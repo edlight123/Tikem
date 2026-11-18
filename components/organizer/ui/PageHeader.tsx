@@ -23,13 +23,13 @@ export function PageHeader({
     <div className={`flex items-start justify-between gap-4 ${className}`}>
       <div className="min-w-0">
         {eyebrow && (
-          <p className="eyebrow text-white/45">{eyebrow}</p>
+          <p className="eyebrow text-fg-subtle">{eyebrow}</p>
         )}
-        <h1 className="mt-1.5 font-display italic text-[clamp(26px,4vw,38px)] leading-[1.02] text-white">
+        <h1 className="mt-1.5 font-display italic text-[clamp(26px,4vw,38px)] leading-[1.02] text-fg">
           {title}
         </h1>
         {subtitle && (
-          <p className="mt-1.5 text-sm text-white/55 sm:text-[15px]">{subtitle}</p>
+          <p className="mt-1.5 text-sm text-fg-muted sm:text-body">{subtitle}</p>
         )}
       </div>
       {actions && <div className="shrink-0">{actions}</div>}
@@ -57,12 +57,12 @@ export function SectionHeader({
   return (
     <div className={`flex items-end justify-between gap-4 ${className}`}>
       <div className="min-w-0">
-        {eyebrow && <p className="eyebrow text-white/45">{eyebrow}</p>}
-        <h2 className="mt-1 font-display lowercase italic !text-[22px] !leading-snug text-white">
+        {eyebrow && <p className="eyebrow text-fg-subtle">{eyebrow}</p>}
+        <h2 className="mt-1 font-display lowercase italic !text-section !leading-snug text-fg">
           {title}
         </h2>
         {description && (
-          <p className="mt-1 text-sm text-white/50">{description}</p>
+          <p className="mt-1 text-sm text-fg-subtle">{description}</p>
         )}
       </div>
       {actions && <div className="shrink-0">{actions}</div>}

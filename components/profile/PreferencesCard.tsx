@@ -17,9 +17,9 @@ interface PreferencesCardProps {
  *
  * Before: the "default location" summary was `border border-brand-100` — a
  * near-white teal hairline around an unfilled box — and all three selects were
- * `border border-white/10` with no fill, no text colour and the UA's own
+ * `border border-line` with no fill, no text colour and the UA's own
  * chevron, so on a black page they were empty outlines. The category and
- * language buttons were filled `bg-teal-600`, which spends the page's whole teal
+ * language buttons were filled `bg-brand-600`, which spends the page's whole teal
  * budget on "chosen"; the ladder says a chosen chip is the one pure white thing.
  *
  * Now: the summary is a filled read-out, the selects are filled fields with our
@@ -27,7 +27,7 @@ interface PreferencesCardProps {
  * pills. Data, handlers and save-on-change behaviour are untouched.
  */
 const SELECT =
-  'w-full appearance-none rounded-xl bg-white/[0.06] px-3.5 py-3 pr-11 text-[16px] text-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand-500 disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-[#141414] [&>option]:text-white'
+  'w-full appearance-none rounded-xl bg-surface px-3.5 py-3 pr-11 text-base text-fg focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand-500 disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-surface-solid [&>option]:text-fg'
 
 export function PreferencesCard({ profile, onUpdate }: PreferencesCardProps) {
   const { i18n, t } = useTranslation('profile')
@@ -159,13 +159,13 @@ export function PreferencesCard({ profile, onUpdate }: PreferencesCardProps) {
       {defaultCountry && defaultCity && defaultSubarea && (
         <Panel className="mb-4 px-4 py-4 sm:px-5">
           <div className="flex items-start gap-3.5">
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-white/[0.06] text-white/55">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-surface text-fg-muted">
               <MapPin className="h-[18px] w-[18px]" aria-hidden />
             </span>
             <div className="min-w-0">
               {/* A span, not a p: `.mobile-typography p` would override
                   .eyebrow's size and line-height on a phone. */}
-              <span className="eyebrow block text-white/40">{t('preferences.default_location')}</span>
+              <span className="eyebrow block text-fg-subtle">{t('preferences.default_location')}</span>
               {/* 15px, not 17px. This line is one fact — "country · city · area"
                   — and at 17px it needed 286px in the 284px this column has
                   once the 40px tile and its gap are taken out, so on a phone it
@@ -173,10 +173,10 @@ export function PreferencesCard({ profile, onUpdate }: PreferencesCardProps) {
                   to 252px, one line down to a 375px viewport, and it is still
                   the loudest line in the panel because it is the only bold one.
                   Only the phone is constrained, so 17px comes back at sm. */}
-              <p className="mt-1 !text-[15px] font-bold !leading-snug text-white sm:!text-[17px]">
+              <p className="mt-1 !text-body font-bold !leading-snug text-fg sm:!text-lead">
                 {LOCATION_CONFIG[defaultCountry]?.name} · {defaultCity} · {defaultSubarea}
               </p>
-              <p className="mt-1 !text-[12px] text-white/40">{t('preferences.location_note')}</p>
+              <p className="mt-1 !text-caption text-fg-subtle">{t('preferences.location_note')}</p>
             </div>
           </div>
         </Panel>
@@ -200,7 +200,7 @@ export function PreferencesCard({ profile, onUpdate }: PreferencesCardProps) {
                 <option key={country.code} value={country.code}>{country.name}</option>
               ))}
             </select>
-            <ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" aria-hidden />
+            <ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-fg-subtle" aria-hidden />
           </div>
         </div>
 
@@ -222,7 +222,7 @@ export function PreferencesCard({ profile, onUpdate }: PreferencesCardProps) {
                 <option key={city} value={city}>{city}</option>
               ))}
             </select>
-            <ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" aria-hidden />
+            <ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-fg-subtle" aria-hidden />
           </div>
         </div>
 
@@ -245,7 +245,7 @@ export function PreferencesCard({ profile, onUpdate }: PreferencesCardProps) {
                   <option key={subarea} value={subarea}>{subarea}</option>
                 ))}
               </select>
-              <ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" aria-hidden />
+              <ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-fg-subtle" aria-hidden />
             </div>
           </div>
         )}
@@ -265,10 +265,10 @@ export function PreferencesCard({ profile, onUpdate }: PreferencesCardProps) {
                   aria-pressed={isSelected}
                   onClick={() => handleCategoryToggle(category)}
                   disabled={isUpdating}
-                  className={`rounded px-3.5 py-2 text-[13px] font-semibold transition-colors disabled:opacity-50 ${
+                  className={`rounded px-3.5 py-2 text-meta font-semibold transition-colors disabled:opacity-50 ${
                     isSelected
-                      ? 'bg-white text-black'
-                      : 'bg-white/[0.055] text-white/70 hover:bg-white/[0.12] hover:text-white'
+                      ? 'bg-inverse text-on-inverse'
+                      : 'bg-surface text-fg-muted hover:bg-surface-high hover:text-fg'
                   }`}
                 >
                   {tCommon(`categories.${category}`, { defaultValue: category })}
@@ -276,7 +276,7 @@ export function PreferencesCard({ profile, onUpdate }: PreferencesCardProps) {
               )
             })}
           </div>
-          <p className="mt-2.5 !text-[12px] text-white/35">{t('preferences.categories_note')}</p>
+          <p className="mt-2.5 !text-caption text-fg-faint">{t('preferences.categories_note')}</p>
         </div>
 
         {/* Language — one segmented control, not three loose pills */}
@@ -284,7 +284,7 @@ export function PreferencesCard({ profile, onUpdate }: PreferencesCardProps) {
           <FieldLabel icon={Globe} className="mb-2">
             {t('preferences.language')}
           </FieldLabel>
-          <div className="grid grid-cols-3 gap-1 rounded-xl bg-white/[0.055] p-1">
+          <div className="grid grid-cols-3 gap-1 rounded-xl bg-surface p-1">
             {[
               { code: 'en' as const, label: t('preferences.language_en') },
               { code: 'fr' as const, label: t('preferences.language_fr') },
@@ -296,10 +296,10 @@ export function PreferencesCard({ profile, onUpdate }: PreferencesCardProps) {
                 aria-pressed={language === code}
                 onClick={() => handleLanguageChange(code)}
                 disabled={isUpdating}
-                className={`rounded-lg py-2.5 text-[13px] font-semibold transition-colors disabled:opacity-50 ${
+                className={`rounded-lg py-2.5 text-meta font-semibold transition-colors disabled:opacity-50 ${
                   language === code
-                    ? 'bg-white text-black'
-                    : 'text-white/60 hover:bg-white/[0.08] hover:text-white'
+                    ? 'bg-inverse text-on-inverse'
+                    : 'text-fg-muted hover:bg-surface-raised hover:text-fg'
                 }`}
               >
                 {label}

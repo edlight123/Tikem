@@ -37,12 +37,12 @@ export default async function EventEarningsPage({
   if (!eventDoc.exists) {
     return (
       <div className="mx-auto flex min-h-[60vh] max-w-md items-center justify-center px-4 py-16">
-        <div className="w-full rounded-2xl bg-white/[0.055] p-8 text-center">
-          <h2 className="font-display lowercase italic !text-[26px] !leading-snug text-white mb-3"><T k="server_bits.event_not_found" /></h2>
-          <p className="text-sm text-white/70"><T k="server_bits.event_deleted_or_wrong_link" /></p>
+        <div className="w-full rounded-2xl bg-surface p-8 text-center">
+          <h2 className="font-display lowercase italic !text-headline !leading-snug text-fg mb-3"><T k="server_bits.event_not_found" /></h2>
+          <p className="text-sm text-fg-muted"><T k="server_bits.event_deleted_or_wrong_link" /></p>
           <Link
             href="/organizer/events"
-            className="mt-6 inline-flex items-center gap-2 rounded bg-white px-5 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+            className="mt-6 inline-flex items-center gap-2 rounded bg-inverse px-5 py-2.5 text-sm font-semibold text-on-inverse transition-colors hover:bg-inverse-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
           >
             <T k="server_bits.back_to_events" />
           </Link>

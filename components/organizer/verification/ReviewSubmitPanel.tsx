@@ -49,9 +49,9 @@ export default function ReviewSubmitPanel({ request, onSubmit, onBack, isReadOnl
       {/* Summary Sections */}
       <div className="space-y-6">
         {!hasAnyDetails && isReadOnly ? (
-          <div className="p-4 bg-white/[0.055] rounded-2xl">
-            <div className="text-sm font-semibold text-white">{t('verification_review.no_verification_details')}</div>
-            <div className="text-sm text-white/60 mt-1">
+          <div className="p-4 bg-surface rounded-2xl">
+            <div className="text-sm font-semibold text-fg">{t('verification_review.no_verification_details')}</div>
+            <div className="text-sm text-fg-muted mt-1">
               This account is marked as verified, but no submitted verification fields/files were found.
               This can happen if verification was granted manually by an admin or if the record predates the current verification flow.
             </div>
@@ -62,7 +62,7 @@ export default function ReviewSubmitPanel({ request, onSubmit, onBack, isReadOnl
         {request.steps.organizerInfo.status === 'complete' && (
           <SummarySection
             title={t('verification_review.organizer_information')}
-            icon={<UserRound className="w-5 h-5 text-white/70" />}
+            icon={<UserRound className="w-5 h-5 text-fg-muted" />}
             fields={request.steps.organizerInfo.fields}
           />
         )}
@@ -71,7 +71,7 @@ export default function ReviewSubmitPanel({ request, onSubmit, onBack, isReadOnl
         {request.steps.governmentId.status === 'complete' && (
           <SummarySection
             title={t('verification_review.government_id')}
-            icon={<IdCard className="w-5 h-5 text-white/70" />}
+            icon={<IdCard className="w-5 h-5 text-fg-muted" />}
             fields={{
               ...request.steps.governmentId.fields,
               'ID Front': request.files.governmentId?.front ? 'Uploaded' : 'Not uploaded',
@@ -84,7 +84,7 @@ export default function ReviewSubmitPanel({ request, onSubmit, onBack, isReadOnl
         {request.steps.selfie.status === 'complete' && (
           <SummarySection
             title={t('verification_review.identity_verification')}
-            icon={<Fingerprint className="w-5 h-5 text-white/70" />}
+            icon={<Fingerprint className="w-5 h-5 text-fg-muted" />}
             fields={{
               ...request.steps.selfie.fields,
               'Selfie Photo': request.files.selfie?.path ? 'Uploaded' : 'Not uploaded'
@@ -96,7 +96,7 @@ export default function ReviewSubmitPanel({ request, onSubmit, onBack, isReadOnl
         {request.steps.businessDetails.status === 'complete' && (
           <SummarySection
             title={t('verification_review.business_details')}
-            icon={<Building2 className="w-5 h-5 text-white/70" />}
+            icon={<Building2 className="w-5 h-5 text-fg-muted" />}
             fields={request.steps.businessDetails.fields}
           />
         )}
@@ -104,11 +104,11 @@ export default function ReviewSubmitPanel({ request, onSubmit, onBack, isReadOnl
 
       {/* Blocking Issues */}
       {!canSubmit && !isReadOnly && blockingIssues.length > 0 && (
-        <div className="mt-6 rounded-xl bg-amber-500/10 p-4">
-          <h3 className="font-semibold text-amber-200 mb-2 text-sm md:text-base">
+        <div className="mt-6 rounded-xl bg-warning-strong/10 p-4">
+          <h3 className="font-semibold text-warning-soft mb-2 text-sm md:text-base">
             {t('verification_review.complete_required_steps')}
           </h3>
-          <ul className="list-disc list-inside text-sm text-amber-200/80 space-y-1">
+          <ul className="list-disc list-inside text-sm text-warning-soft/80 space-y-1">
             {blockingIssues.map((issue, index) => (
               <li key={index}>{issue}</li>
             ))}
@@ -118,18 +118,18 @@ export default function ReviewSubmitPanel({ request, onSubmit, onBack, isReadOnl
 
       {/* Submission Status */}
       {isSubmitted && (
-        <div className="mt-6 rounded-xl bg-white/[0.055] p-4">
+        <div className="mt-6 rounded-xl bg-surface p-4">
           <div className="flex items-start gap-3">
             <div className="rounded p-2 flex-shrink-0">
-              <svg className="w-5 h-5 text-white/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 text-fg-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
             <div className="flex-1">
-              <h3 className="font-semibold text-white mb-1 text-sm md:text-base">
+              <h3 className="font-semibold text-fg mb-1 text-sm md:text-base">
                 {t('verification_review.verification_submitted')}
               </h3>
-              <p className="text-sm text-white/60">
+              <p className="text-sm text-fg-muted">
                 Submitted on {request.submittedAt ? new Date(request.submittedAt).toLocaleDateString('en-US', {
                   year: 'numeric',
                   month: 'long',
@@ -139,7 +139,7 @@ export default function ReviewSubmitPanel({ request, onSubmit, onBack, isReadOnl
                 }) : 'N/A'}
               </p>
               {request.reviewedAt && (
-                <p className="text-sm text-white/60 mt-1">
+                <p className="text-sm text-fg-muted mt-1">
                   Reviewed on {new Date(request.reviewedAt).toLocaleDateString('en-US', {
                     year: 'numeric',
                     month: 'long',
@@ -159,7 +159,7 @@ export default function ReviewSubmitPanel({ request, onSubmit, onBack, isReadOnl
         <div className="mt-8 flex flex-col sm:flex-row gap-3">
           <button
             onClick={onBack}
-            className="flex-1 rounded bg-white/[0.07] px-6 py-3 font-semibold text-white transition-colors hover:bg-white/[0.12] hover:text-white"
+            className="flex-1 rounded bg-surface-raised px-6 py-3 font-semibold text-fg transition-colors hover:bg-surface-high hover:text-fg"
           >
             ← Back to Steps
           </button>
@@ -168,8 +168,8 @@ export default function ReviewSubmitPanel({ request, onSubmit, onBack, isReadOnl
             disabled={!canSubmit}
             className={`flex-1 px-6 py-3 rounded font-semibold transition-colors ${
               canSubmit
-                ? 'bg-white hover:bg-white/90 text-black'
-                : 'bg-white/[0.07] text-white/50 cursor-not-allowed'
+                ? 'bg-inverse hover:bg-inverse-hover text-on-inverse'
+                : 'bg-surface-raised text-fg-subtle cursor-not-allowed'
             }`}
           >
             {canSubmit ? 'Submit for Review' : 'Complete Required Steps'}
@@ -179,7 +179,7 @@ export default function ReviewSubmitPanel({ request, onSubmit, onBack, isReadOnl
 
       {/* Terms & Conditions */}
       {!isReadOnly && canSubmit && (
-        <div className="mt-4 text-xs md:text-sm text-white/60 text-center">
+        <div className="mt-4 text-xs md:text-sm text-fg-muted text-center">
           By submitting, you agree to our{' '}
           <a href="/legal/terms" className="text-brand-300 hover:text-brand-300 underline">
             {t('verification_review.terms_of_service')}
@@ -214,7 +214,7 @@ function SummarySection({ title, icon, fields }: SummarySectionProps) {
           <span aria-hidden="true">{icon}</span>
           {/* Matches the wizard's own review cards. `!` because
               `.mobile-typography h3` (0,1,1) outranks a bare size utility. */}
-          <h3 className="font-display lowercase italic !text-[22px] !leading-snug text-white">
+          <h3 className="font-display lowercase italic !text-section !leading-snug text-fg">
             {title}
           </h3>
         </div>
@@ -224,10 +224,10 @@ function SummarySection({ title, icon, fields }: SummarySectionProps) {
       <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
         {entries.map(([key, value]) => (
           <div key={key}>
-            <dt className="text-xs md:text-sm text-white/60 mb-1">
+            <dt className="text-xs md:text-sm text-fg-muted mb-1">
               {formatFieldName(key)}
             </dt>
-            <dd className="text-sm md:text-base text-white font-medium">
+            <dd className="text-sm md:text-base text-fg font-medium">
               {formatFieldValue(value)}
             </dd>
           </div>

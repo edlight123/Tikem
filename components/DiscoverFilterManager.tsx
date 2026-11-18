@@ -167,7 +167,7 @@ export function DiscoverFilterManager({ userCountry = 'HT' }: DiscoverFilterMana
           Pins directly below the navbar (h-14 / sm:h-16). */}
       {/* Same translucency as the navbar above (which renders `flush` on this
           page), so the two bars read as ONE header band.
-          NO bottom rule. It used to carry `border-b border-white/10`, which
+          NO bottom rule. It used to carry `border-b border-line`, which
           landed a few pixels under the navbar's own edge and read as a seam
           drawn across the page right below the chips. The blurred band plus the
           feed's own top padding separate the two regions on their own. */}
@@ -194,7 +194,7 @@ export function DiscoverFilterManager({ userCountry = 'HT' }: DiscoverFilterMana
             ? 'translate3d(0, calc(-100% - var(--chrome-h)), 0)'
             : undefined,
         }}
-        className="sticky top-14 sm:top-16 z-40 bg-[#0a0a0a]/80 backdrop-blur-xl transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
+        className="sticky top-14 sm:top-16 z-40 bg-canvas/80 backdrop-blur-xl transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
       >
         <DiscoverTopBar
           filters={appliedFilters}

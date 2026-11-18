@@ -87,7 +87,7 @@ export default function BankVerificationsClient() {
           <button
             key={status}
             onClick={() => handleStatusChange(status)}
-            className={`label-mono border-b-2 px-1 pb-2 text-[12px] uppercase tracking-[0.14em] transition-colors ${
+            className={`label-mono border-b-2 px-1 pb-2 text-caption uppercase tracking-[0.14em] transition-colors ${
               statusFilter === status
                 ? 'border-console-text text-console-text'
                 : 'border-transparent text-console-mut hover:text-console-text'
@@ -132,10 +132,10 @@ export default function BankVerificationsClient() {
               d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
             />
           </svg>
-          <h3 className="label-mono mt-3 text-[12px] uppercase tracking-[0.14em] text-console-mut">
+          <h3 className="label-mono mt-3 text-caption uppercase tracking-[0.14em] text-console-mut">
             No {statusFilter} verifications
           </h3>
-          <p className="mt-1 text-[13px] text-console-faint">
+          <p className="mt-1 text-meta text-console-faint">
             There are no {statusFilter} bank verifications at this time.
           </p>
         </div>

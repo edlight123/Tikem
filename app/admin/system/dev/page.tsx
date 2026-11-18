@@ -46,7 +46,7 @@ export default function DevToolsPage() {
           <Link key={tool.href} href={tool.href} className="block">
             <ConsolePanel className="px-4 py-3.5 transition-colors hover:bg-console-raise">
               <div className="text-sm font-semibold text-console-text">{tool.name}</div>
-              <div className="mt-0.5 text-[13px] text-console-mut">{tool.description}</div>
+              <div className="mt-0.5 text-meta text-console-mut">{tool.description}</div>
             </ConsolePanel>
           </Link>
         ))}

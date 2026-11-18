@@ -96,14 +96,14 @@ export function CategoryChips({ selectedCategories }: CategoryChipsProps) {
             aria-modal="true"
             aria-label={t('filters.categories', { defaultValue: 'Category' })}
           >
-            <div className="absolute inset-0 bg-black/70 backdrop-blur-[2px]" onClick={() => setOpen(false)} aria-hidden="true" />
-            <div className="relative z-[101] w-full max-w-sm rounded-t-2xl bg-[#141414] p-4 shadow-2xl sm:rounded-2xl">
+            <div className="absolute inset-0 bg-scrim backdrop-blur-[2px]" onClick={() => setOpen(false)} aria-hidden="true" />
+            <div className="relative z-[101] w-full max-w-sm rounded-t-2xl bg-surface-solid p-4 shadow-2xl sm:rounded-2xl">
               <div className="mb-3 flex items-center justify-between">
-                <h3 className="text-base font-semibold text-white">{t('filters.categories', { defaultValue: 'Category' })}</h3>
+                <h3 className="text-base font-semibold text-fg">{t('filters.categories', { defaultValue: 'Category' })}</h3>
                 <button
                   onClick={() => setOpen(false)}
                   aria-label="Close"
-                  className="grid h-8 w-8 place-items-center rounded-lg text-white/50 hover:bg-white/[0.06] hover:text-white"
+                  className="grid h-8 w-8 place-items-center rounded-lg text-fg-subtle hover:bg-surface hover:text-fg"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -122,13 +122,13 @@ export function CategoryChips({ selectedCategories }: CategoryChipsProps) {
                       // tint inside a teal border — a coloured status pill.
                       // min-h-11 here, unlike the rail chip: this sheet has room
                       // for a proper 44px target, so it gets one.
-                      className={`flex min-h-11 items-center gap-2 rounded px-3 py-2 text-left text-[13px] leading-[18px] font-medium transition-colors ${
-                        isSel ? 'bg-white text-black' : 'bg-white/[0.06] text-white/70 hover:bg-white/[0.12] hover:text-white'
+                      className={`flex min-h-11 items-center gap-2 rounded px-3 py-2 text-left text-meta leading-[18px] font-medium transition-colors ${
+                        isSel ? 'bg-inverse text-on-inverse' : 'bg-surface text-fg-muted hover:bg-surface-high hover:text-fg'
                       }`}
                     >
-                      <span className={isSel ? 'text-black/55' : 'text-white/50'}>{CATEGORY_ICONS[category]}</span>
+                      <span className={isSel ? 'text-on-inverse/55' : 'text-fg-subtle'}>{CATEGORY_ICONS[category]}</span>
                       <span className="flex-1 truncate">{t(`categories.${category}`, { defaultValue: category })}</span>
-                      {isSel && <Check className="h-4 w-4 shrink-0 text-black" />}
+                      {isSel && <Check className="h-4 w-4 shrink-0 text-on-inverse" />}
                     </button>
                   )
                 })}
@@ -138,14 +138,14 @@ export function CategoryChips({ selectedCategories }: CategoryChipsProps) {
                 {count > 0 && (
                   <button
                     onClick={clearAll}
-                    className="flex-1 rounded bg-white/[0.07] px-4 py-2.5 text-sm font-semibold text-white hover:bg-white/[0.12]"
+                    className="flex-1 rounded bg-surface-raised px-4 py-2.5 text-sm font-semibold text-fg hover:bg-surface-high"
                   >
                     {t('filters.clear_all', { defaultValue: 'Clear all' })}
                   </button>
                 )}
                 <button
                   onClick={() => setOpen(false)}
-                  className="flex-1 rounded bg-white px-4 py-2.5 text-sm font-semibold text-black hover:bg-white/90"
+                  className="flex-1 rounded bg-inverse px-4 py-2.5 text-sm font-semibold text-on-inverse hover:bg-inverse-hover"
                 >
                   {t('common.done', { defaultValue: 'Done' })}
                 </button>

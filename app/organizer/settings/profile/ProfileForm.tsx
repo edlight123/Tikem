@@ -142,7 +142,7 @@ export default function ProfileForm({ userId, initialData }: ProfileFormProps) {
       {/* Profile Photo */}
       <div className="flex items-start gap-6">
         <div className="relative">
-          <div className="w-24 h-24 rounded-full overflow-hidden bg-white/[0.055]">
+          <div className="w-24 h-24 rounded-full overflow-hidden bg-surface">
             {formData.photo_url ? (
               <Image
                 src={formData.photo_url}
@@ -153,20 +153,20 @@ export default function ProfileForm({ userId, initialData }: ProfileFormProps) {
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center">
-                <User className="w-12 h-12 text-white/40" />
+                <User className="w-12 h-12 text-fg-subtle" />
               </div>
             )}
           </div>
           {isUploadingPhoto && (
-            <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
-              <Loader2 className="w-6 h-6 text-white animate-spin" />
+            <div className="absolute inset-0 bg-scrim-light rounded-full flex items-center justify-center">
+              <Loader2 className="w-6 h-6 text-fg animate-spin" />
             </div>
           )}
         </div>
         <div className="flex-1">
           <label
             htmlFor="photo-upload"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-white/[0.07] hover:bg-white/[0.12] text-white/80 rounded cursor-pointer transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-surface-raised hover:bg-surface-high text-fg-soft rounded cursor-pointer transition-colors"
           >
             <Camera className="w-4 h-4" />
             {t('profile_form.change_photo')}
@@ -179,7 +179,7 @@ export default function ProfileForm({ userId, initialData }: ProfileFormProps) {
             className="hidden"
             disabled={isUploadingPhoto}
           />
-          <p className="text-xs text-white/50 mt-2">
+          <p className="text-xs text-fg-subtle mt-2">
             {t('profile_form.photo_formats')}
           </p>
         </div>
@@ -187,17 +187,17 @@ export default function ProfileForm({ userId, initialData }: ProfileFormProps) {
 
       {/* Full Name */}
       <div>
-        <label htmlFor="full_name" className="block text-sm font-medium text-white/70 mb-2">
+        <label htmlFor="full_name" className="block text-sm font-medium text-fg-muted mb-2">
           {t('profile_form.full_name')}
         </label>
         <div className="relative">
-          <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
+          <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-fg-subtle" />
           <input
             type="text"
             id="full_name"
             value={formData.full_name}
             onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-            className="w-full pl-10 pr-4 py-3 rounded focus:ring-2 focus:ring-brand-500 bg-white/[0.06] text-[16px] text-white placeholder:text-white/35 focus:outline-none"
+            className="w-full pl-10 pr-4 py-3 rounded focus:ring-2 focus:ring-brand-500 bg-surface text-base text-fg placeholder:text-fg-faint focus:outline-none"
             placeholder={t('profile_form.enter_full_name')}
             required
           />
@@ -206,41 +206,41 @@ export default function ProfileForm({ userId, initialData }: ProfileFormProps) {
 
       {/* Email (Read-only) */}
       <div>
-        <label htmlFor="email" className="block text-sm font-medium text-white/70 mb-2">
+        <label htmlFor="email" className="block text-sm font-medium text-fg-muted mb-2">
           {t('profile_form.email_address')}
         </label>
         <div className="relative">
-          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
+          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-fg-subtle" />
           <input
             type="email"
             id="email"
             value={formData.email}
-            className="w-full pl-10 pr-4 py-3 rounded bg-white/[0.04] text-white/45 cursor-not-allowed text-[16px] focus:outline-none"
+            className="w-full pl-10 pr-4 py-3 rounded bg-surface-low text-fg-subtle cursor-not-allowed text-base focus:outline-none"
             disabled
           />
         </div>
-        <p className="text-xs text-white/50 mt-1">
+        <p className="text-xs text-fg-subtle mt-1">
           {t('profile_form.email_cannot_change')}
         </p>
       </div>
 
       {/* Phone Number */}
       <div>
-        <label htmlFor="phone_number" className="block text-sm font-medium text-white/70 mb-2">
+        <label htmlFor="phone_number" className="block text-sm font-medium text-fg-muted mb-2">
           {t('profile_form.phone_number')}
         </label>
         <div className="relative">
-          <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
+          <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-fg-subtle" />
           <input
             type="tel"
             id="phone_number"
             value={formData.phone_number}
             onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })}
-            className="w-full pl-10 pr-4 py-3 rounded focus:ring-2 focus:ring-brand-500 bg-white/[0.06] text-[16px] text-white placeholder:text-white/35 focus:outline-none"
+            className="w-full pl-10 pr-4 py-3 rounded focus:ring-2 focus:ring-brand-500 bg-surface text-base text-fg placeholder:text-fg-faint focus:outline-none"
             placeholder="+509 1234 5678"
           />
         </div>
-        <p className="text-xs text-white/50 mt-1">
+        <p className="text-xs text-fg-subtle mt-1">
           {t('profile_form.phone_use_note')}
         </p>
       </div>

@@ -137,9 +137,9 @@ function Stat({
 }) {
   return (
     <div className="flex items-center gap-2 whitespace-nowrap">
-      <Icon className="h-4 w-4 shrink-0 text-white/40" aria-hidden />
-      <span className="text-[15px] font-semibold tabular-nums text-white">{value}</span>
-      <span className="text-[13px] text-white/50">{label}</span>
+      <Icon className="h-4 w-4 shrink-0 text-fg-subtle" aria-hidden />
+      <span className="text-body font-semibold tabular-nums text-fg">{value}</span>
+      <span className="text-meta text-fg-subtle">{label}</span>
     </div>
   )
 }
@@ -148,10 +148,10 @@ function Stat({
 function SectionHead({ title, note }: { title: string; note?: string }) {
   return (
     <div className="mb-5">
-      <h2 className="font-display lowercase italic !text-[clamp(24px,3.6vw,30px)] !leading-[1.05] text-white">
+      <h2 className="font-display lowercase italic !text-[clamp(24px,3.6vw,30px)] !leading-[1.05] text-fg">
         {title}
       </h2>
-      {note && <p className="mt-1 text-[13px] text-white/50 sm:text-sm">{note}</p>}
+      {note && <p className="mt-1 text-meta text-fg-subtle sm:text-sm">{note}</p>}
     </div>
   )
 }
@@ -237,13 +237,13 @@ export default function OrganizerProfileClient({
             {/* Two stops, not one: the poster reads as light in the room, and
                 the copy below still sits on near-black so it stays legible
                 over whatever colours that particular flyer happens to have. */}
-            <div className="absolute inset-0 bg-gradient-to-b from-[#0a0a0a]/60 via-[#0a0a0a]/85 to-[#0a0a0a]" />
+            <div className="absolute inset-0 bg-gradient-to-b from-canvas/60 via-canvas/85 to-canvas" />
           </div>
         )}
 
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 md:py-12 lg:px-8">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:gap-6">
-            {/* Avatar. A real surface (`bg-[#0a0a0a]` would be the page colour,
+            {/* Avatar. A real surface (`bg-canvas` would be the page colour,
                 the invisible-card mistake). No organizer has uploaded a logo
                 (checked against production), so the mark is an organization
                 glyph, not the name's first letter (owner rule). */}
@@ -261,13 +261,13 @@ export default function OrganizerProfileClient({
             )}
 
             <div className="min-w-0 flex-1">
-              <h1 className="font-grotesk font-bold uppercase tracking-[-0.02em] text-white !text-[clamp(30px,5.5vw,46px)] !leading-[0.98]">
+              <h1 className="font-grotesk font-bold uppercase tracking-[-0.02em] text-fg !text-[clamp(30px,5.5vw,46px)] !leading-[0.98]">
                 {organizer.name}
               </h1>
 
               {/* Verified as a DOT plus a label, not a filled pill (house
                   rule). It was a rounded-full chip in page-colour on teal. */}
-              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[13px]">
+              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-meta">
                 {organizer.is_verified && (
                   <span className="inline-flex items-center gap-1.5 text-brand-300">
                     <Shield className="h-3.5 w-3.5" aria-hidden />
@@ -275,13 +275,13 @@ export default function OrganizerProfileClient({
                   </span>
                 )}
                 {place && (
-                  <span className="inline-flex items-center gap-1.5 text-white/50">
+                  <span className="inline-flex items-center gap-1.5 text-fg-subtle">
                     <MapPin className="h-3.5 w-3.5" aria-hidden />
                     {place}
                   </span>
                 )}
                 {isHost && since && (
-                  <span className="text-white/40">
+                  <span className="text-fg-subtle">
                     {t('organizer_profile.since', {
                       defaultValue: 'On Tikèm since {{date}}',
                       date: since,
@@ -289,7 +289,7 @@ export default function OrganizerProfileClient({
                   </span>
                 )}
                 {!isHost && joined && (
-                  <span className="text-white/40">
+                  <span className="text-fg-subtle">
                     {t('organizer_profile.joined', { defaultValue: 'Joined Tikèm {{date}}', date: joined })}
                   </span>
                 )}
@@ -321,13 +321,13 @@ export default function OrganizerProfileClient({
               {/* An org's description, or a person's bio when their privacy
                   lets this viewer see it (decided on the server). */}
               {about.text && (
-                <p className="mt-4 max-w-[60ch] whitespace-pre-line text-[15px] leading-relaxed text-white/70">
+                <p className="mt-4 max-w-[60ch] whitespace-pre-line text-body leading-relaxed text-fg-muted">
                   {about.text}
                 </p>
               )}
 
               {details?.kind === 'person' && details.person === null && (
-                <p className="mt-4 text-[13px] text-white/40">
+                <p className="mt-4 text-meta text-fg-subtle">
                   {t('organizer_profile.private_details', 'Bio and socials are visible to friends only.')}
                 </p>
               )}
@@ -337,7 +337,7 @@ export default function OrganizerProfileClient({
                   href={about.website}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-3 inline-flex max-w-full items-center gap-1.5 text-[14px] text-brand-300 transition-colors hover:text-white"
+                  className="mt-3 inline-flex max-w-full items-center gap-1.5 text-sm text-brand-300 transition-colors hover:text-fg"
                 >
                   <Globe className="h-3.5 w-3.5 shrink-0" aria-hidden />
                   <span className="truncate">{externalUrlLabel(about.website)}</span>
@@ -380,7 +380,7 @@ export default function OrganizerProfileClient({
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-label={label}
-                      className="grid h-11 w-11 place-items-center rounded bg-white/[0.07] text-white/70 transition-colors hover:bg-white/[0.14] hover:text-white"
+                      className="grid h-11 w-11 place-items-center rounded bg-surface-raised text-fg-muted transition-colors hover:bg-surface-high hover:text-fg"
                     >
                       <Icon className="h-4 w-4" />
                     </a>
@@ -409,7 +409,7 @@ export default function OrganizerProfileClient({
       <div className="mx-auto max-w-7xl px-4 pb-12 sm:px-6 lg:px-8">
         {/* A person who never hosted has no events section at all. */}
         {(isHost || (upcomingEvents?.length || 0) > 0) && (
-        <section className="border-t border-white/10 pt-8 md:pt-10">
+        <section className="border-t border-line pt-8 md:pt-10">
           <SectionHead
             title={t('organizer_profile.upcoming_events', 'upcoming events')}
             note={t(
@@ -434,14 +434,14 @@ export default function OrganizerProfileClient({
             </div>
           ) : (
             /* A fill, not a hairline around the page colour — this was
-               `bg-[#0a0a0a] border border-white/10`, i.e. a ring around
+               `bg-canvas border border-line`, i.e. a ring around
                nothing. Also half the height it was. */
-            <div className="rounded-2xl bg-white/[0.03] px-6 py-10 text-center">
-              <CalendarDays className="mx-auto mb-3 h-8 w-8 text-white/25" aria-hidden />
-              <p className="text-[15px] font-semibold text-white">
+            <div className="rounded-2xl bg-surface-low px-6 py-10 text-center">
+              <CalendarDays className="mx-auto mb-3 h-8 w-8 text-fg-faint" aria-hidden />
+              <p className="text-body font-semibold text-fg">
                 {t('organizer_profile.no_upcoming_title', 'No upcoming events')}
               </p>
-              <p className="mx-auto mt-1 max-w-[42ch] text-[13px] text-white/50">
+              <p className="mx-auto mt-1 max-w-[42ch] text-meta text-fg-subtle">
                 {t(
                   'organizer_profile.no_upcoming_desc',
                   "This organizer doesn't have any upcoming events at the moment."
@@ -453,7 +453,7 @@ export default function OrganizerProfileClient({
         )}
 
         {pastEvents && pastEvents.length > 0 && (
-          <section className="mt-10 border-t border-white/10 pt-8 md:mt-14 md:pt-10">
+          <section className="mt-10 border-t border-line pt-8 md:mt-14 md:pt-10">
             <SectionHead
               title={t('organizer_profile.past_events', 'past events')}
               note={t('organizer_profile.past_events_desc', {

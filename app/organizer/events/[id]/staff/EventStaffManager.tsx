@@ -343,7 +343,7 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
   return (
     <div className="space-y-6">
       {listenerError ? (
-        <div className="bg-red-500/10 text-red-300 px-4 py-3 rounded-lg text-sm">
+        <div className="bg-danger-strong/10 text-danger-soft px-4 py-3 rounded-lg text-sm">
           {listenerError}
         </div>
       ) : null}
@@ -351,53 +351,53 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
       <div className="flex justify-end">
         <button
           onClick={() => setShowInviteModal(true)}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-white/90 text-black font-semibold rounded transition-colors"
+          className="inline-flex items-center gap-2 px-4 py-2.5 bg-inverse hover:bg-inverse-hover text-on-inverse font-semibold rounded transition-colors"
         >
           {tx('event_staff.invite_staff')}
         </button>
       </div>
 
-      <div className="bg-white/[0.055] rounded-2xl overflow-hidden">
-        <div className="px-6 py-4 border-b border-white/10">
-          <h3 className="font-display lowercase italic !text-[22px] !leading-snug text-white">{tx('event_staff.staff_members')}</h3>
+      <div className="bg-surface rounded-2xl overflow-hidden">
+        <div className="px-6 py-4 border-b border-line">
+          <h3 className="font-display lowercase italic !text-section !leading-snug text-fg">{tx('event_staff.staff_members')}</h3>
         </div>
         {members.length === 0 ? (
-          <div className="px-6 py-8 text-sm text-white/70">{tx('event_staff.no_staff_yet')}</div>
+          <div className="px-6 py-8 text-sm text-fg-muted">{tx('event_staff.no_staff_yet')}</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-white/[0.03] border-b border-white/10">
+              <thead className="bg-surface-low border-b border-line">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">User</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">{tx('event_staff.permissions')}</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-white/70 uppercase tracking-wider">{tx('event_staff.actions')}</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-fg-muted uppercase tracking-wider">User</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-fg-muted uppercase tracking-wider">{tx('event_staff.permissions')}</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-fg-muted uppercase tracking-wider">{tx('event_staff.actions')}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/10">
+              <tbody className="divide-y divide-line">
                 {members.map((m) => {
                   const profile = memberProfiles[m.id]
                   const displayName = profile?.full_name || profile?.email || m.id
                   const showEmail = profile?.full_name && profile?.email
 
                   return (
-                    <tr key={m.id} className="hover:bg-white/[0.04]">
+                    <tr key={m.id} className="hover:bg-surface-low">
                       <td className="px-6 py-4">
-                        <div className="font-medium text-white">{displayName}</div>
-                        <div className="text-sm text-white/70">{m.role || 'staff'}</div>
+                        <div className="font-medium text-fg">{displayName}</div>
+                        <div className="text-sm text-fg-muted">{m.role || 'staff'}</div>
                         {showEmail && (
-                          <div className="text-xs text-white/70 mt-0.5">{profile.email}</div>
+                          <div className="text-xs text-fg-muted mt-0.5">{profile.email}</div>
                         )}
                       </td>
-                      <td className="px-6 py-4 text-sm text-white/70">
+                      <td className="px-6 py-4 text-sm text-fg-muted">
                         <div className="space-y-2">
-                          <div className="text-white/70">{tx('event_staff.can_check_in')}</div>
+                          <div className="text-fg-muted">{tx('event_staff.can_check_in')}</div>
                           {m.role === 'owner' ? (
-                            <div className="text-white/70">
+                            <div className="text-fg-muted">
                               Can view attendee list: {m.permissions?.viewAttendees ? 'Yes' : 'No'}
                             </div>
                           ) : (
                             <div className="flex items-center gap-3">
-                              <span className="text-white/70">{tx('event_staff.can_view_attendee_list')}</span>
+                              <span className="text-fg-muted">{tx('event_staff.can_view_attendee_list')}</span>
                               <button
                                 type="button"
                                 role="switch"
@@ -406,11 +406,11 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
                                 disabled={Boolean(permBusy[m.id])}
                                 onClick={() => handleToggleViewAttendees(m.id, !m.permissions?.viewAttendees)}
                                 className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 disabled:opacity-50 ${
-                                  m.permissions?.viewAttendees ? 'bg-brand-500' : 'bg-white/15'
+                                  m.permissions?.viewAttendees ? 'bg-brand-500' : 'bg-surface-high'
                                 }`}
                               >
                                 <span
-                                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                  className={`inline-block h-4 w-4 transform rounded-full bg-inverse transition-transform ${
                                     m.permissions?.viewAttendees ? 'translate-x-6' : 'translate-x-1'
                                   }`}
                                 />
@@ -430,7 +430,7 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
                               cta: 'Remove',
                             })
                           }
-                          className="text-sm font-medium text-red-300 transition-colors hover:text-red-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 rounded"
+                          className="text-sm font-medium text-danger-soft transition-colors hover:text-danger-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-danger-strong rounded"
                         >
                           {tx('actions.remove')}
                         </button>
@@ -444,24 +444,24 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
         )}
       </div>
 
-      <div className="bg-white/[0.055] rounded-2xl overflow-hidden">
-        <div className="px-6 py-4 border-b border-white/10">
-          <h3 className="font-display lowercase italic !text-[22px] !leading-snug text-white">{tx('event_staff.invites')}</h3>
+      <div className="bg-surface rounded-2xl overflow-hidden">
+        <div className="px-6 py-4 border-b border-line">
+          <h3 className="font-display lowercase italic !text-section !leading-snug text-fg">{tx('event_staff.invites')}</h3>
         </div>
         {invites.length === 0 ? (
-          <div className="px-6 py-8 text-sm text-white/70">{tx('event_staff.no_invites_yet')}</div>
+          <div className="px-6 py-8 text-sm text-fg-muted">{tx('event_staff.no_invites_yet')}</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-white/[0.03] border-b border-white/10">
+              <thead className="bg-surface-low border-b border-line">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">{tx('event_staff.method')}</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">{tx('event_staff.target')}</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">{tx('event_staff.status')}</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-white/70 uppercase tracking-wider">{tx('event_staff.actions')}</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-fg-muted uppercase tracking-wider">{tx('event_staff.method')}</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-fg-muted uppercase tracking-wider">{tx('event_staff.target')}</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-fg-muted uppercase tracking-wider">{tx('event_staff.status')}</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-fg-muted uppercase tracking-wider">{tx('event_staff.actions')}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/10">
+              <tbody className="divide-y divide-line">
                 {invites.map((inv) => {
                   const status = inv.revokedAt
                     ? 'Revoked'
@@ -472,10 +472,10 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
                   const target = inv.method === 'email' ? inv.targetEmail : inv.method === 'phone' ? inv.targetPhone : 'Link'
 
                   return (
-                    <tr key={inv.id} className="hover:bg-white/[0.04]">
-                      <td className="px-6 py-4 text-sm text-white">{inv.method}</td>
-                      <td className="px-6 py-4 text-sm text-white/70">{target || ''}</td>
-                      <td className="px-6 py-4 text-sm text-white/70">{status}</td>
+                    <tr key={inv.id} className="hover:bg-surface-low">
+                      <td className="px-6 py-4 text-sm text-fg">{inv.method}</td>
+                      <td className="px-6 py-4 text-sm text-fg-muted">{target || ''}</td>
+                      <td className="px-6 py-4 text-sm text-fg-muted">{status}</td>
                       <td className="px-6 py-4 text-right">
                         {!inv.revokedAt && !inv.usedAt ? (
                           <button
@@ -488,12 +488,12 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
                                 cta: 'Revoke',
                               })
                             }
-                            className="text-sm font-medium text-red-300 transition-colors hover:text-red-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 rounded"
+                            className="text-sm font-medium text-danger-soft transition-colors hover:text-danger-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-danger-strong rounded"
                           >
                             {tx('actions.revoke')}
                           </button>
                         ) : (
-                          <span className="text-sm text-white/70">{EMPTY_VALUE}</span>
+                          <span className="text-sm text-fg-muted">{EMPTY_VALUE}</span>
                         )}
                       </td>
                     </tr>
@@ -507,7 +507,7 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
 
       {showInviteModal && (
         <div
-          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-scrim-light z-50 flex items-center justify-center p-4"
           onClick={closeInviteModal}
         >
           <div
@@ -515,19 +515,19 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
             aria-modal="true"
             aria-labelledby="invite-staff-title"
             onClick={(e) => e.stopPropagation()}
-            className="bg-[#1c1c1c] rounded-2xl max-w-md w-full p-6"
+            className="bg-surface-raised-solid rounded-2xl max-w-md w-full p-6"
           >
-            <h3 id="invite-staff-title" className="font-display italic text-xl text-white mb-4">{tx('event_staff.invite_staff')}</h3>
+            <h3 id="invite-staff-title" className="font-display italic text-xl text-fg mb-4">{tx('event_staff.invite_staff')}</h3>
 
             <div className="space-y-4">
               <div>
-                <label htmlFor="invite-method" className="block text-sm font-medium text-white/70 mb-2">{tx('event_staff.method')}</label>
+                <label htmlFor="invite-method" className="block text-sm font-medium text-fg-muted mb-2">{tx('event_staff.method')}</label>
                 <select
                   id="invite-method"
                   ref={inviteMethodRef}
                   value={method}
                   onChange={(e) => setMethod(e.target.value as InviteMethod)}
-                  className="w-full px-4 py-2.5 bg-white/[0.06] rounded-lg text-white focus:ring-2 focus:ring-brand-500/60"
+                  className="w-full px-4 py-2.5 bg-surface rounded-lg text-fg focus:ring-2 focus:ring-brand-500/60"
                 >
                   <option value="link">Link</option>
                   <option value="email">{tx('actions.email')}</option>
@@ -537,13 +537,13 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
 
               {method === 'email' && (
                 <div>
-                  <label htmlFor="invite-email" className="block text-sm font-medium text-white/70 mb-2">{tx('actions.email')}</label>
+                  <label htmlFor="invite-email" className="block text-sm font-medium text-fg-muted mb-2">{tx('actions.email')}</label>
                   <input
                     id="invite-email"
                     type="email"
                     value={targetEmail}
                     onChange={(e) => setTargetEmail(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-white/[0.06] rounded-lg text-white placeholder-white/30 focus:ring-2 focus:ring-brand-500/60"
+                    className="w-full px-4 py-2.5 bg-surface rounded-lg text-fg placeholder-fg-faint focus:ring-2 focus:ring-brand-500/60"
                     placeholder="staff@example.com"
                   />
                 </div>
@@ -551,13 +551,13 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
 
               {method === 'phone' && (
                 <div>
-                  <label htmlFor="invite-phone" className="block text-sm font-medium text-white/70 mb-2">{tx('actions.phone')}</label>
+                  <label htmlFor="invite-phone" className="block text-sm font-medium text-fg-muted mb-2">{tx('actions.phone')}</label>
                   <input
                     id="invite-phone"
                     type="tel"
                     value={targetPhone}
                     onChange={(e) => setTargetPhone(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-white/[0.06] rounded-lg text-white placeholder-white/30 focus:ring-2 focus:ring-brand-500/60"
+                    className="w-full px-4 py-2.5 bg-surface rounded-lg text-fg placeholder-fg-faint focus:ring-2 focus:ring-brand-500/60"
                     placeholder="+509..."
                   />
                 </div>
@@ -565,8 +565,8 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
 
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-white">{tx('event_staff.allow_viewing_attendee_details')}</p>
-                  <p className="text-xs text-white/70">{tx('event_staff.let_staff_see_contacts')}</p>
+                  <p className="text-sm font-medium text-fg">{tx('event_staff.allow_viewing_attendee_details')}</p>
+                  <p className="text-xs text-fg-muted">{tx('event_staff.let_staff_see_contacts')}</p>
                 </div>
                 <button
                   type="button"
@@ -575,11 +575,11 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
                   aria-label={tx('event_staff.allow_viewing_attendee_details')}
                   onClick={() => setViewAttendees((v) => !v)}
                   className={`relative mt-0.5 inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
-                    viewAttendees ? 'bg-brand-500' : 'bg-white/15'
+                    viewAttendees ? 'bg-brand-500' : 'bg-surface-high'
                   }`}
                 >
                   <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    className={`inline-block h-4 w-4 transform rounded-full bg-inverse transition-transform ${
                       viewAttendees ? 'translate-x-6' : 'translate-x-1'
                     }`}
                   />
@@ -590,7 +590,7 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
                 <button
                   type="button"
                   onClick={closeInviteModal}
-                  className="flex-1 px-4 py-2.5 text-white/70 font-medium rounded hover:bg-white/[0.12] transition-colors bg-white/[0.07]"
+                  className="flex-1 px-4 py-2.5 text-fg-muted font-medium rounded hover:bg-surface-high transition-colors bg-surface-raised"
                 >
                   {tx('actions.cancel')}
                 </button>
@@ -598,7 +598,7 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
                   type="button"
                   disabled={!canSubmit || isSubmitting}
                   onClick={handleCreateInvite}
-                  className="flex-1 px-4 py-2.5 bg-white hover:bg-white/90 text-black font-semibold rounded disabled:opacity-50 transition-colors"
+                  className="flex-1 px-4 py-2.5 bg-inverse hover:bg-inverse-hover text-on-inverse font-semibold rounded disabled:opacity-50 transition-colors"
                 >
                   {isSubmitting ? 'Creating…' : 'Create Invite'}
                 </button>
@@ -610,7 +610,7 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
 
       {pendingConfirm && (
         <div
-          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-scrim-light z-50 flex items-center justify-center p-4"
           onClick={() => !confirmBusy && setPendingConfirm(null)}
         >
           <div
@@ -618,16 +618,16 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
             aria-modal="true"
             aria-labelledby="staff-confirm-title"
             onClick={(e) => e.stopPropagation()}
-            className="bg-[#1c1c1c] rounded-2xl max-w-md w-full p-6"
+            className="bg-surface-raised-solid rounded-2xl max-w-md w-full p-6"
           >
-            <h3 id="staff-confirm-title" className="font-display italic text-xl text-white mb-2">{pendingConfirm.title}</h3>
-            <p className="text-sm text-white/70 mb-6">{pendingConfirm.message}</p>
+            <h3 id="staff-confirm-title" className="font-display italic text-xl text-fg mb-2">{pendingConfirm.title}</h3>
+            <p className="text-sm text-fg-muted mb-6">{pendingConfirm.message}</p>
             <div className="flex gap-3">
               <button
                 type="button"
                 onClick={() => setPendingConfirm(null)}
                 disabled={confirmBusy}
-                className="flex-1 px-4 py-2.5 text-white/70 font-medium rounded hover:bg-white/[0.12] transition-colors disabled:opacity-50 bg-white/[0.07]"
+                className="flex-1 px-4 py-2.5 text-fg-muted font-medium rounded hover:bg-surface-high transition-colors disabled:opacity-50 bg-surface-raised"
               >
                 {tx('actions.cancel')}
               </button>
@@ -635,7 +635,7 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
                 type="button"
                 onClick={runPendingConfirm}
                 disabled={confirmBusy}
-                className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
+                className="flex-1 px-4 py-2.5 bg-danger-strong hover:bg-danger-strong text-fg font-medium rounded-lg transition-colors disabled:opacity-50"
               >
                 {confirmBusy ? 'Working…' : pendingConfirm.cta}
               </button>

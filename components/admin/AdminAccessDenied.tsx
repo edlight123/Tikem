@@ -13,7 +13,7 @@ export function AdminAccessDenied({ userEmail }: { userEmail?: string | null }) 
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
           </svg>
         </div>
-        <h1 className="label-mono mb-2 text-[15px] font-bold uppercase tracking-[0.14em] text-console-text">
+        <h1 className="label-mono mb-2 text-body font-bold uppercase tracking-[0.14em] text-console-text">
           {t('dashboard.access_denied')}
         </h1>
         <p className="mb-4 text-console-mut">
@@ -29,7 +29,7 @@ export function AdminAccessDenied({ userEmail }: { userEmail?: string | null }) 
         </div>
         <a
           href="/"
-          className="inline-block rounded bg-console-text px-6 py-2 text-[13px] font-bold text-console-ground transition-colors hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-console-mut"
+          className="inline-block rounded bg-console-text px-6 py-2 text-meta font-bold text-console-ground transition-colors hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-console-mut"
         >
           {t('dashboard.return_home')}
         </a>

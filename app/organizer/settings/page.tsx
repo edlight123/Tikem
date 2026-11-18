@@ -48,7 +48,7 @@ export default async function OrganizerSettingsHubPage() {
   const defaultLocation = organizerData?.default_city || 'Not set'
 
   return (
-    <div className="bg-[#0a0a0a]">
+    <div className="bg-canvas">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
         <SettingsContent
           isVerified={isVerified}

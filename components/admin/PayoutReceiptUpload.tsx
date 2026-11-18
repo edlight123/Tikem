@@ -237,7 +237,7 @@ export default function PayoutReceiptUpload({
             <button
               onClick={handleUpload}
               disabled={uploading}
-              className="flex w-full items-center justify-center gap-2 rounded bg-console-text px-4 py-2 text-[13px] font-bold text-console-ground transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex w-full items-center justify-center gap-2 rounded bg-console-text px-4 py-2 text-meta font-bold text-console-ground transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {uploading ? (
                 <>

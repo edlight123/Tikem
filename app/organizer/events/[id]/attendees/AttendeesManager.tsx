@@ -96,12 +96,12 @@ const buildColumns = (tx: (k: string) => string): OrgColumn<Ticket>[] => [
     sortAccessor: (t: Ticket) => t.attendee?.full_name || '',
     render: (t: Ticket) => (
       <div className="flex items-center gap-3">
-        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white/[0.08]">
+        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-surface-raised">
           <User className="h-4 w-4 text-brand-300" />
         </div>
         <div className="min-w-0">
-          <p className="truncate font-medium text-white">{t.attendee?.full_name || t.attendee?.email || tx('event_tools.guest')}</p>
-          <p className="truncate text-xs text-white/70 sm:hidden">{t.attendee?.full_name ? t.attendee?.email || '' : ''}</p>
+          <p className="truncate font-medium text-fg">{t.attendee?.full_name || t.attendee?.email || tx('event_tools.guest')}</p>
+          <p className="truncate text-xs text-fg-muted sm:hidden">{t.attendee?.full_name ? t.attendee?.email || '' : ''}</p>
         </div>
       </div>
     ),
@@ -112,7 +112,7 @@ const buildColumns = (tx: (k: string) => string): OrgColumn<Ticket>[] => [
     sortable: true,
     sortAccessor: (t: Ticket) => t.attendee?.email || '',
     render: (t: Ticket) => (
-      <span className="text-sm text-white/70">{t.attendee?.email || EMPTY_VALUE}</span>
+      <span className="text-sm text-fg-muted">{t.attendee?.email || EMPTY_VALUE}</span>
     ),
     cellClassName: 'hidden sm:table-cell',
     headerClassName: 'hidden sm:table-cell',
@@ -124,7 +124,7 @@ const buildColumns = (tx: (k: string) => string): OrgColumn<Ticket>[] => [
       <div>
         <TicketStatus t={t} tx={tx} />
         {t.checked_in_at && keyOf(t) === 'checked_in' && (
-          <p className="mt-0.5 font-mono tabular-nums text-xs text-white/70">
+          <p className="mt-0.5 font-mono tabular-nums text-xs text-fg-muted">
             {format(new Date(t.checked_in_at), 'MMM d, h:mm a')}
           </p>
         )}
@@ -137,7 +137,7 @@ const buildColumns = (tx: (k: string) => string): OrgColumn<Ticket>[] => [
     sortable: true,
     sortAccessor: (t: Ticket) => t.purchased_at,
     render: (t: Ticket) => (
-      <span className="font-mono tabular-nums text-sm text-white/60">
+      <span className="font-mono tabular-nums text-sm text-fg-muted">
         {format(new Date(t.purchased_at), 'MMM d, yyyy')}
       </span>
     ),
@@ -213,14 +213,14 @@ export function AttendeesManager({ eventId, eventTitle, tickets, ticketsError = 
       key={t.id}
       type="button"
       onClick={() => setSelectedTicket(t)}
-      className="flex w-full items-center gap-3 p-4 text-left hover:bg-white/[0.06] active:bg-white/[0.10]"
+      className="flex w-full items-center gap-3 p-4 text-left hover:bg-surface active:bg-surface-raised"
     >
-      <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/[0.08]">
+      <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface-raised">
         <User className="h-5 w-5 text-brand-300" />
       </div>
       <div className="min-w-0 flex-1">
-        <p className="truncate font-medium text-white">{t.attendee?.full_name || t.attendee?.email || tx('event_tools.guest')}</p>
-        <p className="truncate text-xs text-white/70">{t.attendee?.full_name ? t.attendee?.email || '' : ''}</p>
+        <p className="truncate font-medium text-fg">{t.attendee?.full_name || t.attendee?.email || tx('event_tools.guest')}</p>
+        <p className="truncate text-xs text-fg-muted">{t.attendee?.full_name ? t.attendee?.email || '' : ''}</p>
       </div>
       <div>
         <TicketStatus t={t} tx={tx} />
@@ -231,11 +231,11 @@ export function AttendeesManager({ eventId, eventTitle, tickets, ticketsError = 
   return (
     <>
       {ticketsError && (
-        <div className="mb-4 flex items-start gap-3 rounded-xl bg-red-500/10 px-4 py-3">
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-300" />
+        <div className="mb-4 flex items-start gap-3 rounded-xl bg-danger-strong/10 px-4 py-3">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-danger-soft" />
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-white">Couldn&apos;t load attendees</p>
-            <p className="mt-0.5 text-sm text-white/70">
+            <p className="text-sm font-semibold text-fg">Couldn&apos;t load attendees</p>
+            <p className="mt-0.5 text-sm text-fg-muted">
               Something went wrong fetching tickets for this event.{' '}
               <button
                 type="button"
@@ -252,13 +252,13 @@ export function AttendeesManager({ eventId, eventTitle, tickets, ticketsError = 
       {/* KPI row: live tickets only; refunds are counted apart, never as attendees. */}
       <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
-          { label: tx('event_tools.kpi_valid'), value: liveCount, color: 'text-white' },
-          { label: tx('event_tools.status_checked_in'), value: stats['checked-in'], color: 'text-emerald-300' },
-          { label: tx('event_tools.filter_not_in'), value: stats['not-checked-in'], color: 'text-white/80' },
-          { label: tx('event_tools.kpi_refunded_cancelled'), value: stats.refunded + stats.cancelled, color: 'text-red-300' },
+          { label: tx('event_tools.kpi_valid'), value: liveCount, color: 'text-fg' },
+          { label: tx('event_tools.status_checked_in'), value: stats['checked-in'], color: 'text-success-soft' },
+          { label: tx('event_tools.filter_not_in'), value: stats['not-checked-in'], color: 'text-fg-soft' },
+          { label: tx('event_tools.kpi_refunded_cancelled'), value: stats.refunded + stats.cancelled, color: 'text-danger-soft' },
         ].map((k) => (
-          <div key={k.label} className="rounded bg-white/[0.055] p-4">
-            <p className="label-mono uppercase text-white/70">{k.label}</p>
+          <div key={k.label} className="rounded bg-surface p-4">
+            <p className="label-mono uppercase text-fg-muted">{k.label}</p>
             <p className={`mt-1 font-mono tabular-nums text-2xl font-bold ${k.color}`}>{k.value}</p>
           </div>
         ))}
@@ -283,7 +283,7 @@ export function AttendeesManager({ eventId, eventTitle, tickets, ticketsError = 
             type="button"
             onClick={() => setComposeOpen(true)}
             disabled={updateRecipients === 0}
-            className="inline-flex h-11 items-center gap-2 rounded bg-white px-4 text-sm font-semibold text-black transition-colors hover:bg-white/90 disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+            className="inline-flex h-11 items-center gap-2 rounded bg-inverse px-4 text-sm font-semibold text-on-inverse transition-colors hover:bg-inverse-hover disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
           >
             <Mail className="h-4 w-4" />
             <span className="hidden sm:inline">{tx('event_tools.email_attendees')}</span>
@@ -332,7 +332,7 @@ export function AttendeesManager({ eventId, eventTitle, tickets, ticketsError = 
             ticketIsActionable(selectedTicket.status) ? (
               <AttendeeActions ticket={selectedTicket} eventId={eventId} />
             ) : (
-              <p className="text-sm text-white/60">{tx('event_tools.no_actions_for_status')}</p>
+              <p className="text-sm text-fg-muted">{tx('event_tools.no_actions_for_status')}</p>
             )
           ) : undefined
         }
@@ -357,7 +357,7 @@ function AttendeeDetail({ ticket }: { ticket: Ticket }) {
     <div className="space-y-6 p-6">
       {/* Attendee info */}
       <section>
-        <p className="label-mono uppercase mb-3 text-white/70">
+        <p className="label-mono uppercase mb-3 text-fg-muted">
           {tx('attendees.attendee_information')}
         </p>
         <div className="space-y-3">
@@ -382,7 +382,7 @@ function AttendeeDetail({ ticket }: { ticket: Ticket }) {
 
       {/* Ticket info */}
       <section>
-        <p className="label-mono uppercase mb-3 text-white/70">
+        <p className="label-mono uppercase mb-3 text-fg-muted">
           {tx('attendees.ticket_information')}
         </p>
         <div className="space-y-3">
@@ -398,19 +398,19 @@ function AttendeeDetail({ ticket }: { ticket: Ticket }) {
           <InfoRow
             icon={
               ticket.checked_in_at ? (
-                <Check className="h-4 w-4 text-emerald-300" />
+                <Check className="h-4 w-4 text-success-soft" />
               ) : (
-                <AlertCircle className="h-4 w-4 text-amber-300" />
+                <AlertCircle className="h-4 w-4 text-warning-soft" />
               )
             }
             label={tx('attendees.check_in')}
           >
             {ticket.checked_in_at ? (
-              <span className="font-mono tabular-nums text-emerald-300">
+              <span className="font-mono tabular-nums text-success-soft">
                 {format(new Date(ticket.checked_in_at), 'MMM d, h:mm a')}
               </span>
             ) : (
-              <span className="text-amber-300">{tx('attendees.not_checked_in')}</span>
+              <span className="text-warning-soft">{tx('attendees.not_checked_in')}</span>
             )}
           </InfoRow>
           <InfoRow icon={<CreditCard className="h-4 w-4" />} label={tx('attendees.price_paid')}>
@@ -436,10 +436,10 @@ function InfoRow({
 }) {
   return (
     <div className="flex gap-3">
-      <span className="mt-0.5 shrink-0 text-white/40">{icon}</span>
+      <span className="mt-0.5 shrink-0 text-fg-subtle">{icon}</span>
       <div>
-        <p className="text-xs text-white/70">{label}</p>
-        <p className="font-medium text-white">{children}</p>
+        <p className="text-xs text-fg-muted">{label}</p>
+        <p className="font-medium text-fg">{children}</p>
       </div>
     </div>
   )
@@ -522,21 +522,21 @@ function AttendeeActions({ ticket, eventId }: { ticket: Ticket; eventId: string 
         type="button"
         onClick={handleResendTicket}
         disabled={loading}
-        className="flex w-full items-center justify-center gap-2 rounded bg-white px-4 py-2.5 font-semibold text-black transition-colors hover:bg-white/90 disabled:opacity-50"
+        className="flex w-full items-center justify-center gap-2 rounded bg-inverse px-4 py-2.5 font-semibold text-on-inverse transition-colors hover:bg-inverse-hover disabled:opacity-50"
       >
         <Mail className="h-4 w-4" />
         {tx('attendees.resend_ticket_email')}
       </button>
 
       {confirmingRefund ? (
-        <div className="rounded bg-red-500/[0.14] p-3">
-          <p className="text-sm text-white">{tx('attendees.refund_confirm')}</p>
+        <div className="rounded bg-danger-strong/[0.14] p-3">
+          <p className="text-sm text-fg">{tx('attendees.refund_confirm')}</p>
           <div className="mt-3 flex gap-2">
             <button
               type="button"
               onClick={() => setConfirmingRefund(false)}
               disabled={loading}
-              className="h-11 flex-1 rounded bg-white/[0.10] text-sm font-semibold text-white/80 transition-colors hover:bg-white/[0.16] hover:text-white disabled:opacity-50"
+              className="h-11 flex-1 rounded bg-surface-raised text-sm font-semibold text-fg-soft transition-colors hover:bg-surface-high hover:text-fg disabled:opacity-50"
             >
               {tx('actions.cancel')}
             </button>
@@ -544,7 +544,7 @@ function AttendeeActions({ ticket, eventId }: { ticket: Ticket; eventId: string 
               type="button"
               onClick={handleRefund}
               disabled={loading}
-              className="h-11 flex-1 rounded bg-red-600 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+              className="h-11 flex-1 rounded bg-danger-strong text-sm font-semibold text-fg transition-colors hover:bg-danger-strong disabled:opacity-50"
             >
               {loading ? tx('event_tools.refunding') : tx('event_tools.confirm_refund')}
             </button>
@@ -555,7 +555,7 @@ function AttendeeActions({ ticket, eventId }: { ticket: Ticket; eventId: string 
           type="button"
           onClick={() => setConfirmingRefund(true)}
           disabled={loading}
-          className="flex w-full items-center justify-center gap-2 rounded bg-red-600 px-4 py-2.5 font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+          className="flex w-full items-center justify-center gap-2 rounded bg-danger-strong px-4 py-2.5 font-semibold text-fg transition-colors hover:bg-danger-strong disabled:opacity-50"
         >
           <CreditCard className="h-4 w-4" />
           {tx('attendees.process_refund')}
@@ -638,7 +638,7 @@ function EmailAttendeesSheet({
           <button
             type="button"
             onClick={close}
-            className="rounded bg-white/[0.07] px-4 py-2.5 text-sm font-semibold text-white/70 transition-colors hover:bg-white/[0.12] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+            className="rounded bg-surface-raised px-4 py-2.5 text-sm font-semibold text-fg-muted transition-colors hover:bg-surface-high focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
           >
             {tx('actions.cancel')}
           </button>
@@ -646,7 +646,7 @@ function EmailAttendeesSheet({
             type="button"
             onClick={send}
             disabled={sending || recipients === 0}
-            className="inline-flex items-center gap-2 rounded bg-white px-4 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+            className="inline-flex items-center gap-2 rounded bg-inverse px-4 py-2.5 text-sm font-semibold text-on-inverse transition-colors hover:bg-inverse-hover disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
           >
             <Send className="h-4 w-4" />
             {sending ? tx('event_tools.compose_sending') : tx('event_tools.compose_send', { count: recipients })}
@@ -655,8 +655,8 @@ function EmailAttendeesSheet({
       }
     >
       <div className="space-y-4 p-6">
-        <p className="text-sm text-white/70">{tx('event_tools.compose_intro', { count: recipients })}</p>
-        <label htmlFor="attendee-update" className="block text-xs text-white/70">
+        <p className="text-sm text-fg-muted">{tx('event_tools.compose_intro', { count: recipients })}</p>
+        <label htmlFor="attendee-update" className="block text-xs text-fg-muted">
           {tx('event_tools.compose_label')}
         </label>
         <textarea
@@ -665,10 +665,10 @@ function EmailAttendeesSheet({
           onChange={(e) => setMessage(e.target.value.slice(0, 2000))}
           rows={8}
           placeholder={tx('event_tools.compose_placeholder')}
-          className="w-full rounded bg-white/[0.06] px-4 py-3 text-[16px] sm:text-sm text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-brand-500/60"
+          className="w-full rounded bg-surface px-4 py-3 text-base sm:text-sm text-fg placeholder-fg-faint focus:outline-none focus:ring-2 focus:ring-brand-500/60"
         />
-        <p className="text-right font-mono text-xs tabular-nums text-white/40">{message.length} / 2000</p>
-        {error && <p className="text-sm text-red-300">{error}</p>}
+        <p className="text-right font-mono text-xs tabular-nums text-fg-subtle">{message.length} / 2000</p>
+        {error && <p className="text-sm text-danger-soft">{error}</p>}
       </div>
     </Drawer>
   )

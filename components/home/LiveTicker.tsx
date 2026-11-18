@@ -36,7 +36,7 @@ export default function LiveTicker({ signals }: { signals: TickerSignal[] }) {
   return (
     <aside
       aria-label={t('home.ticker.aria', { defaultValue: 'Happening on Tikèm' })}
-      className="ticker relative overflow-hidden bg-white/[0.045]"
+      className="ticker relative overflow-hidden bg-surface-low"
     >
       <div
         className={`flex h-9 items-center ${
@@ -54,16 +54,16 @@ export default function LiveTicker({ signals }: { signals: TickerSignal[] }) {
               prefetch={false}
               aria-hidden={dup || undefined}
               tabIndex={dup ? -1 : undefined}
-              className={`${dup ? 'ticker-dup ' : ''}group flex shrink-0 items-center gap-2.5 px-5 font-mono text-[11px] uppercase tracking-[0.08em] text-white/50 outline-none transition-colors hover:text-white focus-visible:text-white focus-visible:underline`}
+              className={`${dup ? 'ticker-dup ' : ''}group flex shrink-0 items-center gap-2.5 px-5 font-mono text-eyebrow uppercase tracking-[0.08em] text-fg-subtle outline-none transition-colors hover:text-fg focus-visible:text-fg focus-visible:underline`}
             >
               <span
                 aria-hidden
                 className={`h-1.5 w-1.5 shrink-0 rounded-full ${
-                  s.kind === 'live' ? 'ticker-live bg-[#14B8A6]' : 'bg-white/35'
+                  s.kind === 'live' ? 'ticker-live bg-brand-500' : 'bg-fg/35'
                 }`}
               />
-              <span className="text-white/85 group-hover:text-white">{s.title}</span>
-              {s.city && <span className="text-white/35">{s.city}</span>}
+              <span className="text-fg-soft group-hover:text-fg">{s.title}</span>
+              {s.city && <span className="text-fg-faint">{s.city}</span>}
               <span>{label(s)}</span>
             </Link>
           )

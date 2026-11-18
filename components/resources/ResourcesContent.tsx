@@ -70,11 +70,11 @@ function GuideRow({ guide, index }: { guide: Guide; index: string }) {
   const title = t(`resources.guides.${guide.key}.title`)
   const pdfCodes = guide.pdfCodes ?? guide.codes
   return (
-    <div className="group relative border-t border-white/10 transition-colors duration-300 hover:bg-white/[0.02]">
+    <div className="group relative border-t border-line transition-colors duration-300 hover:bg-surface-low">
       <div className="grid grid-cols-1 gap-4 py-7 sm:grid-cols-[64px_1fr_auto] sm:items-baseline sm:gap-8 sm:py-9">
         {/* index + icon */}
         <div className="flex items-center gap-3 sm:flex-col sm:items-start sm:gap-4">
-          <span className="label-mono text-[12px] text-white/35">{index}</span>
+          <span className="label-mono text-caption text-fg-faint">{index}</span>
           <Icon className="h-4 w-4 text-brand-400/80" strokeWidth={1.75} />
         </div>
 
@@ -86,12 +86,12 @@ function GuideRow({ guide, index }: { guide: Guide; index: string }) {
             rel="noopener noreferrer"
             className="group/title inline-flex items-baseline gap-3"
           >
-            <span className="font-display lowercase italic text-[clamp(26px,3.4vw,42px)] leading-[1.05] text-white/85 transition-all duration-300 group-hover:translate-x-1.5 group-hover:text-white">
+            <span className="font-display lowercase italic text-[clamp(26px,3.4vw,42px)] leading-[1.05] text-fg-soft transition-all duration-300 group-hover:translate-x-1.5 group-hover:text-fg">
               {title.toLowerCase()}
             </span>
-            <ArrowUpRight className="h-[0.55em] w-[0.55em] shrink-0 translate-y-1 self-center text-white/0 transition-all duration-300 group-hover:text-brand-400" />
+            <ArrowUpRight className="h-[0.55em] w-[0.55em] shrink-0 translate-y-1 self-center text-fg/0 transition-all duration-300 group-hover:text-brand-400" />
           </a>
-          <p className="mt-2 max-w-xl text-[14px] leading-relaxed text-white/50">
+          <p className="mt-2 max-w-xl text-sm leading-relaxed text-fg-subtle">
             {t(`resources.guides.${guide.key}.body`)}
           </p>
         </div>
@@ -99,12 +99,12 @@ function GuideRow({ guide, index }: { guide: Guide; index: string }) {
         {/* the languages */}
         <div className="flex flex-wrap items-center gap-2 sm:justify-end">
           {guide.codes.map((c) => (
-            <span key={c} className="flex items-center overflow-hidden rounded border border-white/10">
+            <span key={c} className="flex items-center overflow-hidden rounded border border-line">
               <a
                 href={`/guides/${guide.slug}-${c}.html`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-3 py-1.5 font-mono text-[11px] tracking-wider text-white/70 transition-colors hover:bg-white/5 hover:text-brand-300"
+                className="px-3 py-1.5 font-mono text-eyebrow tracking-wider text-fg-muted transition-colors hover:bg-surface hover:text-brand-300"
               >
                 {c.toUpperCase()}
               </a>
@@ -112,7 +112,7 @@ function GuideRow({ guide, index }: { guide: Guide; index: string }) {
                 <a
                   href={`/guides/${guide.slug}-${c}.pdf`}
                   download
-                  className="border-l border-white/10 px-2.5 py-1.5 text-white/45 transition-colors hover:bg-white/5 hover:text-brand-300"
+                  className="border-l border-line px-2.5 py-1.5 text-fg-subtle transition-colors hover:bg-surface hover:text-brand-300"
                   aria-label={`${title} (${LANG_LABEL[c]}). PDF`}
                 >
                   <Download className="h-3 w-3" />
@@ -143,7 +143,7 @@ function Chapter({
       {/* the chapter's ghost numeral */}
       <span
         aria-hidden
-        className="pointer-events-none absolute -top-4 right-2 font-grotesk text-[clamp(120px,22vw,280px)] font-bold leading-none tracking-[-0.04em] text-white/[0.03] sm:right-6"
+        className="pointer-events-none absolute -top-4 right-2 font-grotesk text-[clamp(120px,22vw,280px)] font-bold leading-none tracking-[-0.04em] text-fg/3 sm:right-6"
       >
         {index}
       </span>
@@ -153,14 +153,14 @@ function Chapter({
             <p className="eyebrow text-brand-400">
               {index} &nbsp; {t(`resources.${chapter}_kicker`)}
             </p>
-            <h2 className="mt-3 font-grotesk text-[clamp(30px,5vw,54px)] font-bold uppercase leading-[0.95] tracking-[-0.02em] text-white">
+            <h2 className="mt-3 font-grotesk text-[clamp(30px,5vw,54px)] font-bold uppercase leading-[0.95] tracking-[-0.02em] text-fg">
               {t(`resources.${chapter}_title`)}
             </h2>
           </div>
-          <p className="max-w-sm text-[14px] leading-relaxed text-white/50">{t(`resources.${chapter}_blurb`)}</p>
+          <p className="max-w-sm text-sm leading-relaxed text-fg-subtle">{t(`resources.${chapter}_blurb`)}</p>
         </div>
       </Reveal>
-      <div className="border-b border-white/10">
+      <div className="border-b border-line">
         {guides.map((g, i) => (
           <Reveal key={g.slug} delay={i * 70}>
             <GuideRow guide={g} index={String(startAt + i).padStart(2, '0')} />
@@ -178,17 +178,17 @@ export default function ResourcesContent() {
     <>
       {/* ACT 0 — the statement. This is a playbook, not a help center.
           The guides themselves float around it, like the homepage's posters. */}
-      <section className="relative overflow-hidden bg-white/[0.03]">
+      <section className="relative overflow-hidden bg-surface-low">
         <FloatingGuides />
         <div className="relative mx-auto max-w-7xl px-4 pb-16 pt-20 sm:px-6 sm:pb-24 sm:pt-32 lg:px-8">
           <p
-            className="plt-enter font-display lowercase italic !text-[17px] !leading-none text-white/60"
+            className="plt-enter font-display lowercase italic !text-lead !leading-none text-fg-muted"
             style={{ ['--d' as any]: '0s' }}
           >
             {t('resources.hero_eyebrow')}
           </p>
           <h1
-            className="plt-enter mt-5 font-grotesk font-bold uppercase tracking-[-0.02em] text-white !leading-[0.95] !text-[clamp(52px,10vw,140px)]"
+            className="plt-enter mt-5 font-grotesk font-bold uppercase tracking-[-0.02em] text-fg !leading-[0.95] !text-[clamp(52px,10vw,140px)]"
             style={{ ['--d' as any]: '0.08s' }}
           >
             {t('resources.hero_line1')}
@@ -196,7 +196,7 @@ export default function ResourcesContent() {
             {t('resources.hero_line2')}
           </h1>
           <p
-            className="plt-enter mt-6 max-w-xl font-display lowercase italic !text-[clamp(18px,2.4vw,24px)] !leading-snug text-white/70"
+            className="plt-enter mt-6 max-w-xl font-display lowercase italic !text-[clamp(18px,2.4vw,24px)] !leading-snug text-fg-muted"
             style={{ ['--d' as any]: '0.18s' }}
           >
             {t('resources.hero_sub')}
@@ -205,7 +205,7 @@ export default function ResourcesContent() {
         {/* scroll cue — a breathing hairline */}
         <div
           aria-hidden
-          className="plt-breathe absolute bottom-5 left-1/2 hidden h-12 w-px -translate-x-1/2 bg-gradient-to-b from-transparent to-white/40 lg:block"
+          className="plt-breathe absolute bottom-5 left-1/2 hidden h-12 w-px -translate-x-1/2 bg-gradient-to-b from-transparent to-fg/40 lg:block"
         />
       </section>
 
@@ -239,7 +239,7 @@ export default function ResourcesContent() {
         <div className="relative mx-auto max-w-4xl px-5 py-24 text-center sm:px-6 sm:py-32 lg:px-8">
           <OuPare />
           <Reveal delay={200}>
-            <p className="mx-auto mt-4 max-w-md text-[15px] leading-relaxed text-white/55">
+            <p className="mx-auto mt-4 max-w-md text-body leading-relaxed text-fg-muted">
               {t('resources.outro_sub')}
             </p>
           </Reveal>
@@ -247,14 +247,14 @@ export default function ResourcesContent() {
             {/* Straight into the composer — no account needed until publish. */}
             <Link
               href="/create"
-              className="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-7 py-3.5 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-700"
+              className="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-7 py-3.5 text-sm font-semibold text-fg shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-700"
             >
               {t('resources.cta_create')}
               <ArrowRight className="h-4 w-4" />
             </Link>
             <Link
               href="/support"
-              className="inline-flex items-center rounded-xl border border-white/15 px-7 py-3.5 text-sm font-semibold text-white/85 transition-all duration-200 hover:border-white/30 hover:bg-white/5"
+              className="inline-flex items-center rounded-xl border border-line-strong px-7 py-3.5 text-sm font-semibold text-fg-soft transition-all duration-200 hover:border-fg/30 hover:bg-surface"
             >
               {t('resources.cta_support')}
             </Link>

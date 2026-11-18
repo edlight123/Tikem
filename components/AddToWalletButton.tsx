@@ -365,7 +365,7 @@ export default function AddToWalletButton({ ticket, event, qrElementId = 'ticket
       <button
         onClick={() => setShowOptions(!showOptions)}
         disabled={isDownloading}
-        className="w-full inline-flex h-14 items-center justify-center gap-3 px-6 bg-white hover:bg-white/90 text-black rounded font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        className="w-full inline-flex h-14 items-center justify-center gap-3 px-6 bg-inverse hover:bg-inverse-hover text-on-inverse rounded font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
         <Wallet className="w-5 h-5" />
         {isDownloading ? 'Preparing...' : 'Save Ticket'}
@@ -381,17 +381,17 @@ export default function AddToWalletButton({ ticket, event, qrElementId = 'ticket
 
       {/* Options Dropdown */}
       {showOptions && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-[#1c1c1c] rounded-2xl shadow-2xl overflow-hidden z-50">
+        <div className="absolute top-full left-0 right-0 mt-2 bg-surface-raised-solid rounded-2xl shadow-2xl overflow-hidden z-50">
           <button
             onClick={handleDownloadPDF}
-            className="w-full flex items-center gap-3 px-6 py-4 hover:bg-white/[0.06] transition-colors text-left"
+            className="w-full flex items-center gap-3 px-6 py-4 hover:bg-surface transition-colors text-left"
           >
-            <div className="w-10 h-10 bg-white/[0.08] rounded flex items-center justify-center">
-              <Download className="w-5 h-5 text-white/90" />
+            <div className="w-10 h-10 bg-surface-raised rounded flex items-center justify-center">
+              <Download className="w-5 h-5 text-fg" />
             </div>
             <div>
-              <div className="font-bold text-white">Download PDF</div>
-              <div className="text-xs text-white/65">Print or save to device</div>
+              <div className="font-bold text-fg">Download PDF</div>
+              <div className="text-xs text-fg-muted">Print or save to device</div>
             </div>
           </button>
 
@@ -399,14 +399,14 @@ export default function AddToWalletButton({ ticket, event, qrElementId = 'ticket
             <button
               onClick={handleAddToAppleWallet}
               disabled={isAddingToWallet !== null}
-              className="w-full flex items-center gap-3 px-6 py-4 hover:bg-white/[0.06] transition-colors text-left disabled:opacity-50"
+              className="w-full flex items-center gap-3 px-6 py-4 hover:bg-surface transition-colors text-left disabled:opacity-50"
             >
-              <div className="w-10 h-10 bg-white/[0.08] rounded flex items-center justify-center">
-                <Wallet className="w-5 h-5 text-white" />
+              <div className="w-10 h-10 bg-surface-raised rounded flex items-center justify-center">
+                <Wallet className="w-5 h-5 text-fg" />
               </div>
               <div>
-                <div className="font-bold text-white">Apple Wallet</div>
-                <div className="text-xs text-white/65">
+                <div className="font-bold text-fg">Apple Wallet</div>
+                <div className="text-xs text-fg-muted">
                   {isAddingToWallet === 'ios' ? 'Preparing your pass…' : 'For iPhone users'}
                 </div>
               </div>
@@ -417,14 +417,14 @@ export default function AddToWalletButton({ ticket, event, qrElementId = 'ticket
             <button
               onClick={handleAddToGooglePay}
               disabled={isAddingToWallet !== null}
-              className="w-full flex items-center gap-3 px-6 py-4 hover:bg-white/[0.06] transition-colors text-left disabled:opacity-50"
+              className="w-full flex items-center gap-3 px-6 py-4 hover:bg-surface transition-colors text-left disabled:opacity-50"
             >
-              <div className="w-10 h-10 bg-white/[0.08] rounded flex items-center justify-center">
-                <Smartphone className="w-5 h-5 text-white/90" />
+              <div className="w-10 h-10 bg-surface-raised rounded flex items-center justify-center">
+                <Smartphone className="w-5 h-5 text-fg" />
               </div>
               <div>
-                <div className="font-bold text-white">Google Wallet</div>
-                <div className="text-xs text-white/65">
+                <div className="font-bold text-fg">Google Wallet</div>
+                <div className="text-xs text-fg-muted">
                   {isAddingToWallet === 'android' ? 'Preparing your pass…' : 'For Android users'}
                 </div>
               </div>

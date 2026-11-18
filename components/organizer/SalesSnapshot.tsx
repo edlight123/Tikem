@@ -72,28 +72,28 @@ export function SalesSnapshot({ data, currency = 'HTG' }: SalesSnapshotProps) {
   }
 
   return (
-    <div className="rounded-2xl bg-white/[0.03] p-4 shadow-soft sm:p-5">
+    <div className="rounded-2xl bg-surface-low p-4 shadow-soft sm:p-5">
       {/* Header with Toggle */}
       <div className="mb-3.5 flex items-center justify-between gap-3">
         <div className="flex items-baseline gap-2.5 min-w-0">
-          <h3 className="font-display italic text-lg leading-none text-white sm:text-xl">{t('sales_snapshot.title')}</h3>
-          <span className="truncate text-xs text-white/40">{getRangeLabel(range)}</span>
+          <h3 className="font-display italic text-lg leading-none text-fg sm:text-xl">{t('sales_snapshot.title')}</h3>
+          <span className="truncate text-xs text-fg-subtle">{getRangeLabel(range)}</span>
         </div>
         {/*
-          The selected range used to be `bg-white/[0.03]` sitting inside a
-          `bg-white/[0.03]` track on a card of the same value — three identical
+          The selected range used to be `bg-surface-low` sitting inside a
+          `bg-surface-low` track on a card of the same value — three identical
           fills, so nothing read as chosen. Selection is a white fill now, and
           the ::after gives each 30px chip a 44px touch box.
         */}
-        <div className="flex shrink-0 items-center gap-0.5 rounded bg-white/[0.06] p-1">
+        <div className="flex shrink-0 items-center gap-0.5 rounded bg-surface p-1">
           {(['7d', '30d', 'lifetime'] as TimeRange[]).map((r) => (
             <button
               key={r}
               onClick={() => setRange(r)}
-              className={`relative inline-flex items-center rounded px-2.5 py-1.5 text-[13px] font-medium leading-[18px] transition-colors after:absolute after:inset-x-0 after:-inset-y-[7px] after:content-[''] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
+              className={`relative inline-flex items-center rounded px-2.5 py-1.5 text-meta font-medium leading-[18px] transition-colors after:absolute after:inset-x-0 after:-inset-y-[7px] after:content-[''] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
                 range === r
-                  ? 'bg-white text-black'
-                  : 'text-white/70 hover:bg-white/[0.12] hover:text-white'
+                  ? 'bg-inverse text-on-inverse'
+                  : 'text-fg-muted hover:bg-surface-high hover:text-fg'
               }`}
             >
               {r === '7d' ? '7d' : r === '30d' ? '30d' : 'Lifetime'}
@@ -104,33 +104,33 @@ export function SalesSnapshot({ data, currency = 'HTG' }: SalesSnapshotProps) {
 
       {/* Metrics row — compact chips (icon + label inline, value below) */}
       <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
-        <div className="rounded-xl bg-white/[0.06] px-3.5 py-3">
-          <div className="mb-1 flex items-center gap-1.5 text-white/50">
+        <div className="rounded-xl bg-surface px-3.5 py-3">
+          <div className="mb-1 flex items-center gap-1.5 text-fg-subtle">
             <Calendar className="h-3.5 w-3.5 text-brand-300" />
-            <p className="label-mono text-[11px] uppercase">{t('sales_snapshot.events')}</p>
+            <p className="label-mono text-eyebrow uppercase">{t('sales_snapshot.events')}</p>
           </div>
-          <p className="text-2xl font-bold leading-none text-white font-mono tabular-nums">{metrics.upcomingEvents}</p>
-          <p className="mt-1 text-[11px] text-white/40">{t('sales_snapshot.upcoming')}</p>
+          <p className="text-2xl font-bold leading-none text-fg font-mono tabular-nums">{metrics.upcomingEvents}</p>
+          <p className="mt-1 text-eyebrow text-fg-subtle">{t('sales_snapshot.upcoming')}</p>
         </div>
 
-        <div className="rounded-xl bg-white/[0.06] px-3.5 py-3">
-          <div className="mb-1 flex items-center gap-1.5 text-white/50">
+        <div className="rounded-xl bg-surface px-3.5 py-3">
+          <div className="mb-1 flex items-center gap-1.5 text-fg-subtle">
             <Users className="h-3.5 w-3.5 text-brand-300" />
-            <p className="label-mono text-[11px] uppercase">{t('sales_snapshot.tickets')}</p>
+            <p className="label-mono text-eyebrow uppercase">{t('sales_snapshot.tickets')}</p>
           </div>
-          <p className="text-2xl font-bold leading-none text-white font-mono tabular-nums">{metrics.ticketsSold}</p>
-          <p className="mt-1 text-[11px] text-white/40">{t('sales_snapshot.sold')}</p>
+          <p className="text-2xl font-bold leading-none text-fg font-mono tabular-nums">{metrics.ticketsSold}</p>
+          <p className="mt-1 text-eyebrow text-fg-subtle">{t('sales_snapshot.sold')}</p>
         </div>
 
-        <div className="rounded-xl bg-white/[0.06] px-3.5 py-3">
-          <div className="mb-1 flex items-center gap-1.5 text-white/50">
+        <div className="rounded-xl bg-surface px-3.5 py-3">
+          <div className="mb-1 flex items-center gap-1.5 text-fg-subtle">
             <DollarSign className="h-3.5 w-3.5 text-brand-300" />
-            <p className="label-mono text-[11px] uppercase">{t('sales_snapshot.revenue')}</p>
+            <p className="label-mono text-eyebrow uppercase">{t('sales_snapshot.revenue')}</p>
           </div>
-          <p className={`font-bold leading-tight ${metrics.revenueCents === 0 ? 'text-base text-white' : 'text-2xl leading-none font-mono tabular-nums text-brand-300'}`}>
+          <p className={`font-bold leading-tight ${metrics.revenueCents === 0 ? 'text-base text-fg' : 'text-2xl leading-none font-mono tabular-nums text-brand-300'}`}>
             {formatRevenue()}
           </p>
-          <p className="mt-1 text-[11px] text-white/40">
+          <p className="mt-1 text-eyebrow text-fg-subtle">
             {metrics.revenueCents === 0
               ? 'Start selling tickets'
               : hasMultipleCurrencies
@@ -139,13 +139,13 @@ export function SalesSnapshot({ data, currency = 'HTG' }: SalesSnapshotProps) {
           </p>
         </div>
 
-        <div className="rounded-xl bg-white/[0.06] px-3.5 py-3">
-          <div className="mb-1 flex items-center gap-1.5 text-white/50">
+        <div className="rounded-xl bg-surface px-3.5 py-3">
+          <div className="mb-1 flex items-center gap-1.5 text-fg-subtle">
             <TrendingUp className="h-3.5 w-3.5 text-brand-300" />
-            <p className="label-mono text-[11px] uppercase">{t('sales_snapshot.avg_event')}</p>
+            <p className="label-mono text-eyebrow uppercase">{t('sales_snapshot.avg_event')}</p>
           </div>
-          <p className="text-2xl font-bold leading-none text-white font-mono tabular-nums">{metrics.avgTicketsPerEvent.toFixed(1)}</p>
-          <p className="mt-1 text-[11px] text-white/40">{t('sales_snapshot.tickets_per_event')}</p>
+          <p className="text-2xl font-bold leading-none text-fg font-mono tabular-nums">{metrics.avgTicketsPerEvent.toFixed(1)}</p>
+          <p className="mt-1 text-eyebrow text-fg-subtle">{t('sales_snapshot.tickets_per_event')}</p>
         </div>
       </div>
     </div>

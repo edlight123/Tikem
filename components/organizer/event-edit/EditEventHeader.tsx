@@ -34,22 +34,22 @@ export function EditEventHeader({
   const { t } = useTranslation('organizer')
 
   return (
-    <div className="sticky top-0 z-50 bg-[#0a0a0a]/90 backdrop-blur">
+    <div className="sticky top-0 z-50 bg-canvas/90 backdrop-blur">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           {/* Left: Title & Status */}
           <div className="flex items-center gap-4 flex-1 min-w-0">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-3 mb-1">
-                <h1 className="text-xl md:text-2xl font-bold text-white truncate">
+                <h1 className="text-xl md:text-2xl font-bold text-fg truncate">
                   {title || 'Untitled Event'}
                 </h1>
                 <StatusChip tone={isPublished ? 'success' : 'neutral'} className="text-sm">
                   {isPublished ? 'Published' : 'Draft'}
                 </StatusChip>
                 {hasUnsavedChanges && (
-                  <span className="text-sm text-amber-300 font-medium flex items-center gap-1">
-                    <span className="w-2 h-2 bg-amber-400 rounded-full animate-pulse"></span>
+                  <span className="text-sm text-warning-soft font-medium flex items-center gap-1">
+                    <span className="w-2 h-2 bg-warning rounded-full animate-pulse"></span>
                     {t('edit_event_header.unsaved')}
                   </span>
                 )}
@@ -59,23 +59,23 @@ export function EditEventHeader({
               <div className="flex items-center gap-3">
                 <div className="flex-1 max-w-xs">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-semibold text-white/60">
+                    <span className="text-xs font-semibold text-fg-muted">
                       {completionPercentage}% Complete
                     </span>
                     {missingItemsCount > 0 && (
-                      <span className="text-xs text-amber-300 font-medium">
+                      <span className="text-xs text-warning-soft font-medium">
                         {missingItemsCount} item{missingItemsCount !== 1 ? 's' : ''} missing
                       </span>
                     )}
                   </div>
-                  <div className="w-full bg-white/[0.07] rounded h-2">
+                  <div className="w-full bg-surface-raised rounded h-2">
                     <div
                       className={`h-2 rounded transition-all duration-500 ${
                         completionPercentage === 100
-                          ? 'bg-emerald-400'
+                          ? 'bg-success'
                           : completionPercentage >= 60
-                          ? 'bg-white'
-                          : 'bg-amber-500'
+                          ? 'bg-inverse'
+                          : 'bg-warning-strong'
                       }`}
                       style={{ width: `${completionPercentage}%` }}
                     ></div>
@@ -83,12 +83,12 @@ export function EditEventHeader({
                 </div>
 
                 {canPublish ? (
-                  <div className="hidden md:flex items-center gap-1.5 text-emerald-300 text-sm font-medium">
+                  <div className="hidden md:flex items-center gap-1.5 text-success-soft text-sm font-medium">
                     <CheckCircle className="w-4 h-4" />
                     <span>{t('edit_event_header.ready_to_publish')}</span>
                   </div>
                 ) : (
-                  <div className="hidden md:flex items-center gap-1.5 text-amber-300 text-sm font-medium">
+                  <div className="hidden md:flex items-center gap-1.5 text-warning-soft text-sm font-medium">
                     <AlertCircle className="w-4 h-4" />
                     <span>{t('edit_event_header.complete_required_fields')}</span>
                   </div>
@@ -106,8 +106,8 @@ export function EditEventHeader({
               disabled={isSaving || !hasUnsavedChanges}
               className={`flex items-center gap-2 px-4 py-2.5 rounded font-semibold transition-all ${
                 hasUnsavedChanges
-                  ? 'bg-white/[0.07] text-white hover:bg-white/[0.12]'
-                  : 'bg-white/[0.07] text-white/40 cursor-not-allowed'
+                  ? 'bg-surface-raised text-fg hover:bg-surface-high'
+                  : 'bg-surface-raised text-fg-subtle cursor-not-allowed'
               }`}
             >
               <Save className="w-4 h-4" />
@@ -121,7 +121,7 @@ export function EditEventHeader({
               <Link
                 href={`/events/${eventId}`}
                 target="_blank"
-                className="flex items-center gap-2 px-4 py-2.5 rounded font-semibold bg-white/[0.07] text-white/70 hover:bg-white/[0.12] transition-all"
+                className="flex items-center gap-2 px-4 py-2.5 rounded font-semibold bg-surface-raised text-fg-muted hover:bg-surface-high transition-all"
               >
                 <Eye className="w-4 h-4" />
                 <span className="hidden sm:inline">{t('actions.preview')}</span>
@@ -136,9 +136,9 @@ export function EditEventHeader({
               className={`flex items-center gap-2 px-5 py-2.5 rounded font-semibold transition-all ${
                 canPublish && !isSaving
                   ? isPublished
-                    ? 'bg-white/[0.07] text-white hover:bg-white/[0.12]'
-                    : 'bg-white text-black hover:bg-white/90'
-                  : 'bg-white/[0.07] text-white/40 cursor-not-allowed'
+                    ? 'bg-surface-raised text-fg hover:bg-surface-high'
+                    : 'bg-inverse text-on-inverse hover:bg-inverse-hover'
+                  : 'bg-surface-raised text-fg-subtle cursor-not-allowed'
               }`}
               title={!canPublish ? `Complete ${missingItemsCount} required item${missingItemsCount !== 1 ? 's' : ''} to publish` : ''}
             >
@@ -153,12 +153,12 @@ export function EditEventHeader({
         {/* Mobile Status Indicator */}
         <div className="md:hidden mt-3 flex items-center gap-2">
           {canPublish ? (
-            <div className="flex items-center gap-1.5 text-emerald-300 text-sm font-medium">
+            <div className="flex items-center gap-1.5 text-success-soft text-sm font-medium">
               <CheckCircle className="w-4 h-4" />
               <span>{t('edit_event_header.ready_to_publish')}</span>
             </div>
           ) : (
-            <div className="flex items-center gap-1.5 text-amber-300 text-sm font-medium">
+            <div className="flex items-center gap-1.5 text-warning-soft text-sm font-medium">
               <AlertCircle className="w-4 h-4" />
               <span>Complete {missingItemsCount} required field{missingItemsCount !== 1 ? 's' : ''}</span>
             </div>

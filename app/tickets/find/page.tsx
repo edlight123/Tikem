@@ -22,12 +22,12 @@ export default async function FindTicketsPage() {
   const smsEnabled = isSmsConfigured()
   const lang = await resolveServerLanguage()
   return (
-    <div className="min-h-screen bg-[#0a0a0a]">
+    <div className="min-h-screen bg-canvas">
       <Navbar user={null} isAdmin={false} />
 
       <main className="max-w-md mx-auto px-4 py-12 pb-mobile-nav md:pb-16">
-        <h1 className="font-display italic lowercase !text-[34px] !leading-none text-white">Find my tickets</h1>
-        <p className="text-white/60 mt-2 leading-relaxed">
+        <h1 className="font-display italic lowercase !text-display !leading-none text-fg">Find my tickets</h1>
+        <p className="text-fg-muted mt-2 leading-relaxed">
           {smsEnabled
             ? tServer(lang, 'find_tickets.intro_sms', "Bought without an account? Enter the email address or phone number you used at checkout and we'll send your ticket link straight back to it.")
             : tServer(lang, 'find_tickets.intro_email_only', "Bought without an account? Enter the email address or phone number you used at checkout and we'll email your ticket link to the address on that order.")}
@@ -37,7 +37,7 @@ export default async function FindTicketsPage() {
           <FindTicketsForm smsEnabled={smsEnabled} />
         </div>
 
-        <p className="mt-8 text-xs text-white/40 text-center">
+        <p className="mt-8 text-xs text-fg-subtle text-center">
           Have an account?{' '}
           <a href="/auth/login" className="text-brand-400 underline underline-offset-2">
             Sign in

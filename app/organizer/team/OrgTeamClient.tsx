@@ -93,13 +93,13 @@ function RoleTiles({
             aria-checked={active}
             onClick={() => onChange(r.value)}
             className={`flex items-start gap-3 rounded px-4 py-3 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
-              active ? 'bg-white text-black' : 'bg-white/[0.06] text-white hover:bg-white/[0.1]'
+              active ? 'bg-inverse text-on-inverse' : 'bg-surface text-fg hover:bg-surface-raised'
             }`}
           >
-            <Icon className={`mt-0.5 h-4 w-4 shrink-0 ${active ? 'text-black/70' : 'text-white/60'}`} />
+            <Icon className={`mt-0.5 h-4 w-4 shrink-0 ${active ? 'text-on-inverse/70' : 'text-fg-muted'}`} />
             <span>
               <span className="block text-sm font-semibold">{t(`team_roles.${r.value}`)}</span>
-              <span className={`mt-0.5 block text-xs ${active ? 'text-black/60' : 'text-white/50'}`}>
+              <span className={`mt-0.5 block text-xs ${active ? 'text-on-inverse/60' : 'text-fg-subtle'}`}>
                 {t(`org_team.tile_${r.value}`)}
               </span>
             </span>
@@ -123,21 +123,21 @@ function FinanceToggle({ checked, onChange }: { checked: boolean; onChange: (nex
       role="switch"
       aria-checked={checked}
       onClick={() => onChange(!checked)}
-      className="flex w-full items-start gap-3 rounded bg-white/[0.06] px-4 py-3 text-left transition-colors hover:bg-white/[0.1] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+      className="flex w-full items-start gap-3 rounded bg-surface px-4 py-3 text-left transition-colors hover:bg-surface-raised focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
     >
       <span className="min-w-0 flex-1">
-        <span className="block text-sm font-semibold text-white">{t('finance_view.toggle_label')}</span>
-        <span className="mt-0.5 block text-xs leading-relaxed text-white/50">{t('finance_view.toggle_desc')}</span>
+        <span className="block text-sm font-semibold text-fg">{t('finance_view.toggle_label')}</span>
+        <span className="mt-0.5 block text-xs leading-relaxed text-fg-subtle">{t('finance_view.toggle_desc')}</span>
       </span>
       <span
         aria-hidden
         className={`relative mt-0.5 inline-flex h-6 w-10 shrink-0 items-center rounded-full transition-colors ${
-          checked ? 'bg-white' : 'bg-white/[0.16]'
+          checked ? 'bg-inverse' : 'bg-surface-high'
         }`}
       >
         <span
           className={`absolute h-5 w-5 rounded-full transition-transform ${
-            checked ? 'translate-x-[18px] bg-black' : 'translate-x-0.5 bg-white/70'
+            checked ? 'translate-x-[18px] bg-black' : 'translate-x-0.5 bg-fg/70'
           }`}
         />
       </span>
@@ -312,15 +312,15 @@ export default function OrgTeamClient({
         const you = m.isOwner ? viewerIsOwner : !!m.uid && m.uid === viewerId
         return (
           <div className="flex min-w-0 items-center gap-3">
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white/[0.12] text-sm font-semibold text-white">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-surface-high text-sm font-semibold text-fg">
               {initialOf(m.name || m.email)}
             </span>
             <div className="min-w-0">
-              <p className="truncate font-medium text-white">
+              <p className="truncate font-medium text-fg">
                 {m.name || m.email || EMPTY_VALUE}
-                {you && <span className="ml-2 text-xs font-normal text-white/40">{t('org_team.you')}</span>}
+                {you && <span className="ml-2 text-xs font-normal text-fg-subtle">{t('org_team.you')}</span>}
               </p>
-              {m.name && m.email && <p className="truncate text-xs text-white/50">{m.email}</p>}
+              {m.name && m.email && <p className="truncate text-xs text-fg-subtle">{m.email}</p>}
             </div>
           </div>
         )
@@ -331,20 +331,20 @@ export default function OrgTeamClient({
       header: t('org_team.role'),
       render: (m) =>
         m.isOwner ? (
-          <span className="text-sm font-semibold text-white">{roleLabel('owner')}</span>
+          <span className="text-sm font-semibold text-fg">{roleLabel('owner')}</span>
         ) : (
           <button
             type="button"
             onClick={() => openRoleEditor(m)}
             aria-label={t('org_team.change_role_for', { who: m.name || m.email })}
-            className="-mx-2 inline-flex items-center gap-1.5 rounded px-2 py-1 text-sm font-semibold text-white transition-colors hover:bg-white/[0.08] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+            className="-mx-2 inline-flex items-center gap-1.5 rounded px-2 py-1 text-sm font-semibold text-fg transition-colors hover:bg-surface-raised focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
           >
             {roleLabel(m.role)}
-            <ChevronDown className="h-3.5 w-3.5 text-white/40" aria-hidden />
+            <ChevronDown className="h-3.5 w-3.5 text-fg-subtle" aria-hidden />
             {m.role === 'admin' && m.finance_view && (
               // Dot + label, not a pill (no-status-pills rule).
-              <span className="ml-1.5 inline-flex items-center gap-1.5 text-xs font-medium text-white/55">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" aria-hidden />
+              <span className="ml-1.5 inline-flex items-center gap-1.5 text-xs font-medium text-fg-muted">
+                <span className="h-1.5 w-1.5 rounded-full bg-success" aria-hidden />
                 {t('finance_view.row_marker')}
               </span>
             )}
@@ -366,7 +366,7 @@ export default function OrgTeamClient({
       header: t('org_team.col_added'),
       hideOnMobile: true,
       render: (m) => m.isOwner ? null : (
-        <span className="font-mono tabular-nums text-sm text-white/40">
+        <span className="font-mono tabular-nums text-sm text-fg-subtle">
           {m.joined_at
             ? new Date(m.joined_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
             : EMPTY_VALUE}
@@ -388,7 +388,7 @@ export default function OrgTeamClient({
                 ? t('org_team.revoke_title', { who: m.name || m.email })
                 : t('org_team.remove_title', { who: m.name || m.email })
             }
-            className="inline-flex h-8 w-8 items-center justify-center rounded text-white/40 transition-colors hover:bg-red-500/10 hover:text-red-400 disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+            className="inline-flex h-8 w-8 items-center justify-center rounded text-fg-subtle transition-colors hover:bg-danger-strong/10 hover:text-danger disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
           >
             <Trash2 className="h-3.5 w-3.5" />
           </button>
@@ -403,7 +403,7 @@ export default function OrgTeamClient({
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="inline-flex items-center gap-2 rounded bg-white px-4 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+          className="inline-flex items-center gap-2 rounded bg-inverse px-4 py-2.5 text-sm font-semibold text-on-inverse transition-colors hover:bg-inverse-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
         >
           <UserPlus className="h-4 w-4" />
           {t('org_team.invite_member')}
@@ -411,9 +411,9 @@ export default function OrgTeamClient({
       </div>
 
       {loadError && (
-        <p className="mb-4 rounded bg-red-500/10 px-3 py-2 text-sm text-red-300">{t('org_team.load_failed')}</p>
+        <p className="mb-4 rounded bg-danger-strong/10 px-3 py-2 text-sm text-danger-soft">{t('org_team.load_failed')}</p>
       )}
-      {rowError && <p className="mb-4 rounded bg-red-500/10 px-3 py-2 text-sm text-red-300">{rowError}</p>}
+      {rowError && <p className="mb-4 rounded bg-danger-strong/10 px-3 py-2 text-sm text-danger-soft">{rowError}</p>}
 
       <OrgDataTable rows={rows} columns={columns} rowKey={(m) => m.id} />
 
@@ -430,19 +430,19 @@ export default function OrgTeamClient({
       {/* What each role can really do: the same table as lib/organizer/teamRoles.ts. */}
       <section className="mt-10">
         <SectionHeader title={t('org_team.access_levels')} className="mb-3" />
-        <div className="overflow-hidden rounded bg-white/[0.055]">
+        <div className="overflow-hidden rounded bg-surface">
           {ACCESS.map(({ role: r, icon: Icon }, i) => (
             <div
               key={r}
-              className={`flex items-start gap-3 px-4 py-4 sm:px-5 ${i > 0 ? 'border-t border-white/[0.06]' : ''}`}
+              className={`flex items-start gap-3 px-4 py-4 sm:px-5 ${i > 0 ? 'border-t border-line-soft' : ''}`}
             >
-              <Icon className="mt-0.5 h-4 w-4 shrink-0 text-white/50" aria-hidden />
+              <Icon className="mt-0.5 h-4 w-4 shrink-0 text-fg-subtle" aria-hidden />
               <div className="min-w-0 sm:flex sm:flex-1 sm:gap-6">
-                <p className="text-sm font-semibold text-white sm:w-28 sm:shrink-0">{roleLabel(r)}</p>
+                <p className="text-sm font-semibold text-fg sm:w-28 sm:shrink-0">{roleLabel(r)}</p>
                 <div className="mt-0.5 sm:mt-0">
-                  <p className="text-[13px] leading-relaxed text-white/60">{t(`org_team.access_${r}`)}</p>
+                  <p className="text-meta leading-relaxed text-fg-muted">{t(`org_team.access_${r}`)}</p>
                   {r === 'admin' && (
-                    <p className="mt-1 text-[13px] leading-relaxed text-white/45">{t('finance_view.access_note')}</p>
+                    <p className="mt-1 text-meta leading-relaxed text-fg-subtle">{t('finance_view.access_note')}</p>
                   )}
                 </div>
               </div>
@@ -462,7 +462,7 @@ export default function OrgTeamClient({
             <button
               type="button"
               onClick={() => { setOpen(false); reset() }}
-              className="rounded bg-white/[0.07] px-4 py-2.5 text-sm font-semibold text-white/70 transition-colors hover:bg-white/[0.12] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+              className="rounded bg-surface-raised px-4 py-2.5 text-sm font-semibold text-fg-muted transition-colors hover:bg-surface-high focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
             >
               {t('actions.cancel')}
             </button>
@@ -470,7 +470,7 @@ export default function OrgTeamClient({
               type="button"
               onClick={handleInvite}
               disabled={isPending}
-              className="inline-flex items-center gap-2 rounded bg-white px-4 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+              className="inline-flex items-center gap-2 rounded bg-inverse px-4 py-2.5 text-sm font-semibold text-on-inverse transition-colors hover:bg-inverse-hover disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
             >
               <UserPlus className="h-4 w-4" />
               {isPending ? t('org_team.inviting') : t('org_team.send_invite')}
@@ -486,7 +486,7 @@ export default function OrgTeamClient({
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="colleague@example.com"
-              className="bg-white/[0.06] w-full rounded px-4 py-3 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-1 focus:ring-brand-500"
+              className="bg-surface w-full rounded px-4 py-3 text-sm text-fg placeholder-fg-faint focus:outline-none focus:ring-1 focus:ring-brand-500"
             />
           </FormField>
           <FormField label={t('org_team.name')} htmlFor="team-name">
@@ -496,16 +496,16 @@ export default function OrgTeamClient({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder={t('org_team.optional')}
-              className="bg-white/[0.06] w-full rounded px-4 py-3 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-1 focus:ring-brand-500"
+              className="bg-surface w-full rounded px-4 py-3 text-sm text-fg placeholder-fg-faint focus:outline-none focus:ring-1 focus:ring-brand-500"
             />
           </FormField>
           <FormField label={t('org_team.role')}>
             <RoleTiles value={role} onChange={setRole} label={t('org_team.role')} />
           </FormField>
           {viewerIsOwner && role === 'admin' && <FinanceToggle checked={finance} onChange={setFinance} />}
-          <p className="text-xs leading-relaxed text-white/45">{t('org_team.invite_note')}</p>
+          <p className="text-xs leading-relaxed text-fg-subtle">{t('org_team.invite_note')}</p>
           {error && open && (
-            <p className="rounded bg-red-500/10 px-3 py-2 text-sm text-red-300">{error}</p>
+            <p className="rounded bg-danger-strong/10 px-3 py-2 text-sm text-danger-soft">{error}</p>
           )}
         </FormSection>
       </Drawer>
@@ -521,7 +521,7 @@ export default function OrgTeamClient({
             <button
               type="button"
               onClick={() => { setEditing(null); setError(null) }}
-              className="rounded bg-white/[0.07] px-4 py-2.5 text-sm font-semibold text-white/70 transition-colors hover:bg-white/[0.12] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+              className="rounded bg-surface-raised px-4 py-2.5 text-sm font-semibold text-fg-muted transition-colors hover:bg-surface-high focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
             >
               {t('actions.cancel')}
             </button>
@@ -529,7 +529,7 @@ export default function OrgTeamClient({
               type="button"
               onClick={handleRoleSave}
               disabled={isPending}
-              className="rounded bg-white px-4 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+              className="rounded bg-inverse px-4 py-2.5 text-sm font-semibold text-on-inverse transition-colors hover:bg-inverse-hover disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
             >
               {isPending ? t('org_team.saving') : t('org_team.save_role')}
             </button>
@@ -541,7 +541,7 @@ export default function OrgTeamClient({
             <RoleTiles value={editRole} onChange={setEditRole} label={t('org_team.role')} />
             {viewerIsOwner && editRole === 'admin' && <FinanceToggle checked={editFinance} onChange={setEditFinance} />}
             {error && !open && (
-              <p className="rounded bg-red-500/10 px-3 py-2 text-sm text-red-300">{error}</p>
+              <p className="rounded bg-danger-strong/10 px-3 py-2 text-sm text-danger-soft">{error}</p>
             )}
           </FormSection>
         )}

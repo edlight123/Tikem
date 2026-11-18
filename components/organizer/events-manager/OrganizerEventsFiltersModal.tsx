@@ -84,25 +84,25 @@ export default function OrganizerEventsFiltersModal({
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/50 z-40 transition-opacity"
+        className="fixed inset-0 bg-scrim-light z-40 transition-opacity"
         onClick={onClose}
       />
 
       {/* Modal */}
-      <div className="fixed inset-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-2xl z-50 flex flex-col bg-[#111] md:rounded-2xl md:shadow-2xl md:max-h-[90vh] overflow-hidden">
+      <div className="fixed inset-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-2xl z-50 flex flex-col bg-surface-solid md:rounded-2xl md:shadow-2xl md:max-h-[90vh] overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-white/10 px-6 py-4 text-white">
+        <div className="flex items-center justify-between border-b border-line px-6 py-4 text-fg">
           <div className="flex items-center gap-3">
-            <h2 className="font-display text-[22px] lowercase italic leading-none">filters</h2>
+            <h2 className="font-display text-section lowercase italic leading-none">filters</h2>
             {activeFiltersCount > 0 && (
-              <span className="rounded bg-white/[0.12] px-2.5 py-1 font-mono text-[13px] font-semibold tabular-nums text-white/80">
+              <span className="rounded bg-surface-high px-2.5 py-1 font-mono text-meta font-semibold tabular-nums text-fg-soft">
                 {activeFiltersCount} active
               </span>
             )}
           </div>
           <button
             onClick={onClose}
-            className="grid h-11 w-11 place-items-center rounded bg-white/[0.06] transition-colors hover:bg-white/[0.12]"
+            className="grid h-11 w-11 place-items-center rounded bg-surface transition-colors hover:bg-surface-high"
             aria-label={t('events_filters.close_filters')}
           >
             <X className="w-6 h-6" />
@@ -115,11 +115,11 @@ export default function OrganizerEventsFiltersModal({
           <div>
             <div className="flex items-center gap-2 mb-3">
               <Calendar className="w-5 h-5 text-brand-300" />
-              <label className="text-sm font-semibold text-white">{t('events_filters.date_range')}</label>
+              <label className="text-sm font-semibold text-fg">{t('events_filters.date_range')}</label>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="label-mono uppercase block text-xs text-white/60 mb-1">{t('events_filters.start_date')}</label>
+                <label className="label-mono uppercase block text-xs text-fg-muted mb-1">{t('events_filters.start_date')}</label>
                 <input
                   type="date"
                   value={localFilters.dateRange?.start || ''}
@@ -132,11 +132,11 @@ export default function OrganizerEventsFiltersModal({
                       }
                     }))
                   }
-                  className="h-11 w-full rounded bg-white/[0.06] px-3 text-[16px] text-white focus:bg-white/[0.09] focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand-500/40"
+                  className="h-11 w-full rounded bg-surface px-3 text-base text-fg focus:bg-surface-raised focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand-500/40"
                 />
               </div>
               <div>
-                <label className="label-mono uppercase block text-xs text-white/60 mb-1">{t('events_filters.end_date')}</label>
+                <label className="label-mono uppercase block text-xs text-fg-muted mb-1">{t('events_filters.end_date')}</label>
                 <input
                   type="date"
                   value={localFilters.dateRange?.end || ''}
@@ -149,7 +149,7 @@ export default function OrganizerEventsFiltersModal({
                       }
                     }))
                   }
-                  className="h-11 w-full rounded bg-white/[0.06] px-3 text-[16px] text-white focus:bg-white/[0.09] focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand-500/40"
+                  className="h-11 w-full rounded bg-surface px-3 text-base text-fg focus:bg-surface-raised focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand-500/40"
                 />
               </div>
             </div>
@@ -167,7 +167,7 @@ export default function OrganizerEventsFiltersModal({
           <div>
             <div className="flex items-center gap-2 mb-3">
               <MapPin className="w-5 h-5 text-brand-300" />
-              <label className="text-sm font-semibold text-white">{t('events_filters.cities')}</label>
+              <label className="text-sm font-semibold text-fg">{t('events_filters.cities')}</label>
             </div>
             <div className="flex flex-wrap gap-2">
               {availableCities.map((city) => {
@@ -176,10 +176,10 @@ export default function OrganizerEventsFiltersModal({
                   <button
                     key={city}
                     onClick={() => toggleCity(city)}
-                    className={`relative inline-flex items-center rounded px-2.5 py-1.5 text-[13px] font-medium leading-[18px] transition-colors after:absolute after:inset-x-0 after:-inset-y-[7px] after:content-[''] ${
+                    className={`relative inline-flex items-center rounded px-2.5 py-1.5 text-meta font-medium leading-[18px] transition-colors after:absolute after:inset-x-0 after:-inset-y-[7px] after:content-[''] ${
                       isSelected
-                        ? 'bg-white text-black'
-                        : 'bg-white/[0.06] text-white/70 hover:bg-white/[0.12] hover:text-white'
+                        ? 'bg-inverse text-on-inverse'
+                        : 'bg-surface text-fg-muted hover:bg-surface-high hover:text-fg'
                     }`}
                   >
                     {city}
@@ -193,7 +193,7 @@ export default function OrganizerEventsFiltersModal({
           <div>
             <div className="flex items-center gap-2 mb-3">
               <Tag className="w-5 h-5 text-brand-300" />
-              <label className="text-sm font-semibold text-white">{t('events_filters.categories')}</label>
+              <label className="text-sm font-semibold text-fg">{t('events_filters.categories')}</label>
             </div>
             <div className="flex flex-wrap gap-2">
               {availableCategories.map((category) => {
@@ -202,10 +202,10 @@ export default function OrganizerEventsFiltersModal({
                   <button
                     key={category}
                     onClick={() => toggleCategory(category)}
-                    className={`relative inline-flex items-center rounded px-2.5 py-1.5 text-[13px] font-medium leading-[18px] transition-colors after:absolute after:inset-x-0 after:-inset-y-[7px] after:content-[''] ${
+                    className={`relative inline-flex items-center rounded px-2.5 py-1.5 text-meta font-medium leading-[18px] transition-colors after:absolute after:inset-x-0 after:-inset-y-[7px] after:content-[''] ${
                       isSelected
-                        ? 'bg-white text-black'
-                        : 'bg-white/[0.06] text-white/70 hover:bg-white/[0.12] hover:text-white'
+                        ? 'bg-inverse text-on-inverse'
+                        : 'bg-surface text-fg-muted hover:bg-surface-high hover:text-fg'
                     }`}
                   >
                     {category}
@@ -219,35 +219,35 @@ export default function OrganizerEventsFiltersModal({
           <div>
             <div className="flex items-center gap-2 mb-3">
               <DollarSign className="w-5 h-5 text-brand-300" />
-              <label className="text-sm font-semibold text-white">{t('events_filters.sales_status')}</label>
+              <label className="text-sm font-semibold text-fg">{t('events_filters.sales_status')}</label>
             </div>
             <div className="flex gap-2">
               <button
                 onClick={() => setLocalFilters((prev) => ({ ...prev, hasSales: null }))}
-                className={`h-11 flex-1 rounded text-[13px] font-medium transition-colors ${
+                className={`h-11 flex-1 rounded text-meta font-medium transition-colors ${
                   localFilters.hasSales === null
-                    ? 'bg-white text-black'
-                    : 'bg-white/[0.06] text-white/70 hover:bg-white/[0.12] hover:text-white'
+                    ? 'bg-inverse text-on-inverse'
+                    : 'bg-surface text-fg-muted hover:bg-surface-high hover:text-fg'
                 }`}
               >
                 {t('events_filters.all_events')}
               </button>
               <button
                 onClick={() => setLocalFilters((prev) => ({ ...prev, hasSales: true }))}
-                className={`h-11 flex-1 rounded text-[13px] font-medium transition-colors ${
+                className={`h-11 flex-1 rounded text-meta font-medium transition-colors ${
                   localFilters.hasSales === true
-                    ? 'bg-white text-black'
-                    : 'bg-white/[0.06] text-white/70 hover:bg-white/[0.12] hover:text-white'
+                    ? 'bg-inverse text-on-inverse'
+                    : 'bg-surface text-fg-muted hover:bg-surface-high hover:text-fg'
                 }`}
               >
                 {t('events_filters.has_sales')}
               </button>
               <button
                 onClick={() => setLocalFilters((prev) => ({ ...prev, hasSales: false }))}
-                className={`h-11 flex-1 rounded text-[13px] font-medium transition-colors ${
+                className={`h-11 flex-1 rounded text-meta font-medium transition-colors ${
                   localFilters.hasSales === false
-                    ? 'bg-white text-black'
-                    : 'bg-white/[0.06] text-white/70 hover:bg-white/[0.12] hover:text-white'
+                    ? 'bg-inverse text-on-inverse'
+                    : 'bg-surface text-fg-muted hover:bg-surface-high hover:text-fg'
                 }`}
               >
                 {t('events_filters.no_sales')}
@@ -259,7 +259,7 @@ export default function OrganizerEventsFiltersModal({
           <div>
             <div className="flex items-center gap-2 mb-3">
               <ArrowUpDown className="w-5 h-5 text-brand-300" />
-              <label className="text-sm font-semibold text-white">{t('events_filters.sort_by')}</label>
+              <label className="text-sm font-semibold text-fg">{t('events_filters.sort_by')}</label>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <select
@@ -270,7 +270,7 @@ export default function OrganizerEventsFiltersModal({
                     sortBy: e.target.value as EventFilters['sortBy']
                   }))
                 }
-                className="h-11 rounded bg-white/[0.06] px-3 text-[16px] font-medium text-white focus:bg-white/[0.09] focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand-500/40"
+                className="h-11 rounded bg-surface px-3 text-base font-medium text-fg focus:bg-surface-raised focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand-500/40"
               >
                 <option value="date">{t('events_filters.event_date')}</option>
                 <option value="sales">{t('events_filters.ticket_sales')}</option>
@@ -285,7 +285,7 @@ export default function OrganizerEventsFiltersModal({
                     sortOrder: e.target.value as EventFilters['sortOrder']
                   }))
                 }
-                className="h-11 rounded bg-white/[0.06] px-3 text-[16px] font-medium text-white focus:bg-white/[0.09] focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand-500/40"
+                className="h-11 rounded bg-surface px-3 text-base font-medium text-fg focus:bg-surface-raised focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand-500/40"
               >
                 <option value="desc">{t('events_filters.descending')}</option>
                 <option value="asc">{t('events_filters.ascending')}</option>
@@ -295,23 +295,23 @@ export default function OrganizerEventsFiltersModal({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between gap-3 border-t border-white/10 bg-white/[0.04] px-6 py-4">
+        <div className="flex items-center justify-between gap-3 border-t border-line bg-surface-low px-6 py-4">
           <button
             onClick={handleClearAll}
-            className="px-4 py-2 text-sm font-medium text-white/70 hover:text-white transition-colors"
+            className="px-4 py-2 text-sm font-medium text-fg-muted hover:text-fg transition-colors"
           >
             {t('events_filters.clear_all')}
           </button>
           <div className="flex gap-3">
             <button
               onClick={onClose}
-              className="h-11 rounded bg-white/[0.08] px-5 text-sm font-semibold text-white/80 transition-colors hover:bg-white/[0.14] hover:text-white"
+              className="h-11 rounded bg-surface-raised px-5 text-sm font-semibold text-fg-soft transition-colors hover:bg-surface-high hover:text-fg"
             >
               {t('actions.cancel')}
             </button>
             <button
               onClick={handleApply}
-              className="h-11 rounded bg-white px-5 text-sm font-semibold text-black transition-colors hover:bg-white/90"
+              className="h-11 rounded bg-inverse px-5 text-sm font-semibold text-on-inverse transition-colors hover:bg-inverse-hover"
             >
               {t('events_filters.apply_filters')}
             </button>

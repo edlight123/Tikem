@@ -20,9 +20,9 @@ function Bar({ className = '' }: { className?: string }) {
 
 export default function Loading() {
   return (
-    <div className="min-h-screen bg-[#0a0a0a] pb-mobile-nav md:pb-8">
+    <div className="min-h-screen bg-canvas pb-mobile-nav md:pb-8">
       {/* Navbar — h-14 / sm:h-16, matching components/Navbar. */}
-      <div className="sticky top-0 z-50 border-b border-white/10 bg-[#0a0a0a]/80 backdrop-blur-xl">
+      <div className="sticky top-0 z-50 border-b border-line bg-canvas/80 backdrop-blur-xl">
         <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:h-16 sm:px-6 lg:px-8">
           <Bar className="h-7 w-24" />
           <Bar className="h-8 w-20 rounded" />
@@ -59,11 +59,11 @@ export default function Loading() {
         </div>
 
         {/* Key facts — date, venue, price. Traced off MobileKeyFacts rather
-            than eyeballed: `border-b border-white/10 px-4 py-5`, then a 15px
+            than eyeballed: `border-b border-line px-4 py-5`, then a 15px
             date line, a 14px venue line at mt-1.5, and a 15px price at mt-3.
             The old version used a flat `space-y-2` and no bottom rule, so the
             rule appeared out of nowhere when the real strip landed. */}
-        <div className="border-b border-white/10 px-4 py-5">
+        <div className="border-b border-line px-4 py-5">
           <Bar className="h-5 w-2/3" />
           <Bar className="mt-1.5 h-[18px] w-1/2" />
           <Bar className="mt-3 h-5 w-28" />
@@ -71,11 +71,11 @@ export default function Loading() {
 
         {/* The flat sections: MobileSections renders exactly five — about,
             date & time, venue & directions, organizer, share — in a
-            `divide-y divide-white/[0.06] px-4` stack, each `py-6` with a
+            `divide-y divide-line-soft px-4` stack, each `py-6` with a
             22px Instrument Serif heading at `mb-3`. The heading bar is
             h-[22px], not h-5: at 20px every heading down the page sat two
             pixels high, which compounds into a visible jump by the fifth. */}
-        <div className="divide-y divide-white/[0.06] px-4">
+        <div className="divide-y divide-line-soft px-4">
           {[3, 2, 3, 1, 1].map((lines, i) => (
             <div key={i} className="py-6">
               <Bar className="h-[22px] w-36" />
@@ -96,7 +96,7 @@ export default function Loading() {
           <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-[340px_minmax(0,1fr)] lg:gap-12">
             {/* Square, matching the desktop hero's framed-print treatment
                 (`rounded-none shadow-poster ring-1`) — this was rounded-2xl. */}
-            <div className="skeleton aspect-[4/5] w-full rounded-none ring-1 ring-white/10" />
+            <div className="skeleton aspect-[4/5] w-full rounded-none ring-1 ring-line" />
             <div>
               <Bar className="h-3 w-40" />
               <Bar className="mt-4 h-12 w-4/5" />
@@ -105,7 +105,7 @@ export default function Loading() {
                 <Bar className="h-4 w-36" />
               </div>
               {/* The facts row: date, venue, availability. */}
-              <div className="mt-8 flex flex-wrap gap-x-12 gap-y-6 border-t border-white/10 pt-6">
+              <div className="mt-8 flex flex-wrap gap-x-12 gap-y-6 border-t border-line pt-6">
                 {[0, 1, 2].map((i) => (
                   <div key={i}>
                     <Bar className="h-2.5 w-16" />
@@ -121,7 +121,7 @@ export default function Loading() {
           <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
             <div className="space-y-8 lg:col-span-2">
               {[3, 2, 2].map((lines, i) => (
-                <div key={i} className="border-b border-white/10 pb-8">
+                <div key={i} className="border-b border-line pb-8">
                   <Bar className="h-6 w-40" />
                   <div className="mt-4 space-y-2">
                     {Array.from({ length: lines }).map((_, l) => (

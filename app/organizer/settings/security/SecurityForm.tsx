@@ -19,10 +19,10 @@ export default function SecurityForm({ userId }: SecurityFormProps) {
   return (
     <div className="space-y-6">
       {/* Change Password */}
-      <div className="rounded-xl bg-white/[0.03] p-6">
+      <div className="rounded-xl bg-surface-low p-6">
         <div className="flex items-center gap-2 mb-6">
           <Key className="w-5 h-5 text-brand-300" />
-          <h3 className="font-display text-[20px] lowercase italic leading-none text-white">{t('security.change_password')}</h3>
+          <h3 className="font-display text-title lowercase italic leading-none text-fg">{t('security.change_password')}</h3>
         </div>
         {/* Firebase holds the password: reauthenticate + updatePassword run
             client-side (components/auth/ChangePasswordPanel.tsx). */}
@@ -30,18 +30,18 @@ export default function SecurityForm({ userId }: SecurityFormProps) {
       </div>
 
       {/* Two-Factor Authentication (Future) */}
-      <div className="rounded-xl bg-white/[0.03] p-6">
+      <div className="rounded-xl bg-surface-low p-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Shield className="w-5 h-5 text-brand-300" />
             <div>
-              <h3 className="font-display text-[20px] lowercase italic leading-none text-white">{t('security.two_factor_auth')}</h3>
-              <p className="text-sm text-white/60 mt-1">
+              <h3 className="font-display text-title lowercase italic leading-none text-fg">{t('security.two_factor_auth')}</h3>
+              <p className="text-sm text-fg-muted mt-1">
                 {t('security.extra_security_layer')}
               </p>
             </div>
           </div>
-          <span className="shrink-0 rounded bg-white/[0.08] px-2.5 py-1 text-xs font-medium text-white/60">
+          <span className="shrink-0 rounded bg-surface-raised px-2.5 py-1 text-xs font-medium text-fg-muted">
             {t('security.coming_soon')}
           </span>
         </div>

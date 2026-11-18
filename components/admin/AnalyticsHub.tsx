@@ -33,14 +33,14 @@ export function HeroScorecard() {
     <div>
       <div className="mb-3 flex items-center gap-2">
         <span className={`h-1.5 w-1.5 rounded-full ${isConnected ? 'bg-console-green' : 'bg-console-faint'}`} />
-        <span className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint">
+        <span className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint">
           {isConnected ? 'Live' : 'Snapshot'}
         </span>
       </div>
       <div className="grid grid-cols-2 gap-x-6 gap-y-4 sm:flex sm:flex-wrap sm:gap-x-8 sm:gap-y-4">
         {cells.map((c) => (
           <div key={c.label}>
-            <div className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint">{c.label}</div>
+            <div className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint">{c.label}</div>
             <div className="mt-1 flex items-baseline gap-1">
               <span className="font-mono text-xl tabular-nums text-console-text">{c.value}</span>
               {c.sub && <span className="font-mono text-xs text-console-mut">{c.sub}</span>}
@@ -85,12 +85,12 @@ function AnalyticsHubInner() {
             className="group rounded-lg bg-console-panel p-4 transition-colors hover:bg-console-raise focus:outline-none focus-visible:ring-2 focus-visible:ring-console-mut"
           >
             <div className="flex items-center justify-between gap-3">
-              <span className="label-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-console-text">
+              <span className="label-mono text-eyebrow font-semibold uppercase tracking-[0.14em] text-console-text">
                 {s.label}
               </span>
               <ArrowRight className="h-3.5 w-3.5 shrink-0 text-console-faint transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-console-text" />
             </div>
-            <p className="mt-1.5 text-[12px] leading-relaxed text-console-mut">{s.blurb}</p>
+            <p className="mt-1.5 text-caption leading-relaxed text-console-mut">{s.blurb}</p>
           </Link>
         ))}
       </div>

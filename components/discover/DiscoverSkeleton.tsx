@@ -11,7 +11,7 @@ import React from 'react'
  *    For You / Saved tabs (no hero, no multi-column grid)". So every navigation
  *    to /discover painted rails and then threw them away.
  *  - The card placeholder had NO fill on the poster at all — just two
- *    `bg-white/15` bars floating in an empty box — and the rail headings used
+ *    `bg-surface-high` bars floating in an empty box — and the rail headings used
  *    bare `rounded` divs with no background class whatsoever, which on a
  *    #0a0a0a page renders literally nothing.
  *  - Everything used `animate-pulse`, which fades a whole block in and out and
@@ -105,7 +105,7 @@ export function DiscoverFilterBarSkeleton() {
           {Array.from({ length: 4 }).map((_, i) => (
             <Bar key={i} className="h-[30px] w-16 shrink-0 rounded" />
           ))}
-          <div className="h-5 w-px shrink-0 bg-white/10" />
+          <div className="h-5 w-px shrink-0 bg-surface-raised" />
           {Array.from({ length: 6 }).map((_, i) => (
             <Bar key={i} className="h-[30px] w-20 shrink-0 rounded" />
           ))}

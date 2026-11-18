@@ -49,9 +49,9 @@ describe('ageTier', () => {
 
 describe('ageClass', () => {
   it('maps each tier to its one colour', () => {
-    expect(ageClass(ago(1 * HOUR), NOW)).toBe('text-white/45')
-    expect(ageClass(ago(2 * DAY), NOW)).toBe('text-warning-500')
-    expect(ageClass(ago(9 * DAY), NOW)).toBe('text-error-500')
-    expect(ageClass(null, NOW)).toBe('text-white/45')
+    expect(ageClass(ago(1 * HOUR), NOW)).toBe('text-fg-subtle')
+    expect(ageClass(ago(2 * DAY), NOW)).toBe('text-warning-strong')
+    expect(ageClass(ago(9 * DAY), NOW)).toBe('text-danger-strong')
+    expect(ageClass(null, NOW)).toBe('text-fg-subtle')
   })
 })

@@ -17,10 +17,10 @@ export default async function AdminOrdersPage() {
           "Orders Management": the console's own nav already says this is
           where you manage things. */}
       <div className="mt-4">
-        <h1 className="label-mono text-[15px] font-bold uppercase tracking-[0.14em] text-console-text">
+        <h1 className="label-mono text-body font-bold uppercase tracking-[0.14em] text-console-text">
           Orders
         </h1>
-        <p className="mt-1 text-[13px] text-console-mut">Every ticket order across all events</p>
+        <p className="mt-1 text-meta text-console-mut">Every ticket order across all events</p>
       </div>
 
       <div className="mt-6">

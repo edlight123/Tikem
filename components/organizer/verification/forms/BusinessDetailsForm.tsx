@@ -47,17 +47,17 @@ export default function BusinessDetailsForm({ initialData, onSave, onCancel, onS
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="bg-white/[0.055] rounded-2xl p-6 md:p-8">
+      <div className="bg-surface rounded-2xl p-6 md:p-8">
         <div className="flex items-start justify-between mb-6">
           <div>
-            <h3 className="mb-2 font-display lowercase italic !text-[22px] !leading-snug text-white">
+            <h3 className="mb-2 font-display lowercase italic !text-section !leading-snug text-fg">
               {t('actions.business_details')}
             </h3>
-            <p className="text-sm md:text-base text-white/60">
+            <p className="text-sm md:text-base text-fg-muted">
               {t('verification_business.optional_registration')}
             </p>
           </div>
-          <span className="text-xs font-medium text-white/45">
+          <span className="text-xs font-medium text-fg-subtle">
             {t('actions.optional')}
           </span>
         </div>
@@ -65,7 +65,7 @@ export default function BusinessDetailsForm({ initialData, onSave, onCancel, onS
         <div className="space-y-4">
           {/* Business Registration Number */}
           <div>
-            <label htmlFor="business_registration_number" className="block text-sm font-medium text-white/70 mb-2">
+            <label htmlFor="business_registration_number" className="block text-sm font-medium text-fg-muted mb-2">
               {t('onboarding.verification.biz_reg_number', { defaultValue: 'Business Registration Number' })}
             </label>
             <input
@@ -74,14 +74,14 @@ export default function BusinessDetailsForm({ initialData, onSave, onCancel, onS
               name="business_registration_number"
               value={formData.business_registration_number}
               onChange={handleChange}
-              className="w-full rounded-lg bg-white/[0.055] px-4 py-3 text-white [color-scheme:dark] transition-colors hover:bg-white/[0.08] focus:bg-white/[0.08] focus:outline-none focus:ring-2 focus:ring-brand-400/50"
+              className="w-full rounded-lg bg-surface px-4 py-3 text-fg [color-scheme:dark] transition-colors hover:bg-surface-raised focus:bg-surface-raised focus:outline-none focus:ring-2 focus:ring-brand-400/50"
               placeholder="e.g., RC-12345"
             />
           </div>
 
           {/* Tax ID */}
           <div>
-            <label htmlFor="tax_id" className="block text-sm font-medium text-white/70 mb-2">
+            <label htmlFor="tax_id" className="block text-sm font-medium text-fg-muted mb-2">
               {t('onboarding.verification.biz_tax_id', { defaultValue: 'Tax ID Number (NIF)' })}
             </label>
             <input
@@ -90,14 +90,14 @@ export default function BusinessDetailsForm({ initialData, onSave, onCancel, onS
               name="tax_id"
               value={formData.tax_id}
               onChange={handleChange}
-              className="w-full rounded-lg bg-white/[0.055] px-4 py-3 text-white [color-scheme:dark] transition-colors hover:bg-white/[0.08] focus:bg-white/[0.08] focus:outline-none focus:ring-2 focus:ring-brand-400/50"
+              className="w-full rounded-lg bg-surface px-4 py-3 text-fg [color-scheme:dark] transition-colors hover:bg-surface-raised focus:bg-surface-raised focus:outline-none focus:ring-2 focus:ring-brand-400/50"
               placeholder="e.g., NIF-123456789"
             />
           </div>
 
           {/* Business Type */}
           <div>
-            <label htmlFor="business_type" className="block text-sm font-medium text-white/70 mb-2">
+            <label htmlFor="business_type" className="block text-sm font-medium text-fg-muted mb-2">
               {t('onboarding.verification.biz_type', { defaultValue: 'Business Type' })}
             </label>
             <select
@@ -105,7 +105,7 @@ export default function BusinessDetailsForm({ initialData, onSave, onCancel, onS
               name="business_type"
               value={formData.business_type}
               onChange={handleChange}
-              className="w-full rounded-lg bg-white/[0.055] px-4 py-3 text-white [color-scheme:dark] transition-colors hover:bg-white/[0.08] focus:bg-white/[0.08] focus:outline-none focus:ring-2 focus:ring-brand-400/50"
+              className="w-full rounded-lg bg-surface px-4 py-3 text-fg [color-scheme:dark] transition-colors hover:bg-surface-raised focus:bg-surface-raised focus:outline-none focus:ring-2 focus:ring-brand-400/50"
             >
               <option value="">{t('onboarding.verification.biz_select_type', { defaultValue: 'Select type' })}</option>
               <option value="sole_proprietorship">{t('onboarding.verification.biz_sole', { defaultValue: 'Sole Proprietorship' })}</option>
@@ -118,7 +118,7 @@ export default function BusinessDetailsForm({ initialData, onSave, onCancel, onS
 
           {/* Registration Date */}
           <div>
-            <label htmlFor="registration_date" className="block text-sm font-medium text-white/70 mb-2">
+            <label htmlFor="registration_date" className="block text-sm font-medium text-fg-muted mb-2">
               {t('onboarding.verification.biz_reg_date', { defaultValue: 'Registration Date' })}
             </label>
             <input
@@ -127,15 +127,15 @@ export default function BusinessDetailsForm({ initialData, onSave, onCancel, onS
               name="registration_date"
               value={formData.registration_date}
               onChange={handleChange}
-              className="w-full rounded-lg bg-white/[0.055] px-4 py-3 text-white [color-scheme:dark] transition-colors hover:bg-white/[0.08] focus:bg-white/[0.08] focus:outline-none focus:ring-2 focus:ring-brand-400/50"
+              className="w-full rounded-lg bg-surface px-4 py-3 text-fg [color-scheme:dark] transition-colors hover:bg-surface-raised focus:bg-surface-raised focus:outline-none focus:ring-2 focus:ring-brand-400/50"
             />
           </div>
         </div>
 
         {/* Error */}
         {error && (
-          <div className="mt-4 p-3 bg-red-500/10 rounded-xl">
-            <p className="text-sm text-red-300">{error}</p>
+          <div className="mt-4 p-3 bg-danger-strong/10 rounded-xl">
+            <p className="text-sm text-danger-soft">{error}</p>
           </div>
         )}
       </div>
@@ -146,7 +146,7 @@ export default function BusinessDetailsForm({ initialData, onSave, onCancel, onS
           type="button"
           onClick={onCancel}
           disabled={isSaving}
-          className="flex-1 px-6 py-3 text-white bg-white/[0.07] rounded font-semibold hover:bg-white/[0.12] transition-colors disabled:opacity-50"
+          className="flex-1 px-6 py-3 text-fg bg-surface-raised rounded font-semibold hover:bg-surface-high transition-colors disabled:opacity-50"
         >
           {t('actions.cancel')}
         </button>
@@ -154,14 +154,14 @@ export default function BusinessDetailsForm({ initialData, onSave, onCancel, onS
           type="button"
           onClick={onSkip}
           disabled={isSaving}
-          className="flex-1 px-6 py-3 text-white/60 bg-white/[0.07] hover:bg-white/[0.12] hover:text-white/80 rounded font-semibold transition-colors disabled:opacity-50"
+          className="flex-1 px-6 py-3 text-fg-muted bg-surface-raised hover:bg-surface-high hover:text-fg-soft rounded font-semibold transition-colors disabled:opacity-50"
         >
           {t('verification_business.skip_for_now')}
         </button>
         <button
           type="submit"
           disabled={isSaving}
-          className="flex-1 px-6 py-3 bg-white hover:bg-white/90 text-black rounded font-semibold transition-all disabled:opacity-50"
+          className="flex-1 px-6 py-3 bg-inverse hover:bg-inverse-hover text-on-inverse rounded font-semibold transition-all disabled:opacity-50"
         >
           {isSaving ? 'Saving...' : 'Save & Continue'}
         </button>

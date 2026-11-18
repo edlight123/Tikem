@@ -2,7 +2,7 @@
  * Settings loading skeleton.
  *
  * The old one had the wrong container (`max-w-7xl` against a real `max-w-4xl`),
- * no back link, and eight `bg-white/[0.03] border border-white/10` blocks where
+ * no back link, and eight `bg-surface-low border border-line` blocks where
  * the page has FOUR cards — and that fill is invisible on `#0a0a0a`, so the
  * loading state was eight empty outlines at the wrong width. Its navbar was
  * `py-3` (56px everywhere) against a real `h-14 sm:h-16`.
@@ -12,10 +12,10 @@
  *   body     max-w-4xl px-4 sm:px-6 lg:px-8 py-8
  *   back     inline-flex text link with a 16px chevron, mb-6
  *   header   mb-8 — h1 text-3xl (36px line box), p mt-2
- *   cards    space-y-6 — four `rounded-2xl border border-white/10
- *            bg-white/[0.03] p-6` shells: a 40px rounded-xl icon tile beside a
+ *   cards    space-y-6 — four `rounded-2xl border border-line
+ *            bg-surface-low p-6` shells: a 40px rounded-xl icon tile beside a
  *            title + subtitle (mb-6), then the card's own rows. The fourth
- *            carries `border-red-500/20` (Danger Zone).
+ *            carries `border-danger-strong/20` (Danger Zone).
  */
 
 function Bar({ className = '' }: { className?: string }) {
@@ -25,8 +25,8 @@ function Bar({ className = '' }: { className?: string }) {
 function Card({ lines, danger = false }: { lines: number; danger?: boolean }) {
   return (
     <div
-      className={`rounded-2xl border bg-white/[0.03] p-6 ${
-        danger ? 'border-red-500/20' : 'border-white/10'
+      className={`rounded-2xl border bg-surface-low p-6 ${
+        danger ? 'border-danger-strong/20' : 'border-line'
       }`}
     >
       <div className="mb-6 flex items-center gap-3">
@@ -47,9 +47,9 @@ function Card({ lines, danger = false }: { lines: number; danger?: boolean }) {
 
 export default function Loading() {
   return (
-    <div className="min-h-screen bg-[#0a0a0a] pb-mobile-nav">
+    <div className="min-h-screen bg-canvas pb-mobile-nav">
       {/* Navbar */}
-      <div className="sticky top-0 z-50 border-b border-white/10 bg-[#0a0a0a]/80 backdrop-blur-xl">
+      <div className="sticky top-0 z-50 border-b border-line bg-canvas/80 backdrop-blur-xl">
         <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:h-16 sm:px-6 lg:px-8">
           <Bar className="h-7 w-24" />
           <Bar className="h-8 w-20 rounded" />

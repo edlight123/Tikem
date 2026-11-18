@@ -132,31 +132,31 @@ export default function InviteFriends({ eventId, eventTitle, enabled, currentUse
         <button
           type="button"
           onClick={openPicker}
-          className="flex min-h-[48px] items-center gap-3 rounded-2xl bg-white/[0.055] px-4 py-3 text-left text-[15px] font-bold text-white transition-colors hover:bg-white/[0.09]"
+          className="flex min-h-[48px] items-center gap-3 rounded-2xl bg-surface px-4 py-3 text-left text-body font-bold text-fg transition-colors hover:bg-surface-raised"
         >
-          <UserPlus className="h-5 w-5 text-white/70" />
+          <UserPlus className="h-5 w-5 text-fg-muted" />
           {t('invites.inviteFriends')}
         </button>
         <button
           type="button"
           onClick={shareLink}
           title={t('invites.shareLinkHint')}
-          className="flex min-h-[48px] items-center gap-3 rounded-2xl bg-white/[0.055] px-4 py-3 text-left text-[15px] font-bold text-white transition-colors hover:bg-white/[0.09]"
+          className="flex min-h-[48px] items-center gap-3 rounded-2xl bg-surface px-4 py-3 text-left text-body font-bold text-fg transition-colors hover:bg-surface-raised"
         >
-          <Link2 className="h-5 w-5 text-white/70" />
+          <Link2 className="h-5 w-5 text-fg-muted" />
           {t('invites.shareLink')}
         </button>
       </div>
 
       <BottomSheet isOpen={open} onClose={() => setOpen(false)} title={t('invites.pickerTitle')}>
-        <p className="text-[13px] text-white/55">{t('invites.pickerSubtitle')}</p>
-        <label className="mt-3 flex items-center gap-2 rounded-xl bg-white/[0.07] px-3 py-2.5">
-          <Search className="h-4 w-4 text-white/50" />
+        <p className="text-meta text-fg-muted">{t('invites.pickerSubtitle')}</p>
+        <label className="mt-3 flex items-center gap-2 rounded-xl bg-surface-raised px-3 py-2.5">
+          <Search className="h-4 w-4 text-fg-subtle" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t('invites.search')}
-            className="w-full bg-transparent text-base text-white placeholder:text-white/40 focus:outline-none"
+            className="w-full bg-transparent text-base text-fg placeholder:text-fg-subtle focus:outline-none"
           />
         </label>
 
@@ -164,17 +164,17 @@ export default function InviteFriends({ eventId, eventTitle, enabled, currentUse
           {friends === null ? (
             <div className="space-y-2">
               {[0, 1, 2].map((i) => (
-                <div key={i} className="h-14 animate-pulse rounded-xl bg-white/[0.05]" />
+                <div key={i} className="h-14 animate-pulse rounded-xl bg-surface" />
               ))}
             </div>
           ) : loadFailed ? (
-            <p className="py-6 text-center text-sm text-white/60">{t('invites.loadError')}</p>
+            <p className="py-6 text-center text-sm text-fg-muted">{t('invites.loadError')}</p>
           ) : friends.length === 0 ? (
-            <p className="py-6 text-center text-sm text-white/60">{t('invites.empty')}</p>
+            <p className="py-6 text-center text-sm text-fg-muted">{t('invites.empty')}</p>
           ) : filtered.length === 0 ? (
-            <p className="py-6 text-center text-sm text-white/60">{t('invites.noMatch')}</p>
+            <p className="py-6 text-center text-sm text-fg-muted">{t('invites.noMatch')}</p>
           ) : (
-            <ul className="divide-y divide-white/[0.06] rounded-xl bg-white/[0.04]">
+            <ul className="divide-y divide-line-soft rounded-xl bg-surface-low">
               {filtered.map((f) => {
                 const selectable = f.state === 'available'
                 const isOn = selected.has(f.uid)
@@ -187,7 +187,7 @@ export default function InviteFriends({ eventId, eventTitle, enabled, currentUse
                       aria-pressed={isOn}
                       className="flex w-full items-center gap-3 px-3 py-2.5 text-left disabled:cursor-default"
                     >
-                      <span className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full bg-white/[0.12] text-sm font-semibold text-white">
+                      <span className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full bg-surface-high text-sm font-semibold text-fg">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={f.photoURL || defaultAvatarUrl(f.uid || f.displayName || '')}
@@ -195,19 +195,19 @@ export default function InviteFriends({ eventId, eventTitle, enabled, currentUse
                           className="h-full w-full object-cover"
                         />
                       </span>
-                      <span className={`min-w-0 flex-1 truncate text-[15px] ${selectable ? 'text-white' : 'text-white/45'}`}>
+                      <span className={`min-w-0 flex-1 truncate text-body ${selectable ? 'text-fg' : 'text-fg-subtle'}`}>
                         {f.displayName}
                       </span>
                       {selectable ? (
                         <span
-                          className={`grid h-6 w-6 place-items-center rounded-full ${isOn ? 'bg-white text-black' : 'bg-white/[0.1]'}`}
+                          className={`grid h-6 w-6 place-items-center rounded-full ${isOn ? 'bg-inverse text-on-inverse' : 'bg-surface-raised'}`}
                         >
                           {isOn && <Check className="h-4 w-4" />}
                         </span>
                       ) : (
                         // Dot + label, not a filled pill.
-                        <span className="flex items-center gap-1.5 text-[12px] text-white/50">
-                          <span className={`h-1.5 w-1.5 rounded-full ${f.state === 'going' ? 'bg-brand-400' : 'bg-white/40'}`} />
+                        <span className="flex items-center gap-1.5 text-caption text-fg-subtle">
+                          <span className={`h-1.5 w-1.5 rounded-full ${f.state === 'going' ? 'bg-brand-400' : 'bg-fg/40'}`} />
                           {stateLabel(f.state)}
                         </span>
                       )}
@@ -223,7 +223,7 @@ export default function InviteFriends({ eventId, eventTitle, enabled, currentUse
           type="button"
           onClick={send}
           disabled={selected.size === 0 || sending}
-          className="mt-4 w-full rounded bg-white py-3 text-[15px] font-bold text-black transition-opacity disabled:opacity-40"
+          className="mt-4 w-full rounded bg-inverse py-3 text-body font-bold text-on-inverse transition-opacity disabled:opacity-40"
         >
           {sending ? t('invites.sending') : t('invites.sendCount', { count: selected.size })}
         </button>

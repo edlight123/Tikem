@@ -73,8 +73,8 @@ export default function FavoriteButton({ eventId, userId, initialIsFavorite = fa
    * now sit side by side in the sticky bar, so any difference in size or
    * radius reads as a mistake rather than as a pair.
    *
-   * A FILL, not a hairline: this used to be `bg-white/[0.03]` inside a
-   * `border-white/10`, which is the "border around nothing" the house rule
+   * A FILL, not a hairline: this used to be `bg-surface-low` inside a
+   * `border-line`, which is the "border around nothing" the house rule
    * forbids — at 3% the disc was invisible and only its outline showed. The
    * active state carries its own red fill instead of a red border, and the
    * old `shadow-md`/`hover:scale-110` are gone: nothing else on this page
@@ -86,8 +86,8 @@ export default function FavoriteButton({ eventId, userId, initialIsFavorite = fa
       disabled={loading}
       className={`grid h-10 w-10 place-items-center rounded transition-colors duration-200 active:scale-90 disabled:opacity-50 ${
         isFavorite
-          ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
-          : 'bg-white/[0.06] text-white/65 hover:bg-white/[0.12] hover:text-red-400'
+          ? 'bg-danger-strong/20 text-danger hover:bg-danger-strong/30'
+          : 'bg-surface text-fg-muted hover:bg-surface-high hover:text-danger'
       }`}
       aria-label={label}
       aria-pressed={isFavorite}

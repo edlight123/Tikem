@@ -101,7 +101,7 @@ export default async function EventCommandCenterPage({ params }: { params: Promi
   }
 
   return (
-    <div className="bg-[#0a0a0a]">      <EventCommandCenter 
+    <div className="bg-canvas">      <EventCommandCenter 
         event={event} 
         stats={stats}
         tickets={tickets}

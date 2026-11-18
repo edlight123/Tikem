@@ -43,18 +43,18 @@ export function AdminEventsFilters({ isOpen, onClose, filters, onApply }: AdminE
     'w-full px-3 py-2 rounded bg-console-ground text-sm text-console-text placeholder:text-console-faint focus:outline-none focus:ring-2 focus:ring-console-mut'
 
   const sectionLabelClass =
-    'label-mono flex items-center gap-2 text-[10px] uppercase tracking-[0.18em] text-console-faint mb-3'
+    'label-mono flex items-center gap-2 text-eyebrow uppercase tracking-[0.18em] text-console-faint mb-3'
 
   return (
     <>
       {/* Backdrop */}
-      <div className="fixed inset-0 bg-black/60 z-40" onClick={onClose} />
+      <div className="fixed inset-0 bg-scrim z-40" onClick={onClose} />
 
       {/* Sheet */}
       <div className="fixed inset-y-0 right-0 w-full sm:w-96 bg-console-panel shadow-xl z-50 flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-4">
-          <h3 className="label-mono text-[13px] font-bold uppercase tracking-[0.14em] text-console-text">
+          <h3 className="label-mono text-meta font-bold uppercase tracking-[0.14em] text-console-text">
             Filters
           </h3>
           <button onClick={onClose} aria-label="Close filters" className="p-2 hover:bg-console-raise rounded">

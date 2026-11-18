@@ -25,15 +25,15 @@ interface BadgeProps {
 // is what makes it a surface (docs/POSH_DESIGN_BRIEF.md).
 const variantStyles: Record<BadgeVariant, string> = {
   // Flat, not a teal gradient: teal is semantic, never a surface.
-  primary: 'bg-white/[0.08] text-white',
+  primary: 'bg-surface-raised text-fg',
   secondary: 'bg-brand-500/15 text-brand-300',
-  success: 'bg-success-500/15 text-success-500',
-  warning: 'bg-warning-500/15 text-warning-500',
-  error: 'bg-error-500/15 text-error-500',
-  neutral: 'bg-white/[0.06] text-white/70',
-  vip: 'bg-amber-400/[0.12] text-amber-200',
+  success: 'bg-success-strong/15 text-success-strong',
+  warning: 'bg-warning-strong/15 text-warning-strong',
+  error: 'bg-danger-strong/15 text-danger-strong',
+  neutral: 'bg-surface text-fg-muted',
+  vip: 'bg-warning/[0.12] text-warning-soft',
   trending: 'bg-brand-500/15 text-brand-300',
-  new: 'bg-success-500/15 text-success-500',
+  new: 'bg-success-strong/15 text-success-strong',
 };
 
 const sizeStyles: Record<BadgeSize, string> = {

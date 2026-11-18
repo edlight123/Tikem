@@ -143,17 +143,17 @@ export function CheckInInterface({ event, tickets, onCheckIn }: CheckInInterface
   }, [searchQuery, tickets])
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-black text-fg">
       {/* Header */}
       <div className="bg-black">
         <div className="px-4 py-4 flex items-center justify-between">
           <div className="flex-1 min-w-0">
             <h1 className="text-xl font-bold truncate">{event.title}</h1>
-            <p className="text-sm text-white/70 mt-0.5">{t('door.checkin_scanner', { defaultValue: 'Check-In Scanner' })}</p>
+            <p className="text-sm text-fg-muted mt-0.5">{t('door.checkin_scanner', { defaultValue: 'Check-In Scanner' })}</p>
           </div>
           <Link
             href={`/organizer/events/${event.id}/attendees`}
-            className="ml-4 flex items-center gap-2 px-4 py-2 bg-white/[0.07] hover:bg-white/[0.12] rounded text-sm font-semibold transition-colors"
+            className="ml-4 flex items-center gap-2 px-4 py-2 bg-surface-raised hover:bg-surface-high rounded text-sm font-semibold transition-colors"
           >
             <Users className="w-4 h-4" />
             <span className="hidden sm:inline">{t('door.manage', { defaultValue: 'Manage' })}</span>
@@ -162,25 +162,25 @@ export function CheckInInterface({ event, tickets, onCheckIn }: CheckInInterface
       </div>
 
       {/* Live Stats */}
-      <div className="mx-4 rounded-2xl bg-white/[0.055] px-4 py-6">
+      <div className="mx-4 rounded-2xl bg-surface px-4 py-6">
         <div className="grid grid-cols-3 gap-4 max-w-2xl mx-auto">
           <div className="text-center">
             <div className="text-3xl font-bold">{stats.checkedIn}</div>
-            <div className="text-xs uppercase tracking-wide text-white/50 mt-1">{t('door.checked_in', { defaultValue: 'Checked In' })}</div>
+            <div className="text-xs uppercase tracking-wide text-fg-subtle mt-1">{t('door.checked_in', { defaultValue: 'Checked In' })}</div>
           </div>
-          <div className="text-center border-x border-white/[0.08]">
+          <div className="text-center border-x border-line">
             <div className="text-3xl font-bold">{stats.remaining}</div>
-            <div className="text-xs uppercase tracking-wide text-white/50 mt-1">{t('door.remaining', { defaultValue: 'Remaining' })}</div>
+            <div className="text-xs uppercase tracking-wide text-fg-subtle mt-1">{t('door.remaining', { defaultValue: 'Remaining' })}</div>
           </div>
           <div className="text-center">
             <div className="text-3xl font-bold">{stats.total}</div>
-            <div className="text-xs uppercase tracking-wide text-white/50 mt-1">{t('door.total', { defaultValue: 'Total' })}</div>
+            <div className="text-xs uppercase tracking-wide text-fg-subtle mt-1">{t('door.total', { defaultValue: 'Total' })}</div>
           </div>
         </div>
         
         {/* Progress Bar */}
         <div className="max-w-2xl mx-auto mt-4">
-          <div className="h-2 bg-white/[0.08] rounded overflow-hidden">
+          <div className="h-2 bg-surface-raised rounded overflow-hidden">
             <div 
               className="h-full bg-brand-400 transition-all duration-500"
               style={{ width: `${stats.total > 0 ? (stats.checkedIn / stats.total) * 100 : 0}%` }}
@@ -191,11 +191,11 @@ export function CheckInInterface({ event, tickets, onCheckIn }: CheckInInterface
 
       {/* Entry Point Selector */}
       <div className="px-4 py-3">
-        <label className="block text-sm font-medium text-white/70 mb-2">{t('door.entry_point', { defaultValue: 'Entry Point' })}</label>
+        <label className="block text-sm font-medium text-fg-muted mb-2">{t('door.entry_point', { defaultValue: 'Entry Point' })}</label>
         <select
           value={selectedEntryPoint}
           onChange={(e) => setSelectedEntryPoint(e.target.value)}
-          className="w-full px-4 py-2.5 bg-white/[0.06] rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-brand-400"
+          className="w-full px-4 py-2.5 bg-surface rounded-xl text-fg focus:outline-none focus:ring-2 focus:ring-brand-400"
         >
           <option value="Main Entrance">{t('door.entry_main_entrance', { defaultValue: 'Main Entrance' })}</option>
           <option value="VIP Entrance">{t('door.entry_vip_entrance', { defaultValue: 'VIP Entrance' })}</option>
@@ -206,11 +206,11 @@ export function CheckInInterface({ event, tickets, onCheckIn }: CheckInInterface
 
       {/* Scan Result Overlay */}
       {scanResult && (
-        <div className="fixed inset-0 bg-black/80 z-40 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-scrim-strong z-40 flex items-center justify-center p-4">
           <div className={`max-w-md w-full rounded-2xl p-8 text-center ${
-            scanResult.type === 'success' ? 'bg-emerald-600' :
-            scanResult.type === 'already-checked-in' ? 'bg-amber-600' :
-            'bg-red-600'
+            scanResult.type === 'success' ? 'bg-success-strong' :
+            scanResult.type === 'already-checked-in' ? 'bg-warning-strong' :
+            'bg-danger-strong'
           }`}>
             {scanResult.type === 'success' && <CheckCircle className="w-20 h-20 mx-auto mb-4" />}
             {scanResult.type === 'already-checked-in' && <Clock className="w-20 h-20 mx-auto mb-4" />}
@@ -219,7 +219,7 @@ export function CheckInInterface({ event, tickets, onCheckIn }: CheckInInterface
             <h2 className="text-2xl font-bold mb-2">{scanResult.message}</h2>
             
             {scanResult.ticket && (
-              <div className="mt-4 bg-black/20 rounded-xl p-4">
+              <div className="mt-4 bg-shade/20 rounded-xl p-4">
                 <p className="font-semibold text-lg">{scanResult.ticket.attendee_name}</p>
                 <p className="text-sm opacity-90 mt-1">{scanResult.ticket.ticket_type}</p>
                 {scanResult.ticket.checked_in_at && (
@@ -238,7 +238,7 @@ export function CheckInInterface({ event, tickets, onCheckIn }: CheckInInterface
         <button
           onClick={() => setShowScanner(true)}
           disabled={isProcessing}
-          className="w-full flex items-center justify-center gap-3 px-6 py-6 bg-white text-black hover:bg-white/90 disabled:bg-white/[0.07] disabled:text-white/40 rounded font-semibold text-lg transition-colors"
+          className="w-full flex items-center justify-center gap-3 px-6 py-6 bg-inverse text-on-inverse hover:bg-inverse-hover disabled:bg-surface-raised disabled:text-fg-subtle rounded font-semibold text-lg transition-colors"
         >
           <Camera className="w-8 h-8" />
           {isProcessing ? 'Processing...' : 'Scan QR Code'}
@@ -246,7 +246,7 @@ export function CheckInInterface({ event, tickets, onCheckIn }: CheckInInterface
 
         <button
           onClick={() => setShowManualLookup(true)}
-          className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-white/[0.07] hover:bg-white/[0.12] rounded font-semibold transition-colors"
+          className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-surface-raised hover:bg-surface-high rounded font-semibold transition-colors"
         >
           <Search className="w-5 h-5" />
           {t('check_in.manual_lookup')}
@@ -255,24 +255,24 @@ export function CheckInInterface({ event, tickets, onCheckIn }: CheckInInterface
 
       {/* Recent Check-Ins */}
       <div className="px-4 pb-20">
-        <h2 className="mb-3 font-display lowercase italic !text-[22px] !leading-snug text-white">{t('door.recent_checkins', { defaultValue: 'Recent Check-Ins' })}</h2>
+        <h2 className="mb-3 font-display lowercase italic !text-section !leading-snug text-fg">{t('door.recent_checkins', { defaultValue: 'Recent Check-Ins' })}</h2>
         
         {recentCheckIns.length === 0 ? (
-          <div className="bg-white/[0.055] rounded-2xl p-8 text-center">
-            <Clock className="w-12 h-12 text-white/65 mx-auto mb-3" />
-            <p className="text-white/70">{t('door.no_checkins_yet', { defaultValue: 'No check-ins yet' })}</p>
+          <div className="bg-surface rounded-2xl p-8 text-center">
+            <Clock className="w-12 h-12 text-fg-muted mx-auto mb-3" />
+            <p className="text-fg-muted">{t('door.no_checkins_yet', { defaultValue: 'No check-ins yet' })}</p>
           </div>
         ) : (
           <div className="space-y-2">
             {recentCheckIns.map((ticket) => (
-              <div key={ticket.id} className="bg-white/[0.055] rounded-2xl p-4 flex items-center justify-between">
+              <div key={ticket.id} className="bg-surface rounded-2xl p-4 flex items-center justify-between">
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold truncate">{ticket.attendee_name}</p>
-                  <p className="text-sm text-white/70 truncate">{ticket.ticket_type}</p>
+                  <p className="text-sm text-fg-muted truncate">{ticket.ticket_type}</p>
                 </div>
                 <div className="text-right ml-4">
-                  <CheckCircle className="w-5 h-5 text-emerald-400 mb-1" />
-                  <p className="text-xs text-white/70">
+                  <CheckCircle className="w-5 h-5 text-success mb-1" />
+                  <p className="text-xs text-fg-muted">
                     {ticket.checked_in_at && new Date(ticket.checked_in_at).toLocaleTimeString([], { 
                       hour: '2-digit', 
                       minute: '2-digit' 
@@ -295,15 +295,15 @@ export function CheckInInterface({ event, tickets, onCheckIn }: CheckInInterface
 
       {/* Manual Lookup Modal */}
       {showManualLookup && (
-        <div className="fixed inset-0 bg-[#1c1c1c] z-50 flex flex-col">
-          <div className="p-4 flex items-center justify-between border-b border-white/[0.06]">
+        <div className="fixed inset-0 bg-surface-raised-solid z-50 flex flex-col">
+          <div className="p-4 flex items-center justify-between border-b border-line-soft">
             <h2 className="text-lg font-bold">{t('door.manual_lookup', { defaultValue: 'Manual Lookup' })}</h2>
             <button
               onClick={() => {
                 setShowManualLookup(false)
                 setSearchQuery('')
               }}
-              className="p-2 hover:bg-white/[0.08] rounded"
+              className="p-2 hover:bg-surface-raised rounded"
             >
               <XCircle className="w-6 h-6" />
             </button>
@@ -311,14 +311,14 @@ export function CheckInInterface({ event, tickets, onCheckIn }: CheckInInterface
 
           <div className="p-4">
             <div className="relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/70" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-fg-muted" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={t('door.search_placeholder', { defaultValue: 'Search by name, email, or ticket ID...' })}
                 autoFocus
-                className="w-full pl-12 pr-4 py-3 bg-white/[0.06] rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-brand-400"
+                className="w-full pl-12 pr-4 py-3 bg-surface rounded-xl text-fg placeholder-fg-subtle focus:outline-none focus:ring-2 focus:ring-brand-400"
               />
             </div>
           </div>
@@ -326,8 +326,8 @@ export function CheckInInterface({ event, tickets, onCheckIn }: CheckInInterface
           <div className="flex-1 overflow-y-auto px-4 pb-4">
             {searchQuery.trim() && filteredTickets.length === 0 && (
               <div className="text-center py-12">
-                <AlertCircle className="w-12 h-12 text-white/65 mx-auto mb-3" />
-                <p className="text-white/70">{t('door.no_tickets_found', { defaultValue: 'No tickets found' })}</p>
+                <AlertCircle className="w-12 h-12 text-fg-muted mx-auto mb-3" />
+                <p className="text-fg-muted">{t('door.no_tickets_found', { defaultValue: 'No tickets found' })}</p>
               </div>
             )}
 
@@ -339,20 +339,20 @@ export function CheckInInterface({ event, tickets, onCheckIn }: CheckInInterface
                   disabled={ticket.checked_in}
                   className={`w-full text-left p-4 rounded-2xl transition-all ${
                     ticket.checked_in
-                      ? 'bg-white/[0.03] opacity-50'
-                      : 'bg-white/[0.055] hover:bg-white/[0.1]'
+                      ? 'bg-surface-low opacity-50'
+                      : 'bg-surface hover:bg-surface-raised'
                   }`}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold truncate">{ticket.attendee_name}</p>
-                      <p className="text-sm text-white/70 truncate">{ticket.attendee_email}</p>
-                      <p className="text-xs text-white/70 mt-1">{ticket.ticket_type}</p>
+                      <p className="text-sm text-fg-muted truncate">{ticket.attendee_email}</p>
+                      <p className="text-xs text-fg-muted mt-1">{ticket.ticket_type}</p>
                     </div>
                     {ticket.checked_in ? (
-                      <CheckCircle className="w-6 h-6 text-emerald-400 ml-4" />
+                      <CheckCircle className="w-6 h-6 text-success ml-4" />
                     ) : (
-                      <div className="ml-4 px-3 py-1.5 bg-white/[0.1] text-white rounded text-sm font-semibold">
+                      <div className="ml-4 px-3 py-1.5 bg-surface-raised text-fg rounded text-sm font-semibold">
                         {t('actions.check_in')}
                       </div>
                     )}

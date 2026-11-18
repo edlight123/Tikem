@@ -88,7 +88,7 @@ export default function MobileBottomNav({ isLoggedIn, isOrganizer = false, isAdm
   }
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-[#0a0a0a]/90 backdrop-blur-xl border-t border-white/10 z-50 safe-area-inset-bottom will-change-contents" style={{ minHeight: '56px' }}>
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-canvas/90 backdrop-blur-xl border-t border-line z-50 safe-area-inset-bottom will-change-contents" style={{ minHeight: '56px' }}>
       <div className="flex items-center justify-around px-1 py-1.5">
         {tabs.map((tab) => {
           const Icon = tab.icon
@@ -115,7 +115,7 @@ export default function MobileBottomNav({ isLoggedIn, isOrganizer = false, isAdm
               <span className="grid h-11 w-11 place-items-center">
                 <Icon
                   className={`h-[23px] w-[23px] transition-colors ${
-                    active ? 'text-brand-400' : 'text-white/45'
+                    active ? 'text-brand-400' : 'text-fg-subtle'
                   }`}
                   strokeWidth={active ? 2.3 : 1.8}
                 />

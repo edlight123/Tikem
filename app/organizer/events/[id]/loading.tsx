@@ -38,7 +38,7 @@ export default function Loading() {
       {/* Summary tiles */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="rounded-xl bg-white/[0.03] px-3.5 py-3">
+          <div key={i} className="rounded-xl bg-surface-low px-3.5 py-3">
             <Bar className="h-3 w-16" />
             <Bar className="mt-2 h-6 w-20" />
           </div>
@@ -50,7 +50,7 @@ export default function Loading() {
         {Array.from({ length: 8 }).map((_, i) => (
           <div
             key={i}
-            className="flex items-center gap-4 rounded-xl bg-white/[0.03] px-4 py-3.5"
+            className="flex items-center gap-4 rounded-xl bg-surface-low px-4 py-3.5"
           >
             <div className="skeleton h-9 w-9 shrink-0 rounded" />
             <div className="min-w-0 flex-1 space-y-2">

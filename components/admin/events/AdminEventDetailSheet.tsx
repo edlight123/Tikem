@@ -60,7 +60,7 @@ interface AdminEventDetailSheetProps {
   onReportsResolved?: () => void
 }
 
-const SECTION_LABEL = 'label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint'
+const SECTION_LABEL = 'label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint'
 
 export function AdminEventDetailSheet({ event, isOpen, onClose, onAction, onReportsResolved }: AdminEventDetailSheetProps) {
   const { t } = useTranslation('common')
@@ -111,7 +111,7 @@ export function AdminEventDetailSheet({ event, isOpen, onClose, onAction, onRepo
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/60 z-40"
+        className="fixed inset-0 bg-scrim z-40"
         onClick={onClose}
       />
 
@@ -119,7 +119,7 @@ export function AdminEventDetailSheet({ event, isOpen, onClose, onAction, onRepo
       <div className="fixed inset-y-0 right-0 w-full sm:w-[600px] lg:w-[700px] bg-console-panel shadow-xl z-50 flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-4">
-          <h3 className="label-mono text-[13px] font-bold uppercase tracking-[0.14em] text-console-text">
+          <h3 className="label-mono text-meta font-bold uppercase tracking-[0.14em] text-console-text">
             {t('admin.event_details')}
           </h3>
           <button
@@ -161,7 +161,7 @@ export function AdminEventDetailSheet({ event, isOpen, onClose, onAction, onRepo
               </div>
 
               {event.category && (
-                <span className="label-mono text-[11px] uppercase tracking-[0.08em] text-console-mut">
+                <span className="label-mono text-eyebrow uppercase tracking-[0.08em] text-console-mut">
                   {event.category}
                 </span>
               )}
@@ -335,7 +335,7 @@ export function AdminEventDetailSheet({ event, isOpen, onClose, onAction, onRepo
           {/* Feature toggle */}
           <button
             onClick={() => onAction(event.featured ? 'unfeature' : 'feature')}
-            className={`w-full flex items-center justify-center gap-2 rounded bg-console-raise px-4 py-2 text-[13px] font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-console-mut ${
+            className={`w-full flex items-center justify-center gap-2 rounded bg-console-raise px-4 py-2 text-meta font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-console-mut ${
               event.featured
                 ? 'text-console-amber hover:opacity-90'
                 : 'text-console-mut hover:text-console-text'
@@ -347,11 +347,11 @@ export function AdminEventDetailSheet({ event, isOpen, onClose, onAction, onRepo
 
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-3">
-              <span className="text-[13px] font-semibold text-console-mut">Financials (per ticket)</span>
+              <span className="text-meta font-semibold text-console-mut">Financials (per ticket)</span>
               <ExportButtons variant="console" onExport={exportFinancials('full')} onError={exportFailed} labels={{ pdf: 'PDF', excel: 'Excel', group: 'Export financials' }} />
             </div>
             <div className="flex items-center justify-between gap-3">
-              <span className="text-[13px] font-semibold text-console-mut">Summary</span>
+              <span className="text-meta font-semibold text-console-mut">Summary</span>
               <ExportButtons variant="console" onExport={exportFinancials('summary')} onError={exportFailed} labels={{ pdf: 'PDF', excel: 'Excel', group: 'Export summary' }} />
             </div>
           </div>

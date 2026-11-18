@@ -211,10 +211,10 @@ export default function WithdrawalsView({ embedded = false, showHeader = true }:
     <div className={containerClassName}>
       {showHeader && (
         <header className="mb-5">
-          <h1 className="label-mono text-[15px] font-bold uppercase tracking-[0.14em] text-console-text">
+          <h1 className="label-mono text-body font-bold uppercase tracking-[0.14em] text-console-text">
             Withdrawals
           </h1>
-          <p className="mt-1 text-[13px] text-console-mut">Review and process organizer withdrawal requests</p>
+          <p className="mt-1 text-meta text-console-mut">Review and process organizer withdrawal requests</p>
         </header>
       )}
 
@@ -224,7 +224,7 @@ export default function WithdrawalsView({ embedded = false, showHeader = true }:
           <button
             key={tab}
             onClick={() => setFilter(tab as any)}
-            className={`label-mono border-b-2 pb-1.5 text-[11px] uppercase tracking-[0.14em] transition-colors ${
+            className={`label-mono border-b-2 pb-1.5 text-eyebrow uppercase tracking-[0.14em] transition-colors ${
               filter === tab
                 ? 'border-console-text text-console-text'
                 : 'border-transparent text-console-mut hover:text-console-text'
@@ -252,8 +252,8 @@ export default function WithdrawalsView({ embedded = false, showHeader = true }:
         </ConsolePanel>
       ) : visibleWithdrawals.length === 0 ? (
         <ConsolePanel className="p-12 text-center">
-          <p className="label-mono text-[12px] uppercase tracking-[0.14em] text-console-mut">No Withdrawals</p>
-          <p className="mt-1 text-[13px] text-console-faint">No {filter !== 'all' ? filter : ''} withdrawal requests found</p>
+          <p className="label-mono text-caption uppercase tracking-[0.14em] text-console-mut">No Withdrawals</p>
+          <p className="mt-1 text-meta text-console-faint">No {filter !== 'all' ? filter : ''} withdrawal requests found</p>
         </ConsolePanel>
       ) : (
         <ConsolePanel className="overflow-hidden">
@@ -262,14 +262,14 @@ export default function WithdrawalsView({ embedded = false, showHeader = true }:
             <table className="w-full">
               <thead className="border-b border-console-ground">
                 <tr>
-                  <th className="label-mono px-4 py-3 text-left text-[10px] uppercase tracking-[0.14em] text-console-faint">Organizer</th>
-                  <th className="label-mono px-4 py-3 text-left text-[10px] uppercase tracking-[0.14em] text-console-faint">Event</th>
-                  <th className="label-mono px-4 py-3 text-left text-[10px] uppercase tracking-[0.14em] text-console-faint">Amount</th>
-                  <th className="label-mono px-4 py-3 text-left text-[10px] uppercase tracking-[0.14em] text-console-faint">Method</th>
-                  <th className="label-mono px-4 py-3 text-left text-[10px] uppercase tracking-[0.14em] text-console-faint">Status</th>
-                  <th className="label-mono px-4 py-3 text-left text-[10px] uppercase tracking-[0.14em] text-console-faint">Date</th>
-                  <th className="label-mono px-4 py-3 text-right text-[10px] uppercase tracking-[0.14em] text-console-faint">Waiting</th>
-                  <th className="label-mono px-4 py-3 text-left text-[10px] uppercase tracking-[0.14em] text-console-faint">Actions</th>
+                  <th className="label-mono px-4 py-3 text-left text-eyebrow uppercase tracking-[0.14em] text-console-faint">Organizer</th>
+                  <th className="label-mono px-4 py-3 text-left text-eyebrow uppercase tracking-[0.14em] text-console-faint">Event</th>
+                  <th className="label-mono px-4 py-3 text-left text-eyebrow uppercase tracking-[0.14em] text-console-faint">Amount</th>
+                  <th className="label-mono px-4 py-3 text-left text-eyebrow uppercase tracking-[0.14em] text-console-faint">Method</th>
+                  <th className="label-mono px-4 py-3 text-left text-eyebrow uppercase tracking-[0.14em] text-console-faint">Status</th>
+                  <th className="label-mono px-4 py-3 text-left text-eyebrow uppercase tracking-[0.14em] text-console-faint">Date</th>
+                  <th className="label-mono px-4 py-3 text-right text-eyebrow uppercase tracking-[0.14em] text-console-faint">Waiting</th>
+                  <th className="label-mono px-4 py-3 text-left text-eyebrow uppercase tracking-[0.14em] text-console-faint">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-console-ground">
@@ -302,7 +302,7 @@ export default function WithdrawalsView({ embedded = false, showHeader = true }:
                       {getStatusBadge(withdrawal.status)}
                       {(withdrawal.approvalBlockers?.length ?? 0) > 0 && (
                         <div
-                          className="label-mono mt-1 text-[10px] uppercase tracking-[0.1em] text-console-red"
+                          className="label-mono mt-1 text-eyebrow uppercase tracking-[0.1em] text-console-red"
                           title={withdrawal.approvalBlockers!.map((b) => b.message).join(' ')}
                         >
                           Blocked
@@ -319,7 +319,7 @@ export default function WithdrawalsView({ embedded = false, showHeader = true }:
                     </td>
                     <td className="px-4 py-4 text-right">
                       <span
-                        className={`label-mono text-[13px] tabular-nums ${
+                        className={`label-mono text-meta tabular-nums ${
                           now ? consoleAgeClass(requestedTimestamp(withdrawal), now) : 'text-console-faint'
                         }`}
                       >
@@ -374,10 +374,10 @@ export default function WithdrawalsView({ embedded = false, showHeader = true }:
 
       {/* Detail Modal */}
       {selectedWithdrawal && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-scrim flex items-center justify-center p-4 z-50">
           <div className="bg-console-panel shadow-xl rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
             <div className="flex justify-between items-start mb-6">
-              <h2 className="label-mono text-[15px] font-bold uppercase tracking-[0.14em] text-console-text">
+              <h2 className="label-mono text-body font-bold uppercase tracking-[0.14em] text-console-text">
                 Withdrawal Details
               </h2>
               <button
@@ -405,7 +405,7 @@ export default function WithdrawalsView({ embedded = false, showHeader = true }:
 
             {/* Organizer Info */}
             <div className="mb-6">
-              <h3 className="label-mono mb-3 text-[10px] uppercase tracking-[0.18em] text-console-faint">Organizer</h3>
+              <h3 className="label-mono mb-3 text-eyebrow uppercase tracking-[0.18em] text-console-faint">Organizer</h3>
               <div className="rounded-lg bg-console-ground p-4 space-y-2">
                 <div className="flex justify-between">
                   <span className="text-console-mut">Name:</span>
@@ -420,7 +420,7 @@ export default function WithdrawalsView({ embedded = false, showHeader = true }:
 
             {/* Event Info */}
             <div className="mb-6">
-              <h3 className="label-mono mb-3 text-[10px] uppercase tracking-[0.18em] text-console-faint">Event</h3>
+              <h3 className="label-mono mb-3 text-eyebrow uppercase tracking-[0.18em] text-console-faint">Event</h3>
               <div className="rounded-lg bg-console-ground p-4 space-y-2">
                 <div className="flex justify-between">
                   <span className="text-console-mut">Title:</span>
@@ -437,7 +437,7 @@ export default function WithdrawalsView({ embedded = false, showHeader = true }:
 
             {/* Payment Details */}
             <div className="mb-6">
-              <h3 className="label-mono mb-3 text-[10px] uppercase tracking-[0.18em] text-console-faint">
+              <h3 className="label-mono mb-3 text-eyebrow uppercase tracking-[0.18em] text-console-faint">
                 Payment Method
               </h3>
               <div className="rounded-lg bg-console-ground p-4 space-y-2">
@@ -486,7 +486,7 @@ export default function WithdrawalsView({ embedded = false, showHeader = true }:
 
             {/* Timestamps */}
             <div className="mb-6">
-              <h3 className="label-mono mb-3 text-[10px] uppercase tracking-[0.18em] text-console-faint">Timeline</h3>
+              <h3 className="label-mono mb-3 text-eyebrow uppercase tracking-[0.18em] text-console-faint">Timeline</h3>
               <div className="rounded-lg bg-console-ground p-4 space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-console-mut">Requested:</span>

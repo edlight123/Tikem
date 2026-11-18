@@ -12,6 +12,7 @@ import { useEffect, useRef, useState } from 'react'
 import Image from 'next/image'
 import { Bookmark } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { color } from '@/lib/design/tokens'
 
 /**
  * A real event, reduced to what a 128px flyer needs.
@@ -66,13 +67,13 @@ function PhoneFrame({ children }: { children: React.ReactNode }) {
   return (
     <div
       aria-hidden
-      className="pointer-events-none mx-auto w-[270px] select-none rounded-[42px] border border-white/10 bg-[#161616] p-2.5 shadow-[0_24px_80px_-24px_rgba(0,0,0,0.8)] sm:w-[290px]"
+      className="pointer-events-none mx-auto w-[270px] select-none rounded-[42px] border border-line bg-surface-solid p-2.5 shadow-[0_24px_80px_-24px_rgba(0,0,0,0.8)] sm:w-[290px]"
     >
       {/* True phone proportions (9:19.5); taller content crops like a real
           screenshot instead of stretching the frame. */}
-      <div className="relative aspect-[9/19.5] overflow-hidden rounded-[32px] bg-white/[0.03]">
+      <div className="relative aspect-[9/19.5] overflow-hidden rounded-[32px] bg-surface-low">
         {/* dynamic island */}
-        <div className="absolute left-1/2 top-2.5 z-10 h-[18px] w-[76px] -translate-x-1/2 rounded-full bg-[#161616]" />
+        <div className="absolute left-1/2 top-2.5 z-10 h-[18px] w-[76px] -translate-x-1/2 rounded-full bg-surface-solid" />
         {children}
       </div>
     </div>
@@ -124,7 +125,7 @@ function MockPoster({
       {/* Only over the gradient. On real art the flyer carries its own title,
           and a second one stamped on top of it reads as a rendering fault. */}
       {label && !src && (
-        <span className="font-grotesk text-[11px] font-bold uppercase leading-[1.05] tracking-tight text-white/90">
+        <span className="font-grotesk text-eyebrow font-bold uppercase leading-[1.05] tracking-tight text-fg">
           {label}
         </span>
       )}
@@ -145,20 +146,20 @@ export function EventPageVignette({ posters = [] }: { posters?: VignettePoster[]
       <div className="relative isolate mx-auto w-fit">
         {/* two more flyers peek from behind the phone: a wall, not a lone screen */}
         <div className="plt-float absolute -left-16 top-14 -z-10 hidden w-[128px] -rotate-6 opacity-75 sm:block lg:-left-24" style={{ ['--dur' as any]: '8s' }}>
-          <MockPoster from="#f59e0b" to="#7c2d12" glow="rgba(245,158,11,0.28)" src={behind[0]?.banner_image_url} />
+          <MockPoster from={color.warning.strong} to="#7c2d12" glow="rgba(245,158,11,0.28)" src={behind[0]?.banner_image_url} />
         </div>
         <div className="plt-float absolute -right-14 bottom-16 -z-10 hidden w-[118px] rotate-6 opacity-75 sm:block lg:-right-20" style={{ ['--dur' as any]: '9s', ['--d' as any]: '1.2s' }}>
           <MockPoster from="#e11d48" to="#4c0519" glow="rgba(225,29,72,0.28)" src={behind[1]?.banner_image_url} />
         </div>
         <PhoneFrame>
           {/* the sale, reported the moment the loop's CTA takes its press */}
-          <div className="plt-ev-toast absolute inset-x-3 top-9 z-20 flex items-center gap-2 rounded-xl bg-[#1f1f1f]/95 px-3 py-2.5 shadow-[0_8px_24px_rgba(0,0,0,0.5)]">
-            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400" />
+          <div className="plt-ev-toast absolute inset-x-3 top-9 z-20 flex items-center gap-2 rounded-xl bg-surface-raised-solid/95 px-3 py-2.5 shadow-[0_8px_24px_rgba(0,0,0,0.5)]">
+            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-success" />
             {/* No buyer name. It read "Ticket sold: Nadège J." — harmless
                 over an invented event, a fabricated sale by a named person
                 once the poster beside it belongs to somebody real. The
                 notification itself is product chrome and stays. */}
-            <span className="min-w-0 flex-1 truncate text-[10px] font-medium text-white">
+            <span className="min-w-0 flex-1 truncate text-eyebrow font-medium text-fg">
               {t('platform.vignettes.ticketSoldPlain', { defaultValue: 'Ticket sold' })}
             </span>
           </div>
@@ -173,12 +174,12 @@ export function EventPageVignette({ posters = [] }: { posters?: VignettePoster[]
                 src={hero?.banner_image_url}
               />
             </div>
-            <p className="plt-ev-title mt-3 truncate font-grotesk text-[15px] font-bold text-white">
+            <p className="plt-ev-title mt-3 truncate font-grotesk text-body font-bold text-fg">
               {hero?.title || 'Vèsen Live. Summer Fest'}
             </p>
             {/* Real event, real place. The invented venue line is kept only for
                 the no-data fallback, where there is nothing to misstate. */}
-            <p className="plt-ev-meta mt-1 truncate text-[11px] text-white/55">
+            <p className="plt-ev-meta mt-1 truncate text-eyebrow text-fg-muted">
               {hero?.city || 'Sat 12 Sep · Kay Atizan, Pétion-Ville'}
             </p>
             {/* The real event's real price. This line printed a hardcoded
@@ -188,7 +189,7 @@ export function EventPageVignette({ posters = [] }: { posters?: VignettePoster[]
                 beside a real event; the fallback keeps the old copy because
                 there is no real event to misprice. */}
             {(hero ? hero.price : '1,500 HTG') && (
-              <p className="plt-ev-price mt-1 text-[11px] font-semibold text-brand-400">
+              <p className="plt-ev-price mt-1 text-eyebrow font-semibold text-brand-400">
                 {t('platform.vignettes.fromPrice', {
                   defaultValue: 'From {{price}}',
                   price: hero ? hero.price : '1,500 HTG',
@@ -197,11 +198,11 @@ export function EventPageVignette({ posters = [] }: { posters?: VignettePoster[]
             )}
             {/* the rest of the page, suggested */}
             <div className="plt-ev-lines mt-4 space-y-2">
-              <div className="h-2 w-full rounded bg-white/[0.07]" />
-              <div className="h-2 w-4/5 rounded bg-white/[0.07]" />
-              <div className="h-2 w-3/5 rounded bg-white/[0.07]" />
+              <div className="h-2 w-full rounded bg-surface-raised" />
+              <div className="h-2 w-4/5 rounded bg-surface-raised" />
+              <div className="h-2 w-3/5 rounded bg-surface-raised" />
             </div>
-            <div className="plt-ev-cta mt-auto rounded-xl bg-white py-2.5 text-center text-[12px] font-medium text-black">
+            <div className="plt-ev-cta mt-auto rounded-xl bg-inverse py-2.5 text-center text-caption font-medium text-on-inverse">
               {t('platform.vignettes.getTickets', { defaultValue: 'Get tickets' })}
             </div>
           </div>
@@ -239,17 +240,17 @@ function FeedCard({
       <div className="relative">
         <MockPoster from={from} to={to} glow={glow} src={poster?.banner_image_url} />
         {save && (
-          <span className="plt-feed-save absolute right-1.5 top-1.5 grid h-6 w-6 place-items-center rounded bg-white shadow-[0_2px_10px_rgba(0,0,0,0.4)]">
-            <Bookmark className="h-3 w-3 fill-black text-black" />
+          <span className="plt-feed-save absolute right-1.5 top-1.5 grid h-6 w-6 place-items-center rounded bg-inverse shadow-[0_2px_10px_rgba(0,0,0,0.4)]">
+            <Bookmark className="h-3 w-3 fill-black text-on-inverse" />
           </span>
         )}
       </div>
-      <p className="mt-1.5 truncate text-[10px] font-semibold text-white">
+      <p className="mt-1.5 truncate text-eyebrow font-semibold text-fg">
         {poster?.title || title}
       </p>
       {/* A real event gets its real city. The invented "N going" is kept only
           for the gradient fallback, where there is no real event to misreport. */}
-      <p className="truncate text-[9px] text-white/50">
+      <p className="truncate text-eyebrow text-fg-subtle">
         {poster
           ? poster.city || ''
           : `● ${t('platform.vignettes.going', { defaultValue: '{{n}} going', n: going })}`}
@@ -268,16 +269,16 @@ export function DiscoverVignette({ posters = [] }: { posters?: VignettePoster[] 
     <VignetteStage glow="rgba(245,158,11,0.10)">
       <PhoneFrame>
         <div className="plt-feed-track px-4 pt-11">
-          <p className="font-display lowercase italic text-[19px] leading-none text-white/90">
+          <p className="font-display lowercase italic text-lead leading-none text-fg">
             {t('platform.vignettes.tonight', { defaultValue: 'tonight' })}
           </p>
           <div className="mt-3 grid grid-cols-2 gap-2.5">
-            <FeedCard from="#f59e0b" to="#7c2d12" glow="rgba(245,158,11,0.32)" title="Kanaval Kickoff" going="214"  poster={at(0)} />
+            <FeedCard from={color.warning.strong} to="#7c2d12" glow="rgba(245,158,11,0.32)" title="Kanaval Kickoff" going="214"  poster={at(0)} />
             <FeedCard from="#e11d48" to="#4c0519" glow="rgba(225,29,72,0.32)" title="Nuit Kompa" going="96"  poster={at(1)} />
             <FeedCard from="#0ea5e9" to="#1e3a8a" glow="rgba(14,165,233,0.32)" title="Plaj Sunset" going="58"  poster={at(2)} />
-            <FeedCard from="#10b981" to="#064e3b" glow="rgba(16,185,129,0.32)" title="Fèt Champèt" going="143"  poster={at(3)} />
+            <FeedCard from={color.success.strong} to="#064e3b" glow="rgba(16,185,129,0.32)" title="Fèt Champèt" going="143"  poster={at(3)} />
           </div>
-          <p className="mt-5 font-display lowercase italic text-[19px] leading-none text-white/90">
+          <p className="mt-5 font-display lowercase italic text-lead leading-none text-fg">
             {t('platform.vignettes.thisWeekend', { defaultValue: 'this weekend' })}
           </p>
           <div className="mt-3 grid grid-cols-2 gap-2.5">
@@ -286,7 +287,7 @@ export function DiscoverVignette({ posters = [] }: { posters?: VignettePoster[] 
             <FeedCard from="#f97316" to="#431407" glow="rgba(249,115,22,0.32)" title="Griyo Night" going="122"  poster={at(6)} />
             <FeedCard from="#6366f1" to="#1e1b4b" glow="rgba(99,102,241,0.32)" title="Jazz Pòtoprens" going="49"  poster={at(7)} />
           </div>
-          <p className="mt-5 font-display lowercase italic text-[19px] leading-none text-white/90">
+          <p className="mt-5 font-display lowercase italic text-lead leading-none text-fg">
             {t('platform.vignettes.inDiaspora', { defaultValue: 'in the diaspora' })}
           </p>
           <div className="mt-3 grid grid-cols-2 gap-2.5 pb-6">
@@ -353,17 +354,17 @@ export function DashboardVignette() {
     <VignetteStage glow="rgba(124,58,237,0.12)">
       <PhoneFrame>
         <div className="h-full px-5 pt-11">
-          <p className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-[0.14em] text-white/40">
+          <p className="flex items-center gap-1.5 text-eyebrow font-medium uppercase tracking-[0.14em] text-fg-subtle">
             <span className="plt-live-dot h-1.5 w-1.5 rounded-full bg-brand-400" />
             {t('platform.vignettes.liveTonight', { defaultValue: 'Live · tonight' })}
           </p>
-          <p className="mt-2.5 font-grotesk text-[30px] font-bold leading-none tracking-tight text-white">
+          <p className="mt-2.5 font-grotesk text-display font-bold leading-none tracking-tight text-fg">
             <span key={revenue} className="plt-tick">
               {revenue.toLocaleString('en-US')}
             </span>{' '}
-            <span className="text-[15px] font-semibold text-white/55">HTG</span>
+            <span className="text-body font-semibold text-fg-muted">HTG</span>
           </p>
-          <p className="mt-1.5 text-[11px] text-white/55">
+          <p className="mt-1.5 text-eyebrow text-fg-muted">
             {t('platform.vignettes.ticketsSold', {
               defaultValue: '{{n}} tickets sold',
               n: sold.toLocaleString('en-US'),
@@ -374,47 +375,47 @@ export function DashboardVignette() {
               <div
                 key={i}
                 className={`flex-1 rounded-sm ${
-                  i === BARS.length - 1 ? 'plt-bar plt-bar-live bg-brand-400' : 'plt-bar bg-white/15'
+                  i === BARS.length - 1 ? 'plt-bar plt-bar-live bg-brand-400' : 'plt-bar bg-surface-high'
                 }`}
                 style={{ height: `${h}%`, ['--d' as any]: `${i * 70}ms` }}
               />
             ))}
           </div>
-          <div className="mt-4 space-y-2.5 border-t border-white/10 pt-3.5">
-            <p className="flex items-center justify-between text-[11px]">
-              <span className="text-white/55">{t('platform.vignettes.checkedIn', { defaultValue: 'Checked in' })}</span>
-              <span className="font-semibold text-white">
+          <div className="mt-4 space-y-2.5 border-t border-line pt-3.5">
+            <p className="flex items-center justify-between text-eyebrow">
+              <span className="text-fg-muted">{t('platform.vignettes.checkedIn', { defaultValue: 'Checked in' })}</span>
+              <span className="font-semibold text-fg">
                 <span key={checked} className="plt-tick">
                   {checked}
                 </span>{' '}
                 / 400
               </span>
             </p>
-            <p className="flex items-center justify-between text-[11px]">
-              <span className="text-white/55">{t('platform.vignettes.payout', { defaultValue: 'Payout' })}</span>
-              <span className="flex items-center gap-1.5 font-medium text-white">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+            <p className="flex items-center justify-between text-eyebrow">
+              <span className="text-fg-muted">{t('platform.vignettes.payout', { defaultValue: 'Payout' })}</span>
+              <span className="flex items-center gap-1.5 font-medium text-fg">
+                <span className="h-1.5 w-1.5 rounded-full bg-success" />
                 {t('platform.vignettes.availableAfterEvent', { defaultValue: 'Available after event' })}
               </span>
             </p>
           </div>
           {/* orders roll in live, newest first */}
-          <p className="mt-5 text-[10px] font-medium uppercase tracking-[0.14em] text-white/40">
+          <p className="mt-5 text-eyebrow font-medium uppercase tracking-[0.14em] text-fg-subtle">
             {t('platform.vignettes.recentOrders', { defaultValue: 'Recent orders' })}
           </p>
           <div className="mt-2.5 space-y-2.5">
             {orders.map((o, i) => (
               <p
                 key={o.id}
-                className={`flex items-center justify-between rounded-md text-[11px] ${
+                className={`flex items-center justify-between rounded-md text-eyebrow ${
                   i === 0 ? 'plt-order-in' : ''
                 }`}
               >
                 <span className="min-w-0">
-                  <span className="block truncate font-medium text-white">{o.name}</span>
-                  <span className="text-[10px] text-white/45">{o.qty}</span>
+                  <span className="block truncate font-medium text-fg">{o.name}</span>
+                  <span className="text-eyebrow text-fg-subtle">{o.qty}</span>
                 </span>
-                <span className="shrink-0 font-semibold text-white/80">
+                <span className="shrink-0 font-semibold text-fg-soft">
                   {o.amt.toLocaleString('en-US')} HTG
                 </span>
               </p>

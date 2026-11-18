@@ -499,34 +499,34 @@ export function PayoutReleaseSettingsForm({ fx = null }: { fx?: FxStatus | null 
       {/* Live summary figures */}
       <div className="grid grid-cols-2 gap-x-6 gap-y-4 sm:flex sm:flex-wrap sm:gap-x-8 sm:gap-y-4">
         <div>
-          <p className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint">New hold</p>
+          <p className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint">New hold</p>
           <p className="mt-1 font-mono text-xl tabular-nums text-console-text">
             {config.newHoldHours}
             <span className="text-sm font-medium text-console-mut"> h</span>
           </p>
         </div>
         <div>
-          <p className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint">Established hold</p>
+          <p className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint">Established hold</p>
           <p className="mt-1 font-mono text-xl tabular-nums text-console-text">
             {config.establishedHoldHours}
             <span className="text-sm font-medium text-console-mut"> h</span>
           </p>
         </div>
         <div>
-          <p className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint">Established after</p>
+          <p className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint">Established after</p>
           <p className="mt-1 font-mono text-xl tabular-nums text-console-text">
             {config.establishedAfterEvents}
             <span className="text-sm font-medium text-console-mut"> events</span>
           </p>
         </div>
         <div>
-          <p className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint">Review above</p>
+          <p className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint">Review above</p>
           <p className="mt-1 font-mono text-xl tabular-nums text-console-text">
             {majorFormatter.format(config.reviewAboveGrossMinor / 100)}
           </p>
         </div>
         <div>
-          <p className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint">Thresholds in</p>
+          <p className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint">Thresholds in</p>
           <p className="mt-1 font-mono text-xl text-console-text">
             {normalizeCode(config.thresholdCurrency || 'USD')}
           </p>
@@ -570,7 +570,7 @@ export function PayoutReleaseSettingsForm({ fx = null }: { fx?: FxStatus | null 
         {GROUPS.map((group) => (
           <section key={group.title} className="rounded-lg bg-console-panel p-4 sm:p-5">
             <div className="mb-4">
-              <h2 className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint">{group.title}</h2>
+              <h2 className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint">{group.title}</h2>
               <p className="mt-1 text-xs text-console-mut">{group.blurb}</p>
             </div>
 
@@ -590,12 +590,12 @@ export function PayoutReleaseSettingsForm({ fx = null }: { fx?: FxStatus | null 
                         {field.label}
                       </label>
                       {atDefault ? (
-                        <span className="label-mono text-[11px] uppercase tracking-wide text-console-faint">Default</span>
+                        <span className="label-mono text-eyebrow uppercase tracking-wide text-console-faint">Default</span>
                       ) : (
                         <button
                           type="button"
                           onClick={() => resetField(field)}
-                          className="inline-flex items-center gap-1 text-[11px] font-semibold text-console-mut hover:text-console-text"
+                          className="inline-flex items-center gap-1 text-eyebrow font-semibold text-console-mut hover:text-console-text"
                         >
                           <RotateCcw className="h-3 w-3" />
                           Reset to {prettyDisplay(field.kind, defaultDisplay)}
@@ -628,7 +628,7 @@ export function PayoutReleaseSettingsForm({ fx = null }: { fx?: FxStatus | null 
                       {field.help}
                     </p>
 
-                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-console-faint">
+                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-eyebrow text-console-faint">
                       <span>
                         Default {prettyDisplay(field.kind, defaultDisplay)}
                       </span>
@@ -668,7 +668,7 @@ export function PayoutReleaseSettingsForm({ fx = null }: { fx?: FxStatus | null 
         {/* ── Threshold currency + FX fallback table ─────────────────────── */}
         <section className="rounded-lg bg-console-panel p-4 sm:p-5">
           <div className="mb-4">
-            <h2 className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint">
+            <h2 className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint">
               Currency conversion for thresholds
             </h2>
             <p className="mt-1 text-xs text-console-mut">
@@ -767,7 +767,7 @@ export function PayoutReleaseSettingsForm({ fx = null }: { fx?: FxStatus | null 
               <p className="text-sm font-medium text-console-mut">
                 Fallback rates, {normalizedThreshold || 'USD'} per 1 unit
               </p>
-              <span className="label-mono text-[11px] uppercase tracking-wide text-console-faint">
+              <span className="label-mono text-eyebrow uppercase tracking-wide text-console-faint">
                 {rateRows.length} currenc{rateRows.length === 1 ? 'y' : 'ies'}
               </span>
             </div>
@@ -828,12 +828,12 @@ export function PayoutReleaseSettingsForm({ fx = null }: { fx?: FxStatus | null 
                   </div>
 
                   {pinned && (
-                    <p className="mt-1 text-[11px] text-console-faint">
+                    <p className="mt-1 text-eyebrow text-console-faint">
                       This is the threshold currency, saved as 1 whatever is typed.
                     </p>
                   )}
                   {showPreview && (
-                    <p className="mt-1 text-[11px] text-console-faint">
+                    <p className="mt-1 text-eyebrow text-console-faint">
                       1 {code} counts as {rateFormatter.format(rate)} {normalizedThreshold} · 1{' '}
                       {normalizedThreshold} counts as {rateFormatter.format(1 / rate)} {code}
                     </p>

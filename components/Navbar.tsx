@@ -38,7 +38,7 @@ const NotificationBell = dynamic(
     loading: () => (
       <Link
         href="/notifications"
-        className="relative p-2 rounded-lg text-white/70 hover:bg-white/[0.04] transition-colors"
+        className="relative p-2 rounded-lg text-fg-muted hover:bg-surface-low transition-colors"
         title="Notifications"
       >
         <Bell className="w-5 h-5" />
@@ -193,12 +193,12 @@ export default function Navbar({ user, isAdmin = false, flush = false, solid = f
   }
 
   const accountMenuItemClass =
-    'block w-full text-left px-4 py-2 text-sm text-white/70 hover:bg-white/5 hover:text-white transition-colors duration-200'
+    'block w-full text-left px-4 py-2 text-sm text-fg-muted hover:bg-surface hover:text-fg transition-colors duration-200'
 
   return (
     <nav
-      className={`sticky top-0 z-50 ${solid ? 'bg-black' : 'bg-[#0a0a0a]/80 backdrop-blur-xl'} ${
-        flush ? '' : 'border-b border-white/10'
+      className={`sticky top-0 z-50 ${solid ? 'bg-black' : 'bg-canvas/80 backdrop-blur-xl'} ${
+        flush ? '' : 'border-b border-line'
       }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -206,7 +206,7 @@ export default function Navbar({ user, isAdmin = false, flush = false, solid = f
           <div className="flex items-center">
             <Link href="/" className="group flex items-center">
               <TikemWordmark
-                className="text-[28px] text-white sm:text-[30px] transition-opacity duration-200 group-hover:opacity-80"
+                className="text-headline text-fg sm:text-display transition-opacity duration-200 group-hover:opacity-80"
               />
             </Link>
             <div className="hidden md:ml-8 md:flex md:space-x-2 lg:space-x-4">
@@ -214,8 +214,8 @@ export default function Navbar({ user, isAdmin = false, flush = false, solid = f
                 href="/discover"
                 className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                   pathname === '/' || pathname === '/discover'
-                    ? 'text-white'
-                    : 'text-white/70 hover:bg-white/5 hover:text-white'
+                    ? 'text-fg'
+                    : 'text-fg-muted hover:bg-surface hover:text-fg'
                 }`}
               >
                 {t('nav.home')}
@@ -223,7 +223,7 @@ export default function Navbar({ user, isAdmin = false, flush = false, solid = f
               <Link
                 href="/resources"
                 className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                  pathname?.startsWith('/resources') ? 'text-white' : 'text-white/70 hover:bg-white/5 hover:text-white'
+                  pathname?.startsWith('/resources') ? 'text-fg' : 'text-fg-muted hover:bg-surface hover:text-fg'
                 }`}
               >
                 {t('nav.resources', { defaultValue: 'Guides' })}
@@ -235,8 +235,8 @@ export default function Navbar({ user, isAdmin = false, flush = false, solid = f
                 href={user?.role === 'organizer' || onATeam ? '/organizer/events/new' : '/create'}
                 className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                   pathname?.startsWith('/create') || pathname?.startsWith('/organizer/events/new')
-                    ? 'text-white'
-                    : 'text-white/70 hover:bg-white/5 hover:text-white'
+                    ? 'text-fg'
+                    : 'text-fg-muted hover:bg-surface hover:text-fg'
                 }`}
               >
                 {t('nav.createEvent', { defaultValue: 'Create event' })}
@@ -258,13 +258,13 @@ export default function Navbar({ user, isAdmin = false, flush = false, solid = f
                     aria-haspopup="menu"
                     aria-expanded={accountMenuOpen}
                     aria-label={user.full_name}
-                    className="flex items-center gap-2 text-sm text-white/80 hover:text-white transition-colors duration-200"
+                    className="flex items-center gap-2 text-sm text-fg-soft hover:text-fg transition-colors duration-200"
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={user.photo_url || defaultAvatarUrl(user.id)}
                       alt=""
-                      className="w-8 h-8 rounded-full object-cover bg-white/[0.08]"
+                      className="w-8 h-8 rounded-full object-cover bg-surface-raised"
                     />
                     <span className="font-medium">{user.full_name}</span>
                     <svg
@@ -282,7 +282,7 @@ export default function Navbar({ user, isAdmin = false, flush = false, solid = f
                     <div
                       role="menu"
                       aria-label={user.full_name}
-                      className="absolute right-0 mt-2 w-56 rounded-lg border border-white/10 bg-[#111] py-1 shadow-xl"
+                      className="absolute right-0 mt-2 w-56 rounded-lg border border-line bg-surface-solid py-1 shadow-xl"
                     >
                       <Link
                         href="/tickets"
@@ -347,7 +347,7 @@ export default function Navbar({ user, isAdmin = false, flush = false, solid = f
                           {t('nav.admin')}
                         </Link>
                       )}
-                      <div className="my-1 border-t border-white/10" />
+                      <div className="my-1 border-t border-line" />
                       <Link
                         href="/profile"
                         role="menuitem"
@@ -378,13 +378,13 @@ export default function Navbar({ user, isAdmin = false, flush = false, solid = f
                     Regular weights and small type read premium; teal never fills. */}
                 <Link
                   href={`/auth/login?redirect=${encodeURIComponent(redirectTarget)}`}
-                  className="hidden sm:inline-flex items-center px-3 py-2 text-[13px] font-normal text-white/70 transition-colors duration-200 hover:text-white"
+                  className="hidden sm:inline-flex items-center px-3 py-2 text-meta font-normal text-fg-muted transition-colors duration-200 hover:text-fg"
                 >
                   {t('nav.signIn')}
                 </Link>
                 <Link
                   href={`/auth/signup?redirect=${encodeURIComponent(redirectTarget)}`}
-                  className="inline-flex items-center rounded-xl bg-white px-4 py-2 text-[13px] font-medium text-black transition-colors duration-200 hover:bg-white/90"
+                  className="inline-flex items-center rounded-xl bg-inverse px-4 py-2 text-meta font-medium text-on-inverse transition-colors duration-200 hover:bg-inverse-hover"
                 >
                   {t('auth:signup.submit')}
                 </Link>
@@ -394,7 +394,7 @@ export default function Navbar({ user, isAdmin = false, flush = false, solid = f
             {/* Mobile menu button */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 rounded-lg text-white/80 hover:bg-white/10"
+              className="md:hidden p-2 rounded-lg text-fg-soft hover:bg-surface-raised"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 {mobileMenuOpen ? (
@@ -409,15 +409,15 @@ export default function Navbar({ user, isAdmin = false, flush = false, solid = f
 
         {/* Mobile menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden py-4 border-t border-white/10">
+          <div className="md:hidden py-4 border-t border-line">
             <div className="space-y-1">
               <Link
                 href="/discover"
                 onClick={() => setMobileMenuOpen(false)}
                 className={`block px-3 py-2 rounded-lg text-sm font-medium ${
                   pathname === '/' || pathname === '/discover'
-                    ? 'text-white'
-                    : 'text-white/70 hover:bg-white/5 hover:text-white'
+                    ? 'text-fg'
+                    : 'text-fg-muted hover:bg-surface hover:text-fg'
                 }`}
               >
                 {t('nav.home')}
@@ -426,7 +426,7 @@ export default function Navbar({ user, isAdmin = false, flush = false, solid = f
                 href="/resources"
                 onClick={() => setMobileMenuOpen(false)}
                 className={`block px-3 py-2 rounded-lg text-sm font-medium ${
-                  pathname?.startsWith('/resources') ? 'text-white' : 'text-white/70 hover:bg-white/5 hover:text-white'
+                  pathname?.startsWith('/resources') ? 'text-fg' : 'text-fg-muted hover:bg-surface hover:text-fg'
                 }`}
               >
                 {t('nav.resources', { defaultValue: 'Guides' })}
@@ -435,7 +435,7 @@ export default function Navbar({ user, isAdmin = false, flush = false, solid = f
                 href={user?.role === 'organizer' || onATeam ? '/organizer/events/new' : '/create'}
                 onClick={() => setMobileMenuOpen(false)}
                 className={`block px-3 py-2 rounded-lg text-sm font-medium ${
-                  pathname?.startsWith('/create') ? 'text-white' : 'text-white/70 hover:bg-white/5 hover:text-white'
+                  pathname?.startsWith('/create') ? 'text-fg' : 'text-fg-muted hover:bg-surface hover:text-fg'
                 }`}
               >
                 {t('nav.createEvent', { defaultValue: 'Create event' })}
@@ -446,7 +446,7 @@ export default function Navbar({ user, isAdmin = false, flush = false, solid = f
                     href="/tickets"
                     onClick={() => setMobileMenuOpen(false)}
                     className={`block px-3 py-2 rounded-lg text-sm font-medium ${
-                      pathname?.startsWith('/tickets') ? 'text-white' : 'text-white/70 hover:bg-white/5 hover:text-white'
+                      pathname?.startsWith('/tickets') ? 'text-fg' : 'text-fg-muted hover:bg-surface hover:text-fg'
                     }`}
                   >
                     {t('nav.myTickets')}
@@ -455,7 +455,7 @@ export default function Navbar({ user, isAdmin = false, flush = false, solid = f
                     href="/favorites"
                     onClick={() => setMobileMenuOpen(false)}
                     className={`block px-3 py-2 rounded-lg text-sm font-medium ${
-                      pathname === '/favorites' ? 'text-white' : 'text-white/70 hover:bg-white/5 hover:text-white'
+                      pathname === '/favorites' ? 'text-fg' : 'text-fg-muted hover:bg-surface hover:text-fg'
                     }`}
                   >
                     {t('nav.favorites')}
@@ -464,7 +464,7 @@ export default function Navbar({ user, isAdmin = false, flush = false, solid = f
                     href="/connections"
                     onClick={() => setMobileMenuOpen(false)}
                     className={`block px-3 py-2 rounded-lg text-sm font-medium ${
-                      pathname?.startsWith('/connections') ? 'text-white' : 'text-white/70 hover:bg-white/5 hover:text-white'
+                      pathname?.startsWith('/connections') ? 'text-fg' : 'text-fg-muted hover:bg-surface hover:text-fg'
                     }`}
                   >
                     {t('nav.friends', { defaultValue: 'Friends' })}
@@ -474,7 +474,7 @@ export default function Navbar({ user, isAdmin = false, flush = false, solid = f
                       href="/organizer"
                       onClick={() => setMobileMenuOpen(false)}
                       className={`block px-3 py-2 rounded-lg text-sm font-medium ${
-                        pathname?.startsWith('/organizer') ? 'text-white' : 'text-white/70 hover:bg-white/5 hover:text-white'
+                        pathname?.startsWith('/organizer') ? 'text-fg' : 'text-fg-muted hover:bg-surface hover:text-fg'
                       }`}
                     >
                       {t('nav.organizer')}
@@ -484,7 +484,7 @@ export default function Navbar({ user, isAdmin = false, flush = false, solid = f
                       href="/organizer"
                       onClick={() => setMobileMenuOpen(false)}
                       className={`block px-3 py-2 rounded-lg text-sm font-medium ${
-                        pathname?.startsWith('/organizer') ? 'text-white' : 'text-white/70 hover:bg-white/5 hover:text-white'
+                        pathname?.startsWith('/organizer') ? 'text-fg' : 'text-fg-muted hover:bg-surface hover:text-fg'
                       }`}
                     >
                       {t('nav.becomeHost', { defaultValue: 'Become a host' })}
@@ -495,7 +495,7 @@ export default function Navbar({ user, isAdmin = false, flush = false, solid = f
                       href="/promoter"
                       onClick={() => setMobileMenuOpen(false)}
                       className={`block px-3 py-2 rounded-lg text-sm font-medium ${
-                        pathname?.startsWith('/promoter') ? 'text-white' : 'text-white/70 hover:bg-white/5 hover:text-white'
+                        pathname?.startsWith('/promoter') ? 'text-fg' : 'text-fg-muted hover:bg-surface hover:text-fg'
                       }`}
                     >
                       {t('nav.promoterPortal', { defaultValue: 'Promoter portal' })}
@@ -506,7 +506,7 @@ export default function Navbar({ user, isAdmin = false, flush = false, solid = f
                       href="/admin"
                       onClick={() => setMobileMenuOpen(false)}
                       className={`block px-3 py-2 rounded-lg text-sm font-medium ${
-                        pathname?.startsWith('/admin') ? 'text-white' : 'text-white/70 hover:bg-white/5 hover:text-white'
+                        pathname?.startsWith('/admin') ? 'text-fg' : 'text-fg-muted hover:bg-surface hover:text-fg'
                       }`}
                     >
                       {t('nav.admin')}
@@ -516,7 +516,7 @@ export default function Navbar({ user, isAdmin = false, flush = false, solid = f
                     href="/profile"
                     onClick={() => setMobileMenuOpen(false)}
                     className={`block px-3 py-2 rounded-lg text-sm font-medium ${
-                      pathname === '/profile' ? 'text-white' : 'text-white/70 hover:bg-white/5 hover:text-white'
+                      pathname === '/profile' ? 'text-fg' : 'text-fg-muted hover:bg-surface hover:text-fg'
                     }`}
                   >
                     {t('nav.profile')}
@@ -527,7 +527,7 @@ export default function Navbar({ user, isAdmin = false, flush = false, solid = f
                       setMobileMenuOpen(false)
                       handleSignOut()
                     }}
-                    className="block w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-white/70 hover:bg-white/5 hover:text-white"
+                    className="block w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-fg-muted hover:bg-surface hover:text-fg"
                   >
                     {t('nav.signOut')}
                   </button>
@@ -538,14 +538,14 @@ export default function Navbar({ user, isAdmin = false, flush = false, solid = f
                   <Link
                     href={`/auth/login?redirect=${encodeURIComponent(redirectTarget)}`}
                     onClick={() => setMobileMenuOpen(false)}
-                    className="block px-3 py-2 rounded-lg text-sm font-medium text-white/70 hover:bg-white/5 hover:text-white"
+                    className="block px-3 py-2 rounded-lg text-sm font-medium text-fg-muted hover:bg-surface hover:text-fg"
                   >
                     {t('nav.signIn')}
                   </Link>
                   <Link
                     href={`/auth/signup?redirect=${encodeURIComponent(redirectTarget)}`}
                     onClick={() => setMobileMenuOpen(false)}
-                    className="block px-3 py-2 rounded-lg text-sm font-medium text-white/70 hover:bg-white/5 hover:text-white"
+                    className="block px-3 py-2 rounded-lg text-sm font-medium text-fg-muted hover:bg-surface hover:text-fg"
                   >
                     {t('auth:signup.submit')}
                   </Link>

@@ -74,7 +74,7 @@ export default async function PayoutsSettingsPage({
   // Show advanced view (original complex page) if requested or editing
   if (viewParam === 'advanced' || editParam) {
     return (
-      <div className="bg-[#0a0a0a]">
+      <div className="bg-canvas">
         <PayoutsPageNew
           haitiConfig={serializedHaitiConfig}
           stripeConfig={serializedStripeConfig}

@@ -22,7 +22,7 @@ import { DeleteAccountDialog } from '@/components/account/DeleteAccountDialog'
  *
  * Before: four rows built as four separate boxes, three of them borders around
  * near-white light-theme tints — `border-brand-100` and `bg-brand-100` on the
- * support row, `border-red-200` and `bg-red-100` on delete — so on a black page
+ * support row, `border-danger-soft` and `bg-danger-soft` on delete — so on a black page
  * the support row drew a pale hairline and a pale block, and the icon tiles were
  * brighter than the text they sat beside.
  *
@@ -78,9 +78,9 @@ export function AccountCard() {
   }
 
   const rowClass =
-    'group flex w-full items-center gap-3.5 px-4 py-4 text-left transition-colors hover:bg-white/[0.05] focus:outline-none focus-visible:bg-white/[0.05] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500 disabled:opacity-60 sm:px-5'
+    'group flex w-full items-center gap-3.5 px-4 py-4 text-left transition-colors hover:bg-surface focus:outline-none focus-visible:bg-surface focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500 disabled:opacity-60 sm:px-5'
   const tileClass =
-    'grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-white/[0.06] text-white/55 transition-colors group-hover:text-white/85'
+    'grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-surface text-fg-muted transition-colors group-hover:text-fg-soft'
 
   return (
     <>
@@ -93,13 +93,13 @@ export function AccountCard() {
                 <Briefcase className="h-[18px] w-[18px]" aria-hidden />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block !text-[15px] font-semibold text-white">{tCommon('nav.staff')}</span>
-                <span className="mt-0.5 block !text-[13px] !leading-snug text-white/50">
+                <span className="block !text-body font-semibold text-fg">{tCommon('nav.staff')}</span>
+                <span className="mt-0.5 block !text-meta !leading-snug text-fg-subtle">
                   {t('account.staff_desc')}
                 </span>
               </span>
               <ChevronRight
-                className="h-4 w-4 shrink-0 text-white/25 transition-colors group-hover:text-white/60"
+                className="h-4 w-4 shrink-0 text-fg-faint transition-colors group-hover:text-fg-muted"
                 aria-hidden
               />
             </Link>
@@ -119,8 +119,8 @@ export function AccountCard() {
                 )}
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block !text-[15px] font-semibold text-white">{t('account.sign_out')}</span>
-                <span className="mt-0.5 block !text-[13px] !leading-snug text-white/50">
+                <span className="block !text-body font-semibold text-fg">{t('account.sign_out')}</span>
+                <span className="mt-0.5 block !text-meta !leading-snug text-fg-subtle">
                   {t('account.sign_out_desc')}
                 </span>
               </span>
@@ -134,16 +134,16 @@ export function AccountCard() {
           type="button"
           id="delete-account"
           onClick={() => setShowDeleteModal(true)}
-          className="group mt-4 flex w-full items-center gap-3.5 rounded-2xl bg-red-500/[0.05] px-4 py-4 text-left ring-1 ring-inset ring-red-500/20 transition-colors hover:bg-red-500/[0.1] focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400 sm:px-5"
+          className="group mt-4 flex w-full items-center gap-3.5 rounded-2xl bg-danger-strong/[0.05] px-4 py-4 text-left ring-1 ring-inset ring-danger-strong/20 transition-colors hover:bg-danger-strong/[0.1] focus:outline-none focus-visible:ring-2 focus-visible:ring-danger sm:px-5"
         >
-          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-red-500/10 text-red-300">
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-danger-strong/10 text-danger-soft">
             <Trash2 className="h-[18px] w-[18px]" aria-hidden />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block !text-[15px] font-semibold text-red-200">
+            <span className="block !text-body font-semibold text-danger-soft">
               {t('account.delete_account')}
             </span>
-            <span className="mt-0.5 block !text-[13px] !leading-snug text-white/50">
+            <span className="mt-0.5 block !text-meta !leading-snug text-fg-subtle">
               {t('account.delete_account_desc')}
             </span>
           </span>

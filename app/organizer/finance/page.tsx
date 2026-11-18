@@ -35,7 +35,7 @@ export default async function FinancePage() {
   const summary = summaryFromAvailability(availability.events)
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a]">
+    <div className="min-h-screen bg-canvas">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
         <TranslatedPageHeader
           eyebrowKey="organizer"
@@ -45,13 +45,13 @@ export default async function FinancePage() {
             isOwner ? (
               <Link
                 href="/organizer/settings/payouts"
-                className="inline-flex h-11 items-center gap-2 rounded bg-white/[0.08] px-4 text-sm font-semibold text-white/80 transition-colors hover:bg-white/[0.14] hover:text-white"
+                className="inline-flex h-11 items-center gap-2 rounded bg-surface-raised px-4 text-sm font-semibold text-fg-soft transition-colors hover:bg-surface-high hover:text-fg"
               >
                 <T k="finance_view.payout_settings" />
               </Link>
             ) : (
-              <span className="inline-flex items-center gap-2 text-sm text-white/60">
-                <span className="h-2 w-2 rounded-full bg-white/50" aria-hidden />
+              <span className="inline-flex items-center gap-2 text-sm text-fg-muted">
+                <span className="h-2 w-2 rounded-full bg-fg/50" aria-hidden />
                 <T k="finance_view.read_only_label" />
               </span>
             )

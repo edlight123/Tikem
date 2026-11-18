@@ -245,7 +245,7 @@ export default async function DiscoverPage({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {nationalDay ? (
           // The national day this list is for, named in the editorial voice.
-          <h1 className="mb-6 font-display lowercase italic !text-[clamp(28px,4.4vw,44px)] !leading-[1.02] text-white/90">
+          <h1 className="mb-6 font-display lowercase italic !text-[clamp(28px,4.4vw,44px)] !leading-[1.02] text-fg">
             {nationalDayTitle}
           </h1>
         ) : (

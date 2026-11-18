@@ -35,9 +35,9 @@ const COLUMNS: OrgColumn<Order>[] = [
     sortAccessor: (o) => o.attendeeName,
     render: (o) => (
       <div className="min-w-0">
-        <p className="truncate font-medium text-white">{o.attendeeName}</p>
+        <p className="truncate font-medium text-fg">{o.attendeeName}</p>
         {o.attendeeEmail && (
-          <p className="truncate text-xs text-white/70">{o.attendeeEmail}</p>
+          <p className="truncate text-xs text-fg-muted">{o.attendeeEmail}</p>
         )}
       </div>
     ),
@@ -46,14 +46,14 @@ const COLUMNS: OrgColumn<Order>[] = [
     key: 'tierName',
     header: 'Tier',
     hideOnMobile: true,
-    render: (o) => <span className="text-white/70">{o.tierName}</span>,
+    render: (o) => <span className="text-fg-muted">{o.tierName}</span>,
   },
   {
     key: 'amount',
     header: 'Amount',
     align: 'right',
     render: (o) => (
-      <span className="font-mono font-semibold tabular-nums text-white">{o.amount}</span>
+      <span className="font-mono font-semibold tabular-nums text-fg">{o.amount}</span>
     ),
   },
   {
@@ -65,7 +65,7 @@ const COLUMNS: OrgColumn<Order>[] = [
     render: (o) => {
       const d = new Date(o.purchasedAt)
       return (
-        <span className="font-mono tabular-nums text-white/70">
+        <span className="font-mono tabular-nums text-fg-muted">
           {isValid(d) ? format(d, 'MMM d, yyyy') : EMPTY_VALUE}
         </span>
       )
@@ -128,16 +128,16 @@ export default function EventOrdersClient({ orders }: { orders: Order[] }) {
           return (
             <div className="px-4 py-3.5">
               <div className="flex items-center justify-between gap-3">
-                <p className="truncate font-medium text-white">{o.attendeeName}</p>
+                <p className="truncate font-medium text-fg">{o.attendeeName}</p>
                 <StatusChip tone={statusTone(o.status)}>
                   {o.status.replace(/_/g, ' ')}
                 </StatusChip>
               </div>
-              <p className="mt-0.5 truncate text-xs text-white/70">{o.attendeeEmail}</p>
+              <p className="mt-0.5 truncate text-xs text-fg-muted">{o.attendeeEmail}</p>
               <div className="mt-2 flex items-center gap-3 text-sm">
-                <span className="font-mono font-semibold text-white tabular-nums">{o.amount}</span>
-                <span className="text-white/70">{o.tierName}</span>
-                <span className="ml-auto font-mono tabular-nums text-white/70">
+                <span className="font-mono font-semibold text-fg tabular-nums">{o.amount}</span>
+                <span className="text-fg-muted">{o.tierName}</span>
+                <span className="ml-auto font-mono tabular-nums text-fg-muted">
                   {isValid(d) ? format(d, 'MMM d') : EMPTY_VALUE}
                 </span>
               </div>

@@ -40,7 +40,7 @@ export default function EventLineup({
 
   return (
     <section className={className}>
-      <h2 className="mb-4 font-display lowercase italic !text-[22px] !leading-snug text-white">
+      <h2 className="mb-4 font-display lowercase italic !text-section !leading-snug text-fg">
         {t('events.lineup', { defaultValue: 'lineup' })}
       </h2>
 
@@ -60,12 +60,12 @@ export default function EventLineup({
                   src={g.photoUrl}
                   alt=""
                   loading="lazy"
-                  className="h-14 w-14 shrink-0 rounded-full object-cover ring-1 ring-white/10"
+                  className="h-14 w-14 shrink-0 rounded-full object-cover ring-1 ring-line"
                 />
               ) : (
                 <span
                   aria-hidden
-                  className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-lg font-bold text-white/70 ring-1 ring-white/10"
+                  className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-surface text-lg font-bold text-fg-muted ring-1 ring-line"
                 >
                   {g.name.trim().charAt(0).toUpperCase()}
                 </span>
@@ -73,20 +73,20 @@ export default function EventLineup({
 
               <span className="min-w-0 flex-1">
                 <span className="flex flex-wrap items-baseline gap-x-2">
-                  <span className="text-[16px] font-semibold text-white">{g.name}</span>
+                  <span className="text-base font-semibold text-fg">{g.name}</span>
                   {href && (
                     <ExternalLink
-                      className="h-3.5 w-3.5 shrink-0 translate-y-[1px] text-white/40 transition-colors group-hover:text-white/80"
+                      className="h-3.5 w-3.5 shrink-0 translate-y-[1px] text-fg-subtle transition-colors group-hover:text-fg-soft"
                       aria-hidden
                     />
                   )}
                 </span>
 
-                <span className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[13px] text-white/50">
+                <span className="mt-0.5 flex flex-wrap items-center gap-x-2 text-meta text-fg-subtle">
                   <span>{t(`composer.roles.${g.role}`, { defaultValue: g.role })}</span>
                   {when && (
                     <>
-                      <span aria-hidden className="text-white/25">
+                      <span aria-hidden className="text-fg-faint">
                         ·
                       </span>
                       <span className="tabular-nums">{when}</span>
@@ -95,7 +95,7 @@ export default function EventLineup({
                 </span>
 
                 {g.description && (
-                  <span className="mt-1.5 block max-w-[60ch] text-[14px] leading-relaxed text-white/70">
+                  <span className="mt-1.5 block max-w-[60ch] text-sm leading-relaxed text-fg-muted">
                     {g.description}
                   </span>
                 )}
@@ -103,7 +103,7 @@ export default function EventLineup({
                 {/* The link shown as text, so it is legible on a surface where
                     hover doesn't exist and the icon alone says nothing. */}
                 {href && (
-                  <span className="mt-1 block truncate text-[12px] text-white/40">
+                  <span className="mt-1 block truncate text-caption text-fg-subtle">
                     {lineupLinkLabel(href)}
                   </span>
                 )}
@@ -120,7 +120,7 @@ export default function EventLineup({
                   href={href}
                   target="_blank"
                   rel="noopener noreferrer nofollow"
-                  className={`${row} transition-colors hover:bg-white/[0.04]`}
+                  className={`${row} transition-colors hover:bg-surface-low`}
                 >
                   {body}
                 </a>

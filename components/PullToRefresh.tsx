@@ -79,11 +79,11 @@ export default function PullToRefresh({ onRefresh, children }: PullToRefreshProp
           }}
         >
           <div
-            /* Was `bg-white` with a `text-brand-600` glyph — a light-theme puck
+            /* Was `bg-inverse` with a `text-brand-600` glyph — a light-theme puck
                that flashed as a white disc over the black app on every pull.
                Same elevated-overlay fill as the toast (#1c1c1c), and the teal
                moves to the 400 end so it reads on a dark disc. */
-            className="bg-[#1c1c1c] rounded-full p-3 shadow-hard"
+            className="bg-surface-raised-solid rounded-full p-3 shadow-hard"
             style={{ opacity }}
           >
             <RefreshCw

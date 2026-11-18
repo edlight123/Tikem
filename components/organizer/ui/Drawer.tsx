@@ -61,7 +61,7 @@ export function Drawer({ open, onClose, title, size = 'md', children, footer }: 
     <div className="fixed inset-0 z-50 flex">
       {/* Backdrop */}
       <div
-        className="flex-1 bg-black/60 backdrop-blur-sm"
+        className="flex-1 bg-scrim backdrop-blur-sm"
         aria-hidden="true"
         onClick={onClose}
       />
@@ -72,13 +72,13 @@ export function Drawer({ open, onClose, title, size = 'md', children, footer }: 
         role="dialog"
         aria-modal="true"
         aria-labelledby={title ? titleId : undefined}
-        className={`flex h-full w-full flex-col bg-[#1a1a1a] shadow-2xl ${sizeClass[size]}`}
+        className={`flex h-full w-full flex-col bg-surface-raised-solid shadow-2xl ${sizeClass[size]}`}
         style={{ animation: 'slideInRight 0.22s ease-out' }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
+        <div className="flex items-center justify-between border-b border-line px-5 py-4">
           {title && (
-            <h2 id={titleId} className="font-display italic text-lg text-white">
+            <h2 id={titleId} className="font-display italic text-lg text-fg">
               {title}
             </h2>
           )}
@@ -86,7 +86,7 @@ export function Drawer({ open, onClose, title, size = 'md', children, footer }: 
             type="button"
             aria-label="Close"
             onClick={onClose}
-            className="ml-auto grid h-8 w-8 place-items-center rounded-lg text-white/50 transition-colors hover:bg-white/[0.04] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+            className="ml-auto grid h-8 w-8 place-items-center rounded-lg text-fg-subtle transition-colors hover:bg-surface-low hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
           >
             <X className="h-5 w-5" />
           </button>
@@ -97,7 +97,7 @@ export function Drawer({ open, onClose, title, size = 'md', children, footer }: 
 
         {/* Footer */}
         {footer && (
-          <div className="border-t border-white/10 px-5 py-4">{footer}</div>
+          <div className="border-t border-line px-5 py-4">{footer}</div>
         )}
       </div>
 

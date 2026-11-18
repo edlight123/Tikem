@@ -82,16 +82,16 @@ export default function OrganizerInfoForm({ initialData, onSave, onCancel }: Pro
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="bg-white/[0.055] rounded-2xl p-6 md:p-8">
-        <h3 className="mb-6 font-display lowercase italic !text-[22px] !leading-snug text-white">
+      <div className="bg-surface rounded-2xl p-6 md:p-8">
+        <h3 className="mb-6 font-display lowercase italic !text-section !leading-snug text-fg">
           {t('onboarding.verification.forms.organizer_info_title', { defaultValue: 'Organizer Information' })}
         </h3>
 
         <div className="space-y-4">
           {/* Full Name */}
           <div>
-            <label htmlFor="full_name" className="block text-sm font-medium text-white/70 mb-2">
-              {t('onboarding.verification.field.full_name', { defaultValue: 'Full Name' })} <span className="text-red-500">*</span>
+            <label htmlFor="full_name" className="block text-sm font-medium text-fg-muted mb-2">
+              {t('onboarding.verification.field.full_name', { defaultValue: 'Full Name' })} <span className="text-danger-strong">*</span>
             </label>
             <input
               type="text"
@@ -99,20 +99,20 @@ export default function OrganizerInfoForm({ initialData, onSave, onCancel }: Pro
               name="full_name"
               value={formData.full_name}
               onChange={handleChange}
-              className={`w-full rounded-lg px-4 py-3 text-white [color-scheme:dark] transition-colors focus:outline-none focus:ring-2 focus:ring-brand-400/50 ${
-                errors.full_name ? 'bg-red-500/10 ring-1 ring-inset ring-red-500/40' : 'bg-white/[0.055] hover:bg-white/[0.08] focus:bg-white/[0.08]'
+              className={`w-full rounded-lg px-4 py-3 text-fg [color-scheme:dark] transition-colors focus:outline-none focus:ring-2 focus:ring-brand-400/50 ${
+                errors.full_name ? 'bg-danger-strong/10 ring-1 ring-inset ring-danger-strong/40' : 'bg-surface hover:bg-surface-raised focus:bg-surface-raised'
               }`}
               placeholder={t('onboarding.verification.forms.full_name_placeholder', { defaultValue: 'John Doe' })}
             />
             {errors.full_name && (
-              <p className="mt-1 text-sm text-red-300">{errors.full_name}</p>
+              <p className="mt-1 text-sm text-danger-soft">{errors.full_name}</p>
             )}
           </div>
 
           {/* Phone */}
           <div>
-            <label htmlFor="phone" className="block text-sm font-medium text-white/70 mb-2">
-              {t('onboarding.verification.field.phone', { defaultValue: 'Phone Number' })} <span className="text-red-500">*</span>
+            <label htmlFor="phone" className="block text-sm font-medium text-fg-muted mb-2">
+              {t('onboarding.verification.field.phone', { defaultValue: 'Phone Number' })} <span className="text-danger-strong">*</span>
             </label>
             <input
               type="tel"
@@ -120,19 +120,19 @@ export default function OrganizerInfoForm({ initialData, onSave, onCancel }: Pro
               name="phone"
               value={formData.phone}
               onChange={handleChange}
-              className={`w-full rounded-lg px-4 py-3 text-white [color-scheme:dark] transition-colors focus:outline-none focus:ring-2 focus:ring-brand-400/50 ${
-                errors.phone ? 'bg-red-500/10 ring-1 ring-inset ring-red-500/40' : 'bg-white/[0.055] hover:bg-white/[0.08] focus:bg-white/[0.08]'
+              className={`w-full rounded-lg px-4 py-3 text-fg [color-scheme:dark] transition-colors focus:outline-none focus:ring-2 focus:ring-brand-400/50 ${
+                errors.phone ? 'bg-danger-strong/10 ring-1 ring-inset ring-danger-strong/40' : 'bg-surface hover:bg-surface-raised focus:bg-surface-raised'
               }`}
               placeholder={t('onboarding.verification.field.phone_placeholder', { defaultValue: '+509 1234 5678' })}
             />
             {errors.phone && (
-              <p className="mt-1 text-sm text-red-300">{errors.phone}</p>
+              <p className="mt-1 text-sm text-danger-soft">{errors.phone}</p>
             )}
           </div>
 
           {/* Email */}
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-white/70 mb-2">
+            <label htmlFor="email" className="block text-sm font-medium text-fg-muted mb-2">
               {t('onboarding.verification.field.email', { defaultValue: 'Email Address' })}
             </label>
             <input
@@ -141,15 +141,15 @@ export default function OrganizerInfoForm({ initialData, onSave, onCancel }: Pro
               name="email"
               value={formData.email}
               onChange={handleChange}
-              className="w-full rounded-lg bg-white/[0.055] px-4 py-3 text-white [color-scheme:dark] transition-colors hover:bg-white/[0.08] focus:bg-white/[0.08] focus:outline-none focus:ring-2 focus:ring-brand-400/50"
+              className="w-full rounded-lg bg-surface px-4 py-3 text-fg [color-scheme:dark] transition-colors hover:bg-surface-raised focus:bg-surface-raised focus:outline-none focus:ring-2 focus:ring-brand-400/50"
               placeholder={t('onboarding.verification.forms.email_placeholder', { defaultValue: 'john@example.com' })}
             />
           </div>
 
           {/* Organization Name */}
           <div>
-            <label htmlFor="organization_name" className="block text-sm font-medium text-white/70 mb-2">
-              {t('onboarding.verification.field.organization_business_name', { defaultValue: 'Organization/Business Name' })} <span className="text-red-500">*</span>
+            <label htmlFor="organization_name" className="block text-sm font-medium text-fg-muted mb-2">
+              {t('onboarding.verification.field.organization_business_name', { defaultValue: 'Organization/Business Name' })} <span className="text-danger-strong">*</span>
             </label>
             <input
               type="text"
@@ -157,19 +157,19 @@ export default function OrganizerInfoForm({ initialData, onSave, onCancel }: Pro
               name="organization_name"
               value={formData.organization_name}
               onChange={handleChange}
-              className={`w-full rounded-lg px-4 py-3 text-white [color-scheme:dark] transition-colors focus:outline-none focus:ring-2 focus:ring-brand-400/50 ${
-                errors.organization_name ? 'bg-red-500/10 ring-1 ring-inset ring-red-500/40' : 'bg-white/[0.055] hover:bg-white/[0.08] focus:bg-white/[0.08]'
+              className={`w-full rounded-lg px-4 py-3 text-fg [color-scheme:dark] transition-colors focus:outline-none focus:ring-2 focus:ring-brand-400/50 ${
+                errors.organization_name ? 'bg-danger-strong/10 ring-1 ring-inset ring-danger-strong/40' : 'bg-surface hover:bg-surface-raised focus:bg-surface-raised'
               }`}
               placeholder={t('onboarding.verification.forms.organization_name_placeholder', { defaultValue: 'Your Company Name' })}
             />
             {errors.organization_name && (
-              <p className="mt-1 text-sm text-red-300">{errors.organization_name}</p>
+              <p className="mt-1 text-sm text-danger-soft">{errors.organization_name}</p>
             )}
           </div>
 
           {/* Organization Type */}
           <div>
-            <label htmlFor="organization_type" className="block text-sm font-medium text-white/70 mb-2">
+            <label htmlFor="organization_type" className="block text-sm font-medium text-fg-muted mb-2">
               {t('onboarding.verification.field.organization_type', { defaultValue: 'Organization Type' })}
             </label>
             <select
@@ -177,7 +177,7 @@ export default function OrganizerInfoForm({ initialData, onSave, onCancel }: Pro
               name="organization_type"
               value={formData.organization_type}
               onChange={handleChange}
-              className="w-full rounded-lg bg-white/[0.055] px-4 py-3 text-white [color-scheme:dark] transition-colors hover:bg-white/[0.08] focus:bg-white/[0.08] focus:outline-none focus:ring-2 focus:ring-brand-400/50"
+              className="w-full rounded-lg bg-surface px-4 py-3 text-fg [color-scheme:dark] transition-colors hover:bg-surface-raised focus:bg-surface-raised focus:outline-none focus:ring-2 focus:ring-brand-400/50"
             >
               <option value="individual">{t('onboarding.verification.org_type.individual', { defaultValue: 'Individual/Sole Proprietor' })}</option>
               <option value="company">{t('onboarding.verification.org_type.company', { defaultValue: 'Company/Corporation' })}</option>
@@ -188,7 +188,7 @@ export default function OrganizerInfoForm({ initialData, onSave, onCancel }: Pro
 
           {/* Address */}
           <div>
-            <label htmlFor="address" className="block text-sm font-medium text-white/70 mb-2">
+            <label htmlFor="address" className="block text-sm font-medium text-fg-muted mb-2">
               {t('onboarding.verification.field.address', { defaultValue: 'Address' })}
             </label>
             <textarea
@@ -197,7 +197,7 @@ export default function OrganizerInfoForm({ initialData, onSave, onCancel }: Pro
               value={formData.address}
               onChange={handleChange}
               rows={2}
-              className="w-full rounded-lg bg-white/[0.055] px-4 py-3 text-white [color-scheme:dark] transition-colors hover:bg-white/[0.08] focus:bg-white/[0.08] focus:outline-none focus:ring-2 focus:ring-brand-400/50"
+              className="w-full rounded-lg bg-surface px-4 py-3 text-fg [color-scheme:dark] transition-colors hover:bg-surface-raised focus:bg-surface-raised focus:outline-none focus:ring-2 focus:ring-brand-400/50"
               placeholder={t('onboarding.verification.field.address_placeholder', { defaultValue: 'Street address' })}
             />
           </div>
@@ -205,7 +205,7 @@ export default function OrganizerInfoForm({ initialData, onSave, onCancel }: Pro
           {/* City & Country */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label htmlFor="city" className="block text-sm font-medium text-white/70 mb-2">
+              <label htmlFor="city" className="block text-sm font-medium text-fg-muted mb-2">
                 {t('onboarding.verification.field.city', { defaultValue: 'City' })}
               </label>
               <input
@@ -214,13 +214,13 @@ export default function OrganizerInfoForm({ initialData, onSave, onCancel }: Pro
                 name="city"
                 value={formData.city}
                 onChange={handleChange}
-                className="w-full rounded-lg bg-white/[0.055] px-4 py-3 text-white [color-scheme:dark] transition-colors hover:bg-white/[0.08] focus:bg-white/[0.08] focus:outline-none focus:ring-2 focus:ring-brand-400/50"
+                className="w-full rounded-lg bg-surface px-4 py-3 text-fg [color-scheme:dark] transition-colors hover:bg-surface-raised focus:bg-surface-raised focus:outline-none focus:ring-2 focus:ring-brand-400/50"
                 placeholder={t('onboarding.verification.field.city_placeholder', { defaultValue: 'Port-au-Prince' })}
               />
             </div>
 
             <div>
-              <label htmlFor="country" className="block text-sm font-medium text-white/70 mb-2">
+              <label htmlFor="country" className="block text-sm font-medium text-fg-muted mb-2">
                 {t('onboarding.verification.field.country', { defaultValue: 'Country' })}
               </label>
               <select
@@ -228,7 +228,7 @@ export default function OrganizerInfoForm({ initialData, onSave, onCancel }: Pro
                 name="country"
                 value={formData.country}
                 onChange={handleChange}
-                className="w-full rounded-lg bg-white/[0.055] px-4 py-3 text-white [color-scheme:dark] transition-colors hover:bg-white/[0.08] focus:bg-white/[0.08] focus:outline-none focus:ring-2 focus:ring-brand-400/50"
+                className="w-full rounded-lg bg-surface px-4 py-3 text-fg [color-scheme:dark] transition-colors hover:bg-surface-raised focus:bg-surface-raised focus:outline-none focus:ring-2 focus:ring-brand-400/50"
               >
                 <option value="Haiti">{t('onboarding.verification.country.haiti', { defaultValue: 'Haiti' })}</option>
                 <option value="Dominican Republic">{t('onboarding.verification.country.dominican_republic', { defaultValue: 'Dominican Republic' })}</option>
@@ -240,8 +240,8 @@ export default function OrganizerInfoForm({ initialData, onSave, onCancel }: Pro
 
         {/* Form Error */}
         {errors._form && (
-          <div className="mt-4 p-3 bg-red-500/10 rounded-xl">
-            <p className="text-sm text-red-300">{errors._form}</p>
+          <div className="mt-4 p-3 bg-danger-strong/10 rounded-xl">
+            <p className="text-sm text-danger-soft">{errors._form}</p>
           </div>
         )}
       </div>
@@ -252,14 +252,14 @@ export default function OrganizerInfoForm({ initialData, onSave, onCancel }: Pro
           type="button"
           onClick={onCancel}
           disabled={isSaving}
-          className="flex-1 px-6 py-3 text-white bg-white/[0.07] rounded font-semibold hover:bg-white/[0.12] transition-colors disabled:opacity-50"
+          className="flex-1 px-6 py-3 text-fg bg-surface-raised rounded font-semibold hover:bg-surface-high transition-colors disabled:opacity-50"
         >
           {t('onboarding.verification.nav.cancel', { defaultValue: 'Cancel' })}
         </button>
         <button
           type="submit"
           disabled={isSaving}
-          className="flex-1 px-6 py-3 bg-white hover:bg-white/90 text-black rounded font-semibold transition-all disabled:opacity-50"
+          className="flex-1 px-6 py-3 bg-inverse hover:bg-inverse-hover text-on-inverse rounded font-semibold transition-all disabled:opacity-50"
         >
           {isSaving
             ? t('onboarding.verification.nav.saving', { defaultValue: 'Saving...' })

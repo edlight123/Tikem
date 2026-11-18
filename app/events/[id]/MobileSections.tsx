@@ -24,7 +24,7 @@ import PromoVideo from '@/components/events/PromoVideo'
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="py-6">
-      <h2 className="mb-3 font-display lowercase italic !text-[22px] !leading-none text-white">
+      <h2 className="mb-3 font-display lowercase italic !text-section !leading-none text-fg">
         {title}
       </h2>
       {children}
@@ -70,12 +70,12 @@ export default function MobileSections({
   // the structure, and nothing needs closing at the end — the lineup and the
   // song follow immediately.
   return (
-    <div className="divide-y divide-white/[0.06] px-4 md:hidden">
+    <div className="divide-y divide-line-soft px-4 md:hidden">
       {/* About */}
       {(description?.trim() || videoUrl || (tags && tags.length > 0)) && (
       <Section title={t('events.about_event')}>
         {description && description.trim() && (
-          <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-white/70">{description}</p>
+          <p className="whitespace-pre-wrap text-body leading-relaxed text-fg-muted">{description}</p>
         )}
         {/* Under the description, exactly where the app puts it. */}
         <PromoVideo url={videoUrl} className="mt-4" />
@@ -95,9 +95,9 @@ export default function MobileSections({
           links would search for an empty string. */}
       {(venueName || address || commune || city) && (
       <Section title={t('events.venue_directions')}>
-        {venueName && <p className="text-[15px] font-medium text-white">{venueName}</p>}
+        {venueName && <p className="text-body font-medium text-fg">{venueName}</p>}
         {venueAddressLines({ venueName, address, commune, city }).map((line, i) => (
-          <p key={i} className={`${i === 0 ? 'mt-1 ' : ''}break-words text-[15px] text-white/60`}>
+          <p key={i} className={`${i === 0 ? 'mt-1 ' : ''}break-words text-body text-fg-muted`}>
             {line}
           </p>
         ))}
@@ -106,21 +106,21 @@ export default function MobileSections({
             null with no provider key configured, a wrapper would leave its
             margin behind as unexplained blank space inside the section. */}
         {venueMap}
-        <p className="mt-3 text-[15px]">
+        <p className="mt-3 text-body">
           <a
             href={`https://maps.apple.com/?q=${mapsQuery}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-white/70 underline decoration-white/30 underline-offset-4 transition-colors hover:text-white"
+            className="text-fg-muted underline decoration-fg-faint underline-offset-4 transition-colors hover:text-fg"
           >
             {t('events.apple_maps')}
           </a>
-          <span className="text-white/25"> · </span>
+          <span className="text-fg-faint"> · </span>
           <a
             href={`https://www.google.com/maps/search/?api=1&query=${mapsQuery}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-white/70 underline decoration-white/30 underline-offset-4 transition-colors hover:text-white"
+            className="text-fg-muted underline decoration-fg-faint underline-offset-4 transition-colors hover:text-fg"
           >
             {t('events.google_maps')}
           </a>

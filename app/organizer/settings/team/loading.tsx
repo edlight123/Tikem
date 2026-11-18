@@ -11,13 +11,13 @@
  * `pb-mobile-nav` main.
  *
  * Derived geometry (app/organizer/settings/team/page.tsx):
- *   root    min-h-screen bg-[#0a0a0a]   (no padding here)
+ *   root    min-h-screen bg-canvas   (no padding here)
  *   inner   max-w-6xl px-4 sm:px-6 lg:px-8 py-8 sm:py-10
  *   back    inline text-sm link + 16px chevron, mb-6
  *   header  PageHeader — eyebrow, h1 mt-1.5 clamp(26px,4vw,38px), subtitle
  *           mt-1.5
  *   stats   grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-10 of
- *           `rounded-xl bg-white/[0.03] p-4`, each a 48px icon tile beside an
+ *           `rounded-xl bg-surface-low p-4`, each a 48px icon tile beside an
  *           11px caps label over a value
  *   split   grid-cols-1 xl:grid-cols-3 gap-8 — main column xl:col-span-2, then
  *           a `space-y-6` sidebar whose first card is `rounded-xl p-5`
@@ -29,7 +29,7 @@ function Bar({ className = '' }: { className?: string }) {
 
 export default function TeamLoading() {
   return (
-    <div className="min-h-screen bg-[#0a0a0a]">
+    <div className="min-h-screen bg-canvas">
       <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
         <Bar className="mb-6 h-5 w-32" />
 
@@ -43,7 +43,7 @@ export default function TeamLoading() {
             straight against the header, as PageHeader carries none. */}
         <div className="mb-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {[0, 1, 2].map((i) => (
-            <div key={i} className="rounded-xl bg-white/[0.03] p-4">
+            <div key={i} className="rounded-xl bg-surface-low p-4">
               <div className="flex items-center gap-3">
                 <div className="skeleton h-12 w-12 shrink-0 rounded-lg" />
                 <div className="min-w-0">
@@ -58,7 +58,7 @@ export default function TeamLoading() {
         {/* Staff manager + guidelines sidebar */}
         <div className="grid grid-cols-1 gap-8 xl:grid-cols-3">
           <div className="xl:col-span-2">
-            <div className="rounded-xl bg-white/[0.03] p-5">
+            <div className="rounded-xl bg-surface-low p-5">
               <Bar className="h-6 w-40" />
               <div className="mt-4 space-y-3">
                 {[0, 1, 2, 3].map((i) => (
@@ -68,7 +68,7 @@ export default function TeamLoading() {
             </div>
           </div>
           <div className="space-y-6">
-            <div className="rounded-xl bg-white/[0.03] p-5">
+            <div className="rounded-xl bg-surface-low p-5">
               <Bar className="mb-3 h-6 w-32" />
               <div className="space-y-3">
                 {[0, 1, 2, 3].map((i) => (

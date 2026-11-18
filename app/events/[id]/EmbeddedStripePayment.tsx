@@ -30,11 +30,11 @@ function SeatHoldCountdown({ expiresAt, t }: { expiresAt: string; t: (key: strin
   if (!Number.isFinite(end)) return null
   const left = Math.max(0, Math.floor((end - now) / 1000))
   if (left <= 0) {
-    return <p className="mb-4 text-center text-xs text-white/60">{t('checkout.seat_hold_expired')}</p>
+    return <p className="mb-4 text-center text-xs text-fg-muted">{t('checkout.seat_hold_expired')}</p>
   }
   const time = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`
   return (
-    <p className="mb-4 text-center text-xs text-white/60" aria-live="off">
+    <p className="mb-4 text-center text-xs text-fg-muted" aria-live="off">
       {t('checkout.seats_held_for', { time })}
     </p>
   )
@@ -198,33 +198,33 @@ function CheckoutForm({ eventId, eventTitle, quantity, totalAmount, currency, co
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Order Summary */}
-      <div className="bg-white/[0.055] rounded-2xl p-4">
-        <h3 className="mb-3 font-display lowercase italic !text-[20px] !leading-snug text-white">{t('events.order_summary')}</h3>
+      <div className="bg-surface rounded-2xl p-4">
+        <h3 className="mb-3 font-display lowercase italic !text-title !leading-snug text-fg">{t('events.order_summary')}</h3>
         <div className="space-y-2 text-sm">
           <div className="flex justify-between">
-            <span className="text-white/65">{eventTitle}</span>
-            <span className="font-medium text-white">x{quantity}</span>
+            <span className="text-fg-muted">{eventTitle}</span>
+            <span className="font-medium text-fg">x{quantity}</span>
           </div>
           {showFeeLine && (
             <>
               <div className="flex justify-between">
-                <span className="text-white/65">{t('events.subtotal', { defaultValue: 'Subtotal' })}</span>
-                <span className="font-medium text-white">{formatAmount(faceValue)}</span>
+                <span className="text-fg-muted">{t('events.subtotal', { defaultValue: 'Subtotal' })}</span>
+                <span className="font-medium text-fg">{formatAmount(faceValue)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-white/65">
+                <span className="text-fg-muted">
                   {t('checkout.service_fee', { defaultValue: 'Service fee' })}
                 </span>
-                <span className="font-medium text-white">{formatAmount(buyerFee)}</span>
+                <span className="font-medium text-fg">{formatAmount(buyerFee)}</span>
               </div>
             </>
           )}
-          <div className="flex justify-between items-center pt-2 border-t border-white/10">
-            <span className="font-semibold text-white">{t('events.total')}</span>
-            <span className="text-lg font-bold text-white">{formatAmount(chargeTotal)}</span>
+          <div className="flex justify-between items-center pt-2 border-t border-line">
+            <span className="font-semibold text-fg">{t('events.total')}</span>
+            <span className="text-lg font-bold text-fg">{formatAmount(chargeTotal)}</span>
           </div>
           {showFeeLine && (
-            <p className="text-xs text-white/45">
+            <p className="text-xs text-fg-subtle">
               {t('checkout.service_fee_nonrefundable', {
                 defaultValue: 'Service fee is non-refundable unless the event is cancelled.',
               })}
@@ -234,22 +234,22 @@ function CheckoutForm({ eventId, eventTitle, quantity, totalAmount, currency, co
       </div>
 
       {/* Payment Element */}
-      <div className="bg-white/[0.055] rounded-2xl p-4">
+      <div className="bg-surface rounded-2xl p-4">
         <div className="flex items-center gap-2 mb-4">
-          <CreditCard className="w-5 h-5 text-white/65" />
-          <h3 className="font-display lowercase italic !text-[20px] !leading-snug text-white">{t('events.payment_details')}</h3>
+          <CreditCard className="w-5 h-5 text-fg-muted" />
+          <h3 className="font-display lowercase italic !text-title !leading-snug text-fg">{t('events.payment_details')}</h3>
         </div>
         <PaymentElement />
       </div>
 
       {error && (
-        <div className="rounded-xl bg-red-500/10 p-4">
-          <p className="text-sm text-red-200">{error}</p>
+        <div className="rounded-xl bg-danger-strong/10 p-4">
+          <p className="text-sm text-danger-soft">{error}</p>
         </div>
       )}
 
       {/* Security Badge */}
-      <div className="flex items-center justify-center gap-2 text-xs text-white/70">
+      <div className="flex items-center justify-center gap-2 text-xs text-fg-muted">
         <Lock className="w-3 h-3" />
         <span>{t('events.secure_payment_stripe')}</span>
       </div>
@@ -260,14 +260,14 @@ function CheckoutForm({ eventId, eventTitle, quantity, totalAmount, currency, co
           type="button"
           onClick={onClose}
           disabled={processing}
-          className="flex-1 h-12 px-4 rounded bg-white/[0.07] font-medium text-white hover:bg-white/[0.12] disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex-1 h-12 px-4 rounded bg-surface-raised font-medium text-fg hover:bg-surface-high disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {t('common.cancel')}
         </button>
         <button
           type="submit"
           disabled={!stripe || processing}
-          className="flex-1 h-12 px-4 rounded bg-white text-black font-semibold hover:bg-white/90 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex-1 h-12 px-4 rounded bg-inverse text-on-inverse font-semibold hover:bg-inverse-hover disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {processing ? t('events.processing') : `${t('events.pay')} ${formatAmount(chargeTotal)}`}
         </button>
@@ -466,23 +466,23 @@ export default function EmbeddedStripePayment({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div className="fixed inset-0 bg-scrim-light z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
       <div
         role="dialog"
         aria-modal="true"
         aria-label={t('events.complete_payment')}
-        className="bg-[#1c1c1c] w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl max-h-[90vh] overflow-y-auto"
+        className="bg-surface-raised-solid w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl max-h-[90vh] overflow-y-auto"
       >
         {/* Header */}
-        <div className="sticky top-0 z-10 bg-[#1c1c1c] px-6 py-4 flex items-center justify-between">
-          <h2 className="font-display lowercase italic !text-[24px] !leading-snug text-white">{t('events.complete_payment')}</h2>
+        <div className="sticky top-0 z-10 bg-surface-raised-solid px-6 py-4 flex items-center justify-between">
+          <h2 className="font-display lowercase italic !text-section !leading-snug text-fg">{t('events.complete_payment')}</h2>
           <button
             ref={closeButtonRef}
             onClick={closeSheet}
-            className="p-2 hover:bg-white/[0.08] rounded transition-colors"
+            className="p-2 hover:bg-surface-raised rounded transition-colors"
             aria-label={t('common.close')}
           >
-            <X className="w-5 h-5 text-white/50" />
+            <X className="w-5 h-5 text-fg-subtle" />
           </button>
         </div>
 
@@ -493,11 +493,11 @@ export default function EmbeddedStripePayment({
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-500"></div>
             </div>
           ) : error ? (
-            <div className="rounded-lg bg-error-500/10 p-6 text-center">
-              <p className="text-red-300 mb-4">{error}</p>
+            <div className="rounded-lg bg-danger-strong/10 p-6 text-center">
+              <p className="text-danger-soft mb-4">{error}</p>
               <button
                 onClick={closeSheet}
-                className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                className="px-6 py-2 bg-danger-strong text-fg rounded-lg hover:bg-danger-strong"
               >
                 {t('common.close')}
               </button>

@@ -66,8 +66,8 @@ export default function GuestAccountOffer({
 
   if (alreadyClaimed && status !== 'error') {
     return (
-      <div className="mt-8 rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-        <p className="text-white font-semibold">
+      <div className="mt-8 rounded-2xl border border-line bg-surface-low p-5">
+        <p className="text-fg font-semibold">
           {t('guest_tickets.already_in_account', { defaultValue: 'These tickets are in your Tikèm account.' })}
         </p>
         <a
@@ -81,11 +81,11 @@ export default function GuestAccountOffer({
   }
 
   return (
-    <div className="mt-8 rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-      <p className="text-white font-semibold">
+    <div className="mt-8 rounded-2xl border border-line bg-surface-low p-5">
+      <p className="text-fg font-semibold">
         {t('guest_tickets.keep_tickets_in_app', { defaultValue: 'Keep your tickets in the app' })}
       </p>
-      <p className="text-sm text-white/60 mt-1.5 leading-relaxed">
+      <p className="text-sm text-fg-muted mt-1.5 leading-relaxed">
         {t('guest_tickets.keep_tickets_in_app_detail', {
           defaultValue:
             'Optional. Create a free account and these tickets move into it, so you never have to hunt for this link again.',
@@ -95,7 +95,7 @@ export default function GuestAccountOffer({
       <div className="mt-4 flex flex-col sm:flex-row gap-3">
         <a
           href={signupHref}
-          className="flex-1 text-center bg-white hover:bg-white/90 text-black font-medium py-3 px-5 rounded-xl transition-colors min-h-[44px] flex items-center justify-center"
+          className="flex-1 text-center bg-inverse hover:bg-inverse-hover text-on-inverse font-medium py-3 px-5 rounded-xl transition-colors min-h-[44px] flex items-center justify-center"
         >
           {t('guest_tickets.create_account', { defaultValue: 'Create an account' })}
         </a>
@@ -103,7 +103,7 @@ export default function GuestAccountOffer({
           type="button"
           onClick={handleAddToAccount}
           disabled={status === 'working'}
-          className="flex-1 border border-white/10 text-white/80 hover:bg-white/10 font-medium py-3 px-5 rounded-xl transition-colors disabled:opacity-50 min-h-[44px]"
+          className="flex-1 border border-line text-fg-soft hover:bg-surface-raised font-medium py-3 px-5 rounded-xl transition-colors disabled:opacity-50 min-h-[44px]"
         >
           {status === 'working'
             ? t('guest_tickets.adding', { defaultValue: 'Adding…' })
@@ -113,7 +113,7 @@ export default function GuestAccountOffer({
 
       {message && (
         <p
-          className={`mt-3 text-sm ${status === 'error' ? 'text-red-300' : 'text-emerald-300'}`}
+          className={`mt-3 text-sm ${status === 'error' ? 'text-danger-soft' : 'text-success-soft'}`}
         >
           {message}
         </p>

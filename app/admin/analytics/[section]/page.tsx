@@ -21,10 +21,10 @@ export default async function AdminAnalyticsSectionPage({
       />
 
       <div className="mb-5 sm:mb-6">
-        <h1 className="label-mono text-[15px] font-bold uppercase tracking-[0.14em] text-console-text">
+        <h1 className="label-mono text-body font-bold uppercase tracking-[0.14em] text-console-text">
           {meta.label}
         </h1>
-        <p className="mt-1 text-[13px] text-console-mut">{meta.blurb}</p>
+        <p className="mt-1 text-meta text-console-mut">{meta.blurb}</p>
       </div>
 
       <AnalyticsSection section={section} />

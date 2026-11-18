@@ -75,9 +75,9 @@ export default function JoinWaitlistButton({
   }
 
   const primary =
-    'block w-full min-h-12 rounded bg-white px-5 py-2.5 text-center text-[15px] font-semibold text-black transition-colors hover:bg-white/90 disabled:opacity-50'
+    'block w-full min-h-12 rounded bg-inverse px-5 py-2.5 text-center text-body font-semibold text-on-inverse transition-colors hover:bg-inverse-hover disabled:opacity-50'
   const passive =
-    'flex w-full min-h-12 items-center justify-center rounded bg-white/[0.06] px-5 py-2.5 text-center text-[15px] font-semibold text-white/80'
+    'flex w-full min-h-12 items-center justify-center rounded bg-surface px-5 py-2.5 text-center text-body font-semibold text-fg-soft'
 
   if (!userId) {
     const loginHref = `/auth/login?redirect=${encodeURIComponent(`/events/${eventId}`)}`
@@ -86,13 +86,13 @@ export default function JoinWaitlistButton({
         <Link href={loginHref} className={primary}>
           {t('events.waitlist_sign_in')}
         </Link>
-        {!compact && <p className="text-sm text-white/60">{t('events.waitlist_join_desc')}</p>}
+        {!compact && <p className="text-sm text-fg-muted">{t('events.waitlist_join_desc')}</p>}
       </div>
     )
   }
 
   if (loading) {
-    return <div className="h-12 w-full animate-pulse rounded bg-white/[0.06]" aria-hidden="true" />
+    return <div className="h-12 w-full animate-pulse rounded bg-surface" aria-hidden="true" />
   }
 
   if (onList) {
@@ -103,7 +103,7 @@ export default function JoinWaitlistButton({
             ? t('events.waitlist_on_position', { position })
             : t('events.waitlist_on')}
         </div>
-        {!compact && <p className="text-sm text-white/60">{t('events.waitlist_on_desc')}</p>}
+        {!compact && <p className="text-sm text-fg-muted">{t('events.waitlist_on_desc')}</p>}
       </div>
     )
   }
@@ -114,9 +114,9 @@ export default function JoinWaitlistButton({
         {joining ? t('events.waitlist_joining') : t('events.waitlist_join')}
       </button>
       {error ? (
-        <p className="text-sm text-red-300" role="alert">{error}</p>
+        <p className="text-sm text-danger-soft" role="alert">{error}</p>
       ) : (
-        !compact && <p className="text-sm text-white/60">{t('events.waitlist_join_desc')}</p>
+        !compact && <p className="text-sm text-fg-muted">{t('events.waitlist_join_desc')}</p>
       )}
     </div>
   )

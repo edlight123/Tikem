@@ -113,7 +113,7 @@ function PaymentMethodBadge({ method }: { method: string }) {
   const methodLower = (method || '').toLowerCase()
   if (methodLower === 'stripe') {
     return (
-      <span className="label-mono inline-flex items-center gap-1 text-[11px] uppercase tracking-wide text-console-mut">
+      <span className="label-mono inline-flex items-center gap-1 text-eyebrow uppercase tracking-wide text-console-mut">
         <CreditCard className="w-3 h-3" />
         Stripe
       </span>
@@ -121,7 +121,7 @@ function PaymentMethodBadge({ method }: { method: string }) {
   }
   if (methodLower === 'moncash') {
     return (
-      <span className="label-mono inline-flex items-center gap-1 text-[11px] uppercase tracking-wide text-console-mut">
+      <span className="label-mono inline-flex items-center gap-1 text-eyebrow uppercase tracking-wide text-console-mut">
         <Smartphone className="w-3 h-3" />
         MonCash
       </span>
@@ -129,14 +129,14 @@ function PaymentMethodBadge({ method }: { method: string }) {
   }
   if (methodLower === 'natcash') {
     return (
-      <span className="label-mono inline-flex items-center gap-1 text-[11px] uppercase tracking-wide text-console-mut">
+      <span className="label-mono inline-flex items-center gap-1 text-eyebrow uppercase tracking-wide text-console-mut">
         <Smartphone className="w-3 h-3" />
         NatCash
       </span>
     )
   }
   return (
-    <span className="label-mono inline-flex items-center gap-1 text-[11px] uppercase tracking-wide text-console-mut">
+    <span className="label-mono inline-flex items-center gap-1 text-eyebrow uppercase tracking-wide text-console-mut">
       {method || 'Unknown'}
     </span>
   )
@@ -484,7 +484,7 @@ export function AdminOrdersClient() {
   const ordersToolbar = (
     <div className="flex items-center justify-between">
       <div>
-        <h2 className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint">Orders</h2>
+        <h2 className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint">Orders</h2>
         <p className="font-mono text-xs tabular-nums text-console-mut">
           {pagination.totalCount.toLocaleString()} total orders
           {filters.search && ` • Filtered`}
@@ -506,22 +506,22 @@ export function AdminOrdersClient() {
       {summary && (
         <div className="grid grid-cols-2 gap-x-6 gap-y-4 sm:flex sm:flex-wrap sm:gap-x-8 sm:gap-y-4">
           <div>
-            <div className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint">Total Orders</div>
+            <div className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint">Total Orders</div>
             <div className="mt-0.5 font-mono text-xl tabular-nums text-console-text">{summary.totalOrders.toLocaleString()}</div>
             <div className="mt-1 font-mono text-xs tabular-nums text-console-mut">Today: {summary.todayOrders}</div>
           </div>
           <div>
-            <div className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint">Revenue (30d)</div>
+            <div className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint">Revenue (30d)</div>
             <div className="mt-0.5 font-mono text-xl tabular-nums text-console-text">{formatCurrency(summary.last30Days.revenueUSD, 'USD')}</div>
             <div className="mt-1 font-mono text-xs tabular-nums text-console-mut">{formatCurrency(summary.last30Days.revenueHTG, 'HTG')}</div>
           </div>
           <div>
-            <div className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint">Avg Order Value</div>
+            <div className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint">Avg Order Value</div>
             <div className="mt-0.5 font-mono text-xl tabular-nums text-console-text">{formatCurrency(summary.last30Days.avgOrderValueUSD, 'USD')}</div>
             <div className="mt-1 font-mono text-xs tabular-nums text-console-mut">{summary.last30Days.orders} orders (30d)</div>
           </div>
           <div>
-            <div className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint">Confirmed</div>
+            <div className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint">Confirmed</div>
             <div className="mt-0.5 font-mono text-xl tabular-nums text-console-text">{summary.byStatus.confirmed.toLocaleString()}</div>
             <div className="mt-1 font-mono text-xs tabular-nums text-console-mut">{summary.byStatus.pending} pending • {summary.byStatus.refunded} refunded</div>
           </div>
@@ -596,7 +596,7 @@ export function AdminOrdersClient() {
           <div className="mt-4 pt-4 border-t border-console-raise grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Status Filter */}
             <div>
-              <label className="label-mono block text-[10px] uppercase tracking-wide text-console-faint mb-1">Status</label>
+              <label className="label-mono block text-eyebrow uppercase tracking-wide text-console-faint mb-1">Status</label>
               <select
                 value={filters.status}
                 onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
@@ -612,7 +612,7 @@ export function AdminOrdersClient() {
 
             {/* Payment Method Filter */}
             <div>
-              <label className="label-mono block text-[10px] uppercase tracking-wide text-console-faint mb-1">Payment Method</label>
+              <label className="label-mono block text-eyebrow uppercase tracking-wide text-console-faint mb-1">Payment Method</label>
               <select
                 value={filters.paymentMethod}
                 onChange={(e) => setFilters(prev => ({ ...prev, paymentMethod: e.target.value }))}
@@ -627,7 +627,7 @@ export function AdminOrdersClient() {
 
             {/* Currency Filter */}
             <div>
-              <label className="label-mono block text-[10px] uppercase tracking-wide text-console-faint mb-1">Currency</label>
+              <label className="label-mono block text-eyebrow uppercase tracking-wide text-console-faint mb-1">Currency</label>
               <select
                 value={filters.currency}
                 onChange={(e) => setFilters(prev => ({ ...prev, currency: e.target.value }))}
@@ -641,7 +641,7 @@ export function AdminOrdersClient() {
 
             {/* Sort By */}
             <div>
-              <label className="label-mono block text-[10px] uppercase tracking-wide text-console-faint mb-1">Sort By</label>
+              <label className="label-mono block text-eyebrow uppercase tracking-wide text-console-faint mb-1">Sort By</label>
               <select
                 value={filters.sortBy}
                 onChange={(e) => setFilters(prev => ({ ...prev, sortBy: e.target.value }))}
@@ -657,7 +657,7 @@ export function AdminOrdersClient() {
             {/* Custom Date Range */}
             <div className="sm:col-span-2 lg:col-span-4 flex gap-4 items-end">
               <div className="flex-1">
-                <label className="label-mono block text-[10px] uppercase tracking-wide text-console-faint mb-1">Start Date</label>
+                <label className="label-mono block text-eyebrow uppercase tracking-wide text-console-faint mb-1">Start Date</label>
                 <input
                   type="date"
                   value={filters.startDate}
@@ -666,7 +666,7 @@ export function AdminOrdersClient() {
                 />
               </div>
               <div className="flex-1">
-                <label className="label-mono block text-[10px] uppercase tracking-wide text-console-faint mb-1">End Date</label>
+                <label className="label-mono block text-eyebrow uppercase tracking-wide text-console-faint mb-1">End Date</label>
                 <input
                   type="date"
                   value={filters.endDate}
@@ -707,7 +707,7 @@ export function AdminOrdersClient() {
         renderMobileCard={renderOrderMobileCard}
         empty={
           <div className="text-center">
-            <p className="label-mono text-[12px] uppercase tracking-[0.14em] text-console-mut">No orders found</p>
+            <p className="label-mono text-caption uppercase tracking-[0.14em] text-console-mut">No orders found</p>
             <p className="text-sm text-console-faint mt-1">Try adjusting your filters</p>
           </div>
         }
@@ -717,10 +717,10 @@ export function AdminOrdersClient() {
       {/* Order Details Modal */}
       {selectedOrder && (
         <>
-          <div className="fixed inset-0 bg-black/60 z-40" onClick={() => setSelectedOrder(null)} />
+          <div className="fixed inset-0 bg-scrim z-40" onClick={() => setSelectedOrder(null)} />
           <div className="fixed inset-y-0 right-0 w-full sm:w-[480px] bg-console-panel shadow-xl z-50 flex flex-col overflow-hidden">
             <div className="px-4 py-3 flex items-center justify-between">
-              <h3 className="label-mono text-[12px] font-bold uppercase tracking-[0.14em] text-console-text">Order Details</h3>
+              <h3 className="label-mono text-caption font-bold uppercase tracking-[0.14em] text-console-text">Order Details</h3>
               <button onClick={() => setSelectedOrder(null)} className="p-1 text-console-mut hover:text-console-text">
                 <X className="w-5 h-5" />
               </button>
@@ -746,7 +746,7 @@ export function AdminOrdersClient() {
 
               {/* Event */}
               <div className="rounded-lg bg-console-ground p-4">
-                <div className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint mb-2">Event</div>
+                <div className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint mb-2">Event</div>
                 <div className="text-console-text">{selectedOrder.event_name || 'Unknown Event'}</div>
                 <div className="text-xs text-console-faint mt-1">
                   Ticket Type: {selectedOrder.ticket_type || selectedOrder.ticketType || 'General'}
@@ -764,7 +764,7 @@ export function AdminOrdersClient() {
 
               {/* Attendee */}
               <div className="rounded-lg bg-console-ground p-4">
-                <div className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint mb-2">Attendee</div>
+                <div className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint mb-2">Attendee</div>
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <User className="w-4 h-4 text-console-faint" />
@@ -781,7 +781,7 @@ export function AdminOrdersClient() {
 
               {/* Payment */}
               <div className="rounded-lg bg-console-ground p-4">
-                <div className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint mb-2">Payment</div>
+                <div className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint mb-2">Payment</div>
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-console-mut">Amount</span>
@@ -823,7 +823,7 @@ export function AdminOrdersClient() {
               {/* QR Code */}
               {(selectedOrder.qr_code || selectedOrder.qrCode) && (
                 <div className="text-center">
-                  <div className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint mb-2">QR Code</div>
+                  <div className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint mb-2">QR Code</div>
                   <div className="inline-block p-4 rounded-lg bg-console-ground">
                     <Image
                       src={selectedOrder.qr_code ?? selectedOrder.qrCode ?? ''}

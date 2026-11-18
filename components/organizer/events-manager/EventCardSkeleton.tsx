@@ -2,7 +2,7 @@
  * Placeholder for one OrganizerEventCard row.
  *
  * Measured against the real card (components/organizer/events-manager/
- * OrganizerEventCard): `flex items-center gap-4 rounded-2xl bg-white/[0.03]
+ * OrganizerEventCard): `flex items-center gap-4 rounded-2xl bg-surface-low
  * p-3` with a 58×72 `rounded-none` poster thumb, a status pill over a 15px
  * serif title over a 12.5px meta line, two right-aligned stat columns from sm,
  * and a 20px chevron closing the row — that chevron was missing here, so the
@@ -14,7 +14,7 @@
  */
 export default function EventCardSkeleton() {
   return (
-    <div className="flex items-center gap-4 rounded-2xl bg-white/[0.03] p-3">
+    <div className="flex items-center gap-4 rounded-2xl bg-surface-low p-3">
       {/* Poster thumbnail */}
       <div className="skeleton h-[72px] w-[58px] shrink-0 rounded-none" />
 

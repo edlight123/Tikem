@@ -24,7 +24,7 @@ function Section({ rows }: { rows: number }) {
         <Bar className="h-6 w-40 sm:h-7 sm:w-52" />
         <Bar className="mt-2 h-4 w-64 max-w-full" />
       </div>
-      <div className="rounded bg-white/[0.03] p-4 sm:p-5">
+      <div className="rounded bg-surface-low p-4 sm:p-5">
         <div className="space-y-5">
           {Array.from({ length: rows }).map((_, r) => (
             <div key={r} className="flex items-start gap-3.5">
@@ -43,9 +43,9 @@ function Section({ rows }: { rows: number }) {
 
 export default function Loading() {
   return (
-    <div className="min-h-screen bg-[#0a0a0a] pb-mobile-nav">
+    <div className="min-h-screen bg-canvas pb-mobile-nav">
       {/* Navbar */}
-      <div className="sticky top-0 z-50 border-b border-white/10 bg-[#0a0a0a]/80 backdrop-blur-xl">
+      <div className="sticky top-0 z-50 border-b border-line bg-canvas/80 backdrop-blur-xl">
         <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:h-16 sm:px-6 lg:px-8">
           <Bar className="h-7 w-24" />
           <Bar className="h-8 w-20 rounded" />
@@ -62,7 +62,7 @@ export default function Loading() {
               <Bar className="mt-3 h-3.5 w-40" />
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-2 rounded bg-white/[0.03] px-2 py-4 lg:w-[340px] lg:bg-transparent lg:p-0">
+          <div className="grid grid-cols-3 gap-2 rounded bg-surface-low px-2 py-4 lg:w-[340px] lg:bg-transparent lg:p-0">
             {[0, 1, 2].map((i) => (
               <div key={i} className="flex flex-col items-center lg:items-start">
                 <Bar className="h-7 w-10" />
@@ -74,7 +74,7 @@ export default function Loading() {
 
         <div className="mt-9 grid grid-cols-1 gap-x-12 gap-y-9 sm:mt-12 lg:grid-cols-[minmax(0,1fr)_360px]">
           <div className="space-y-9 sm:space-y-12">
-            <div className="rounded bg-white/[0.055] p-5 sm:p-6">
+            <div className="rounded bg-surface p-5 sm:p-6">
               <Bar className="h-8 w-40" />
               <Bar className="mt-4 h-6 w-56" />
               <Bar className="mt-2 h-4 w-4/5" />

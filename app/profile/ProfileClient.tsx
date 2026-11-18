@@ -202,7 +202,7 @@ export default function ProfileClient({
               <button
                 type="button"
                 onClick={closePanel}
-                className="mb-6 inline-flex items-center gap-2 rounded text-[13px] font-semibold text-white/60 transition-colors hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+                className="mb-6 inline-flex items-center gap-2 rounded text-meta font-semibold text-fg-muted transition-colors hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
               >
                 <ArrowLeft className="h-4 w-4" aria-hidden />
                 {t('dashboard.settings.back')}

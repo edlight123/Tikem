@@ -28,15 +28,15 @@ interface DateChipsProps {
  * on, barely-there when off), and the TOUCH TARGET is a separate concern: an
  * ::after stretched 7px past the top and bottom edges buys the 44px tappable
  * box without a pixel of visible height. `leading-[18px]` is explicit because
- * an arbitrary `text-[13px]` sets only font-size and would otherwise inherit
+ * an arbitrary `text-meta` sets only font-size and would otherwise inherit
  * whatever line-height the strip had, letting the chip height drift.
  */
-const CHIP_ON = 'bg-white text-black'
-const CHIP_OFF = 'bg-white/[0.06] text-white/70 hover:bg-white/[0.12] hover:text-white'
+const CHIP_ON = 'bg-inverse text-on-inverse'
+const CHIP_OFF = 'bg-surface text-fg-muted hover:bg-surface-high hover:text-fg'
 export const discoverChipCls = (on: boolean) =>
   [
     'relative inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap',
-    'rounded px-2.5 py-1.5 text-[13px] leading-[18px] font-medium transition-colors',
+    'rounded px-2.5 py-1.5 text-meta leading-[18px] font-medium transition-colors',
     "after:absolute after:inset-x-0 after:-inset-y-[7px] after:content-['']",
     on ? CHIP_ON : CHIP_OFF,
   ].join(' ')
@@ -129,14 +129,14 @@ export function DateChips({ currentDate, bare = false }: DateChipsProps) {
             aria-modal="true"
             aria-label={t('filters.pick_date')}
           >
-            <div className="absolute inset-0 bg-black/70 backdrop-blur-[2px]" onClick={() => setShowDatePicker(false)} aria-hidden="true" />
-            <div className="relative z-[101] w-full max-w-sm rounded-t-2xl bg-[#141414] p-4 shadow-2xl ring-1 ring-white/10 sm:rounded-2xl">
+            <div className="absolute inset-0 bg-scrim backdrop-blur-[2px]" onClick={() => setShowDatePicker(false)} aria-hidden="true" />
+            <div className="relative z-[101] w-full max-w-sm rounded-t-2xl bg-surface-solid p-4 shadow-2xl ring-1 ring-line sm:rounded-2xl">
               <div className="mb-3 flex items-center justify-between">
-                <h3 className="text-base font-semibold text-white">{t('filters.pick_date')}</h3>
+                <h3 className="text-base font-semibold text-fg">{t('filters.pick_date')}</h3>
                 <button
                   onClick={() => setShowDatePicker(false)}
                   aria-label="Close"
-                  className="grid h-11 w-11 place-items-center rounded-lg text-white/50 hover:bg-white/[0.06] hover:text-white sm:h-8 sm:w-8"
+                  className="grid h-11 w-11 place-items-center rounded-lg text-fg-subtle hover:bg-surface hover:text-fg sm:h-8 sm:w-8"
                 >
                   <X className="h-4 w-4" />
                 </button>

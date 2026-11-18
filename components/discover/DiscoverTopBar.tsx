@@ -131,7 +131,7 @@ export function DiscoverTopBar({ filters, onOpenFilters, userCountry = 'HT' }: D
                   setShowSubareaDropdown(false)
                   setShowCityDropdown(!showCityDropdown)
                 }}
-                className="flex items-center gap-1.5 px-4 py-2 hover:bg-white/15 rounded text-sm font-medium text-white/80 transition-colors"
+                className="flex items-center gap-1.5 px-4 py-2 hover:bg-surface-high rounded text-sm font-medium text-fg-soft transition-colors"
               >
                 <MapPin className="w-4 h-4" />
                 {filters.city || t('filters.all_cities')}
@@ -139,10 +139,10 @@ export function DiscoverTopBar({ filters, onOpenFilters, userCountry = 'HT' }: D
               </button>
 
               {showCityDropdown && (
-                <div className="absolute top-full mt-2 right-0 bg-[#1a1a1a] rounded-lg shadow-xl py-1 min-w-[180px] z-20">
+                <div className="absolute top-full mt-2 right-0 bg-surface-raised-solid rounded-lg shadow-xl py-1 min-w-[180px] z-20">
                   <button
                     onClick={() => handleCitySelect('')}
-                    className="w-full text-left px-4 py-2 text-sm hover:bg-white/10 text-white/80"
+                    className="w-full text-left px-4 py-2 text-sm hover:bg-surface-raised text-fg-soft"
                   >
                     {t('filters.all_cities')}
                   </button>
@@ -150,8 +150,8 @@ export function DiscoverTopBar({ filters, onOpenFilters, userCountry = 'HT' }: D
                     <button
                       key={city}
                       onClick={() => handleCitySelect(city)}
-                      className={`w-full text-left px-4 py-2 text-sm hover:bg-white/10 ${
-                        filters.city === city ? 'font-medium text-brand-300' : 'text-white/80'
+                      className={`w-full text-left px-4 py-2 text-sm hover:bg-surface-raised ${
+                        filters.city === city ? 'font-medium text-brand-300' : 'text-fg-soft'
                       }`}
                     >
                       {city}
@@ -169,17 +169,17 @@ export function DiscoverTopBar({ filters, onOpenFilters, userCountry = 'HT' }: D
                     setShowCityDropdown(false)
                     setShowSubareaDropdown(!showSubareaDropdown)
                   }}
-                  className="flex items-center gap-1.5 px-4 py-2 hover:bg-white/15 rounded text-sm font-medium text-white/80 transition-colors"
+                  className="flex items-center gap-1.5 px-4 py-2 hover:bg-surface-high rounded text-sm font-medium text-fg-soft transition-colors"
                 >
                   {filters.commune || `${t('filters.all_areas')} ${locationLabel.toLowerCase()}s`}
                   <ChevronDown className="w-4 h-4" />
                 </button>
 
                 {showSubareaDropdown && (
-                  <div className="absolute top-full mt-2 right-0 bg-[#1a1a1a] rounded-lg shadow-xl py-1 min-w-[180px] z-20">
+                  <div className="absolute top-full mt-2 right-0 bg-surface-raised-solid rounded-lg shadow-xl py-1 min-w-[180px] z-20">
                     <button
                       onClick={() => handleSubareaSelect('')}
-                      className="w-full text-left px-4 py-2 text-sm hover:bg-white/10 text-white/80"
+                      className="w-full text-left px-4 py-2 text-sm hover:bg-surface-raised text-fg-soft"
                     >
                       {t('filters.all_areas')} {locationLabel.toLowerCase()}s
                     </button>
@@ -187,8 +187,8 @@ export function DiscoverTopBar({ filters, onOpenFilters, userCountry = 'HT' }: D
                       <button
                         key={subarea}
                         onClick={() => handleSubareaSelect(subarea)}
-                        className={`w-full text-left px-4 py-2 text-sm hover:bg-white/10 ${
-                          filters.commune === subarea ? 'font-medium text-brand-300' : 'text-white/80'
+                        className={`w-full text-left px-4 py-2 text-sm hover:bg-surface-raised ${
+                          filters.commune === subarea ? 'font-medium text-brand-300' : 'text-fg-soft'
                         }`}
                       >
                         {subarea}
@@ -207,12 +207,12 @@ export function DiscoverTopBar({ filters, onOpenFilters, userCountry = 'HT' }: D
             onClick={onOpenFilters}
             // On a phone the label is hidden, leaving a bare icon — so the box
             // has to carry the target: min-h-11 (44px) there, natural above.
-            className="flex min-h-11 items-center gap-2 whitespace-nowrap rounded bg-white/[0.07] px-4 py-2.5 text-sm font-normal text-white/80 transition-colors hover:bg-white/[0.12] hover:text-white sm:min-h-0"
+            className="flex min-h-11 items-center gap-2 whitespace-nowrap rounded bg-surface-raised px-4 py-2.5 text-sm font-normal text-fg-soft transition-colors hover:bg-surface-high hover:text-fg sm:min-h-0"
           >
             <SlidersHorizontal className="w-4 h-4" />
             <span className="hidden sm:inline">{t('filters.filters')}</span>
             {activeFiltersCount > 0 && (
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-xs font-semibold text-black">
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-inverse text-xs font-semibold text-on-inverse">
                 {activeFiltersCount}
               </span>
             )}

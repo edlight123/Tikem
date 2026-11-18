@@ -1,4 +1,5 @@
 import type { Config } from 'tailwindcss'
+import { color as tokenColor, fontSize as tokenFontSize } from './lib/design/tokens'
 
 const config: Config = {
   content: [
@@ -9,67 +10,9 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Control Room — the admin console's own world, deliberately unlike the
-        // public site: blue-ink ground, elevation steps instead of borders, and
-        // amber/red reserved for one meaning (how long work has waited).
-        // No teal in the console; the accent is the near-white primary action.
-        console: {
-          ground: '#12151A',
-          panel: '#1A1E25',
-          raise: '#20252E',
-          text: '#E8EAED',
-          mut: '#8B93A1',
-          faint: '#545D6B',
-          amber: '#E8A33D',
-          red: '#FF6B52',
-          green: '#4CC38A',
-        },
-        brand: {
-          primary: '#0F766E',    // Teal-700
-          secondary: '#14B8A6',  // Teal-500 (unified single accent)
-          // Premium color palette
-          50: '#F0FDFA',   // Teal-50
-          100: '#CCFBF1',  // Teal-100
-          200: '#99F6E4',  // Teal-200
-          300: '#5EEAD4',  // Teal-300
-          400: '#2DD4BF',  // Teal-400
-          500: '#14B8A6',  // Teal-500
-          600: '#0D9488',  // Teal-600
-          700: '#0F766E',  // Teal-700
-          800: '#115E59',  // Teal-800
-          900: '#134E4A',  // Teal-900
-        },
-        // Legacy "accent" alias — unified with the teal brand (single accent).
-        accent: {
-          50: '#F0FDFA',   // Teal-50
-          100: '#CCFBF1',  // Teal-100
-          200: '#99F6E4',  // Teal-200
-          300: '#5EEAD4',  // Teal-300
-          400: '#2DD4BF',  // Teal-400
-          500: '#14B8A6',  // Teal-500
-          600: '#0D9488',  // Teal-600
-          700: '#0F766E',  // Teal-700
-          800: '#115E59',  // Teal-800
-          900: '#134E4A',  // Teal-900
-        },
-        success: {
-          50: '#F0FDF4',
-          500: '#22C55E',
-          600: '#16A34A',
-          700: '#15803D',
-        },
-        warning: {
-          50: '#FFFBEB',
-          500: '#EAB308',
-          600: '#CA8A04',
-          700: '#A16207',
-        },
-        error: {
-          50: '#FEF2F2',
-          500: '#EF4444',
-          600: '#DC2626',
-          700: '#B91C1C',
-        },
+        // The whole palette — canvas, surfaces, text, brand, status, console —
+        // is lib/design/tokens.ts (mirrors the app's mobile/theme/tokens.ts).
+        ...tokenColor,
       },
       fontFamily: {
         sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
@@ -79,6 +22,8 @@ const config: Config = {
         mono: ['var(--font-mono)', 'JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'monospace'],
       },
       fontSize: {
+        // The app's text ladder (lib/design/tokens.ts).
+        ...tokenFontSize,
         'xs': ['0.75rem', { lineHeight: '1rem' }],
         'sm': ['0.875rem', { lineHeight: '1.25rem' }],
         'base': ['1rem', { lineHeight: '1.5rem' }],

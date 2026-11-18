@@ -147,19 +147,19 @@ export default function GuestlistSheet({
               <img
                 src={defaultAvatarUrl(viewerId)}
                 alt=""
-                className="h-28 w-28 rounded-full border-[3px] border-[#161616] object-cover"
+                className="h-28 w-28 rounded-full border-[3px] border-surface-solid object-cover"
               />
-              <span className="absolute bottom-1 right-0.5 grid h-9 w-9 place-items-center rounded-full border-[3px] border-[#161616] bg-white">
-                {uploading ? <Loader2 className="h-4 w-4 animate-spin text-black" /> : <Camera className="h-4 w-4 text-black" />}
+              <span className="absolute bottom-1 right-0.5 grid h-9 w-9 place-items-center rounded-full border-[3px] border-surface-solid bg-inverse">
+                {uploading ? <Loader2 className="h-4 w-4 animate-spin text-on-inverse" /> : <Camera className="h-4 w-4 text-on-inverse" />}
               </span>
             </button>
           </div>
 
-          <h2 className="mt-5 font-display !text-[34px] italic !leading-tight text-white">
+          <h2 className="mt-5 font-display !text-display italic !leading-tight text-fg">
             {t('whos_going.gate_title', "see who's going")}
           </h2>
-          <p className="mt-1 text-[15px] text-white/60">{t('whos_going.gate_sub', 'Show your face to see theirs.')}</p>
-          {error && <p className="mt-3 text-sm text-red-400">{error}</p>}
+          <p className="mt-1 text-body text-fg-muted">{t('whos_going.gate_sub', 'Show your face to see theirs.')}</p>
+          {error && <p className="mt-3 text-sm text-danger">{error}</p>}
 
           <input
             ref={fileRef}
@@ -176,32 +176,32 @@ export default function GuestlistSheet({
             type="button"
             onClick={() => fileRef.current?.click()}
             disabled={uploading}
-            className="mt-7 flex h-[52px] w-full items-center justify-center rounded bg-white text-[15px] font-bold text-black transition-opacity hover:opacity-90 disabled:opacity-70"
+            className="mt-7 flex h-[52px] w-full items-center justify-center rounded bg-inverse text-body font-bold text-on-inverse transition-opacity hover:opacity-90 disabled:opacity-70"
           >
             {uploading ? <Loader2 className="h-5 w-5 animate-spin" /> : t('whos_going.add_photo', 'Add a photo')}
           </button>
           <button
             type="button"
             onClick={onClose}
-            className="mt-1 py-3.5 text-[15px] font-semibold text-white/70 transition-colors hover:text-white"
+            className="mt-1 py-3.5 text-body font-semibold text-fg-muted transition-colors hover:text-fg"
           >
             {t('whos_going.not_now', 'Not now')}
           </button>
         </div>
       ) : (
         <div className="pb-2">
-          <h2 className="font-display !text-[30px] italic !leading-tight text-white">
+          <h2 className="font-display !text-display italic !leading-tight text-fg">
             {t('whos_going.list_title', 'guestlist')}
           </h2>
           {showCount && (
-            <p className="text-[13px] text-white/55">
+            <p className="text-meta text-fg-muted">
               {t('whos_going.going_count', { count: totalGoing, defaultValue: '{{count}} going' })}
             </p>
           )}
 
           {!list ? (
             <div className="grid h-40 place-items-center">
-              <Loader2 className="h-5 w-5 animate-spin text-white/50" />
+              <Loader2 className="h-5 w-5 animate-spin text-fg-subtle" />
             </div>
           ) : (
             <ul className="mt-4 max-h-[60vh] overflow-y-auto">
@@ -210,10 +210,10 @@ export default function GuestlistSheet({
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={photo || defaultAvatarUrl(viewerId)} alt="" className="h-[52px] w-[52px] rounded-full object-cover" />
                   <div className="min-w-0">
-                    <p className="truncate text-[15px] font-semibold text-white">
+                    <p className="truncate text-body font-semibold text-fg">
                       {viewerName || t('whos_going.you_badge', 'You')}
                     </p>
-                    <p className="text-[13px] text-white/50">{t('whos_going.you_badge', 'You')}</p>
+                    <p className="text-meta text-fg-subtle">{t('whos_going.you_badge', 'You')}</p>
                   </div>
                 </li>
               )}
@@ -222,7 +222,7 @@ export default function GuestlistSheet({
                   <li key={u.uid}>
                     <Link
                       href={`/profile/organizer/${u.uid}`}
-                      className="-mx-2 flex items-center gap-3.5 rounded px-2 py-2.5 transition-colors hover:bg-white/[0.05]"
+                      className="-mx-2 flex items-center gap-3.5 rounded px-2 py-2.5 transition-colors hover:bg-surface"
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
@@ -231,8 +231,8 @@ export default function GuestlistSheet({
                         className="h-[52px] w-[52px] rounded-full object-cover"
                       />
                       <div className="min-w-0">
-                        <p className="truncate text-[15px] font-semibold text-white">{u.displayName}</p>
-                        {friend && <p className="text-[13px] text-white/50">{t('whos_going.friend', 'Friend')}</p>}
+                        <p className="truncate text-body font-semibold text-fg">{u.displayName}</p>
+                        {friend && <p className="text-meta text-fg-subtle">{t('whos_going.friend', 'Friend')}</p>}
                       </div>
                     </Link>
                   </li>
@@ -243,19 +243,19 @@ export default function GuestlistSheet({
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={defaultAvatarAt(base)} alt="" className="h-[52px] w-[52px] rounded-full opacity-60" />
                   <div className="min-w-0">
-                    <p className="text-[15px] font-semibold text-white/85">
+                    <p className="text-body font-semibold text-fg-soft">
                       {showCount
                         ? t('whos_going.more_guests', { count: hidden, defaultValue: '+{{count}} more' })
                         : t('whos_going.more_private', 'Others keep it private')}
                     </p>
                     {showCount && (
-                      <p className="text-[13px] text-white/50">{t('whos_going.more_private', 'Others keep it private')}</p>
+                      <p className="text-meta text-fg-subtle">{t('whos_going.more_private', 'Others keep it private')}</p>
                     )}
                   </div>
                 </li>
               )}
               {shown === 0 && hidden === 0 && (
-                <li className="py-4 text-[13px] text-white/50">{t('whos_going.no_faces', 'No one shows their face yet.')}</li>
+                <li className="py-4 text-meta text-fg-subtle">{t('whos_going.no_faces', 'No one shows their face yet.')}</li>
               )}
             </ul>
           )}

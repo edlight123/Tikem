@@ -53,11 +53,11 @@ export function TikemMark({
   return (
     <span
       aria-hidden="true"
-      className={`relative inline-flex shrink-0 items-center justify-center overflow-hidden bg-gradient-to-br from-brand-700 to-[#0C5E57] ${className}`}
+      className={`relative inline-flex shrink-0 items-center justify-center overflow-hidden bg-gradient-to-br from-brand-700 to-logo-deep ${className}`}
       style={{ width: size, height: size, borderRadius: size * 0.24 }}
     >
       <span
-        className="font-display italic font-bold leading-none text-[#F8F5EE]"
+        className="font-display italic font-bold leading-none text-logo-cream"
         style={{ fontSize: size * 0.62 }}
       >
         T
@@ -81,7 +81,7 @@ export function TikemMark({
  */
 export function TikemLogo({
   markSize = 40,
-  wordmarkClassName = 'text-[30px] text-brand-300',
+  wordmarkClassName = 'text-display text-brand-300',
   className = '',
 }: {
   markSize?: number

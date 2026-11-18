@@ -131,12 +131,12 @@ export function OrgSwitcher({ orgs: initialOrgs, staleOrgCookie = false }: { org
 
   const label = (
     <>
-      <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-white/[0.14] text-xs font-bold text-white">
+      <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-surface-high text-xs font-bold text-fg">
         {initialOf(activeName)}
       </span>
       <span className="hidden min-w-0 flex-col text-left leading-tight md:flex">
-        <span className="max-w-[160px] truncate text-[13px] font-semibold text-white">{activeName}</span>
-        <span className="text-[11px] text-white/50">{roleLabel(active.role)}</span>
+        <span className="max-w-[160px] truncate text-meta font-semibold text-fg">{activeName}</span>
+        <span className="text-eyebrow text-fg-subtle">{roleLabel(active.role)}</span>
       </span>
     </>
   )
@@ -162,11 +162,11 @@ export function OrgSwitcher({ orgs: initialOrgs, staleOrgCookie = false }: { org
         aria-expanded={open}
         aria-label={t('org_switcher.acting_for_label', { org: activeName, role: roleLabel(active.role) })}
         className={`flex h-9 items-center gap-2 rounded px-1.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 md:pr-2 ${
-          open ? 'bg-white/[0.12]' : 'hover:bg-white/[0.08]'
+          open ? 'bg-surface-high' : 'hover:bg-surface-raised'
         }`}
       >
         {label}
-        <ChevronDown className={`h-3.5 w-3.5 shrink-0 text-white/50 transition-transform ${open ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`h-3.5 w-3.5 shrink-0 text-fg-subtle transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
 
       {open && (
@@ -175,9 +175,9 @@ export function OrgSwitcher({ orgs: initialOrgs, staleOrgCookie = false }: { org
           aria-label={t('org_switcher.switch_org')}
           // Phone: pinned under the bar across the screen (the trigger sits mid-bar,
           // so a right-anchored panel ran off the left edge). Wider: under the trigger.
-          className="fixed inset-x-4 top-14 z-50 mt-1 rounded bg-[#1c1c1c] p-1.5 shadow-2xl shadow-black/60 sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-72"
+          className="fixed inset-x-4 top-14 z-50 mt-1 rounded bg-surface-raised-solid p-1.5 shadow-2xl shadow-black/60 sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-72"
         >
-          <p className="px-2.5 pb-1.5 pt-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-white/40">
+          <p className="px-2.5 pb-1.5 pt-2 text-eyebrow font-semibold uppercase tracking-[0.12em] text-fg-subtle">
             {t('org_switcher.acting_for')}
           </p>
           {orgs.map((org) => {
@@ -192,15 +192,15 @@ export function OrgSwitcher({ orgs: initialOrgs, staleOrgCookie = false }: { org
                 disabled={busy !== null}
                 onClick={() => switchTo(org.orgId)}
                 className={`flex w-full items-center gap-3 rounded px-2.5 py-2 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 disabled:opacity-60 ${
-                  isActive ? 'bg-white/[0.08]' : 'hover:bg-white/[0.06]'
+                  isActive ? 'bg-surface-raised' : 'hover:bg-surface'
                 }`}
               >
-                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white/[0.12] text-xs font-bold text-white">
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-surface-high text-xs font-bold text-fg">
                   {initialOf(name)}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-semibold text-white">{name}</span>
-                  <span className="block text-xs text-white/50">
+                  <span className="block truncate text-sm font-semibold text-fg">{name}</span>
+                  <span className="block text-xs text-fg-subtle">
                     {busy === org.orgId ? t('org_switcher.switching') : roleLabel(org.role)}
                   </span>
                 </span>
@@ -208,7 +208,7 @@ export function OrgSwitcher({ orgs: initialOrgs, staleOrgCookie = false }: { org
               </button>
             )
           })}
-          {error && <p className="px-2.5 py-2 text-xs text-red-300">{error}</p>}
+          {error && <p className="px-2.5 py-2 text-xs text-danger-soft">{error}</p>}
         </div>
       )}
     </div>

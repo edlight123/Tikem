@@ -183,8 +183,8 @@ export default function MessagesClient({
                     aria-current={active ? 'true' : undefined}
                     className={`w-full rounded px-4 py-3 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
                       active
-                        ? 'bg-white/[0.08] ring-1 ring-inset ring-brand-500/60'
-                        : 'bg-white/[0.03] hover:bg-white/[0.055]'
+                        ? 'bg-surface-raised ring-1 ring-inset ring-brand-500/60'
+                        : 'bg-surface-low hover:bg-surface'
                     }`}
                   >
                     <div className="flex items-center gap-2">
@@ -194,21 +194,21 @@ export default function MessagesClient({
                           aria-hidden
                         />
                       )}
-                      <p className="min-w-0 flex-1 truncate text-sm font-medium text-white">
+                      <p className="min-w-0 flex-1 truncate text-sm font-medium text-fg">
                         {thread.sender_name}
                       </p>
-                      <span className="shrink-0 text-[11px] text-white/40">
+                      <span className="shrink-0 text-eyebrow text-fg-subtle">
                         {formatWhen(thread.last_activity_at)}
                       </span>
                     </div>
-                    <p className="mt-1 line-clamp-2 text-xs text-white/50">
+                    <p className="mt-1 line-clamp-2 text-xs text-fg-subtle">
                       {last?.author_role === 'organizer' ? `${tx('messages.you')}: ` : ''}
                       {previewText}
                     </p>
-                    <p className="mt-1.5 flex items-center gap-1.5 text-[11px] text-white/35">
+                    <p className="mt-1.5 flex items-center gap-1.5 text-eyebrow text-fg-faint">
                       {thread.needs_reply ? (
-                        <span className="inline-flex items-center gap-1.5 font-semibold uppercase tracking-[0.08em] text-amber-300/90">
-                          <span className="h-1.5 w-1.5 rounded-full bg-amber-300/90" aria-hidden />
+                        <span className="inline-flex items-center gap-1.5 font-semibold uppercase tracking-[0.08em] text-warning-soft/90">
+                          <span className="h-1.5 w-1.5 rounded-full bg-warning-soft/90" aria-hidden />
                           {tx('messages.needs_reply')}
                         </span>
                       ) : (
@@ -226,17 +226,17 @@ export default function MessagesClient({
 
           {/* Conversation */}
           {selected && (
-            <div className="rounded p-5 sm:p-6 bg-white/[0.055]">
+            <div className="rounded p-5 sm:p-6 bg-surface">
               <div className="flex items-start justify-between gap-4 pb-4">
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-white">{selected.sender_name}</p>
-                  <p className="mt-0.5 text-xs text-white/45">
+                  <p className="text-sm font-medium text-fg">{selected.sender_name}</p>
+                  <p className="mt-0.5 text-xs text-fg-subtle">
                     {topicLabel(selected.topic)} · {formatWhen(selected.created_at)}
                   </p>
                 </div>
                 {selected.needs_reply && (
-                  <span className="inline-flex shrink-0 items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-amber-300/90">
-                    <span className="h-1.5 w-1.5 rounded-full bg-amber-300/90" aria-hidden />
+                  <span className="inline-flex shrink-0 items-center gap-1.5 text-eyebrow font-semibold uppercase tracking-[0.08em] text-warning-soft/90">
+                    <span className="h-1.5 w-1.5 rounded-full bg-warning-soft/90" aria-hidden />
                     {tx('messages.needs_reply')}
                   </span>
                 )}
@@ -270,28 +270,28 @@ export default function MessagesClient({
                   maxLength={maxReplyLength}
                   disabled={sending}
                   placeholder={tx('messages.reply_placeholder', { name: selected.sender_name })}
-                  className="w-full resize-y rounded px-4 py-3 text-[16px] sm:text-sm text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-brand-500/60 bg-white/[0.06]"
+                  className="w-full resize-y rounded px-4 py-3 text-base sm:text-sm text-fg placeholder-fg-faint focus:outline-none focus:ring-2 focus:ring-brand-500/60 bg-surface"
                 />
                 <div className="mt-3 flex items-center justify-between gap-4">
-                  <p className="text-[11px] text-white/35">
+                  <p className="text-eyebrow text-fg-faint">
                     {tx('messages.reply_privacy_note')}
                   </p>
                   <div className="flex shrink-0 items-center gap-3">
-                    <span className="font-mono text-[11px] tabular-nums text-white/35">
+                    <span className="font-mono text-eyebrow tabular-nums text-fg-faint">
                       {reply.length}/{maxReplyLength}
                     </span>
                     <button
                       type="button"
                       onClick={handleSend}
                       disabled={sending || reply.trim().length === 0}
-                      className="inline-flex items-center gap-2 rounded bg-white px-4 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+                      className="inline-flex items-center gap-2 rounded bg-inverse px-4 py-2.5 text-sm font-semibold text-on-inverse transition-colors hover:bg-inverse-hover disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
                     >
                       <Send className="h-4 w-4" />
                       {sending ? tx('messages.sending') : tx('messages.send')}
                     </button>
                   </div>
                 </div>
-                {error && <p className="mt-3 text-sm text-red-400">{error}</p>}
+                {error && <p className="mt-3 text-sm text-danger">{error}</p>}
               </div>
             </div>
           )}
@@ -307,11 +307,11 @@ function Bubble({ mine, body, meta }: { mine: boolean; body: string; meta: strin
     <li className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
       <div
         className={`max-w-prose rounded px-4 py-3 ${
-          mine ? 'bg-white/[0.14] text-white/90' : 'bg-black/30 text-white/85'
+          mine ? 'bg-surface-high text-fg' : 'bg-scrim-light text-fg-soft'
         }`}
       >
         <p className="whitespace-pre-line text-sm">{body}</p>
-        <p className="mt-1.5 text-[11px] text-white/40">{meta}</p>
+        <p className="mt-1.5 text-eyebrow text-fg-subtle">{meta}</p>
       </div>
     </li>
   )

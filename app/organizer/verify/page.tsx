@@ -280,8 +280,8 @@ export default function VerifyOrganizerPage() {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-white/60 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-white/60">
+          <div className="w-16 h-16 border-4 border-fg/60 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-fg-muted">
             {restarting ? 'Resetting verification...' : 'Loading verification...'}
           </p>
         </div>
@@ -292,12 +292,12 @@ export default function VerifyOrganizerPage() {
   if (error && !request) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center p-4">
-        <div className="bg-red-500/10 rounded-2xl p-6 max-w-md">
-          <h2 className="mb-2 font-display lowercase italic !text-[22px] !leading-snug text-red-200">{t('verification_page.error_loading')}</h2>
-          <p className="text-sm text-red-200 mb-4">{error}</p>
+        <div className="bg-danger-strong/10 rounded-2xl p-6 max-w-md">
+          <h2 className="mb-2 font-display lowercase italic !text-section !leading-snug text-danger-soft">{t('verification_page.error_loading')}</h2>
+          <p className="text-sm text-danger-soft mb-4">{error}</p>
           <button
             onClick={() => window.location.reload()}
-            className="w-full px-4 py-2.5 bg-white text-black font-semibold rounded hover:bg-white/90 transition-colors"
+            className="w-full px-4 py-2.5 bg-inverse text-on-inverse font-semibold rounded hover:bg-inverse-hover transition-colors"
           >
             {t('actions.retry')}
           </button>
@@ -339,16 +339,16 @@ export default function VerifyOrganizerPage() {
   }
 
   return (
-    <div className="bg-[#0a0a0a]">
+    <div className="bg-canvas">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
         {/* Header */}
         <div className="mb-6">
-          <div className="flex items-center gap-2 text-sm text-white/60 mb-2">
-            <Link href="/organizer" className="hover:text-white">
+          <div className="flex items-center gap-2 text-sm text-fg-muted mb-2">
+            <Link href="/organizer" className="hover:text-fg">
               {t('actions.organizer')}
             </Link>
-            <span className="text-white/40">/</span>
-            <span className="text-white font-medium">{t('verification_page.verification')}</span>
+            <span className="text-fg-subtle">/</span>
+            <span className="text-fg font-medium">{t('verification_page.verification')}</span>
           </div>
           <SectionHeader
             title={t('verification_page.verification')}
@@ -366,22 +366,22 @@ export default function VerifyOrganizerPage() {
         />
 
         {statusForUI === 'approved' && !wantsDetails ? (
-          <div className="bg-emerald-500/10 rounded-2xl p-4 md:p-5 mb-6">
+          <div className="bg-success-strong/10 rounded-2xl p-4 md:p-5 mb-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
-                <div className="text-sm font-semibold text-white">{t('verification_page.already_verified')}</div>
-                <div className="text-sm text-white/60 mt-1">{t('verification_page.head_to_dashboard')}</div>
+                <div className="text-sm font-semibold text-fg">{t('verification_page.already_verified')}</div>
+                <div className="text-sm text-fg-muted mt-1">{t('verification_page.head_to_dashboard')}</div>
               </div>
               <div className="flex flex-col sm:flex-row gap-2">
                 <Link
                   href="/organizer/verify?details=1"
-                  className="px-4 py-2 rounded font-semibold text-sm text-white bg-white/[0.07] hover:bg-white/[0.12] transition-colors text-center"
+                  className="px-4 py-2 rounded font-semibold text-sm text-fg bg-surface-raised hover:bg-surface-high transition-colors text-center"
                 >
                   {t('verification_page.view_verification_details')}
                 </Link>
                 <Link
                   href="/organizer"
-                  className="px-4 py-2 rounded font-semibold text-sm text-black bg-white hover:bg-white/90 transition-colors text-center"
+                  className="px-4 py-2 rounded font-semibold text-sm text-on-inverse bg-inverse hover:bg-inverse-hover transition-colors text-center"
                 >
                   {t('verification_page.go_to_dashboard')}
                 </Link>
@@ -391,15 +391,15 @@ export default function VerifyOrganizerPage() {
         ) : null}
 
         {error ? (
-          <div className="bg-red-500/10 rounded-xl p-4 mb-6">
+          <div className="bg-danger-strong/10 rounded-xl p-4 mb-6">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <div className="text-sm font-semibold text-red-200">{t('verification_page.something_went_wrong')}</div>
-                <div className="text-sm text-red-200/80 mt-1">{error}</div>
+                <div className="text-sm font-semibold text-danger-soft">{t('verification_page.something_went_wrong')}</div>
+                <div className="text-sm text-danger-soft/80 mt-1">{error}</div>
               </div>
               <button
                 onClick={dismissError}
-                className="text-sm font-medium text-white/70 hover:text-white"
+                className="text-sm font-medium text-fg-muted hover:text-fg"
               >
                 {t('actions.dismiss')}
               </button>
@@ -419,11 +419,11 @@ export default function VerifyOrganizerPage() {
             </div>
 
             <aside className="lg:col-span-1">
-              <div className="bg-white/[0.055] rounded-2xl p-5 md:p-6">
+              <div className="bg-surface rounded-2xl p-5 md:p-6">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <h2 className="font-display lowercase italic !text-[22px] !leading-snug text-white">{t('verification_page.submission')}</h2>
-                    <p className="text-sm text-white/60 mt-1">
+                    <h2 className="font-display lowercase italic !text-section !leading-snug text-fg">{t('verification_page.submission')}</h2>
+                    <p className="text-sm text-fg-muted mt-1">
                       {statusForUI === 'approved'
                         ? 'Your verification is approved. You can view the details anytime.'
                         : isReadOnly
@@ -434,13 +434,13 @@ export default function VerifyOrganizerPage() {
                     </p>
                   </div>
                   <div className="text-right">
-                    <div className="text-xs text-white/50">{t('actions.progress')}</div>
-                    <div className="text-sm font-semibold text-white">{completionPercentage}%</div>
+                    <div className="text-xs text-fg-subtle">{t('actions.progress')}</div>
+                    <div className="text-sm font-semibold text-fg">{completionPercentage}%</div>
                   </div>
                 </div>
 
                 <div className="mt-4">
-                  <div className="w-full bg-white/10 rounded h-2">
+                  <div className="w-full bg-surface-raised rounded h-2">
                     <div
                       className="bg-brand-400 h-2 rounded transition-all"
                       style={{ width: `${completionPercentage}%` }}
@@ -453,10 +453,10 @@ export default function VerifyOrganizerPage() {
                     onClick={() => setViewMode('review')}
                     className={`w-full px-4 py-3 rounded font-semibold transition-colors ${
                       isReadOnly
-                        ? 'bg-white/[0.07] hover:bg-white/[0.12] text-white'
+                        ? 'bg-surface-raised hover:bg-surface-high text-fg'
                         : canSubmit
-                          ? 'bg-white hover:bg-white/90 text-black'
-                          : 'bg-white/[0.07] text-white/40 cursor-not-allowed'
+                          ? 'bg-inverse hover:bg-inverse-hover text-on-inverse'
+                          : 'bg-surface-raised text-fg-subtle cursor-not-allowed'
                     }`}
                     disabled={!isReadOnly && !canSubmit}
                   >
@@ -470,7 +470,7 @@ export default function VerifyOrganizerPage() {
                   </button>
 
                   {!isReadOnly ? (
-                    <p className="text-xs text-white/60">
+                    <p className="text-xs text-fg-muted">
                       {t('verification_page.reviewed_24_48')}
                     </p>
                   ) : null}

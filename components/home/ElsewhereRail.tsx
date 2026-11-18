@@ -38,7 +38,7 @@ export default function ElsewhereRail({
       })
     : ''
 
-  const noteLine = note ? <p className="mb-10 text-[15px] text-white/60">{note}</p> : null
+  const noteLine = note ? <p className="mb-10 text-body text-fg-muted">{note}</p> : null
 
   // In Haiti with Haiti's own sections showing: only the quiet link.
   if (mode === 'abroad' && !note) {
@@ -47,7 +47,7 @@ export default function ElsewhereRail({
       <p>
         <Link
           href="/discover?country=abroad"
-          className="group inline-flex items-center gap-1.5 rounded text-[14px] text-white/55 outline-none transition-colors hover:text-white focus-visible:ring-2 focus-visible:ring-white/70"
+          className="group inline-flex items-center gap-1.5 rounded text-sm text-fg-muted outline-none transition-colors hover:text-fg focus-visible:ring-2 focus-visible:ring-fg/70"
         >
           {t('home.elsewhere.abroad_link', { defaultValue: 'Haitian events abroad' })}
           <ArrowRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />

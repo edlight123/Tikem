@@ -46,10 +46,10 @@ export function ageTier(iso: string | null | undefined, now: Date = new Date()):
 }
 
 const TIER_CLASS: Record<AgeTier, string> = {
-  none: 'text-white/45',
-  fresh: 'text-white/45',
-  waiting: 'text-warning-500',
-  overdue: 'text-error-500',
+  none: 'text-fg-subtle',
+  fresh: 'text-fg-subtle',
+  waiting: 'text-warning-strong',
+  overdue: 'text-danger-strong',
 }
 
 export function ageClass(iso: string | null | undefined, now: Date = new Date()): string {

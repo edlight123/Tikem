@@ -67,8 +67,8 @@ export default function FeaturedHero({ events, zone }: { events: HomeEvent[]; zo
             className="scale-125 object-cover opacity-70 blur-3xl saturate-150"
           />
         )}
-        <div className="absolute inset-0 bg-black/55" />
-        <div className="absolute inset-0 bg-gradient-to-r from-black via-black/75 to-black/20" />
+        <div className="absolute inset-0 bg-scrim-light" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black via-scrim-strong to-shade/20" />
         <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black to-transparent" />
         <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black to-transparent" />
       </div>
@@ -79,7 +79,7 @@ export default function FeaturedHero({ events, zone }: { events: HomeEvent[]; zo
           <Link
             href={href}
             tabIndex={-1}
-            className="relative block aspect-[4/5] w-full max-w-[440px] overflow-hidden rounded bg-white/[0.06] shadow-[0_40px_120px_-30px_rgba(0,0,0,0.9)] sm:w-[70%] lg:ml-auto lg:w-full lg:max-w-[560px]"
+            className="relative block aspect-[4/5] w-full max-w-[440px] overflow-hidden rounded bg-surface shadow-[0_40px_120px_-30px_rgba(0,0,0,0.9)] sm:w-[70%] lg:ml-auto lg:w-full lg:max-w-[560px]"
           >
             {ev.banner_image_url && (
               <PosterImage
@@ -105,20 +105,20 @@ export default function FeaturedHero({ events, zone }: { events: HomeEvent[]; zo
               // just repeated the poster below itself (owner: "wasting
               // space"), so the caption is the title at body-title size,
               // in the event-name voice (serif italic, as in the app).
-              <h2 className="break-words font-display !text-[32px] italic !leading-[1.05] text-white sm:!text-[40px]">
+              <h2 className="break-words font-display !text-display italic !leading-[1.05] text-fg sm:!text-hero">
                 {ev.title}
               </h2>
             ) : (
               <>
-                <h2 className="break-words font-display italic text-white text-balance !text-[clamp(44px,6vw,92px)] !leading-[0.95] tracking-[-0.01em]">
+                <h2 className="break-words font-display italic text-fg text-balance !text-[clamp(44px,6vw,92px)] !leading-[0.95] tracking-[-0.01em]">
                   {ev.title}
                 </h2>
-                <p className="mt-5 truncate whitespace-nowrap font-mono !text-[10px] uppercase !leading-relaxed tracking-[0.04em] text-white/50 sm:!text-[11px] sm:tracking-[0.08em]">
+                <p className="mt-5 truncate whitespace-nowrap font-mono !text-eyebrow uppercase !leading-relaxed tracking-[0.04em] text-fg-subtle sm:!text-eyebrow sm:tracking-[0.08em]">
                   {eventWhen(ev.start_datetime, zone, i18n.language)}
                   {venue && <> · {venue}</>}
                 </p>
                 {lineup && (
-                  <p className="mt-1 truncate whitespace-nowrap font-mono !text-[10px] uppercase !leading-relaxed tracking-[0.04em] text-white/35 sm:!text-[11px] sm:tracking-[0.08em]">
+                  <p className="mt-1 truncate whitespace-nowrap font-mono !text-eyebrow uppercase !leading-relaxed tracking-[0.04em] text-fg-faint sm:!text-eyebrow sm:tracking-[0.08em]">
                     {t('home.hero.lineup', { defaultValue: 'Lineup' })}: {lineup}
                   </p>
                 )}
@@ -128,11 +128,11 @@ export default function FeaturedHero({ events, zone }: { events: HomeEvent[]; zo
             <div className={`${ev.posterHasText ? 'mt-4' : 'mt-8'} flex flex-wrap items-center gap-x-5 gap-y-3`}>
               <Link
                 href={href}
-                className="inline-flex h-12 items-center rounded bg-white px-6 font-grotesk text-[15px] font-semibold text-black outline-none transition-colors hover:bg-white/85 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+                className="inline-flex h-12 items-center rounded bg-inverse px-6 font-grotesk text-body font-semibold text-on-inverse outline-none transition-colors hover:bg-inverse-hover focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black"
               >
                 {t('events.get_tickets', { defaultValue: 'Get tickets' })}
               </Link>
-              <span className="font-mono text-[13px] uppercase tracking-[0.06em] text-white/80">{price}</span>
+              <span className="font-mono text-meta uppercase tracking-[0.06em] text-fg-soft">{price}</span>
             </div>
           </div>
 
@@ -140,16 +140,16 @@ export default function FeaturedHero({ events, zone }: { events: HomeEvent[]; zo
             {count > 1 ? (
               <div className="flex items-center gap-4">
                 <p
-                  className="font-mono text-[12px] tabular-nums tracking-[0.08em] text-white"
+                  className="font-mono text-caption tabular-nums tracking-[0.08em] text-fg"
                   aria-label={t('home.hero.slide', { i: index + 1, n: count, defaultValue: `${index + 1} of ${count}` })}
                 >
-                  {pad(index + 1)} <span className="text-white/35">/ {pad(count)}</span>
+                  {pad(index + 1)} <span className="text-fg-faint">/ {pad(count)}</span>
                 </p>
                 <div aria-hidden className="hidden gap-1 sm:flex">
                   {events.map((e, i) => (
                     <span
                       key={e.id}
-                      className={`h-[2px] w-6 transition-colors duration-300 ${i === index ? 'bg-white' : 'bg-white/20'}`}
+                      className={`h-[2px] w-6 transition-colors duration-300 ${i === index ? 'bg-inverse' : 'bg-fg/20'}`}
                     />
                   ))}
                 </div>
@@ -158,7 +158,7 @@ export default function FeaturedHero({ events, zone }: { events: HomeEvent[]; zo
                     type="button"
                     onClick={() => go(-1)}
                     aria-label={t('home.hero.prev', { defaultValue: 'Previous event' })}
-                    className="grid h-10 w-10 place-items-center rounded bg-white/[0.08] text-white outline-none transition-colors hover:bg-white/[0.16] focus-visible:ring-2 focus-visible:ring-white/70"
+                    className="grid h-10 w-10 place-items-center rounded bg-surface-raised text-fg outline-none transition-colors hover:bg-surface-high focus-visible:ring-2 focus-visible:ring-fg/70"
                   >
                     <ChevronLeft className="h-4 w-4" />
                   </button>
@@ -166,7 +166,7 @@ export default function FeaturedHero({ events, zone }: { events: HomeEvent[]; zo
                     type="button"
                     onClick={() => go(1)}
                     aria-label={t('home.hero.next', { defaultValue: 'Next event' })}
-                    className="grid h-10 w-10 place-items-center rounded bg-white/[0.08] text-white outline-none transition-colors hover:bg-white/[0.16] focus-visible:ring-2 focus-visible:ring-white/70"
+                    className="grid h-10 w-10 place-items-center rounded bg-surface-raised text-fg outline-none transition-colors hover:bg-surface-high focus-visible:ring-2 focus-visible:ring-fg/70"
                   >
                     <ChevronRight className="h-4 w-4" />
                   </button>

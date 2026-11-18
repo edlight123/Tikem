@@ -17,7 +17,7 @@ export default function OrganizerMark({
 }) {
   return (
     <div
-      className={`flex flex-shrink-0 items-center justify-center overflow-hidden bg-white/[0.08] text-white ${className}`}
+      className={`flex flex-shrink-0 items-center justify-center overflow-hidden bg-surface-raised text-fg ${className}`}
     >
       {logoUrl ? (
         // eslint-disable-next-line @next/next/no-img-element

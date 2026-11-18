@@ -152,7 +152,7 @@ export default function RequestsClient({ eventId, requiresApproval }: { eventId:
               type="button"
               onClick={() => act({ action: 'approve_all' }, '*')}
               disabled={busy !== null}
-              className="rounded bg-white px-4 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 disabled:opacity-50"
+              className="rounded bg-inverse px-4 py-2.5 text-sm font-semibold text-on-inverse transition-colors hover:bg-inverse-hover disabled:opacity-50"
             >
               {t('attend_requests.organizer.approve_all', { count: pendingCount })}
             </button>
@@ -161,10 +161,10 @@ export default function RequestsClient({ eventId, requiresApproval }: { eventId:
       />
 
       {!requiresApproval && (
-        <p className="rounded bg-white/[0.03] px-4 py-3 text-sm text-white/60">{t('attend_requests.organizer.not_enabled')}</p>
+        <p className="rounded bg-surface-low px-4 py-3 text-sm text-fg-muted">{t('attend_requests.organizer.not_enabled')}</p>
       )}
 
-      <div role="tablist" className="inline-flex gap-1 rounded bg-white/[0.03] p-1">
+      <div role="tablist" className="inline-flex gap-1 rounded bg-surface-low p-1">
         {tabs.map((tb) => (
           <button
             key={tb.id}
@@ -173,7 +173,7 @@ export default function RequestsClient({ eventId, requiresApproval }: { eventId:
             aria-selected={tab === tb.id}
             onClick={() => setTab(tb.id)}
             className={`rounded px-3.5 py-2 text-xs font-semibold uppercase tracking-[0.1em] transition-colors sm:px-4 ${
-              tab === tb.id ? 'bg-white/[0.08] text-white' : 'text-white/50 hover:text-white/80'
+              tab === tb.id ? 'bg-surface-raised text-fg' : 'text-fg-subtle hover:text-fg-soft'
             }`}
           >
             {tb.label} ({groups[tb.id].length})
@@ -184,14 +184,14 @@ export default function RequestsClient({ eventId, requiresApproval }: { eventId:
       {loading ? (
         <div className="space-y-3" aria-hidden="true">
           {[0, 1, 2].map((i) => (
-            <div key={i} className="h-24 animate-pulse rounded bg-white/[0.03]" />
+            <div key={i} className="h-24 animate-pulse rounded bg-surface-low" />
           ))}
         </div>
       ) : loadError ? (
         <EmptyState
           title={t('attend_requests.organizer.load_failed')}
           action={
-            <button type="button" onClick={load} className="rounded bg-white/[0.08] px-4 py-2 text-sm font-semibold text-white hover:bg-white/[0.12]">
+            <button type="button" onClick={load} className="rounded bg-surface-raised px-4 py-2 text-sm font-semibold text-fg hover:bg-surface-high">
               {t('attend_requests.organizer.retry')}
             </button>
           }
@@ -214,18 +214,18 @@ export default function RequestsClient({ eventId, requiresApproval }: { eventId:
                 : t('attend_requests.organizer.solo')
             const rowBusy = busy === r.id || busy === '*'
             return (
-              <li key={r.id} className="flex flex-col gap-4 rounded bg-white/[0.03] p-4 sm:flex-row sm:items-center sm:p-5">
+              <li key={r.id} className="flex flex-col gap-4 rounded bg-surface-low p-4 sm:flex-row sm:items-center sm:p-5">
                 <div className="flex min-w-0 flex-1 gap-4">
                   <Avatar name={r.name} url={r.avatar_url} />
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                      <p className="font-semibold text-white">{r.name || r.email}</p>
-                      {r.email && r.name && <p className="truncate text-xs text-white/45">{r.email}</p>}
+                      <p className="font-semibold text-fg">{r.name || r.email}</p>
+                      {r.email && r.name && <p className="truncate text-xs text-fg-subtle">{r.email}</p>}
                     </div>
-                    <p className="mt-1 text-sm text-white/70">{plusLine}</p>
-                    {r.note && <p className="mt-1.5 text-sm italic text-white/55">&ldquo;{r.note}&rdquo;</p>}
+                    <p className="mt-1 text-sm text-fg-muted">{plusLine}</p>
+                    {r.note && <p className="mt-1.5 text-sm italic text-fg-muted">&ldquo;{r.note}&rdquo;</p>}
                     {r.last_error && tone === 'pending' && (
-                      <p className="mt-1.5 text-xs text-amber-300">
+                      <p className="mt-1.5 text-xs text-warning-soft">
                         {t('attend_requests.organizer.last_error', { reason: t(attendErrorKey(r.last_error)) })}
                       </p>
                     )}
@@ -233,14 +233,14 @@ export default function RequestsClient({ eventId, requiresApproval }: { eventId:
                 </div>
                 <div className="flex items-center gap-3 sm:shrink-0">
                   <RequestStatusLabel tone={tone} label={t(`attend_requests.organizer.status_${tone}`)} />
-                  <span className="text-xs text-white/40">{relativeTime(r.created_at, locale)}</span>
+                  <span className="text-xs text-fg-subtle">{relativeTime(r.created_at, locale)}</span>
                   {tone === 'pending' && (
                     <div className="ml-auto flex gap-2 sm:ml-2">
                       <button
                         type="button"
                         onClick={() => act({ action: 'decline', requestId: r.id }, r.id)}
                         disabled={busy !== null}
-                        className="rounded bg-white/[0.08] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/[0.12] disabled:opacity-50"
+                        className="rounded bg-surface-raised px-4 py-2 text-sm font-semibold text-fg transition-colors hover:bg-surface-high disabled:opacity-50"
                       >
                         {t('attend_requests.organizer.decline')}
                       </button>
@@ -249,7 +249,7 @@ export default function RequestsClient({ eventId, requiresApproval }: { eventId:
                         onClick={() => act({ action: 'approve', requestId: r.id }, r.id)}
                         disabled={busy !== null}
                         aria-busy={rowBusy}
-                        className="rounded bg-white px-4 py-2 text-sm font-semibold text-black transition-colors hover:bg-white/90 disabled:opacity-50"
+                        className="rounded bg-inverse px-4 py-2 text-sm font-semibold text-on-inverse transition-colors hover:bg-inverse-hover disabled:opacity-50"
                       >
                         {t('attend_requests.organizer.approve')}
                       </button>

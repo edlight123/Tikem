@@ -207,15 +207,15 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-[#0a0a0a] px-4 py-10">
+    <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-canvas px-4 py-10">
       <div aria-hidden className="pointer-events-none absolute left-1/2 top-[-20%] h-[460px] w-[460px] max-w-full -translate-x-1/2 rounded-full blur-[150px]" />
       <div className="relative max-w-md w-full space-y-7">
         <div className="text-center">
           <Link href="/" className="inline-flex justify-center">
-            <TikemWordmark italic className="text-[46px] text-white" />
+            <TikemWordmark italic className="text-hero text-fg" />
           </Link>
-          <p className="mt-1.5 text-sm text-white/55">{BRAND.tagline}</p>
-          <h1 className="mt-6 font-display italic text-2xl md:text-3xl text-white">
+          <p className="mt-1.5 text-sm text-fg-muted">{BRAND.tagline}</p>
+          <h1 className="mt-6 font-display italic text-2xl md:text-3xl text-fg">
             {t('login.title')}
           </h1>
         </div>
@@ -224,19 +224,19 @@ export default function LoginPage() {
 
         <form className="space-y-5" onSubmit={handleLogin}>
           {error && (
-            <div role="alert" className="rounded-xl bg-red-500/10 px-4 py-2.5 text-sm text-red-200">
+            <div role="alert" className="rounded-xl bg-danger-strong/10 px-4 py-2.5 text-sm text-danger-soft">
               {error}
             </div>
           )}
           {resetNotice && (
-            <div role="status" className="rounded bg-white/[0.06] px-4 py-2.5 text-sm text-white/80">
+            <div role="status" className="rounded bg-surface px-4 py-2.5 text-sm text-fg-soft">
               {resetNotice}
             </div>
           )}
 
           <div className="space-y-4">
             <div>
-              <label htmlFor="email" className="block text-[13px] font-medium text-white/70 mb-1.5">
+              <label htmlFor="email" className="block text-meta font-medium text-fg-muted mb-1.5">
                 {t('login.email')}
               </label>
               <input
@@ -248,21 +248,21 @@ export default function LoginPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="block w-full px-4 py-3 text-base rounded-lg bg-white/[0.06] text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-brand-400/50"
+                className="block w-full px-4 py-3 text-base rounded-lg bg-surface text-fg placeholder:text-fg-faint focus:outline-none focus:ring-2 focus:ring-brand-400/50"
                 placeholder={t('login.email_placeholder')}
               />
             </div>
 
             <div>
               <div className="mb-1.5 flex items-baseline justify-between gap-3">
-                <label htmlFor="password" className="block text-[13px] font-medium text-white/70">
+                <label htmlFor="password" className="block text-meta font-medium text-fg-muted">
                   {t('login.password')}
                 </label>
                 <button
                   type="button"
                   onClick={handleForgotPassword}
                   disabled={resetSending || loading}
-                  className="text-[13px] font-medium text-white/60 underline-offset-4 hover:text-white hover:underline disabled:opacity-50"
+                  className="text-meta font-medium text-fg-muted underline-offset-4 hover:text-fg hover:underline disabled:opacity-50"
                 >
                   {resetSending ? t('login.reset_sending') : t('login.forgot_password')}
                 </button>
@@ -276,13 +276,13 @@ export default function LoginPage() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full px-4 py-3 pr-11 text-base rounded-lg bg-white/[0.06] text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-brand-400/50"
+                  className="block w-full px-4 py-3 pr-11 text-base rounded-lg bg-surface text-fg placeholder:text-fg-faint focus:outline-none focus:ring-2 focus:ring-brand-400/50"
                   placeholder={t('login.password_placeholder')}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/50 hover:text-white p-1"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-fg-subtle hover:text-fg p-1"
                   aria-label={showPassword ? t('login.hide_password') : t('login.show_password')}
                 >
                   {showPassword ? (
@@ -303,17 +303,17 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full flex justify-center py-3.5 px-4 rounded text-black text-base font-semibold bg-white hover:bg-white/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#0a0a0a] focus:ring-brand-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="w-full flex justify-center py-3.5 px-4 rounded text-on-inverse text-base font-semibold bg-inverse hover:bg-inverse-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-canvas focus:ring-brand-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {loading ? t('login.submit_loading') : t('login.submit')}
           </button>
 
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-white/10" />
+              <div className="w-full border-t border-line" />
             </div>
-            <div className="relative flex justify-center text-[13px]">
-              <span className="px-3 bg-[#0a0a0a] text-white/45">{t('login.or_continue_with')}</span>
+            <div className="relative flex justify-center text-meta">
+              <span className="px-3 bg-canvas text-fg-subtle">{t('login.or_continue_with')}</span>
             </div>
           </div>
 
@@ -321,7 +321,7 @@ export default function LoginPage() {
             type="button"
             onClick={handleGoogleLogin}
             disabled={loading}
-            className="w-full flex items-center justify-center gap-3 py-3.5 px-4 rounded bg-white/[0.07] text-white text-base font-semibold hover:bg-white/[0.12] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#0a0a0a] focus:ring-brand-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="w-full flex items-center justify-center gap-3 py-3.5 px-4 rounded bg-surface-raised text-fg text-base font-semibold hover:bg-surface-high focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-canvas focus:ring-brand-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path
@@ -345,7 +345,7 @@ export default function LoginPage() {
           </button>
 
           <div className="text-center">
-            <p className="text-[13px] text-white/55">
+            <p className="text-meta text-fg-muted">
               {t('login.no_account')}{' '}
               <Link
                 href={`/auth/signup?redirect=${encodeURIComponent(redirectTo)}`}

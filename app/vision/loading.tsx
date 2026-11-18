@@ -27,8 +27,8 @@
  * 1. `.mobile-typography` (app/globals.css, max-width 640px) forces h3 to
  *    text-base and p/li to text-sm. /vision's `!important` clamps (h1, the
  *    section h2s, the hero sub) survive it; its plain arbitrary sizes do not.
- *    So under 640px the eyebrow renders at 14px/21 and not text-[11px], the
- *    principle headings at 16px/20 and not text-[19px], and the city names at
+ *    So under 640px the eyebrow renders at 14px/21 and not text-eyebrow, the
+ *    principle headings at 16px/20 and not text-lead, and the city names at
  *    14px/21 and not clamp(20px,3.4vw,34px). The bars follow the measurement.
  * 2. `pb-mobile-nav` reserves `--mobile-nav-h`, which is 0 unless
  *    `body[data-mobile-nav]` is set and the viewport is under 768px. The real
@@ -60,7 +60,7 @@ function Bar({ className = '', style }: { className?: string; style?: CSSPropert
  * media-queried, and the phone branch is `sm:hidden`.
  *
  * `lead` is the one oversized paragraph on the page: the first of the problem
- * section, which is text-[17px]/sm:text-[19px] against everything else's 15.
+ * section, which is text-lead/sm:text-lead against everything else's 15.
  */
 function Lines({ n, sm, lead = false }: { n: number; sm: number; lead?: boolean }) {
   const lh = lead ? 27.625 : 24.375
@@ -127,7 +127,7 @@ export default function Loading() {
       {/* Navbar — h-14 / sm:h-16 WITH the bottom rule, because /vision renders
           <Navbar> without `flush`. The homepage skeleton has no rule here; this
           page does. */}
-      <div className="sticky top-0 z-50 border-b border-white/10 bg-[#0a0a0a]/80 backdrop-blur-xl">
+      <div className="sticky top-0 z-50 border-b border-line bg-canvas/80 backdrop-blur-xl">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-14 items-center justify-between sm:h-16">
             <div className="flex items-center gap-8">
@@ -149,7 +149,7 @@ export default function Loading() {
         <Bar className="h-[16.5px] w-20 sm:h-[17px] sm:w-20" />
         {/* The hairline under the eyebrow. It is the page's one spot of teal;
             the skeleton keeps its 12+1px of space but not its colour. */}
-        <div className="mt-3 h-px w-10 bg-white/10" />
+        <div className="mt-3 h-px w-10 bg-surface-raised" />
         {/* h1, clamp(38px,7vw,84px): three lines, 186/352/77 wide at 402 and
             412/779/171 at 1280. Bar+gap tracks the line box — 33+8 → 115 at
             402, 74+16 → 254 at 1280. */}
@@ -169,7 +169,7 @@ export default function Loading() {
       </section>
 
       {/* ── THE PROBLEM ── 489 at 402px, 461 at 1280. ───────────────────── */}
-      <section className="border-t border-white/10">
+      <section className="border-t border-line">
         <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
           {/* serif h2, clamp(26px,4vw,40px), one line: 167 wide at 402 */}
           <Bar className="h-[27.3px] w-[167px] max-w-full sm:h-[27px] sm:w-[257px] md:h-[32px] lg:h-[42px]" />
@@ -183,14 +183,14 @@ export default function Loading() {
 
       {/* ── THE PRINCIPLES ── 1601 at 402px, 1359 at 1280. Five numbered rows
              in one filled, rounded slab — a fill, not a bordered empty box. ── */}
-      <section className="border-t border-white/10">
+      <section className="border-t border-line">
         <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
           <Bar className="h-[16.5px] w-[129px] sm:h-[17px] sm:w-20" />
-          <div className="mt-10 space-y-px overflow-hidden rounded-2xl bg-white/[0.03]">
+          <div className="mt-10 space-y-px overflow-hidden rounded-2xl bg-surface-low">
             {PRINCIPLES.map(({ n, sm, head, gloss }, i) => (
               <div
                 key={i}
-                className="border-b border-white/[0.06] p-6 last:border-b-0 sm:p-8"
+                className="border-b border-line-soft p-6 last:border-b-0 sm:p-8"
               >
                 <div className="flex gap-5 sm:gap-8">
                   {/* the 01…05 counter — 14px wide, mono */}
@@ -222,7 +222,7 @@ export default function Loading() {
       </section>
 
       {/* ── WHERE ── 325 at 402px, 384 at 1280. ─────────────────────────── */}
-      <section className="border-t border-white/10">
+      <section className="border-t border-line">
         <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
           <Bar className="h-[27.3px] w-[109px] max-w-full sm:h-[27px] sm:w-[168px] md:h-[32px] lg:h-[42px]" />
           <div className="mt-4 max-w-[58ch]">
@@ -239,7 +239,7 @@ export default function Loading() {
       </section>
 
       {/* ── CLOSING ── 378 at 402px, 448 at 1280. ───────────────────────── */}
-      <section className="border-t border-white/10">
+      <section className="border-t border-line">
         <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
           {/* "Nou wè aswè a." — clamp(30px,5.5vw,60px) */}
           <Bar className="h-[30.6px] w-[224px] max-w-full sm:h-[36px] sm:w-[449px] md:h-[43px] lg:h-[57px] xl:h-[61px]" />

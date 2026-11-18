@@ -18,10 +18,10 @@ interface NotificationsCardProps {
  * saved a nested `notify` object no sender ever looked at.
  *
  * Before: a bordered card, an empty 40px box around a `text-brand-600` bell, and
- * three copies of the same toggle markup whose knob was `bg-white/[0.03]` —
+ * three copies of the same toggle markup whose knob was `bg-surface-low` —
  * invisible on both a teal and a grey track, so the control's state was carried
- * by the track alone. The closing note was `bg-white/[0.03] border
- * border-white/10`: a hairline around a footnote.
+ * by the track alone. The closing note was `bg-surface-low border
+ * border-line`: a hairline around a footnote.
  *
  * Now: one filled panel, hairline-divided rows (the one place a line is the
  * meaning), the shared Switch with a white knob, and the note as plain muted
@@ -79,7 +79,7 @@ export function NotificationsCard({ profile, onUpdate }: NotificationsCardProps)
         </PanelRows>
       </Panel>
 
-      <p className="mt-3 !text-[12px] !leading-relaxed text-white/35">{t('notifications.note')}</p>
+      <p className="mt-3 !text-caption !leading-relaxed text-fg-faint">{t('notifications.note')}</p>
     </ProfileSection>
   )
 }

@@ -164,7 +164,7 @@ export default function PromotersClient({
   }
 
   const inputClass =
-    'w-full rounded-xl bg-white/[0.06] px-4 py-3 text-sm text-white placeholder-white/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500'
+    'w-full rounded-xl bg-surface px-4 py-3 text-sm text-fg placeholder-fg-faint focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500'
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-6">
@@ -177,7 +177,7 @@ export default function PromotersClient({
             <button
               type="button"
               onClick={() => setShowForm(true)}
-              className="inline-flex shrink-0 items-center gap-2 rounded bg-white px-4 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+              className="inline-flex shrink-0 items-center gap-2 rounded bg-inverse px-4 py-2.5 text-sm font-semibold text-on-inverse transition-colors hover:bg-inverse-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
             >
               <Plus className="h-4 w-4" />
               {t('promoters.add_promoter')}
@@ -187,10 +187,10 @@ export default function PromotersClient({
       />
 
         {showForm && (
-          <div className="rounded-2xl bg-white/[0.055] px-5 py-5 space-y-4">
+          <div className="rounded-2xl bg-surface px-5 py-5 space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="label-mono text-[11px] uppercase text-white/50">Name</label>
+                <label className="label-mono text-eyebrow uppercase text-fg-subtle">Name</label>
                 <input
                   className={`mt-1.5 ${inputClass}`}
                   value={name}
@@ -202,7 +202,7 @@ export default function PromotersClient({
                 />
               </div>
               <div>
-                <label className="label-mono text-[11px] uppercase text-white/50">{t('promoters.contact_optional')}</label>
+                <label className="label-mono text-eyebrow uppercase text-fg-subtle">{t('promoters.contact_optional')}</label>
                 <input
                   className={`mt-1.5 ${inputClass}`}
                   value={contact}
@@ -211,7 +211,7 @@ export default function PromotersClient({
                 />
               </div>
               <div>
-                <label className="label-mono text-[11px] uppercase text-white/50">{t('promoters.link_code')}</label>
+                <label className="label-mono text-eyebrow uppercase text-fg-subtle">{t('promoters.link_code')}</label>
                 <input
                   className={`mt-1.5 ${inputClass} font-mono`}
                   value={code}
@@ -223,7 +223,7 @@ export default function PromotersClient({
                 />
               </div>
               <div>
-                <label className="label-mono text-[11px] uppercase text-white/50">{t('promoters.commission')}</label>
+                <label className="label-mono text-eyebrow uppercase text-fg-subtle">{t('promoters.commission')}</label>
                 <div className="mt-1.5 flex gap-2">
                   <input
                     className={`${inputClass} flex-1`}
@@ -233,7 +233,7 @@ export default function PromotersClient({
                     onChange={(e) => setCommissionValue(e.target.value)}
                   />
                   <select
-                    className="rounded-xl bg-white/[0.06] px-3 py-3 text-sm text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 [&>option]:bg-white/[0.03]"
+                    className="rounded-xl bg-surface px-3 py-3 text-sm text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 [&>option]:bg-surface-low"
                     value={commissionType}
                     onChange={(e) => setCommissionType(e.target.value as any)}
                   >
@@ -248,14 +248,14 @@ export default function PromotersClient({
                 type="button"
                 onClick={handleCreate}
                 disabled={saving || !name.trim()}
-                className="rounded bg-white px-4 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+                className="rounded bg-inverse px-4 py-2.5 text-sm font-semibold text-on-inverse transition-colors hover:bg-inverse-hover disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
               >
                 {saving ? 'Adding…' : 'Add promoter'}
               </button>
               <button
                 type="button"
                 onClick={() => setShowForm(false)}
-                className="rounded px-4 py-2.5 text-sm font-semibold text-white/70 transition-colors hover:bg-white/[0.12] bg-white/[0.07]"
+                className="rounded px-4 py-2.5 text-sm font-semibold text-fg-muted transition-colors hover:bg-surface-high bg-surface-raised"
               >
                 {t('actions.cancel')}
               </button>
@@ -264,7 +264,7 @@ export default function PromotersClient({
         )}
 
         {loading ? (
-          <div className="p-8 text-center text-sm text-white/50">Loading promoters…</div>
+          <div className="p-8 text-center text-sm text-fg-subtle">Loading promoters…</div>
         ) : promoters.length === 0 ? (
           showForm ? null : (
             <OrgEmptyState
@@ -275,7 +275,7 @@ export default function PromotersClient({
                 <button
                   type="button"
                   onClick={() => setShowForm(true)}
-                  className="inline-flex items-center gap-2 rounded bg-white px-4 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+                  className="inline-flex items-center gap-2 rounded bg-inverse px-4 py-2.5 text-sm font-semibold text-on-inverse transition-colors hover:bg-inverse-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
                 >
                   <Plus className="h-4 w-4" />
                   {t('promoters.add_first_promoter')}
@@ -284,20 +284,20 @@ export default function PromotersClient({
             />
           )
         ) : (
-          <div className="divide-y divide-white/5 rounded-2xl bg-white/[0.055]">
+          <div className="divide-y divide-line-soft rounded-2xl bg-surface">
             {promoters.map((p) => (
               <div key={p.id} className="px-5 py-4">
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2.5">
-                      <span className="font-semibold text-white">{p.name}</span>
-                      <span className="font-mono text-xs text-white/50">{p.code}</span>
-                      <span className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-white/50">
-                        <span className={`h-1.5 w-1.5 rounded-full ${p.isActive ? 'bg-emerald-400' : 'bg-white/30'}`} />
+                      <span className="font-semibold text-fg">{p.name}</span>
+                      <span className="font-mono text-xs text-fg-subtle">{p.code}</span>
+                      <span className="inline-flex items-center gap-1.5 text-eyebrow uppercase tracking-wider text-fg-subtle">
+                        <span className={`h-1.5 w-1.5 rounded-full ${p.isActive ? 'bg-success' : 'bg-fg/30'}`} />
                         {p.isActive ? 'Active' : 'Paused'}
                       </span>
                     </div>
-                    <p className="mt-0.5 text-sm text-white/50">
+                    <p className="mt-0.5 text-sm text-fg-subtle">
                       {commissionLabel(p)}
                       {p.contact ? ` · ${p.contact}` : ''}
                     </p>
@@ -305,24 +305,24 @@ export default function PromotersClient({
 
                   <div className="flex items-center gap-6 text-sm">
                     <div className="text-right">
-                      <p className="text-white font-semibold">{p.clicks || 0}</p>
-                      <p className="text-[11px] uppercase tracking-wider text-white/40">{t('promoters.clicks')}</p>
+                      <p className="text-fg font-semibold">{p.clicks || 0}</p>
+                      <p className="text-eyebrow uppercase tracking-wider text-fg-subtle">{t('promoters.clicks')}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-white font-semibold">{formatConversion(p.ordersCount, p.clicks || 0)}</p>
-                      <p className="text-[11px] uppercase tracking-wider text-white/40">{t('promoters.conversion')}</p>
+                      <p className="text-fg font-semibold">{formatConversion(p.ordersCount, p.clicks || 0)}</p>
+                      <p className="text-eyebrow uppercase tracking-wider text-fg-subtle">{t('promoters.conversion')}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-white font-semibold">{p.ticketsSold}</p>
-                      <p className="text-[11px] uppercase tracking-wider text-white/40">{t('promoters.tickets')}</p>
+                      <p className="text-fg font-semibold">{p.ticketsSold}</p>
+                      <p className="text-eyebrow uppercase tracking-wider text-fg-subtle">{t('promoters.tickets')}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-white font-semibold">{fmtMoney(p.grossCents, p.currency)}</p>
-                      <p className="text-[11px] uppercase tracking-wider text-white/40">{t('actions.sales')}</p>
+                      <p className="text-fg font-semibold">{fmtMoney(p.grossCents, p.currency)}</p>
+                      <p className="text-eyebrow uppercase tracking-wider text-fg-subtle">{t('actions.sales')}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-white font-semibold">{fmtMoney(p.commissionCents, p.currency)}</p>
-                      <p className="text-[11px] uppercase tracking-wider text-white/40">Owed</p>
+                      <p className="text-fg font-semibold">{fmtMoney(p.commissionCents, p.currency)}</p>
+                      <p className="text-eyebrow uppercase tracking-wider text-fg-subtle">Owed</p>
                     </div>
                   </div>
                 </div>
@@ -331,7 +331,7 @@ export default function PromotersClient({
                   <button
                     type="button"
                     onClick={() => copy(`share-${p.id}`, p.shareUrl)}
-                    className="inline-flex items-center gap-1.5 rounded bg-white/[0.07] px-3 py-1.5 text-xs font-semibold text-white/70 transition-colors hover:bg-white/[0.12] hover:text-white"
+                    className="inline-flex items-center gap-1.5 rounded bg-surface-raised px-3 py-1.5 text-xs font-semibold text-fg-muted transition-colors hover:bg-surface-high hover:text-fg"
                   >
                     {copiedKey === `share-${p.id}` ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
                     Sales link
@@ -339,7 +339,7 @@ export default function PromotersClient({
                   <button
                     type="button"
                     onClick={() => copy(`stats-${p.id}`, p.statsUrl)}
-                    className="inline-flex items-center gap-1.5 rounded bg-white/[0.07] px-3 py-1.5 text-xs font-semibold text-white/70 transition-colors hover:bg-white/[0.12] hover:text-white"
+                    className="inline-flex items-center gap-1.5 rounded bg-surface-raised px-3 py-1.5 text-xs font-semibold text-fg-muted transition-colors hover:bg-surface-high hover:text-fg"
                   >
                     {copiedKey === `stats-${p.id}` ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
                     Their stats page
@@ -350,7 +350,7 @@ export default function PromotersClient({
                     )}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 rounded bg-white/[0.07] px-3 py-1.5 text-xs font-semibold text-white/70 transition-colors hover:bg-white/[0.12] hover:text-white"
+                    className="inline-flex items-center gap-1.5 rounded bg-surface-raised px-3 py-1.5 text-xs font-semibold text-fg-muted transition-colors hover:bg-surface-high hover:text-fg"
                   >
                     <ExternalLink className="h-3.5 w-3.5" />
                     {t('promoters.send_via_whatsapp')}
@@ -359,7 +359,7 @@ export default function PromotersClient({
                   <button
                     type="button"
                     onClick={() => handleToggle(p)}
-                    className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white/50 transition-colors hover:text-white"
+                    className="rounded-lg px-3 py-1.5 text-xs font-semibold text-fg-subtle transition-colors hover:text-fg"
                   >
                     {p.isActive ? 'Pause' : 'Resume'}
                   </button>
@@ -367,7 +367,7 @@ export default function PromotersClient({
                     <button
                       type="button"
                       onClick={() => handleDelete(p)}
-                      className="rounded-lg px-3 py-1.5 text-xs font-semibold text-red-400/70 transition-colors hover:text-red-300"
+                      className="rounded-lg px-3 py-1.5 text-xs font-semibold text-danger/70 transition-colors hover:text-danger-soft"
                     >
                       {t('actions.remove')}
                     </button>
@@ -380,7 +380,7 @@ export default function PromotersClient({
 
       {/* One short line where it matters: money leaves their earnings. */}
       {promoters.length > 0 && (
-        <p className="text-xs text-white/40">{t('promoters.commission_note')}</p>
+        <p className="text-xs text-fg-subtle">{t('promoters.commission_note')}</p>
       )}
     </div>
   )

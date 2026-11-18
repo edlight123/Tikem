@@ -14,19 +14,19 @@ export const metadata: Metadata = {
 export default function PhotoCreditsPage() {
   return (
     <main className="mx-auto max-w-3xl px-4 pb-24 pt-10 sm:px-6">
-      <h1 className="font-display text-[40px] italic leading-tight text-white">photo credits</h1>
-      <ul className="mt-8 divide-y divide-white/10">
+      <h1 className="font-display text-hero italic leading-tight text-fg">photo credits</h1>
+      <ul className="mt-8 divide-y divide-line">
         {PHOTO_CREDITS.map((c) => (
           <li key={c.key} className="py-4">
             <a
               href={c.source}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[15px] font-semibold text-white hover:underline"
+              className="text-body font-semibold text-fg hover:underline"
             >
               {c.title}
             </a>
-            <p className="mt-1 text-[13px] text-white/60">
+            <p className="mt-1 text-meta text-fg-muted">
               {c.author}
               {' · '}
               {c.licenseUrl ? (

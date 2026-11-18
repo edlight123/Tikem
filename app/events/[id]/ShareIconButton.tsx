@@ -49,12 +49,12 @@ export default function ShareIconButton({
   const toneClasses =
     tone === 'light'
       ? // A fill, not a hairline ring around an empty box (house rule).
-        'bg-white/[0.10] text-white hover:bg-white/[0.18] backdrop-blur-md'
-      /* Was `bg-white/[0.04] ring-1 ring-gray-200`: a near-WHITE hairline
+        'bg-surface-raised text-fg hover:bg-fg/18 backdrop-blur-md'
+      /* Was `bg-surface-low ring-1 ring-gray-200`: a near-WHITE hairline
          around a 4%-opacity disc, sitting on the #0a0a0a sticky bar — so all
          you saw was a bright ring around nothing, the exact pattern the house
          rule forbids. Now a fill, matched to FavoriteButton beside it. */
-      : 'bg-white/[0.06] text-white/65 hover:bg-white/[0.12]'
+      : 'bg-surface text-fg-muted hover:bg-surface-high'
 
   return (
     <button

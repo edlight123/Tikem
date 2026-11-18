@@ -16,7 +16,7 @@ export default function Loading() {
   return (
     <div className="min-h-screen bg-black pb-mobile-nav">
       {/* Navbar. `flush` on the real homepage means no bottom rule here. */}
-      <div className="sticky top-0 z-50 bg-[#0a0a0a]/80 backdrop-blur-xl">
+      <div className="sticky top-0 z-50 bg-canvas/80 backdrop-blur-xl">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-14 items-center justify-between sm:h-16">
             <div className="flex items-center gap-8">
@@ -55,7 +55,7 @@ export default function Loading() {
       </section>
 
       {/* ── FILM STRIP ───────────────────────────────────────────────────── */}
-      <section aria-hidden className="overflow-hidden bg-white/[0.03] py-6">
+      <section aria-hidden className="overflow-hidden bg-surface-low py-6">
         <div className="flex gap-3">
           {Array.from({ length: 8 }).map((_, i) => (
             <div key={i} className="skeleton h-44 w-[141px] shrink-0 rounded sm:h-56 sm:w-[179px]" />

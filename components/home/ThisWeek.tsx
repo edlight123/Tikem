@@ -38,20 +38,20 @@ export default function ThisWeek({ days, scopeQs }: { days: WeekDay[]; scopeQs: 
               <Link
                 href={`/discover?date=pick-date&pickedDate=${d.date}&${scopeQs}`}
                 aria-label={`${dayLabel(d.date, i18n.language)}: ${countLabel}`}
-                className="group block rounded outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+                className="group block rounded outline-none focus-visible:ring-2 focus-visible:ring-fg/70"
               >
                 <p
-                  className={`flex items-baseline gap-2 font-mono text-[11px] uppercase tracking-[0.1em] ${
-                    d.isToday ? 'text-[#14B8A6]' : 'text-white/45'
+                  className={`flex items-baseline gap-2 font-mono text-eyebrow uppercase tracking-[0.1em] ${
+                    d.isToday ? 'text-brand-500' : 'text-fg-subtle'
                   }`}
                 >
-                  {d.isToday && <span aria-hidden className="h-1.5 w-1.5 self-center rounded-full bg-[#14B8A6]" />}
+                  {d.isToday && <span aria-hidden className="h-1.5 w-1.5 self-center rounded-full bg-brand-500" />}
                   {d.isToday ? t('home.week.today', { defaultValue: 'Today' }) : weekday}
-                  <span className="font-grotesk text-[15px] font-bold normal-case tracking-[-0.01em] text-white tabular-nums">
+                  <span className="font-grotesk text-body font-bold normal-case tracking-[-0.01em] text-fg tabular-nums">
                     {day}
                   </span>
                 </p>
-                <div className="relative mt-2.5 aspect-[4/5] w-full overflow-hidden rounded bg-white/[0.06]">
+                <div className="relative mt-2.5 aspect-[4/5] w-full overflow-hidden rounded bg-surface">
                   {d.top && (
                     <PosterImage
                       src={d.top.banner_image_url}
@@ -62,9 +62,9 @@ export default function ThisWeek({ days, scopeQs }: { days: WeekDay[]; scopeQs: 
                     />
                   )}
                 </div>
-                <p className="mt-2.5 truncate font-display text-[19px] italic leading-[1.15] text-white">{d.top?.title}</p>
+                <p className="mt-2.5 truncate font-display text-lead italic leading-[1.15] text-fg">{d.top?.title}</p>
                 {d.count > 1 && (
-                  <p className="mt-0.5 font-mono text-[11px] uppercase tracking-[0.08em] text-white/40">{countLabel}</p>
+                  <p className="mt-0.5 font-mono text-eyebrow uppercase tracking-[0.08em] text-fg-subtle">{countLabel}</p>
                 )}
               </Link>
             </li>

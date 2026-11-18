@@ -107,17 +107,17 @@ export default function SeedEventsClient() {
 
       <ConsoleSection>Quick diagnostics</ConsoleSection>
       <ConsolePanel className="px-4 py-3.5">
-        <div className="text-[13px] text-console-mut">
+        <div className="text-meta text-console-mut">
           Demo mode (client build):{' '}
           <span className="label-mono text-console-text">{String(process.env.NEXT_PUBLIC_DEMO_MODE)}</span>
         </div>
-        <div className="mt-0.5 text-[13px] text-console-mut">
+        <div className="mt-0.5 text-meta text-console-mut">
           Firebase project (client):{' '}
           <span className="label-mono text-console-text">
             {String(process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID)}
           </span>
         </div>
-        <div className="mt-1.5 text-[13px] text-console-faint">
+        <div className="mt-1.5 text-meta text-console-faint">
           If demo mode is <span className="label-mono">true</span>, Discover/Home will show demo
           events instead of Firestore.
         </div>
@@ -142,7 +142,7 @@ export default function SeedEventsClient() {
 
       <ConsoleSection>What will be created</ConsoleSection>
       <ConsolePanel className="px-4 py-3.5">
-        <ul className="list-inside list-disc space-y-1 text-[13px] text-console-mut">
+        <ul className="list-inside list-disc space-y-1 text-meta text-console-mut">
           <li>15 events in Haiti (50%) - Mix of USD and HTG pricing</li>
           <li>8 events in USA (Miami, New York, Boston, etc.)</li>
           <li>7 events in Canada (Montreal, Toronto, Vancouver, etc.)</li>
@@ -164,13 +164,13 @@ export default function SeedEventsClient() {
           <ConsoleState tone={result.success ? 'good' : 'bad'}>{result.message}</ConsoleState>
           {result.events && result.events.length > 0 && (
             <div className="mt-3 max-h-96 overflow-y-auto">
-              <div className="label-mono mb-2 text-[10px] uppercase tracking-[0.18em] text-console-faint">
+              <div className="label-mono mb-2 text-eyebrow uppercase tracking-[0.18em] text-console-faint">
                 Created events
               </div>
               <div className="space-y-1.5">
                 {result.events.map((event, idx) => (
                   <div key={event.id} className="rounded bg-console-raise px-3 py-2">
-                    <div className="text-[13px] font-medium text-console-text">
+                    <div className="text-meta font-medium text-console-text">
                       {idx + 1}. {event.title}
                     </div>
                     <div className="label-mono mt-0.5 text-xs text-console-mut">

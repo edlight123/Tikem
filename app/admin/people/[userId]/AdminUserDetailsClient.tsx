@@ -101,7 +101,7 @@ export default function AdminUserDetailsClient({
 
       {/* Header — mono caps, the console's own voice; badges and id beneath. */}
       <div className="mb-3 min-w-0">
-        <h1 className="label-mono truncate text-[15px] font-bold uppercase tracking-[0.14em] text-console-text">
+        <h1 className="label-mono truncate text-body font-bold uppercase tracking-[0.14em] text-console-text">
           {user.full_name || user.name || 'No name'}
         </h1>
         {user.email && <p className="mt-1 truncate text-sm text-console-mut">{user.email}</p>}
@@ -167,15 +167,15 @@ export default function AdminUserDetailsClient({
       {/* Attendee stats strip */}
       <div className="mb-6 grid grid-cols-3 divide-x divide-console-raise overflow-hidden rounded-lg bg-console-panel">
         <div className="p-4">
-          <div className="label-mono text-[11px] uppercase tracking-wide text-console-mut">{t('users.events_attended')}</div>
+          <div className="label-mono text-eyebrow uppercase tracking-wide text-console-mut">{t('users.events_attended')}</div>
           <div className="mt-1 font-mono text-2xl font-bold tabular-nums text-console-text">{attendeeStats.eventsAttended}</div>
         </div>
         <div className="p-4">
-          <div className="label-mono text-[11px] uppercase tracking-wide text-console-mut">{t('users.tickets_confirmed')}</div>
+          <div className="label-mono text-eyebrow uppercase tracking-wide text-console-mut">{t('users.tickets_confirmed')}</div>
           <div className="mt-1 font-mono text-2xl font-bold tabular-nums text-console-text">{attendeeStats.ticketsConfirmed}</div>
         </div>
         <div className="p-4">
-          <div className="label-mono text-[11px] uppercase tracking-wide text-console-mut">{t('users.tickets_checked_in')}</div>
+          <div className="label-mono text-eyebrow uppercase tracking-wide text-console-mut">{t('users.tickets_checked_in')}</div>
           <div className="mt-1 font-mono text-2xl font-bold tabular-nums text-console-text">{attendeeStats.ticketsCheckedIn}</div>
         </div>
       </div>
@@ -184,7 +184,7 @@ export default function AdminUserDetailsClient({
       {isOrganizer && organizerStats && (
         <div className="rounded-lg bg-console-panel p-4 sm:p-5">
           <div className="mb-4 flex items-center justify-between gap-4">
-            <h2 className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint">{t('users.organizer_section')}</h2>
+            <h2 className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint">{t('users.organizer_section')}</h2>
             <Link
               href={`/admin/people/organizers/${id}`}
               className="text-sm font-medium text-console-mut hover:text-console-text"
@@ -195,15 +195,15 @@ export default function AdminUserDetailsClient({
 
           <div className="grid grid-cols-3 divide-x divide-console-raise overflow-hidden rounded-lg bg-console-panel">
             <div className="p-4">
-              <div className="label-mono text-[11px] uppercase tracking-wide text-console-mut">{t('users.organizer_total_events')}</div>
+              <div className="label-mono text-eyebrow uppercase tracking-wide text-console-mut">{t('users.organizer_total_events')}</div>
               <div className="mt-1 font-mono text-2xl font-bold tabular-nums text-console-text">{organizerStats.totalEvents}</div>
             </div>
             <div className="p-4">
-              <div className="label-mono text-[11px] uppercase tracking-wide text-console-mut">{t('users.organizer_published_events')}</div>
+              <div className="label-mono text-eyebrow uppercase tracking-wide text-console-mut">{t('users.organizer_published_events')}</div>
               <div className="mt-1 font-mono text-2xl font-bold tabular-nums text-console-text">{organizerStats.publishedEvents}</div>
             </div>
             <div className="p-4">
-              <div className="label-mono text-[11px] uppercase tracking-wide text-console-mut">{t('users.organizer_tickets_sold')}</div>
+              <div className="label-mono text-eyebrow uppercase tracking-wide text-console-mut">{t('users.organizer_tickets_sold')}</div>
               <div className="mt-1 font-mono text-2xl font-bold tabular-nums text-console-text">{organizerStats.ticketsSold}</div>
             </div>
           </div>

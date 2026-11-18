@@ -120,7 +120,7 @@ export default function ContactOrganizer({
           onClick={() => (userId ? setOpen(true) : toLogin())}
           aria-label={t('contactOrganizer.open')}
           title={t('contactOrganizer.open')}
-          className={`grid shrink-0 place-items-center rounded bg-white/[0.06] text-white/65 transition-colors hover:bg-white/[0.12] hover:text-white active:scale-90 ${
+          className={`grid shrink-0 place-items-center rounded bg-surface text-fg-muted transition-colors hover:bg-surface-high hover:text-fg active:scale-90 ${
             size === 'sm' ? 'h-9 w-9' : 'h-10 w-10'
           } ${className}`}
         >
@@ -131,13 +131,13 @@ export default function ContactOrganizer({
       <button
         type="button"
         onClick={() => (userId ? setOpen(true) : toLogin())}
-        className={`flex w-full items-center gap-3 rounded bg-white/[0.05] px-3.5 py-3 text-left transition-colors hover:bg-white/[0.09] ${className}`}
+        className={`flex w-full items-center gap-3 rounded bg-surface px-3.5 py-3 text-left transition-colors hover:bg-surface-raised ${className}`}
       >
-        <span className="grid h-8 w-8 shrink-0 place-items-center rounded bg-white/[0.08]" aria-hidden>
-          <MessageCircle className="h-[17px] w-[17px] text-white" />
+        <span className="grid h-8 w-8 shrink-0 place-items-center rounded bg-surface-raised" aria-hidden>
+          <MessageCircle className="h-[17px] w-[17px] text-fg" />
         </span>
-        <span className="flex-1 text-[15px] font-medium text-white">{t('contactOrganizer.open')}</span>
-        <ChevronRight className="h-4 w-4 text-white/50" aria-hidden />
+        <span className="flex-1 text-body font-medium text-fg">{t('contactOrganizer.open')}</span>
+        <ChevronRight className="h-4 w-4 text-fg-subtle" aria-hidden />
       </button>
       )}
 
@@ -148,21 +148,21 @@ export default function ContactOrganizer({
       >
         {sent ? (
           <div className="pb-2">
-            <p className="!text-[15px] leading-relaxed text-white/70">
+            <p className="!text-body leading-relaxed text-fg-muted">
               {eventTitle
                 ? t('contactOrganizer.sentBodyNamed', { event: eventTitle })
                 : t('contactOrganizer.sentBody')}
             </p>
             <a
               href="/profile#messages"
-              className="mt-6 flex h-12 w-full items-center justify-center rounded bg-white/[0.08] text-[15px] font-semibold text-white transition-colors hover:bg-white/[0.12]"
+              className="mt-6 flex h-12 w-full items-center justify-center rounded bg-surface-raised text-body font-semibold text-fg transition-colors hover:bg-surface-high"
             >
               {t('contactOrganizer.viewMessages')}
             </a>
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="mt-3 h-12 w-full rounded bg-white text-[15px] font-semibold text-black transition-opacity hover:opacity-90"
+              className="mt-3 h-12 w-full rounded bg-inverse text-body font-semibold text-on-inverse transition-opacity hover:opacity-90"
             >
               {t('contactOrganizer.done')}
             </button>
@@ -170,12 +170,12 @@ export default function ContactOrganizer({
         ) : (
           <div>
             {eventTitle && (
-              <p className="mb-5 truncate !text-[14px] text-white/60">
+              <p className="mb-5 truncate !text-sm text-fg-muted">
                 {t('contactOrganizer.aboutEvent', { event: eventTitle })}
               </p>
             )}
 
-            <p id="contact-organizer-topic" className="mb-2.5 !text-[13px] font-semibold text-white/60">
+            <p id="contact-organizer-topic" className="mb-2.5 !text-meta font-semibold text-fg-muted">
               {t('contactOrganizer.topicLabel')}
             </p>
             {/* Three filled chips; the chosen one inverts to white. No radio
@@ -190,8 +190,8 @@ export default function ContactOrganizer({
                     role="radio"
                     aria-checked={selected}
                     onClick={() => setTopic(key)}
-                    className={`h-10 min-w-0 flex-1 truncate rounded px-2 text-[14px] font-semibold transition-colors ${
-                      selected ? 'bg-white text-black' : 'bg-white/[0.08] text-white hover:bg-white/[0.12]'
+                    className={`h-10 min-w-0 flex-1 truncate rounded px-2 text-sm font-semibold transition-colors ${
+                      selected ? 'bg-inverse text-on-inverse' : 'bg-surface-raised text-fg hover:bg-surface-high'
                     }`}
                   >
                     {t(`contactOrganizer.topics.${key}`)}
@@ -211,14 +211,14 @@ export default function ContactOrganizer({
               rows={5}
               disabled={sending}
               placeholder={t('contactOrganizer.messagePlaceholder')}
-              className="mt-4 min-h-[132px] w-full resize-none rounded bg-white/[0.06] px-4 py-3.5 text-[16px] leading-[22px] text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-white/30 disabled:opacity-60"
+              className="mt-4 min-h-[132px] w-full resize-none rounded bg-surface px-4 py-3.5 text-base leading-[22px] text-fg placeholder:text-fg-faint focus:outline-none focus:ring-2 focus:ring-fg/30 disabled:opacity-60"
             />
-            <p className="mt-1.5 text-right !text-[12px] tabular-nums text-white/40">
+            <p className="mt-1.5 text-right !text-caption tabular-nums text-fg-subtle">
               {message.length}/{MAX_MESSAGE_LENGTH}
             </p>
 
             {error && (
-              <p role="alert" className="mt-2 !text-[14px] text-red-400">
+              <p role="alert" className="mt-2 !text-sm text-danger">
                 {error}
               </p>
             )}
@@ -227,7 +227,7 @@ export default function ContactOrganizer({
               type="button"
               onClick={send}
               disabled={!canSend}
-              className="mt-4 h-12 w-full rounded bg-white text-[15px] font-semibold text-black transition-opacity hover:opacity-90 disabled:bg-white/[0.08] disabled:text-white/40 disabled:hover:opacity-100"
+              className="mt-4 h-12 w-full rounded bg-inverse text-body font-semibold text-on-inverse transition-opacity hover:opacity-90 disabled:bg-surface-raised disabled:text-fg-subtle disabled:hover:opacity-100"
             >
               {sending ? t('contactOrganizer.sending') : t('contactOrganizer.send')}
             </button>

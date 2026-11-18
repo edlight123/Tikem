@@ -128,7 +128,7 @@ export default function FlyerLibraryPicker({
         type="button"
         onClick={onClose}
         aria-label={t('common.close', { defaultValue: 'Close' })}
-        className="absolute inset-0 bg-black/75 backdrop-blur-sm"
+        className="absolute inset-0 bg-scrim-strong backdrop-blur-sm"
       />
       <div
         role="dialog"
@@ -143,16 +143,16 @@ export default function FlyerLibraryPicker({
            which is the honest number, and --chrome-h is the navbar's own
            height (globals.css). Same class of bug as the homepage phone
            mockup. */
-        className="relative flex max-h-[calc(100svh-1.5rem)] w-full max-w-2xl flex-col overflow-hidden rounded-t-3xl bg-[#1c1c1c] shadow-2xl sm:max-h-[85svh] sm:rounded-3xl"
+        className="relative flex max-h-[calc(100svh-1.5rem)] w-full max-w-2xl flex-col overflow-hidden rounded-t-3xl bg-surface-raised-solid shadow-2xl sm:max-h-[85svh] sm:rounded-3xl"
       >
-        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-white/[0.07] px-5 py-4">
+        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-line-soft px-5 py-4">
           <div>
-            <h2 className="text-[15px] font-semibold text-white">
+            <h2 className="text-body font-semibold text-fg">
               {t('composer.flyerLibrary', { defaultValue: 'Flyer library' })}
             </h2>
             {/* Two spans rather than one string: the long sentence takes three
                 lines at 402px and pushes the grid down the sheet. */}
-            <p className="mt-0.5 text-xs text-white/50">
+            <p className="mt-0.5 text-xs text-fg-subtle">
               <span className="sm:hidden">
                 {t('composer.flyerLibraryHintShort', {
                   defaultValue: 'Free artwork. Swap it any time.',
@@ -168,7 +168,7 @@ export default function FlyerLibraryPicker({
           <button
             type="button"
             onClick={onClose}
-            className="shrink-0 rounded-lg p-1.5 text-white/50 transition-colors hover:bg-white/[0.06] hover:text-white"
+            className="shrink-0 rounded-lg p-1.5 text-fg-subtle transition-colors hover:bg-surface hover:text-fg"
             aria-label={t('common.close', { defaultValue: 'Close' })}
           >
             <X className="h-4 w-4" />
@@ -178,8 +178,8 @@ export default function FlyerLibraryPicker({
         {/* Search. Fifteen tiles fit on a laptop but not on a phone, and an
             organizer usually knows the kind of night before the picture. */}
         <div className="shrink-0 px-5 pt-4">
-          <div className="flex items-center gap-2.5 rounded-xl bg-white/[0.05] px-4">
-            <Search className="h-[18px] w-[18px] shrink-0 text-white/40" aria-hidden />
+          <div className="flex items-center gap-2.5 rounded-xl bg-surface px-4">
+            <Search className="h-[18px] w-[18px] shrink-0 text-fg-subtle" aria-hidden />
             <input
               value={q}
               onChange={(e) => setQ(e.target.value)}
@@ -191,14 +191,14 @@ export default function FlyerLibraryPicker({
                   : t('composer.flyerSearchShort', { defaultValue: 'Search: konpa, gala…' })
               }
               aria-label={t('composer.flyerSearchPlaceholder', { defaultValue: 'Search artwork' })}
-              className="min-h-11 w-full bg-transparent py-3 text-[15px] text-white placeholder:text-white/40 focus:outline-none"
+              className="min-h-11 w-full bg-transparent py-3 text-body text-fg placeholder:text-fg-subtle focus:outline-none"
             />
             {q && (
               <button
                 type="button"
                 onClick={() => setQ('')}
                 aria-label={t('common.clear', { defaultValue: 'Clear' })}
-                className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-white/40 hover:text-white"
+                className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-fg-subtle hover:text-fg"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -228,7 +228,7 @@ export default function FlyerLibraryPicker({
               lie — a query with no hits just shows the whole library under
               this line instead. */}
           {q.trim() !== '' && matchCount === 0 && (
-            <p className="col-span-full pb-1 text-sm text-white/45">
+            <p className="col-span-full pb-1 text-sm text-fg-subtle">
               {t('composer.flyerNoMatchAll', {
                 defaultValue: 'Nothing matched that. Here is everything.',
               })}
@@ -245,7 +245,7 @@ export default function FlyerLibraryPicker({
               // 4:5. `self-start` keeps a row from ever stretching it.
               <Fragment key={item.id}>
               {startsRest && (
-                <p className="label-mono col-span-full pt-2 text-[10px] uppercase tracking-wider text-white/35">
+                <p className="label-mono col-span-full pt-2 text-eyebrow uppercase tracking-wider text-fg-faint">
                   {t('composer.flyerMore', { defaultValue: 'More artwork' })}
                 </p>
               )}
@@ -255,7 +255,7 @@ export default function FlyerLibraryPicker({
                 aria-pressed={selected}
                 title={labelFor(item)}
                 className={`group relative aspect-[4/5] self-start overflow-hidden rounded-xl border text-left transition-colors ${
-                  selected ? 'border-white' : 'border-white/10 hover:border-white/35'
+                  selected ? 'border-white' : 'border-line hover:border-fg/35'
                 }`}
               >
                 {/* Plain img, not next/image: fifteen tiles through the
@@ -280,12 +280,12 @@ export default function FlyerLibraryPicker({
                     the poster on some tiles and not others, which is what made
                     the row of captions look ragged. `title` keeps the full
                     text reachable. */}
-                <span className="pointer-events-none absolute inset-x-0 bottom-0 truncate bg-gradient-to-t from-black/85 to-transparent px-2.5 pb-2 pt-6 text-[11px] font-semibold leading-4 text-white">
+                <span className="pointer-events-none absolute inset-x-0 bottom-0 truncate bg-gradient-to-t from-scrim-strong to-transparent px-2.5 pb-2 pt-6 text-eyebrow font-semibold leading-4 text-fg">
                   {labelFor(item)}
                 </span>
                 {selected && (
-                  <span className="pointer-events-none absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-white">
-                    <Check className="h-3.5 w-3.5 text-black" />
+                  <span className="pointer-events-none absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-inverse">
+                    <Check className="h-3.5 w-3.5 text-on-inverse" />
                   </span>
                 )}
               </button>

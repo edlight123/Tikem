@@ -22,15 +22,15 @@ export default function CategoryGrid() {
             aria-label={cat.label}
           >
             <div
-              className="poster-vignette relative flex h-24 flex-col justify-end overflow-hidden rounded-2xl p-3.5 text-white shadow-poster-sm transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-card-hover sm:h-28"
+              className="poster-vignette relative flex h-24 flex-col justify-end overflow-hidden rounded-2xl p-3.5 text-fg shadow-poster-sm transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-card-hover sm:h-28"
               style={{
                 backgroundImage: `linear-gradient(150deg, ${cat.from}, ${cat.to} 78%, #000)`,
               }}
             >
-              <span className="relative z-10 font-grotesk text-[15px] font-bold leading-tight tracking-tight drop-shadow sm:text-base">
+              <span className="relative z-10 font-grotesk text-body font-bold leading-tight tracking-tight drop-shadow sm:text-base">
                 {cat.label}
               </span>
-              <span className="relative z-10 mt-0.5 truncate text-[11px] text-white/75 drop-shadow">
+              <span className="relative z-10 mt-0.5 truncate text-eyebrow text-fg-soft drop-shadow">
                 {cat.sublabel}
               </span>
             </div>

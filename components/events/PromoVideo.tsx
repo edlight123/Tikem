@@ -87,7 +87,7 @@ export default function PromoVideo({
       {/* 16:9, not the house 4:5. A poster is portrait; a video is not, and
           letterboxing one into the other would put black bars inside a frame
           that is already on a black page. */}
-      <div ref={boxRef} className="relative aspect-video w-full overflow-hidden rounded bg-white/[0.05]">
+      <div ref={boxRef} className="relative aspect-video w-full overflow-hidden rounded bg-surface">
         {mode !== 'idle' ? (
           <>
             <iframe
@@ -104,7 +104,7 @@ export default function PromoVideo({
               <button
                 type="button"
                 onClick={() => setMode('sound')}
-                className="absolute bottom-3 right-3 inline-flex items-center gap-2 rounded bg-black/70 px-3 py-2 text-[13px] font-semibold text-white backdrop-blur transition-colors hover:bg-black/85"
+                className="absolute bottom-3 right-3 inline-flex items-center gap-2 rounded bg-scrim px-3 py-2 text-meta font-semibold text-fg backdrop-blur transition-colors hover:bg-scrim-strong"
               >
                 <Volume2 className="h-4 w-4" aria-hidden />
                 {t('events.tapForSound', { defaultValue: 'Tap for sound' })}
@@ -154,25 +154,25 @@ export default function PromoVideo({
                 organizer's video happens to have. */}
             <span
               aria-hidden
-              className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-black/35"
+              className="absolute inset-0 bg-gradient-to-t from-scrim-strong via-shade/25 to-scrim-light"
             />
 
             {/* The play control. White on black is the house primary; the ring
                 is the only teal, and it means "this is the thing to press". */}
             <span
               aria-hidden
-              className="absolute left-1/2 top-1/2 grid h-16 w-16 -translate-x-1/2 -translate-y-1/2 place-items-center rounded bg-white/95 shadow-[0_8px_30px_-6px_rgba(0,0,0,0.7)] ring-1 ring-brand-400/0 transition-all duration-200 group-hover:scale-105 group-hover:ring-4 group-hover:ring-brand-400/30 motion-reduce:transition-none motion-reduce:group-hover:scale-100"
+              className="absolute left-1/2 top-1/2 grid h-16 w-16 -translate-x-1/2 -translate-y-1/2 place-items-center rounded bg-inverse-hover shadow-[0_8px_30px_-6px_rgba(0,0,0,0.7)] ring-1 ring-brand-400/0 transition-all duration-200 group-hover:scale-105 group-hover:ring-4 group-hover:ring-brand-400/30 motion-reduce:transition-none motion-reduce:group-hover:scale-100"
             >
               {/* Nudged right by a pixel: a triangle's optical centre sits
                   left of its bounding box. */}
-              <Play className="ml-0.5 h-6 w-6 fill-black text-black" />
+              <Play className="ml-0.5 h-6 w-6 fill-black text-on-inverse" />
             </span>
 
             <span className="absolute inset-x-0 bottom-0 flex items-baseline justify-between gap-3 px-4 pb-3.5">
-              <span className="font-display lowercase italic !text-[19px] !leading-none text-white">
+              <span className="font-display lowercase italic !text-lead !leading-none text-fg">
                 {t('events.trailer', { defaultValue: 'trailer' })}
               </span>
-              <span className="label-mono shrink-0 text-[10px] uppercase tracking-wider text-white/55">
+              <span className="label-mono shrink-0 text-eyebrow uppercase tracking-wider text-fg-muted">
                 {video.host}
               </span>
             </span>

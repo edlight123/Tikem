@@ -12,15 +12,15 @@
  * `pb-mobile-nav` main.
  *
  * Derived geometry (app/organizer/settings/page.tsx → SettingsContent):
- *   root    bg-[#0a0a0a]
+ *   root    bg-canvas
  *   inner   max-w-4xl px-4 sm:px-6 lg:px-8 py-6 md:py-8
  *   header  PageHeader — eyebrow, h1 mt-1.5 clamp(26px,4vw,38px), subtitle
  *   groups  mt-8 space-y-8; each is a SectionHeader (`mb-3`) over an
- *           `overflow-hidden rounded-2xl bg-white/[0.025] divide-y
- *           divide-white/[0.055]` list whose rows carry a 36px rounded-lg
+ *           `overflow-hidden rounded-2xl bg-surface-low divide-y
+ *           divide-line-soft` list whose rows carry a 36px rounded-lg
  *           icon tile beside a title and a description
- *   danger  mt-8 — one `rounded-2xl bg-red-500/[0.04] px-4 py-4 ring-1
- *           ring-red-500/20` row (the red is a ring, never a fill)
+ *   danger  mt-8 — one `rounded-2xl bg-danger-strong/[0.04] px-4 py-4 ring-1
+ *           ring-danger-strong/20` row (the red is a ring, never a fill)
  */
 
 function Bar({ className = '' }: { className?: string }) {
@@ -42,7 +42,7 @@ function LinkRow() {
 
 export default function SettingsLoading() {
   return (
-    <div className="bg-[#0a0a0a]">
+    <div className="bg-canvas">
       <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 md:py-8 lg:px-8">
         {/* PageHeader */}
         <div>
@@ -58,7 +58,7 @@ export default function SettingsLoading() {
               <div className="mb-3">
                 <Bar className="h-6 w-40" />
               </div>
-              <div className="overflow-hidden rounded-2xl bg-white/[0.025] divide-y divide-white/[0.055]">
+              <div className="overflow-hidden rounded-2xl bg-surface-low divide-y divide-line-soft">
                 {Array.from({ length: rows }).map((_, i) => (
                   <LinkRow key={i} />
                 ))}
@@ -68,7 +68,7 @@ export default function SettingsLoading() {
         </div>
 
         {/* Danger row */}
-        <div className="mt-8 flex items-center gap-4 rounded-2xl bg-red-500/[0.04] px-4 py-4 ring-1 ring-red-500/20 sm:px-5">
+        <div className="mt-8 flex items-center gap-4 rounded-2xl bg-danger-strong/[0.04] px-4 py-4 ring-1 ring-danger-strong/20 sm:px-5">
           <div className="skeleton h-9 w-9 shrink-0 rounded-lg" />
           <div className="min-w-0 flex-1">
             <Bar className="h-4 w-36" />

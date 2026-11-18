@@ -16,10 +16,10 @@ export function NeedsYouClient({ items }: { items: NeedsYouItem[] }) {
   if (items.length === 0) {
     return (
       <ConsolePanel className="px-4 py-14 text-center">
-        <p className="label-mono text-[12px] uppercase tracking-[0.14em] text-console-mut">
+        <p className="label-mono text-caption uppercase tracking-[0.14em] text-console-mut">
           Nothing waiting
         </p>
-        <p className="mt-1 text-[13px] text-console-faint">Every queue is clear.</p>
+        <p className="mt-1 text-meta text-console-faint">Every queue is clear.</p>
       </ConsolePanel>
     )
   }
@@ -35,10 +35,10 @@ export function NeedsYouClient({ items }: { items: NeedsYouItem[] }) {
         >
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold text-console-text">{item.subject}</p>
-            <p className="truncate text-[12.5px] text-console-mut">{item.decision}</p>
+            <p className="truncate text-caption text-console-mut">{item.decision}</p>
           </div>
           <ConsoleAge ageAt={item.createdAt} now={now} />
-          <span className="label-mono hidden shrink-0 text-[11px] tracking-[0.06em] text-console-mut sm:inline">
+          <span className="label-mono hidden shrink-0 text-eyebrow tracking-[0.06em] text-console-mut sm:inline">
             OPEN ↵
           </span>
         </ConsoleRow>

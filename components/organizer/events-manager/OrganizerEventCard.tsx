@@ -86,9 +86,9 @@ export default function OrganizerEventCard({ event, showNeedsAttention = true }:
     <Link
       href={`/organizer/events/${event.id}`}
       // A row sitting on the page is a fill, not an outline: this was a
-      // `border-white/10` box with no background, repeated down the list, which
+      // `border-line` box with no background, repeated down the list, which
       // is the wireframe look the house rule exists to stop.
-      className="group flex items-center gap-4 rounded-2xl bg-white/[0.03] p-3 transition-colors hover:bg-white/[0.07]"
+      className="group flex items-center gap-4 rounded-2xl bg-surface-low p-3 transition-colors hover:bg-surface-raised"
     >
       {/* Poster thumbnail */}
       <div
@@ -104,7 +104,7 @@ export default function OrganizerEventCard({ event, showNeedsAttention = true }:
             className="object-cover"
           />
         ) : (
-          <span className="absolute inset-0 grid place-items-center font-display italic text-xl text-white/80">
+          <span className="absolute inset-0 grid place-items-center font-display italic text-xl text-fg-soft">
             {(event.title || '?').trim().charAt(0).toUpperCase()}
           </span>
         )}
@@ -127,15 +127,15 @@ export default function OrganizerEventCard({ event, showNeedsAttention = true }:
             </StatusChip>
           )}
           {needsAttention && (
-            <span title={t('event_card_detail.needs_attention')} className="inline-flex items-center text-amber-300">
+            <span title={t('event_card_detail.needs_attention')} className="inline-flex items-center text-warning-soft">
               <AlertCircle className="h-4 w-4" />
             </span>
           )}
         </div>
 
-        <h3 className="truncate font-display text-[15px] italic text-white">{event.title}</h3>
+        <h3 className="truncate font-display text-body italic text-fg">{event.title}</h3>
 
-        <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-0.5 text-[12.5px] text-white/50">
+        <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-0.5 text-caption text-fg-subtle">
           <span className="inline-flex items-center gap-1.5 font-mono tabular-nums">
             <Calendar className="h-3.5 w-3.5 shrink-0" />
             {dateValid ? format(new Date(event.start_datetime), 'MMM d, yyyy · h:mm a') : NO_VALUE}
@@ -150,19 +150,19 @@ export default function OrganizerEventCard({ event, showNeedsAttention = true }:
       {/* Compact stats */}
       <div className="hidden shrink-0 items-center gap-6 pr-1 sm:flex">
         <div className="text-right">
-          <p className="text-sm font-semibold text-white font-mono tabular-nums">
+          <p className="text-sm font-semibold text-fg font-mono tabular-nums">
             {ticketsSold}
-            {totalTickets > 0 && <span className="text-white/40">/{totalTickets}</span>}
+            {totalTickets > 0 && <span className="text-fg-subtle">/{totalTickets}</span>}
           </p>
-          <p className="label-mono uppercase text-[11px] text-white/40">{t('event_card_detail.ticket_sales')}</p>
+          <p className="label-mono uppercase text-eyebrow text-fg-subtle">{t('event_card_detail.ticket_sales')}</p>
         </div>
         <div className="text-right">
-          <p className="text-sm font-semibold text-white font-mono tabular-nums">{revenueText}</p>
-          <p className="label-mono uppercase text-[11px] text-white/40">{t('event_card_detail.revenue')}</p>
+          <p className="text-sm font-semibold text-fg font-mono tabular-nums">{revenueText}</p>
+          <p className="label-mono uppercase text-eyebrow text-fg-subtle">{t('event_card_detail.revenue')}</p>
         </div>
       </div>
 
-      <ChevronRight className="h-5 w-5 shrink-0 text-white/30 transition-colors group-hover:text-white/60" />
+      <ChevronRight className="h-5 w-5 shrink-0 text-fg-faint transition-colors group-hover:text-fg-muted" />
     </Link>
   )
 }

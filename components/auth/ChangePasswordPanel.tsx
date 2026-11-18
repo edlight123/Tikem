@@ -27,7 +27,7 @@ import {
 const MIN_LENGTH = 8
 
 const FIELD =
-  'w-full rounded bg-white/[0.06] py-3 pl-10 pr-4 text-[16px] text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-brand-400/50'
+  'w-full rounded bg-surface py-3 pl-10 pr-4 text-base text-fg placeholder:text-fg-faint focus:outline-none focus:ring-2 focus:ring-brand-400/50'
 
 type Notice = { kind: 'success' | 'error'; text: string } | null
 
@@ -119,18 +119,18 @@ export function ChangePasswordPanel({ className = '' }: { className?: string }) 
   if (!ready) {
     return (
       <div className={className}>
-        <Loader2 className="h-5 w-5 animate-spin text-white/40" />
+        <Loader2 className="h-5 w-5 animate-spin text-fg-subtle" />
       </div>
     )
   }
 
   if (!user) {
-    return <p className={`text-sm text-white/60 ${className}`}>{t('change_password.signed_out')}</p>
+    return <p className={`text-sm text-fg-muted ${className}`}>{t('change_password.signed_out')}</p>
   }
 
   if (!hasPassword) {
     return (
-      <p className={`text-sm text-white/70 ${className}`}>
+      <p className={`text-sm text-fg-muted ${className}`}>
         {t('change_password.provider_only', { provider: provider || 'Google / Apple' })}
       </p>
     )
@@ -145,11 +145,11 @@ export function ChangePasswordPanel({ className = '' }: { className?: string }) 
     autoComplete: string
   ) => (
     <div>
-      <label htmlFor={id} className="mb-2 block text-sm font-medium text-white/70">
+      <label htmlFor={id} className="mb-2 block text-sm font-medium text-fg-muted">
         {label}
       </label>
       <div className="relative">
-        <Lock className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-white/40" />
+        <Lock className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-fg-subtle" />
         <input
           type="password"
           id={id}
@@ -174,7 +174,7 @@ export function ChangePasswordPanel({ className = '' }: { className?: string }) 
         <div
           role={notice.kind === 'error' ? 'alert' : 'status'}
           className={`rounded px-4 py-2.5 text-sm ${
-            notice.kind === 'success' ? 'bg-emerald-500/10 text-emerald-200' : 'bg-red-500/10 text-red-200'
+            notice.kind === 'success' ? 'bg-success-strong/10 text-success-soft' : 'bg-danger-strong/10 text-danger-soft'
           }`}
         >
           {notice.text}
@@ -184,16 +184,16 @@ export function ChangePasswordPanel({ className = '' }: { className?: string }) 
       <button
         type="submit"
         disabled={busy}
-        className="flex items-center gap-2 rounded bg-white px-6 py-2.5 font-semibold text-black transition-colors hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50"
+        className="flex items-center gap-2 rounded bg-inverse px-6 py-2.5 font-semibold text-on-inverse transition-colors hover:bg-inverse-hover disabled:cursor-not-allowed disabled:opacity-50"
       >
         {busy && <Loader2 className="h-4 w-4 animate-spin" />}
         {busy ? t('change_password.submitting') : t('change_password.submit')}
       </button>
-      <p className="text-xs text-white/50">{t('change_password.min_length')}</p>
+      <p className="text-xs text-fg-subtle">{t('change_password.min_length')}</p>
       <button
         type="button"
         onClick={handleReset}
-        className="text-left text-[13px] text-white/60 underline-offset-4 hover:text-white hover:underline"
+        className="text-left text-meta text-fg-muted underline-offset-4 hover:text-fg hover:underline"
       >
         {t('change_password.forgot')}
       </button>

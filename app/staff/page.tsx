@@ -86,16 +86,16 @@ export default async function StaffHomePage() {
   const checkInEvents = events.filter((e) => e.canCheckIn)
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a]">
+    <div className="min-h-screen bg-canvas">
       <Navbar user={user} isAdmin={isAdmin(((user as any)?.email_verified) ? user?.email : null)} />
 
       <div className="max-w-3xl mx-auto px-4 py-6">
-        <h1 className="text-2xl font-bold text-white">Staff</h1>
-        <p className="mt-1 text-sm text-white/65">Your assigned events</p>
+        <h1 className="text-2xl font-bold text-fg">Staff</h1>
+        <p className="mt-1 text-sm text-fg-muted">Your assigned events</p>
 
         {checkInEvents.length === 0 ? (
-          <div className="mt-6 bg-white/[0.055] rounded-2xl p-5">
-            <p className="text-sm text-white/70">No staff events assigned yet.</p>
+          <div className="mt-6 bg-surface rounded-2xl p-5">
+            <p className="text-sm text-fg-muted">No staff events assigned yet.</p>
           </div>
         ) : (
           <div className="mt-6 space-y-3">
@@ -103,18 +103,18 @@ export default async function StaffHomePage() {
               <a
                 key={e.eventId}
                 href={`/organizer/scan/${encodeURIComponent(e.eventId)}`}
-                className="block bg-white/[0.055] rounded-2xl p-4 hover:bg-white/[0.1] transition-colors"
+                className="block bg-surface rounded-2xl p-4 hover:bg-surface-raised transition-colors"
               >
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <div className="font-semibold text-white truncate">{e.title}</div>
-                    <div className="text-xs text-white/65 mt-1">
+                    <div className="font-semibold text-fg truncate">{e.title}</div>
+                    <div className="text-xs text-fg-muted mt-1">
                       {e.start_datetime ? new Date(e.start_datetime).toLocaleString() : 'Date TBD'}
                       {e.venue_name ? ` • ${e.venue_name}` : ''}
                       {e.city ? ` • ${e.city}` : ''}
                     </div>
                   </div>
-                  <div className="shrink-0 text-xs font-semibold text-white bg-white/[0.07] rounded px-3 py-1.5">
+                  <div className="shrink-0 text-xs font-semibold text-fg bg-surface-raised rounded px-3 py-1.5">
                     Scan
                   </div>
                 </div>

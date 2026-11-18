@@ -159,28 +159,28 @@ export function ScanViewport({ onScan, isProcessing }: ScanViewportProps) {
 
       {/* Helper Text */}
       <div className="absolute bottom-8 left-0 right-0 text-center">
-        <p className="text-white text-sm font-medium bg-black/50 backdrop-blur-sm px-4 py-2 rounded inline-block">
+        <p className="text-fg text-sm font-medium bg-scrim-light backdrop-blur-sm px-4 py-2 rounded inline-block">
           {isProcessing ? 'Processing...' : 'Point camera at ticket QR code'}
         </p>
       </div>
 
       {/* Error State */}
       {error && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/80">
+        <div className="absolute inset-0 flex items-center justify-center bg-scrim-strong">
           <div className="text-center px-6">
             <div className="w-16 h-16 rounded flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-8 h-8 text-danger" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
             </div>
-            <p className="text-white font-semibold mb-2">{t('door.camera_error', { defaultValue: 'Camera Error' })}</p>
-            <p className="text-white/40 text-sm">{error}</p>
+            <p className="text-fg font-semibold mb-2">{t('door.camera_error', { defaultValue: 'Camera Error' })}</p>
+            <p className="text-fg-subtle text-sm">{error}</p>
 
             {showOpenInApp ? (
               <div className="mt-4">
                 <a
                   href={openInAppUrl}
-                  className="inline-block px-5 py-2.5 bg-white hover:bg-white/90 text-black font-semibold rounded transition-colors"
+                  className="inline-block px-5 py-2.5 bg-inverse hover:bg-inverse-hover text-on-inverse font-semibold rounded transition-colors"
                 >
                   Open Tikèm app
                 </a>

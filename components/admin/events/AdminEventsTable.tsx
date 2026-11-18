@@ -93,7 +93,7 @@ export function AdminEventsTable({
               {HEADERS.map((header) => (
                 <th
                   key={header}
-                  className="label-mono px-4 py-3 text-left text-[10px] uppercase tracking-wide text-console-faint sm:px-6"
+                  className="label-mono px-4 py-3 text-left text-eyebrow uppercase tracking-wide text-console-faint sm:px-6"
                 >
                   {header}
                 </th>

@@ -268,8 +268,8 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
         </Link>
 
         {freeOnly ? (
-          <p className="mt-4 flex items-center gap-2 text-sm text-white/60">
-            <Gift className="h-4 w-4 shrink-0 text-white/40" strokeWidth={1.75} aria-hidden="true" />
+          <p className="mt-4 flex items-center gap-2 text-sm text-fg-muted">
+            <Gift className="h-4 w-4 shrink-0 text-fg-subtle" strokeWidth={1.75} aria-hidden="true" />
             {t('event_earnings.free_event_nothing')}
           </p>
         ) : (
@@ -282,7 +282,7 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
             action={
               <Link
                 href={`/events/${event.id}`}
-                className="inline-flex items-center rounded bg-white px-4 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90"
+                className="inline-flex items-center rounded bg-inverse px-4 py-2.5 text-sm font-semibold text-on-inverse transition-colors hover:bg-inverse-hover"
               >
                 {t('event_earnings.view_event_page')}
               </Link>
@@ -491,8 +491,8 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
       </Link>
 
       <div className="mb-6">
-        <h1 className="font-display lowercase italic !text-[clamp(28px,4vw,40px)] !leading-[1.04] text-white mb-2">{event.title || 'Event'}</h1>
-        <div className="flex items-center gap-2 text-white/60">
+        <h1 className="font-display lowercase italic !text-[clamp(28px,4vw,40px)] !leading-[1.04] text-fg mb-2">{event.title || 'Event'}</h1>
+        <div className="flex items-center gap-2 text-fg-muted">
           <span className="inline-flex items-center gap-1.5 font-mono tabular-nums"><CalendarDays className="h-4 w-4" aria-hidden="true" />{eventDate ? eventDate.toLocaleDateString('en-US', {
             month: 'long',
             day: 'numeric',
@@ -501,7 +501,7 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
           <span className="mx-2">·</span>
           {getStatusBadge(earnings.settlementStatus)}
         </div>
-        <div className="mt-1 text-xs text-white/70">
+        <div className="mt-1 text-xs text-fg-muted">
           Revenue source: {earnings.dataSource === 'availability' ? 'Ticket sales (platform fee and refunds excluded)' : earnings.dataSource === 'tickets_derived' ? 'Derived from tickets' : earnings.dataSource === 'event_earnings' ? 'event_earnings record' : 'Unknown'}
           {earnings.lastCalculatedAt ? ` · Last calculated: ${new Date(earnings.lastCalculatedAt).toLocaleString('en-US')}` : ''}
         </div>
@@ -524,20 +524,20 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
         <MetricCard
           icon={Wallet}
           label={t('event_earnings.available_to_withdraw')}
-          value={<span className="text-emerald-300">{formatCurrency(availableToWithdraw, earnings.currency)}</span>}
+          value={<span className="text-success-soft">{formatCurrency(availableToWithdraw, earnings.currency)}</span>}
           sublabel={earnings.settlementStatus === 'ready' ? 'Ready now' : 'After settlement'}
         />
       </div>
 
       {/* Ticket Tier Breakdown */}
-      <div className="rounded-2xl bg-white/[0.055] p-6 mb-6">
+      <div className="rounded-2xl bg-surface p-6 mb-6">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="font-display lowercase italic !text-[22px] !leading-snug text-white">Ticket Tier Breakdown</h2>
-            <p className="text-sm text-white/60">{t('event_earnings.totals_note')}</p>
+            <h2 className="font-display lowercase italic !text-section !leading-snug text-fg">Ticket Tier Breakdown</h2>
+            <p className="text-sm text-fg-muted">{t('event_earnings.totals_note')}</p>
           </div>
           <div className="flex items-center gap-3">
-            <span className="hidden text-xs font-semibold uppercase tracking-[0.14em] text-white/50 sm:inline">
+            <span className="hidden text-xs font-semibold uppercase tracking-[0.14em] text-fg-subtle sm:inline">
               {t('event_earnings.sales_audit')}
             </span>
             <ExportButtons
@@ -556,12 +556,12 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
         </div>
 
         {!tierBreakdown || tierBreakdown.length === 0 ? (
-          <div className="text-white/60 text-sm">{t('event_earnings.no_ticket_sales_yet')}</div>
+          <div className="text-fg-muted text-sm">{t('event_earnings.no_ticket_sales_yet')}</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-white/70 border-b border-white/[0.08]">
+                <tr className="text-left text-fg-muted border-b border-line">
                   <th className="py-2 pr-4 font-medium">Tier</th>
                   <th className="py-2 pr-4 font-medium">{t('event_earnings.listed_unit_price')}</th>
                   <th className="py-2 pr-4 font-medium">{t('event_earnings.tickets_sold')}</th>
@@ -572,12 +572,12 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
                 {tierBreakdown.map((row) => (
                   <tr
                     key={`${String(row.tierId || row.tierName)}::${row.listedUnitPriceCents}::${row.listedCurrency}`}
-                    className="border-b border-white/[0.06] last:border-b-0"
+                    className="border-b border-line-soft last:border-b-0"
                   >
-                    <td className="py-3 pr-4 font-medium text-white">{row.tierName}</td>
-                    <td className="py-3 pr-4 font-mono tabular-nums text-white/70">{formatCurrency(row.listedUnitPriceCents, row.listedCurrency)}</td>
-                    <td className="py-3 pr-4 font-mono tabular-nums text-white/70">{row.ticketsSold}</td>
-                    <td className="py-3 font-mono tabular-nums text-white">{formatCurrency(row.grossSales, row.listedCurrency)}</td>
+                    <td className="py-3 pr-4 font-medium text-fg">{row.tierName}</td>
+                    <td className="py-3 pr-4 font-mono tabular-nums text-fg-muted">{formatCurrency(row.listedUnitPriceCents, row.listedCurrency)}</td>
+                    <td className="py-3 pr-4 font-mono tabular-nums text-fg-muted">{row.ticketsSold}</td>
+                    <td className="py-3 font-mono tabular-nums text-fg">{formatCurrency(row.grossSales, row.listedCurrency)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -588,21 +588,21 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
 
       {/* Settlement Status */}
       {earnings.settlementStatus !== 'ready' && (
-        <div className="rounded-2xl bg-amber-500/10 p-6 mb-6">
+        <div className="rounded-2xl bg-warning-strong/10 p-6 mb-6">
           <div className="flex items-start gap-3">
-            <Info className="mt-0.5 h-5 w-5 shrink-0 text-amber-300" aria-hidden="true" />
+            <Info className="mt-0.5 h-5 w-5 shrink-0 text-warning-soft" aria-hidden="true" />
             <div>
-              <h3 className="font-semibold text-amber-200 mb-1">
+              <h3 className="font-semibold text-warning-soft mb-1">
                 {earnings.settlementStatus === 'pending' ? 'Settlement Pending' : 'Funds Locked'}
               </h3>
-              <p className="text-amber-200/80 text-sm mb-2">
+              <p className="text-warning-soft/80 text-sm mb-2">
                 {t('payout_timing.release_rule', {
                   defaultValue:
                     'Funds become available to withdraw 72 hours after your event ends (24 hours once you’ve run 3 events or sold $1,000). Larger first events may be reviewed by our team first.',
                 })}
               </p>
               {settlementDate && (
-                <p className="text-amber-200 text-sm font-medium">
+                <p className="text-warning-soft text-sm font-medium">
                   {t('event_earnings.available_for_withdrawal')}<span className="font-mono tabular-nums">{settlementDate.toLocaleDateString('en-US', {
                     month: 'long',
                     day: 'numeric',
@@ -617,27 +617,27 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
 
       {/* Withdrawal Section */}
       {withdrawalBlocked && (
-        <div className="rounded-xl bg-amber-500/10 p-4 mb-6">
-          <p className="text-amber-200 text-sm">{t('event_earnings.needs_admin_review')}</p>
+        <div className="rounded-xl bg-warning-strong/10 p-4 mb-6">
+          <p className="text-warning-soft text-sm">{t('event_earnings.needs_admin_review')}</p>
         </div>
       )}
 
       {readOnly && (
-        <div className="mb-6 flex items-start gap-3 rounded bg-white/[0.055] p-5">
-          <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-white/50" aria-hidden="true" />
+        <div className="mb-6 flex items-start gap-3 rounded bg-surface p-5">
+          <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-fg/50" aria-hidden="true" />
           <div>
-            <p className="text-sm font-semibold text-white">{t('finance_view.read_only_title')}</p>
-            <p className="mt-1 text-sm text-white/60">{t('finance_view.read_only_event_body')}</p>
+            <p className="text-sm font-semibold text-fg">{t('finance_view.read_only_title')}</p>
+            <p className="mt-1 text-sm text-fg-muted">{t('finance_view.read_only_event_body')}</p>
           </div>
         </div>
       )}
 
       {!readOnly && !withdrawalBlocked && (needsIdentityToWithdraw || needsPayoutMethodToWithdraw) && (
-        <div className="rounded-xl bg-amber-500/10 p-5 mb-6">
-          <h2 className="font-semibold text-amber-100">
+        <div className="rounded-xl bg-warning-strong/10 p-5 mb-6">
+          <h2 className="font-semibold text-warning-soft">
             {t('verify_to_withdraw.title', { defaultValue: 'Verify your identity to withdraw' })}
           </h2>
-          <p className="mt-1 text-sm text-amber-100/80">
+          <p className="mt-1 text-sm text-warning-soft/80">
             {needsPayoutMethodToWithdraw
               ? t('verify_to_withdraw.no_method_body', { defaultValue: 'Add a payout method (MonCash or bank transfer) and verify your identity to withdraw. Our team reviews identity usually within 1–2 business days.' })
               : t('verify_to_withdraw.body', { defaultValue: 'Your payout method is saved. Withdrawals open once your identity is verified. Our team reviews it usually within 1–2 business days.' })}
@@ -645,14 +645,14 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
           <div className="mt-3 flex flex-wrap gap-3">
             <Link
               href="/organizer/verify"
-              className="inline-flex items-center rounded bg-white px-4 py-2 text-sm font-semibold text-black hover:bg-white/90"
+              className="inline-flex items-center rounded bg-inverse px-4 py-2 text-sm font-semibold text-on-inverse hover:bg-inverse-hover"
             >
               {t('verify_to_withdraw.cta', { defaultValue: 'Verify your identity' })}
             </Link>
             {needsPayoutMethodToWithdraw && (
               <Link
                 href="/organizer/settings/payouts"
-                className="inline-flex items-center rounded bg-white/[0.07] px-4 py-2 text-sm font-semibold text-white hover:bg-white/[0.12]"
+                className="inline-flex items-center rounded bg-surface-raised px-4 py-2 text-sm font-semibold text-fg hover:bg-surface-high"
               >
                 {t('verify_to_withdraw.add_method_cta', { defaultValue: 'Set up payouts' })}
               </Link>
@@ -662,11 +662,11 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
       )}
 
       {!readOnly && !withdrawalBlocked && !needsIdentityToWithdraw && !needsPayoutMethodToWithdraw && earnings.settlementStatus === 'ready' && availableToWithdraw > 0 && (
-        <div className="rounded-2xl bg-white/[0.055] p-6 mb-6">
+        <div className="rounded-2xl bg-surface p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="font-display lowercase italic !text-[22px] !leading-snug text-white">Request Withdrawal</h2>
-              <p className="text-white/60 text-sm">{t('event_earnings.available_label')}<span className="font-mono tabular-nums">{formatCurrency(availableToWithdraw, earnings.currency)}</span></p>
+              <h2 className="font-display lowercase italic !text-section !leading-snug text-fg">Request Withdrawal</h2>
+              <p className="text-fg-muted text-sm">{t('event_earnings.available_label')}<span className="font-mono tabular-nums">{formatCurrency(availableToWithdraw, earnings.currency)}</span></p>
             </div>
           </div>
 
@@ -676,21 +676,21 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
                 onClick={() => handleWithdraw('moncash')}
                 disabled={!moncashMeetsMinimum}
                 aria-disabled={!moncashMeetsMinimum}
-                className="w-full rounded-2xl bg-white/[0.07] p-4 hover:bg-white/[0.11] transition-colors text-left group disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full rounded-2xl bg-surface-raised p-4 hover:bg-surface-high transition-colors text-left group disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <div className="flex items-center gap-3 mb-2">
-                  <div className="w-12 h-12 rounded-xl bg-white/[0.07] flex items-center justify-center">
-                    <Smartphone className="h-6 w-6 text-white/80" aria-hidden="true" />
+                  <div className="w-12 h-12 rounded-xl bg-surface-raised flex items-center justify-center">
+                    <Smartphone className="h-6 w-6 text-fg-soft" aria-hidden="true" />
                   </div>
                   <div>
-                    <div className="font-bold text-white">{t('event_earnings.moncash')}</div>
-                    <div className="text-sm text-white/70">{t('event_earnings.instant_transfer')}</div>
+                    <div className="font-bold text-fg">{t('event_earnings.moncash')}</div>
+                    <div className="text-sm text-fg-muted">{t('event_earnings.instant_transfer')}</div>
                   </div>
                 </div>
-                <div className="text-xs text-white/70">{t('event_earnings.processed_24h')}</div>
+                <div className="text-xs text-fg-muted">{t('event_earnings.processed_24h')}</div>
               </button>
               {!moncashMeetsMinimum && (
-                <p className="mt-2 rounded-xl bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+                <p className="mt-2 rounded-xl bg-warning-strong/10 px-3 py-2 text-xs text-warning-soft">
                   {t('event_earnings.moncash_below_minimum', {
                     min: moncashMinLabel,
                     balance: formatCurrency(availableToWithdraw, earnings.currency),
@@ -704,21 +704,21 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
                 onClick={() => handleWithdraw('bank')}
                 disabled={!bankMeetsMinimum}
                 aria-disabled={!bankMeetsMinimum}
-                className="w-full rounded-2xl bg-white/[0.07] p-4 hover:bg-white/[0.11] transition-colors text-left group disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full rounded-2xl bg-surface-raised p-4 hover:bg-surface-high transition-colors text-left group disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <div className="flex items-center gap-3 mb-2">
-                  <div className="w-12 h-12 rounded-xl bg-white/[0.07] flex items-center justify-center">
-                    <Building2 className="h-6 w-6 text-white/80" aria-hidden="true" />
+                  <div className="w-12 h-12 rounded-xl bg-surface-raised flex items-center justify-center">
+                    <Building2 className="h-6 w-6 text-fg-soft" aria-hidden="true" />
                   </div>
                   <div>
-                    <div className="font-bold text-white">{t('event_earnings.bank_transfer')}</div>
-                    <div className="text-sm text-white/70">{t('event_earnings.direct_deposit')}</div>
+                    <div className="font-bold text-fg">{t('event_earnings.bank_transfer')}</div>
+                    <div className="text-sm text-fg-muted">{t('event_earnings.direct_deposit')}</div>
                   </div>
                 </div>
-                <div className="text-xs text-white/70">{t('event_earnings.processed_3_5_days')}</div>
+                <div className="text-xs text-fg-muted">{t('event_earnings.processed_3_5_days')}</div>
               </button>
               {!bankMeetsMinimum && (
-                <p className="mt-2 rounded-xl bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+                <p className="mt-2 rounded-xl bg-warning-strong/10 px-3 py-2 text-xs text-warning-soft">
                   {t('event_earnings.bank_below_minimum', {
                     min: formatCurrency(BANK_MIN_WITHDRAWAL_MINOR, earnings.currency),
                   })}
@@ -731,23 +731,23 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
 
       {/* Withdrawal History */}
       {earnings.withdrawnAmount > 0 && (
-        <div className="rounded-2xl bg-white/[0.055] p-6">
-          <h2 className="font-display lowercase italic !text-[22px] !leading-snug text-white mb-4">Withdrawal History</h2>
+        <div className="rounded-2xl bg-surface p-6">
+          <h2 className="font-display lowercase italic !text-section !leading-snug text-fg mb-4">Withdrawal History</h2>
           <div className="space-y-3">
-            <div className="flex justify-between items-center py-3 border-b border-white/[0.06]">
+            <div className="flex justify-between items-center py-3 border-b border-line-soft">
               <div>
-                <div className="font-medium text-white">{t('event_earnings.total_withdrawn')}</div>
-                <div className="text-sm text-white/70">{t('event_earnings.from_this_event')}</div>
+                <div className="font-medium text-fg">{t('event_earnings.total_withdrawn')}</div>
+                <div className="text-sm text-fg-muted">{t('event_earnings.from_this_event')}</div>
               </div>
-              <span className="font-mono tabular-nums font-bold text-white">{formatCurrency(earnings.withdrawnAmount, earnings.currency)}</span>
+              <span className="font-mono tabular-nums font-bold text-fg">{formatCurrency(earnings.withdrawnAmount, earnings.currency)}</span>
             </div>
             {!withdrawalBlocked && earnings.netAmount - earnings.withdrawnAmount > 0 && (
               <div className="flex justify-between items-center py-3">
                 <div>
-                  <div className="font-medium text-white">{t('event_earnings.remaining_balance')}</div>
-                  <div className="text-sm text-white/70">Available {earnings.settlementStatus === 'ready' ? 'now' : 'after settlement'}</div>
+                  <div className="font-medium text-fg">{t('event_earnings.remaining_balance')}</div>
+                  <div className="text-sm text-fg-muted">Available {earnings.settlementStatus === 'ready' ? 'now' : 'after settlement'}</div>
                 </div>
-                <span className="font-mono tabular-nums font-bold text-white">{formatCurrency(earnings.netAmount - earnings.withdrawnAmount, earnings.currency)}</span>
+                <span className="font-mono tabular-nums font-bold text-fg">{formatCurrency(earnings.netAmount - earnings.withdrawnAmount, earnings.currency)}</span>
               </div>
             )}
           </div>
@@ -756,21 +756,21 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
 
       {/* Withdrawal Modal */}
       {!readOnly && showWithdrawModal && withdrawMethod && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
-          <div className="rounded-2xl bg-[#1c1c1c] max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
-            <h3 className="font-display lowercase italic !text-[22px] !leading-snug text-white mb-4">
+        <div className="fixed inset-0 bg-scrim flex items-center justify-center p-4 z-50">
+          <div className="rounded-2xl bg-surface-raised-solid max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
+            <h3 className="font-display lowercase italic !text-section !leading-snug text-fg mb-4">
               Request {withdrawMethod === 'moncash' ? 'MonCash' : 'Bank'} Withdrawal
             </h3>
             
             <div className="mb-6">
-              <div className="rounded-xl bg-white/[0.06] p-4 mb-4">
+              <div className="rounded-xl bg-surface p-4 mb-4">
                 <div className="flex justify-between mb-2">
-                  <span className="text-white/60">{t('event_earnings.amount_label')}</span>
-                  <span className="font-mono tabular-nums font-bold text-white">{formatCurrency(availableToWithdraw, earnings.currency)}</span>
+                  <span className="text-fg-muted">{t('event_earnings.amount_label')}</span>
+                  <span className="font-mono tabular-nums font-bold text-fg">{formatCurrency(availableToWithdraw, earnings.currency)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-white/60">{t('event_earnings.method_label')}</span>
-                  <span className="font-medium text-white">
+                  <span className="text-fg-muted">{t('event_earnings.method_label')}</span>
+                  <span className="font-medium text-fg">
                     {withdrawMethod === 'moncash' ? 'MonCash' : 'Bank Transfer'}
                   </span>
                 </div>
@@ -780,7 +780,7 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
               {withdrawMethod === 'moncash' && (
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-white/70 mb-2">
+                    <label className="block text-sm font-medium text-fg-muted mb-2">
                       {t('event_earnings.moncash_phone_number')}
                     </label>
                     <input
@@ -788,7 +788,7 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
                       value={moncashNumber}
                       onChange={(e) => setMoncashNumber(e.target.value)}
                       placeholder="+509 1234 5678"
-                      className="w-full px-4 py-3 rounded focus:ring-2 focus:ring-brand-500 bg-white/[0.08] text-[16px] text-white placeholder:text-white/35 focus:outline-none"
+                      className="w-full px-4 py-3 rounded focus:ring-2 focus:ring-brand-500 bg-surface-raised text-base text-fg placeholder:text-fg-faint focus:outline-none"
                       required
                     />
                   </div>
@@ -796,15 +796,15 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
                     <div
                       className={
                         moncashQuote.instantAvailable
-                          ? 'rounded-xl bg-white/[0.08] p-3 ring-1 ring-inset ring-brand-400/50'
-                          : 'rounded-xl bg-white/[0.06] p-3'
+                          ? 'rounded-xl bg-surface-raised p-3 ring-1 ring-inset ring-brand-400/50'
+                          : 'rounded-xl bg-surface p-3'
                       }
                     >
                       <p
                         className={
                           moncashQuote.instantAvailable
-                            ? 'text-sm font-medium text-white'
-                            : 'text-sm font-medium text-white'
+                            ? 'text-sm font-medium text-fg'
+                            : 'text-sm font-medium text-fg'
                         }
                       >
                         {moncashQuote.instantAvailable ? 'Instant MonCash (prefunding)' : 'MonCash payout'}
@@ -812,8 +812,8 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
                       <p
                         className={
                           moncashQuote.instantAvailable
-                            ? 'text-xs text-white/60 mt-1'
-                            : 'text-xs text-white/60 mt-1'
+                            ? 'text-xs text-fg-muted mt-1'
+                            : 'text-xs text-fg-muted mt-1'
                         }
                       >
                         {moncashQuote.instantAvailable
@@ -824,8 +824,8 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
                       <div
                         className={
                           moncashQuote.instantAvailable
-                            ? 'mt-2 text-xs text-white/90 space-y-1'
-                            : 'mt-2 text-xs text-white/90 space-y-1'
+                            ? 'mt-2 text-xs text-fg space-y-1'
+                            : 'mt-2 text-xs text-fg space-y-1'
                         }
                       >
                         <div className="flex justify-between">
@@ -849,12 +849,12 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
                       </div>
                     </div>
                   ) : isInstantPrefundingAvailable ? (
-                    <div className="rounded-xl bg-white/[0.06] p-3">
-                      <p className="text-sm font-medium text-white">{t('event_earnings.instant_moncash_prefunding')}</p>
-                      <p className="text-xs text-white/60 mt-1">
+                    <div className="rounded-xl bg-surface p-3">
+                      <p className="text-sm font-medium text-fg">{t('event_earnings.instant_moncash_prefunding')}</p>
+                      <p className="text-xs text-fg-muted mt-1">
                         {t('event_earnings.prefunding_instant_note')}
                       </p>
-                      <div className="mt-2 text-xs text-white/90 space-y-1">
+                      <div className="mt-2 text-xs text-fg space-y-1">
                         <div className="flex justify-between">
                           <span>{t('event_earnings.prefunding_fee')}</span>
                           <span className="font-mono tabular-nums">-{formatCurrency(prefundingFeeCents, earnings.currency)}</span>
@@ -866,7 +866,7 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
                       </div>
                     </div>
                   ) : (
-                    <p className="text-sm text-white/60">
+                    <p className="text-sm text-fg-muted">
                       {t('event_earnings.moncash_note')}
                     </p>
                   )}
@@ -877,13 +877,13 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
               {withdrawMethod === 'bank' && (
                 <div className="space-y-4">
                   {bankDestinationsError ? (
-                    <div className="rounded-xl bg-amber-500/10 p-3 text-sm text-amber-200">
+                    <div className="rounded-xl bg-warning-strong/10 p-3 text-sm text-warning-soft">
                       {bankDestinationsError}
                     </div>
                   ) : null}
 
                   <div className="space-y-2">
-                    <label className="flex items-start gap-2 text-sm text-white">
+                    <label className="flex items-start gap-2 text-sm text-fg">
                       <input
                         type="radio"
                         checked={bankMode === 'on_file'}
@@ -893,7 +893,7 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
                       />
                       <span>
                         <span className="font-semibold">{t('event_earnings.use_bank_on_file')}</span>
-                        <span className="block text-xs text-white/70">
+                        <span className="block text-xs text-fg-muted">
                           {bankDestinations?.some((d) => d.isPrimary)
                             ? 'Uses your primary bank from payout settings.'
                             : 'No bank on file yet. Add a bank account below.'}
@@ -902,7 +902,7 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
                     </label>
 
                     {bankDestinations && bankDestinations.length > 1 ? (
-                      <label className="flex items-start gap-2 text-sm text-white">
+                      <label className="flex items-start gap-2 text-sm text-fg">
                         <input
                           type="radio"
                           checked={bankMode === 'saved'}
@@ -911,12 +911,12 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
                         />
                         <span>
                           <span className="font-semibold">{t('event_earnings.use_saved_bank')}</span>
-                          <span className="block text-xs text-white/70">{t('event_earnings.choose_saved_accounts')}</span>
+                          <span className="block text-xs text-fg-muted">{t('event_earnings.choose_saved_accounts')}</span>
                         </span>
                       </label>
                     ) : null}
 
-                    <label className="flex items-start gap-2 text-sm text-white">
+                    <label className="flex items-start gap-2 text-sm text-fg">
                       <input
                         type="radio"
                         checked={bankMode === 'new'}
@@ -925,7 +925,7 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
                       />
                       <span>
                         <span className="font-semibold">{t('event_earnings.use_new_bank')}</span>
-                        <span className="block text-xs text-white/70">
+                        <span className="block text-xs text-fg-muted">
                           {t('event_earnings.new_bank_needs_verification')}
                         </span>
                       </span>
@@ -933,14 +933,14 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
                   </div>
 
                   {(bankMode === 'on_file' || bankMode === 'saved') && bankDestinations ? (
-                    <div className="rounded-xl bg-white/[0.06] p-3">
+                    <div className="rounded-xl bg-surface p-3">
                       {bankMode === 'saved' ? (
                         <div className="mb-2">
-                          <label className="block text-xs font-medium text-white/60 mb-1">{t('event_earnings.select_account')}</label>
+                          <label className="block text-xs font-medium text-fg-muted mb-1">{t('event_earnings.select_account')}</label>
                           <select
                             value={selectedBankDestinationId}
                             onChange={(e) => setSelectedBankDestinationId(e.target.value)}
-                            className="w-full px-3 py-3 rounded text-[16px] bg-white/[0.08] text-white placeholder:text-white/35 focus:outline-none"
+                            className="w-full px-3 py-3 rounded text-base bg-surface-raised text-fg placeholder:text-fg-faint focus:outline-none"
                           >
                             {bankDestinations.map((d) => (
                               <option key={d.id} value={d.id}>
@@ -952,28 +952,28 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
                       ) : null}
 
                       {selectedBankDestination ? (
-                        <div className="text-sm text-white">
+                        <div className="text-sm text-fg">
                           <div className="font-semibold">{selectedBankDestination.bankName}</div>
-                          <div className="text-xs text-white/60">
+                          <div className="text-xs text-fg-muted">
                             {selectedBankDestination.accountName} · ****{selectedBankDestination.accountNumberLast4}
                           </div>
                         </div>
                       ) : (
-                        <div className="text-sm text-white/60">{t('event_earnings.select_a_bank_account')}</div>
+                        <div className="text-sm text-fg-muted">{t('event_earnings.select_a_bank_account')}</div>
                       )}
                     </div>
                   ) : null}
 
                   {bankMode === 'new' ? (
                     <div className="space-y-3">
-                      <div className="rounded-xl bg-white/[0.06] p-3">
-                        <p className="text-sm text-white font-medium">{t('event_earnings.verification_required')}</p>
-                        <p className="text-xs text-white/60 mt-1">
+                      <div className="rounded-xl bg-surface p-3">
+                        <p className="text-sm text-fg font-medium">{t('event_earnings.verification_required')}</p>
+                        <p className="text-xs text-fg-muted mt-1">
                           {t('event_earnings.new_bank_needs_verification_long')}
                         </p>
                       </div>
 
-                      <label className="flex items-center gap-2 text-sm text-white">
+                      <label className="flex items-center gap-2 text-sm text-fg">
                         <input
                           type="checkbox"
                           checked={saveNewBankDestination}
@@ -984,80 +984,80 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
                       </label>
 
                       <div>
-                        <label className="block text-sm font-medium text-white/70 mb-2">{t('event_earnings.account_holder_name')}</label>
+                        <label className="block text-sm font-medium text-fg-muted mb-2">{t('event_earnings.account_holder_name')}</label>
                         <input
                           type="text"
                           value={bankDetails.accountHolder}
                           onChange={(e) => setBankDetails({ ...bankDetails, accountHolder: e.target.value })}
                           placeholder={t('event_earnings.full_name_on_account')}
-                          className="w-full px-4 py-3 rounded focus:ring-2 focus:ring-brand-500 bg-white/[0.08] text-[16px] text-white placeholder:text-white/35 focus:outline-none"
+                          className="w-full px-4 py-3 rounded focus:ring-2 focus:ring-brand-500 bg-surface-raised text-base text-fg placeholder:text-fg-faint focus:outline-none"
                           required
                         />
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-white/70 mb-2">{t('event_earnings.bank_name')}</label>
+                        <label className="block text-sm font-medium text-fg-muted mb-2">{t('event_earnings.bank_name')}</label>
                         <input
                           type="text"
                           value={bankDetails.bankName}
                           onChange={(e) => setBankDetails({ ...bankDetails, bankName: e.target.value })}
                           placeholder="e.g., Unibank"
-                          className="w-full px-4 py-3 rounded focus:ring-2 focus:ring-brand-500 bg-white/[0.08] text-[16px] text-white placeholder:text-white/35 focus:outline-none"
+                          className="w-full px-4 py-3 rounded focus:ring-2 focus:ring-brand-500 bg-surface-raised text-base text-fg placeholder:text-fg-faint focus:outline-none"
                           required
                         />
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-white/70 mb-2">{t('event_earnings.account_number')}</label>
+                        <label className="block text-sm font-medium text-fg-muted mb-2">{t('event_earnings.account_number')}</label>
                         <input
                           type="text"
                           value={bankDetails.accountNumber}
                           onChange={(e) => setBankDetails({ ...bankDetails, accountNumber: e.target.value })}
                           placeholder={t('event_earnings.account_number_placeholder')}
-                          className="w-full px-4 py-3 rounded focus:ring-2 focus:ring-brand-500 bg-white/[0.08] text-[16px] text-white placeholder:text-white/35 focus:outline-none"
+                          className="w-full px-4 py-3 rounded focus:ring-2 focus:ring-brand-500 bg-surface-raised text-base text-fg placeholder:text-fg-faint focus:outline-none"
                           required
                         />
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-white/70 mb-2">{t('event_earnings.routing_number_optional')}</label>
+                        <label className="block text-sm font-medium text-fg-muted mb-2">{t('event_earnings.routing_number_optional')}</label>
                         <input
                           type="text"
                           value={bankDetails.routingNumber}
                           onChange={(e) => setBankDetails({ ...bankDetails, routingNumber: e.target.value })}
                           placeholder={t('event_earnings.for_international_transfers')}
-                          className="w-full px-4 py-3 rounded focus:ring-2 focus:ring-brand-500 bg-white/[0.08] text-[16px] text-white placeholder:text-white/35 focus:outline-none"
+                          className="w-full px-4 py-3 rounded focus:ring-2 focus:ring-brand-500 bg-surface-raised text-base text-fg placeholder:text-fg-faint focus:outline-none"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-white/70 mb-2">{t('event_earnings.swift_code_optional')}</label>
+                        <label className="block text-sm font-medium text-fg-muted mb-2">{t('event_earnings.swift_code_optional')}</label>
                         <input
                           type="text"
                           value={bankDetails.swiftCode}
                           onChange={(e) => setBankDetails({ ...bankDetails, swiftCode: e.target.value })}
                           placeholder={t('event_earnings.for_international_transfers')}
-                          className="w-full px-4 py-3 rounded focus:ring-2 focus:ring-brand-500 bg-white/[0.08] text-[16px] text-white placeholder:text-white/35 focus:outline-none"
+                          className="w-full px-4 py-3 rounded focus:ring-2 focus:ring-brand-500 bg-surface-raised text-base text-fg placeholder:text-fg-faint focus:outline-none"
                         />
                       </div>
                     </div>
                   ) : null}
 
-                  <p className="text-sm text-white/60">
+                  <p className="text-sm text-fg-muted">
                     {t('event_earnings.bank_deposit_note')}
                   </p>
                 </div>
               )}
 
               {payoutChangeVerificationRequired ? (
-                <div className="mt-4 rounded-xl bg-white/[0.06] p-3">
-                  <p className="text-sm font-semibold text-white">{t('event_earnings.email_verification')}</p>
-                  <p className="text-xs text-white/60 mt-1">
+                <div className="mt-4 rounded-xl bg-surface p-3">
+                  <p className="text-sm font-semibold text-fg">{t('event_earnings.email_verification')}</p>
+                  <p className="text-xs text-fg-muted mt-1">
                     {verificationMessage || 'For your security, confirm this change with the code we email you.'}
                   </p>
 
                   {debugVerificationCode ? (
-                    <p className="text-xs text-white/60 mt-2">Dev code: {debugVerificationCode}</p>
+                    <p className="text-xs text-fg-muted mt-2">Dev code: {debugVerificationCode}</p>
                   ) : null}
 
                   <div className="mt-3 flex gap-2">
@@ -1065,7 +1065,7 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
                       type="button"
                       onClick={sendVerificationCode}
                       disabled={isSendingVerificationCode}
-                      className="px-3 py-2 bg-white/[0.1] text-white rounded text-sm font-semibold hover:bg-white/[0.15] disabled:opacity-40"
+                      className="px-3 py-2 bg-surface-raised text-fg rounded text-sm font-semibold hover:bg-surface-high disabled:opacity-40"
                     >
                       {isSendingVerificationCode ? 'Sending…' : 'Send code'}
                     </button>
@@ -1073,27 +1073,27 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
                       value={verificationCode}
                       onChange={(e) => setVerificationCode(e.target.value)}
                       placeholder="6-digit code"
-                      className="flex-1 min-w-0 px-3 py-2 rounded-xl bg-white/[0.08] text-[16px] text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                      className="flex-1 min-w-0 px-3 py-2 rounded-xl bg-surface-raised text-base text-fg placeholder:text-fg-faint focus:outline-none focus:ring-2 focus:ring-brand-500"
                     />
                     <button
                       type="button"
                       onClick={verifyCode}
                       disabled={isVerifyingVerificationCode || !/^\d{6}$/.test(verificationCode)}
-                      className="px-3 py-2 bg-white/[0.1] text-white rounded text-sm font-semibold hover:bg-white/[0.15] disabled:opacity-50"
+                      className="px-3 py-2 bg-surface-raised text-fg rounded text-sm font-semibold hover:bg-surface-high disabled:opacity-50"
                     >
                       {isVerifyingVerificationCode ? 'Verifying…' : 'Verify'}
                     </button>
                   </div>
 
                   {verificationError ? (
-                    <div className="mt-2 text-sm text-red-300">{verificationError}</div>
+                    <div className="mt-2 text-sm text-danger-soft">{verificationError}</div>
                   ) : null}
                 </div>
               ) : null}
 
               {error && (
-                <div className="rounded-xl bg-red-500/10 p-3 mt-4">
-                  <p className="text-red-200 text-sm">{error}</p>
+                <div className="rounded-xl bg-danger-strong/10 p-3 mt-4">
+                  <p className="text-danger-soft text-sm">{error}</p>
                 </div>
               )}
             </div>
@@ -1108,7 +1108,7 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
                     ((bankMode === 'new' && (!bankDetails.accountHolder || !bankDetails.bankName || !bankDetails.accountNumber)) ||
                       (bankMode !== 'new' && !selectedBankDestinationId)))
                 }
-                className="flex-1 px-4 py-2.5 text-sm bg-white text-black rounded hover:bg-white/90 transition-colors font-semibold disabled:cursor-not-allowed disabled:opacity-40"
+                className="flex-1 px-4 py-2.5 text-sm bg-inverse text-on-inverse rounded hover:bg-inverse-hover transition-colors font-semibold disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {isSubmitting ? 'Submitting...' : 'Confirm Withdrawal'}
               </button>
@@ -1133,7 +1133,7 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
                   })
                 }}
                 disabled={isSubmitting}
-                className="px-4 py-2.5 text-sm rounded bg-white/[0.07] text-white hover:bg-white/[0.12] transition-colors font-semibold disabled:cursor-not-allowed"
+                className="px-4 py-2.5 text-sm rounded bg-surface-raised text-fg hover:bg-surface-high transition-colors font-semibold disabled:cursor-not-allowed"
               >
                 {t('actions.cancel')}
               </button>

@@ -129,7 +129,7 @@ export function AdminRevenueAnalytics({ showFilters = false }: Props) {
         <p className="mb-4 text-sm text-console-red">{loadError || 'Failed to load revenue analytics'}</p>
         <button
           onClick={() => void fetchData()}
-          className="rounded bg-console-raise px-3 py-1.5 text-[13px] font-semibold text-console-mut transition-colors hover:text-console-text"
+          className="rounded bg-console-raise px-3 py-1.5 text-meta font-semibold text-console-mut transition-colors hover:text-console-text"
         >
           Retry
         </button>
@@ -162,7 +162,7 @@ export function AdminRevenueAnalytics({ showFilters = false }: Props) {
             <button
               key={option.value}
               onClick={() => setDateRange(option.value as any)}
-              className={`rounded px-3 py-1.5 text-[13px] font-semibold transition-colors ${
+              className={`rounded px-3 py-1.5 text-meta font-semibold transition-colors ${
                 dateRange === option.value
                   ? 'bg-console-raise text-console-text'
                   : 'text-console-mut hover:text-console-text'
@@ -178,7 +178,7 @@ export function AdminRevenueAnalytics({ showFilters = false }: Props) {
       <div className="flex flex-wrap gap-x-8 gap-y-4">
         <div>
           <div className="flex items-center gap-3">
-            <span className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint">Revenue (USD)</span>
+            <span className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint">Revenue (USD)</span>
             {growth && <GrowthBadge value={growth.revenueGrowth7d} />}
           </div>
           <div className="mt-1 font-mono text-xl tabular-nums text-console-text">
@@ -193,14 +193,14 @@ export function AdminRevenueAnalytics({ showFilters = false }: Props) {
 
         <div>
           <div className="flex items-center gap-3">
-            <span className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint">Tickets sold</span>
+            <span className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint">Tickets sold</span>
             {growth && <GrowthBadge value={growth.ticketsGrowth7d} />}
           </div>
           <div className="mt-1 font-mono text-xl tabular-nums text-console-text">{revenue.totalTickets.toLocaleString()}</div>
         </div>
 
         <div>
-          <div className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint">Avg ticket price</div>
+          <div className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint">Avg ticket price</div>
           <div className="mt-1 font-mono text-xl tabular-nums text-console-text">
             {formatCurrency(revenue.totalRevenueUSD / revenue.totalTickets || 0, 'USD')}
           </div>
@@ -210,7 +210,7 @@ export function AdminRevenueAnalytics({ showFilters = false }: Props) {
 
       {/* Currency Breakdown */}
       <div className="rounded-lg bg-console-panel p-4">
-        <h3 className="label-mono mb-3 text-[10px] uppercase tracking-[0.18em] text-console-faint">Revenue by Currency</h3>
+        <h3 className="label-mono mb-3 text-eyebrow uppercase tracking-[0.18em] text-console-faint">Revenue by Currency</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {/* HTG Revenue */}
           <div className="rounded bg-console-raise p-3">
@@ -271,17 +271,17 @@ export function AdminRevenueAnalytics({ showFilters = false }: Props) {
       {/* FX Spread Profit */}
       {revenue.fxSpread?.ticketCount > 0 && (
         <div className="rounded-lg bg-console-panel p-4">
-          <h3 className="label-mono mb-3 text-[10px] uppercase tracking-[0.18em] text-console-faint">FX Spread Profit (MonCash USD Events)</h3>
+          <h3 className="label-mono mb-3 text-eyebrow uppercase tracking-[0.18em] text-console-faint">FX Spread Profit (MonCash USD Events)</h3>
           <div className="flex flex-wrap gap-x-8 gap-y-4">
             <div>
-              <div className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint">USD Volume</div>
+              <div className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint">USD Volume</div>
               <div className="mt-1 font-mono text-xl tabular-nums text-console-text">
                 {formatCurrency(revenue.fxSpread.usdVolume, 'USD')}
               </div>
               <div className="mt-1 text-xs text-console-mut"><span className="font-mono tabular-nums">{revenue.fxSpread.ticketCount}</span> tickets</div>
             </div>
             <div>
-              <div className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint">Spread Profit</div>
+              <div className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint">Spread Profit</div>
               <div className="mt-1 font-mono text-xl tabular-nums text-console-text">
                 {formatCurrency(revenue.fxSpread.profitHTG, 'HTG')}
               </div>
@@ -289,7 +289,7 @@ export function AdminRevenueAnalytics({ showFilters = false }: Props) {
               <div className="mt-1 text-xs text-console-faint">Computed from base vs effective rate</div>
             </div>
             <div>
-              <div className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint">Avg Spread</div>
+              <div className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint">Avg Spread</div>
               <div className="mt-1 font-mono text-xl tabular-nums text-console-text">
                 {(revenue.fxSpread.averageSpreadPercent * 100).toFixed(2)}%
               </div>
@@ -301,7 +301,7 @@ export function AdminRevenueAnalytics({ showFilters = false }: Props) {
 
       {/* Payment Method Breakdown */}
       <div>
-        <h3 className="label-mono mb-3 text-[10px] uppercase tracking-[0.18em] text-console-faint">Revenue by payment method</h3>
+        <h3 className="label-mono mb-3 text-eyebrow uppercase tracking-[0.18em] text-console-faint">Revenue by payment method</h3>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           {[
             {
@@ -341,7 +341,7 @@ export function AdminRevenueAnalytics({ showFilters = false }: Props) {
                 <div className="mb-4 flex items-center gap-2">
                   <Icon className="h-4 w-4 text-console-faint" />
                   <h4 className="text-sm font-semibold text-console-text">{m.name}</h4>
-                  <span className="label-mono ml-auto text-[10px] uppercase tracking-[0.18em] text-console-faint">
+                  <span className="label-mono ml-auto text-eyebrow uppercase tracking-[0.18em] text-console-faint">
                     {m.code}
                   </span>
                 </div>
@@ -362,28 +362,28 @@ export function AdminRevenueAnalytics({ showFilters = false }: Props) {
       {/* Exchange Rate Info */}
       {revenue.exchangeRates.averageRate > 0 && (
         <div className="rounded-lg bg-console-panel p-4">
-          <h3 className="label-mono mb-3 text-[10px] uppercase tracking-[0.18em] text-console-faint">Exchange Rate Analytics</h3>
+          <h3 className="label-mono mb-3 text-eyebrow uppercase tracking-[0.18em] text-console-faint">Exchange Rate Analytics</h3>
           <div className="flex flex-wrap gap-x-8 gap-y-4">
             <div>
-              <div className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint">Average Rate</div>
+              <div className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint">Average Rate</div>
               <div className="mt-1 font-mono text-base tabular-nums text-console-text">
                 {revenue.exchangeRates.averageRate.toFixed(6)}
               </div>
             </div>
             <div>
-              <div className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint">Min Rate</div>
+              <div className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint">Min Rate</div>
               <div className="mt-1 font-mono text-base tabular-nums text-console-text">
                 {revenue.exchangeRates.minRate.toFixed(6)}
               </div>
             </div>
             <div>
-              <div className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint">Max Rate</div>
+              <div className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint">Max Rate</div>
               <div className="mt-1 font-mono text-base tabular-nums text-console-text">
                 {revenue.exchangeRates.maxRate.toFixed(6)}
               </div>
             </div>
             <div>
-              <div className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint">Rate Spread</div>
+              <div className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint">Rate Spread</div>
               <div className="mt-1 font-mono text-base tabular-nums text-console-text">
                 {revenue.exchangeRates.rateSpread.toFixed(6)}
               </div>

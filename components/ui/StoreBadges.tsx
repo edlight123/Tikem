@@ -21,11 +21,11 @@ export default function StoreBadges({
   const { t } = useTranslation('common')
   const lg = size === 'lg'
   const box = lg
-    ? 'flex items-center justify-center gap-3 rounded bg-white px-6 py-4 text-black'
-    : 'inline-flex items-center gap-2 rounded bg-white px-3.5 py-2 text-black'
+    ? 'flex items-center justify-center gap-3 rounded bg-inverse px-6 py-4 text-on-inverse'
+    : 'inline-flex items-center gap-2 rounded bg-inverse px-3.5 py-2 text-on-inverse'
   const icon = lg ? 22 : 18
-  const small = lg ? 'text-[10px]' : 'text-[9px]'
-  const big = lg ? 'text-lg' : 'text-[14px]'
+  const small = lg ? 'text-eyebrow' : 'text-eyebrow'
+  const big = lg ? 'text-lg' : 'text-sm'
 
   const play = (
     <a
@@ -43,7 +43,7 @@ export default function StoreBadges({
         <path d="M16.4 9.2L5.2 3C4.6 2.6 4 2.7 3.6 3l9.4 9.4 3.4-3.2z" fill="#00F076" />
       </svg>
       <span className="text-left leading-none">
-        <span className={`block uppercase tracking-wide text-black/60 ${small}`}>
+        <span className={`block uppercase tracking-wide text-on-inverse/60 ${small}`}>
           {t('store_badges.play_small', { defaultValue: 'Get it on' })}
         </span>
         <span className={`block font-semibold ${big}`}>Google Play</span>
@@ -64,7 +64,7 @@ export default function StoreBadges({
         <path d="M17.05 12.54c-.02-2.2 1.8-3.26 1.88-3.31-1.03-1.5-2.62-1.71-3.19-1.73-1.36-.14-2.65.8-3.34.8-.69 0-1.75-.78-2.88-.76-1.48.02-2.85.86-3.61 2.19-1.54 2.67-.39 6.62 1.11 8.79.73 1.06 1.6 2.25 2.74 2.21 1.1-.05 1.52-.71 2.85-.71 1.33 0 1.71.71 2.88.69 1.19-.02 1.94-1.08 2.67-2.15.84-1.23 1.19-2.42 1.21-2.48-.03-.01-2.32-.89-2.34-3.53zM14.88 5.72c.61-.74 1.02-1.77.91-2.8-.88.04-1.94.59-2.57 1.33-.56.65-1.06 1.7-.93 2.7.98.08 1.98-.5 2.59-1.23z" />
       </svg>
       <span className="text-left leading-none">
-        <span className={`block uppercase tracking-wide text-black/60 ${small}`}>
+        <span className={`block uppercase tracking-wide text-on-inverse/60 ${small}`}>
           {t('store_badges.apple_small', { defaultValue: 'Download on the' })}
         </span>
         <span className={`block font-semibold ${big}`}>App Store</span>

@@ -41,9 +41,9 @@ export default function OrganizerEventsList({
   return (
     <ConsolePanel className="p-4 sm:p-5">
       <div className="mb-4 flex items-baseline justify-between gap-3">
-        <h2 className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint">Events</h2>
+        <h2 className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint">Events</h2>
         {truncated && (
-          <span className="label-mono text-[11px] tabular-nums text-console-faint">
+          <span className="label-mono text-eyebrow tabular-nums text-console-faint">
             Showing {events.length} of {totalEvents}
           </span>
         )}
@@ -78,7 +78,7 @@ export default function OrganizerEventsList({
                         <span className="text-console-faint">/{event.total_tickets}</span>
                       )}
                     </div>
-                    <div className="label-mono text-[10px] uppercase tracking-wide text-console-faint">Sold</div>
+                    <div className="label-mono text-eyebrow uppercase tracking-wide text-console-faint">Sold</div>
                   </div>
 
                   <ConsoleState tone={consoleTone(stateLabel)}>

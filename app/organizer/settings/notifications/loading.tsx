@@ -5,12 +5,12 @@
  * `pb-mobile-nav` main.
  *
  * Derived geometry (app/organizer/settings/notifications/page.tsx):
- *   root    min-h-screen bg-[#0a0a0a] py-8
+ *   root    min-h-screen bg-canvas py-8
  *   inner   max-w-3xl px-4 sm:px-6 lg:px-8
  *   back    inline text-sm link + 16px chevron, mb-6
  *   header  PageHeader — eyebrow, h1 mt-1.5 clamp(26px,4vw,38px), subtitle
  *           mt-1.5  (the eyebrow was missing here)
- *   card    mt-8 overflow-hidden rounded-2xl bg-white/[0.03] — NotificationsForm
+ *   card    mt-8 overflow-hidden rounded-2xl bg-surface-low — NotificationsForm
  *           carries three channels with 5 / 2 / 2 toggles (email, SMS, push);
  *           this used to draw 3 × 4, so the card was ~90px too tall
  *
@@ -27,7 +27,7 @@ const CHANNELS = [5, 2, 2]
 
 export default function NotificationsLoading() {
   return (
-    <div className="min-h-screen bg-[#0a0a0a] py-8">
+    <div className="min-h-screen bg-canvas py-8">
       <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
         <Bar className="mb-6 h-5 w-32" />
 
@@ -37,7 +37,7 @@ export default function NotificationsLoading() {
           <Bar className="mt-1.5 h-4 w-72 max-w-full" />
         </div>
 
-        <div className="mt-8 space-y-8 overflow-hidden rounded-2xl bg-white/[0.03] p-6">
+        <div className="mt-8 space-y-8 overflow-hidden rounded-2xl bg-surface-low p-6">
           {CHANNELS.map((items, section) => (
             <div key={section}>
               <Bar className="mb-4 h-6 w-44" />

@@ -68,7 +68,7 @@ export default function FollowButton({ organizerId, userId, initialIsFollowing =
       disabled={loading}
       aria-pressed={isFollowing}
       /* A FILL, not a hairline around nothing. Both states here were a bare
-         `border-white/10`–`/15` with NO background at all — the exact pattern
+         `border-line`–`/15` with NO background at all — the exact pattern
          the house rule forbids, and on the organizer profile this is the
          PRIMARY action, sitting immediately beside ConnectButton (which is
          filled). Two adjacent controls, one outlined and one filled, read as
@@ -80,8 +80,8 @@ export default function FollowButton({ organizerId, userId, initialIsFollowing =
          rounded-xl) so the pair lines up exactly. */
       className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors duration-200 ${
         isFollowing
-          ? 'bg-white/[0.055] text-white/70 hover:bg-white/[0.12] hover:text-white'
-          : 'bg-white text-black hover:bg-white/90'
+          ? 'bg-surface text-fg-muted hover:bg-surface-high hover:text-fg'
+          : 'bg-inverse text-on-inverse hover:bg-inverse-hover'
       } disabled:opacity-50`}
     >
       {loading ? (

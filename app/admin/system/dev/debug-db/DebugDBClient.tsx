@@ -149,7 +149,7 @@ export default function DebugDBClient() {
   if (loading && !user) {
     return (
       <ConsolePanel className="px-4 py-8 text-center">
-        <span className="label-mono text-[13px] text-console-mut">Loading…</span>
+        <span className="label-mono text-meta text-console-mut">Loading…</span>
       </ConsolePanel>
     )
   }
@@ -158,7 +158,7 @@ export default function DebugDBClient() {
     return (
       <ConsolePanel className="px-4 py-8 text-center">
         <p className="text-sm font-semibold text-console-text">Please sign in</p>
-        <p className="mt-1 text-[13px] text-console-mut">
+        <p className="mt-1 text-meta text-console-mut">
           This tool reads the database as the signed-in admin.
         </p>
       </ConsolePanel>

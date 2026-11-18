@@ -111,16 +111,16 @@ export default function DefaultsForm({ userId, initialData }: DefaultsFormProps)
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Country */}
         <div>
-          <label htmlFor="default_country" className="block text-sm font-medium text-white/70 mb-2">
+          <label htmlFor="default_country" className="block text-sm font-medium text-fg-muted mb-2">
             {t('defaults_form.default_country')}
           </label>
           <div className="relative">
-            <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
+            <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-fg-subtle" />
             <select
               id="default_country"
               value={formData.default_country}
               onChange={(e) => handleCountryChange(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 rounded focus:ring-2 focus:ring-brand-500 appearance-none bg-white/[0.06] text-[16px] text-white placeholder:text-white/35 focus:outline-none"
+              className="w-full pl-10 pr-4 py-3 rounded focus:ring-2 focus:ring-brand-500 appearance-none bg-surface text-base text-fg placeholder:text-fg-faint focus:outline-none"
             >
               <option value="">{t('defaults_form.select_a_country')}</option>
               {countries.map((country) => (
@@ -134,16 +134,16 @@ export default function DefaultsForm({ userId, initialData }: DefaultsFormProps)
 
         {/* City */}
         <div>
-          <label htmlFor="default_city" className="block text-sm font-medium text-white/70 mb-2">
+          <label htmlFor="default_city" className="block text-sm font-medium text-fg-muted mb-2">
             {t('defaults_form.default_city')}
           </label>
           <div className="relative">
-            <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
+            <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-fg-subtle" />
             <select
               id="default_city"
               value={formData.default_city}
               onChange={(e) => setFormData({ ...formData, default_city: e.target.value })}
-              className="w-full pl-10 pr-4 py-3 rounded focus:ring-2 focus:ring-brand-500 appearance-none bg-white/[0.06] text-[16px] text-white placeholder:text-white/35 focus:outline-none"
+              className="w-full pl-10 pr-4 py-3 rounded focus:ring-2 focus:ring-brand-500 appearance-none bg-surface text-base text-fg placeholder:text-fg-faint focus:outline-none"
               disabled={!formData.default_country}
             >
               <option value="">{t('defaults_form.select_a_city')}</option>
@@ -155,23 +155,23 @@ export default function DefaultsForm({ userId, initialData }: DefaultsFormProps)
             </select>
           </div>
           {!formData.default_country && (
-            <p className="text-xs text-white/50 mt-1">{t('defaults_form.select_country_first')}</p>
+            <p className="text-xs text-fg-subtle mt-1">{t('defaults_form.select_country_first')}</p>
           )}
         </div>
       </div>
 
       {/* Timezone */}
       <div>
-        <label htmlFor="default_timezone" className="block text-sm font-medium text-white/70 mb-2">
+        <label htmlFor="default_timezone" className="block text-sm font-medium text-fg-muted mb-2">
           {t('defaults_form.default_timezone')}
         </label>
         <div className="relative">
-          <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
+          <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-fg-subtle" />
           <select
             id="default_timezone"
             value={formData.default_timezone}
             onChange={(e) => setFormData({ ...formData, default_timezone: e.target.value })}
-            className="w-full pl-10 pr-4 py-3 rounded focus:ring-2 focus:ring-brand-500 appearance-none bg-white/[0.06] text-[16px] text-white placeholder:text-white/35 focus:outline-none"
+            className="w-full pl-10 pr-4 py-3 rounded focus:ring-2 focus:ring-brand-500 appearance-none bg-surface text-base text-fg placeholder:text-fg-faint focus:outline-none"
           >
             {TIMEZONES.map((tz) => (
               <option key={tz.value} value={tz.value}>
@@ -184,16 +184,16 @@ export default function DefaultsForm({ userId, initialData }: DefaultsFormProps)
 
       {/* Currency */}
       <div>
-        <label htmlFor="default_currency" className="block text-sm font-medium text-white/70 mb-2">
+        <label htmlFor="default_currency" className="block text-sm font-medium text-fg-muted mb-2">
           {t('defaults_form.default_currency')}
         </label>
         <div className="relative">
-          <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
+          <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-fg-subtle" />
           <select
             id="default_currency"
             value={formData.default_currency}
             onChange={(e) => setFormData({ ...formData, default_currency: e.target.value })}
-            className="w-full pl-10 pr-4 py-3 rounded focus:ring-2 focus:ring-brand-500 appearance-none bg-white/[0.06] text-[16px] text-white placeholder:text-white/35 focus:outline-none"
+            className="w-full pl-10 pr-4 py-3 rounded focus:ring-2 focus:ring-brand-500 appearance-none bg-surface text-base text-fg placeholder:text-fg-faint focus:outline-none"
           >
             {CURRENCIES.map((currency) => (
               <option key={currency.value} value={currency.value}>
@@ -206,7 +206,7 @@ export default function DefaultsForm({ userId, initialData }: DefaultsFormProps)
 
       {/* Categories */}
       <div>
-        <label className="block text-sm font-medium text-white/70 mb-3">
+        <label className="block text-sm font-medium text-fg-muted mb-3">
           <Tag className="inline w-4 h-4 mr-1" />
           {t('defaults_form.default_categories')}
         </label>
@@ -218,25 +218,25 @@ export default function DefaultsForm({ userId, initialData }: DefaultsFormProps)
               onClick={() => handleCategoryToggle(category)}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                 formData.default_categories.includes(category)
-                  ? 'bg-white text-black'
-                  : 'bg-white/[0.055] text-white/70 hover:bg-white/[0.12] hover:text-white'
+                  ? 'bg-inverse text-on-inverse'
+                  : 'bg-surface text-fg-muted hover:bg-surface-high hover:text-fg'
               }`}
             >
               {category}
             </button>
           ))}
         </div>
-        <p className="text-xs text-white/50 mt-2">
+        <p className="text-xs text-fg-subtle mt-2">
           {t('defaults_form.categories_help')}
         </p>
       </div>
 
       {/* Submit Button */}
-      <div className="flex justify-end pt-4 border-t border-white/10">
+      <div className="flex justify-end pt-4 border-t border-line">
         <button
           type="submit"
           disabled={isSubmitting}
-          className="px-6 py-2.5 bg-white hover:bg-white/90 text-black font-semibold rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+          className="px-6 py-2.5 bg-inverse hover:bg-inverse-hover text-on-inverse font-semibold rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
         >
           {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
           {isSubmitting ? 'Saving...' : 'Save Defaults'}

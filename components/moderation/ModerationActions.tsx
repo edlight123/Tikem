@@ -22,7 +22,7 @@ function useLoginRedirect() {
 }
 
 const QUIET =
-  'inline-flex items-center gap-1.5 text-[13px] text-white/45 transition-colors hover:text-white/80 disabled:opacity-50'
+  'inline-flex items-center gap-1.5 text-meta text-fg-subtle transition-colors hover:text-fg-soft disabled:opacity-50'
 
 export function ReportButton({
   kind,
@@ -121,21 +121,21 @@ export function BlockOrganizerButton({
             : t('moderation.block_confirm_title', { name: organizerName })
         }
       >
-        <p className="text-[15px] leading-relaxed text-white/70">
+        <p className="text-body leading-relaxed text-fg-muted">
           {blocked ? t('moderation.unblock_confirm_body') : t('moderation.block_confirm_body')}
         </p>
         <div className="mt-6 flex gap-3">
           <button
             type="button"
             onClick={() => setConfirming(false)}
-            className="h-12 flex-1 rounded-xl bg-white/[0.08] text-[15px] font-semibold text-white hover:bg-white/[0.12]"
+            className="h-12 flex-1 rounded-xl bg-surface-raised text-body font-semibold text-fg hover:bg-surface-high"
           >
             {t('moderation.cancel')}
           </button>
           <button
             type="button"
             onClick={apply}
-            className={`h-12 flex-1 rounded-xl text-[15px] font-semibold ${blocked ? 'bg-white text-black' : 'bg-red-500 text-white'} hover:opacity-90`}
+            className={`h-12 flex-1 rounded-xl text-body font-semibold ${blocked ? 'bg-inverse text-on-inverse' : 'bg-danger-strong text-fg'} hover:opacity-90`}
           >
             {blocked ? t('moderation.unblock') : t('moderation.block')}
           </button>

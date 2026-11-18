@@ -44,7 +44,7 @@ export default function LoadingSkeleton({
 }: LoadingSkeletonProps) {
   // `.skeleton` carries both the fill and the sweep; a still placeholder needs
   // the same fill without the animation.
-  const fill = animated ? 'skeleton' : 'bg-white/[0.06]'
+  const fill = animated ? 'skeleton' : 'bg-surface'
 
   return (
     <div className={`grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 lg:gap-6 ${className}`}>

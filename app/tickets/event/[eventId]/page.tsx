@@ -93,13 +93,13 @@ export default async function EventTicketsPage({ params }: { params: Promise<{ e
   const serializedEvent = serializeTimestamps(event)
   const serializedTickets = tickets.map(ticket => serializeTimestamps(ticket))
 
-  // `bg-[#0a0a0a]` here is the PAGE canvas, which is the one place it belongs —
+  // `bg-canvas` here is the PAGE canvas, which is the one place it belongs —
   // never as a card fill, where it renders invisible against this. Surfaces
   // inside the content use the white/[0.0x] ladder in docs/POSH_DESIGN_BRIEF.md.
   // `pb-mobile-nav` is conditional in CSS (body[data-mobile-nav], <768px), so it
   // reserves nothing for a signed-out reader.
   return (
-    <div className="min-h-screen bg-[#0a0a0a] pb-mobile-nav">
+    <div className="min-h-screen bg-canvas pb-mobile-nav">
       <Navbar user={user} isAdmin={isAdmin(((user as any)?.email_verified) ? user?.email : null)} />
 
       <EventTicketsContent event={serializedEvent} tickets={serializedTickets} />

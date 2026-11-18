@@ -36,6 +36,7 @@ import {
 } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { getEventPriceLabel } from '@/lib/discover/helpers'
+import { color } from '@/lib/design/tokens'
 
 export interface AppScrubEvent {
   id: string
@@ -57,22 +58,22 @@ const smooth = (p: number, a: number, b: number) => {
 
 export function StatusBar() {
   return (
-    <div className="pointer-events-none absolute inset-x-0 top-0 z-40 flex items-center justify-between bg-gradient-to-b from-[#0a0a0a] from-40% via-[#0a0a0a]/85 to-transparent px-6 pb-4 pt-3">
-      <span className="w-10 text-[11px] font-semibold tracking-tight text-white">9:41</span>
+    <div className="pointer-events-none absolute inset-x-0 top-0 z-40 flex items-center justify-between bg-gradient-to-b from-canvas from-40% via-canvas/85 to-transparent px-6 pb-4 pt-3">
+      <span className="w-10 text-eyebrow font-semibold tracking-tight text-fg">9:41</span>
       <span className="h-[18px] w-[76px] rounded-full bg-black" />
       <span className="flex w-10 items-center justify-end gap-1">
         {/* signal bars */}
         <span className="flex items-end gap-[1.5px]" aria-hidden>
-          <span className="h-[4px] w-[2.5px] rounded-[1px] bg-white" />
-          <span className="h-[6px] w-[2.5px] rounded-[1px] bg-white" />
-          <span className="h-[8px] w-[2.5px] rounded-[1px] bg-white" />
-          <span className="h-[10px] w-[2.5px] rounded-[1px] bg-white/40" />
+          <span className="h-[4px] w-[2.5px] rounded-[1px] bg-inverse" />
+          <span className="h-[6px] w-[2.5px] rounded-[1px] bg-inverse" />
+          <span className="h-[8px] w-[2.5px] rounded-[1px] bg-inverse" />
+          <span className="h-[10px] w-[2.5px] rounded-[1px] bg-fg/40" />
         </span>
-        <Wifi className="h-[11px] w-[11px] text-white" strokeWidth={2.5} />
+        <Wifi className="h-[11px] w-[11px] text-fg" strokeWidth={2.5} />
         {/* battery */}
-        <span className="relative h-[10px] w-[18px] rounded-[3px] border border-white/50" aria-hidden>
-          <span className="absolute inset-[1.5px] right-[4px] rounded-[1px] bg-white" />
-          <span className="absolute -right-[3px] top-1/2 h-[4px] w-[1.5px] -translate-y-1/2 rounded-r-full bg-white/50" />
+        <span className="relative h-[10px] w-[18px] rounded-[3px] border border-fg/50" aria-hidden>
+          <span className="absolute inset-[1.5px] right-[4px] rounded-[1px] bg-inverse" />
+          <span className="absolute -right-[3px] top-1/2 h-[4px] w-[1.5px] -translate-y-1/2 rounded-r-full bg-fg/50" />
         </span>
       </span>
     </div>
@@ -81,7 +82,7 @@ export function StatusBar() {
 
 function Wordmark() {
   return (
-    <span className="font-display italic text-[19px] leading-none text-white">
+    <span className="font-display italic text-lead leading-none text-fg">
       tik<span className="not-italic text-brand-400">è</span>m
     </span>
   )
@@ -96,20 +97,20 @@ function TabBar() {
     { icon: User, label: 'Profile', active: false },
   ] as const
   return (
-    <div className="absolute inset-x-0 bottom-0 z-[5] bg-[#0a0a0a]/95 pb-4 pt-2 backdrop-blur-md">
+    <div className="absolute inset-x-0 bottom-0 z-[5] bg-canvas/95 pb-4 pt-2 backdrop-blur-md">
       <div className="flex items-center justify-around px-3">
         {items.map((it, i) =>
           it === null ? (
-            <span key={i} className="grid h-9 w-9 place-items-center rounded bg-white">
-              <Plus className="h-[18px] w-[18px] text-black" strokeWidth={2.5} />
+            <span key={i} className="grid h-9 w-9 place-items-center rounded bg-inverse">
+              <Plus className="h-[18px] w-[18px] text-on-inverse" strokeWidth={2.5} />
             </span>
           ) : (
             <span key={i} className="flex flex-col items-center gap-0.5">
               <it.icon
-                className={`h-[18px] w-[18px] ${it.active ? 'text-white' : 'text-white/35'}`}
+                className={`h-[18px] w-[18px] ${it.active ? 'text-fg' : 'text-fg-faint'}`}
                 strokeWidth={it.active ? 2.2 : 1.8}
               />
-              <span className={`text-[8px] font-medium ${it.active ? 'text-white' : 'text-white/35'}`}>
+              <span className={`text-eyebrow font-medium ${it.active ? 'text-fg' : 'text-fg-faint'}`}>
                 {it.label}
               </span>
             </span>
@@ -117,7 +118,7 @@ function TabBar() {
         )}
       </div>
       {/* home indicator */}
-      <span className="absolute bottom-1.5 left-1/2 h-[4px] w-[86px] -translate-x-1/2 rounded-full bg-white/30" />
+      <span className="absolute bottom-1.5 left-1/2 h-[4px] w-[86px] -translate-x-1/2 rounded-full bg-fg/30" />
     </div>
   )
 }
@@ -130,9 +131,9 @@ function FeedCard({ ev }: { ev: AppScrubEvent }) {
       <div className="relative aspect-[4/5] overflow-hidden rounded">
         <Image src={ev.banner_image_url} alt="" fill sizes="130px" quality={50} className="object-cover" />
       </div>
-      <p className="mt-1.5 truncate text-[10px] font-semibold text-white">{ev.title}</p>
-      {ev.city && <p className="truncate text-[9px] text-white/50">{ev.city}</p>}
-      {price && <p className="truncate text-[9px] font-semibold text-brand-400">{price}</p>}
+      <p className="mt-1.5 truncate text-eyebrow font-semibold text-fg">{ev.title}</p>
+      {ev.city && <p className="truncate text-eyebrow text-fg-subtle">{ev.city}</p>}
+      {price && <p className="truncate text-eyebrow font-semibold text-brand-400">{price}</p>}
     </div>
   )
 }
@@ -211,7 +212,7 @@ export default function AppScrub({
   ]
 
   return (
-    <div ref={wrapRef} className="relative h-[170vh] bg-[#0a0a0a] sm:h-[320vh]">
+    <div ref={wrapRef} className="relative h-[170vh] bg-canvas sm:h-[320vh]">
       {/* The stage pins BELOW the site chrome, not under it. At top-0 with a
           full h-screen the composition centred itself against the whole
           viewport, so on a phone (402×734) the top 23px of the frame — the
@@ -234,7 +235,7 @@ export default function AppScrub({
               {captions.map((c) => (
                 <p
                   key={c.key}
-                  className="absolute inset-x-0 font-display lowercase italic !text-[clamp(26px,4.2vw,52px)] !leading-[1.08] text-white"
+                  className="absolute inset-x-0 font-display lowercase italic !text-[clamp(26px,4.2vw,52px)] !leading-[1.08] text-fg"
                   style={{ opacity: c.opacity }}
                   aria-hidden={c.opacity < 0.5}
                 >
@@ -249,7 +250,7 @@ export default function AppScrub({
             <div className="mt-4 md:mt-6" style={{ opacity: still ? 1 : Math.max(c3, 0) }}>
               <Link
                 href="/discover"
-                className="group inline-flex items-center gap-1.5 text-[13px] font-medium text-brand-400 transition-colors hover:text-brand-300"
+                className="group inline-flex items-center gap-1.5 text-meta font-medium text-brand-400 transition-colors hover:text-brand-300"
               >
                 {t('home.appscrub_cta', { defaultValue: 'explore events' })}
                 <ArrowRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
@@ -259,8 +260,8 @@ export default function AppScrub({
 
           {/* The phone: page scroll drives the screen. */}
           <div aria-hidden className="pointer-events-none order-1 select-none md:order-2">
-            <div className="mx-auto w-[250px] rounded-[42px] border border-white/10 bg-[#161616] p-2.5 shadow-[0_24px_80px_-24px_rgba(0,0,0,0.8)] sm:w-[280px]">
-              <div className="relative aspect-[9/19.5] overflow-hidden rounded-[32px] bg-[#0a0a0a]">
+            <div className="mx-auto w-[250px] rounded-[42px] border border-line bg-surface-solid p-2.5 shadow-[0_24px_80px_-24px_rgba(0,0,0,0.8)] sm:w-[280px]">
+              <div className="relative aspect-[9/19.5] overflow-hidden rounded-[32px] bg-canvas">
                 <StatusBar />
 
                 {/* ---------- phase 1: the home feed ---------- */}
@@ -271,30 +272,30 @@ export default function AppScrub({
                   {/* wordmark bar + location chip — the real home top bar */}
                   <div className="flex items-center justify-between">
                     <Wordmark />
-                    <span className="flex items-center gap-1 rounded bg-white/[0.06] px-2 py-1 text-[9px] font-medium text-white/70">
+                    <span className="flex items-center gap-1 rounded bg-surface px-2 py-1 text-eyebrow font-medium text-fg-muted">
                       <MapPin className="h-[9px] w-[9px]" />
                       Port-au-Prince
-                      <ChevronDown className="h-[9px] w-[9px] text-white/40" />
+                      <ChevronDown className="h-[9px] w-[9px] text-fg-subtle" />
                     </span>
                   </div>
 
                   {/* search pill */}
-                  <div className="mt-3 flex items-center gap-2 rounded bg-white/[0.06] px-3 py-2">
-                    <Search className="h-[11px] w-[11px] text-white/40" />
-                    <span className="text-[10px] text-white/40">Search events, organizers…</span>
+                  <div className="mt-3 flex items-center gap-2 rounded bg-surface px-3 py-2">
+                    <Search className="h-[11px] w-[11px] text-fg-subtle" />
+                    <span className="text-eyebrow text-fg-subtle">Search events, organizers…</span>
                   </div>
 
                   {/* category chips */}
                   <div className="mt-3 flex gap-1.5">
-                    <span className="rounded bg-white px-2.5 py-1 text-[9px] font-semibold text-black">All</span>
+                    <span className="rounded bg-inverse px-2.5 py-1 text-eyebrow font-semibold text-on-inverse">All</span>
                     {['mizik', 'fèt', 'espò', 'kilti'].map((c) => (
-                      <span key={c} className="rounded bg-white/[0.06] px-2.5 py-1 text-[9px] text-white/60">
+                      <span key={c} className="rounded bg-surface px-2.5 py-1 text-eyebrow text-fg-muted">
                         {c}
                       </span>
                     ))}
                   </div>
 
-                  <p className="mt-4 font-display lowercase italic text-[17px] leading-none text-white/90">
+                  <p className="mt-4 font-display lowercase italic text-lead leading-none text-fg">
                     {t('events.rail_tonight', { defaultValue: 'tonight' })}
                   </p>
                   <div className="mt-2.5 grid grid-cols-2 gap-2.5">
@@ -302,7 +303,7 @@ export default function AppScrub({
                       <FeedCard key={`${ev.id}-${i}`} ev={ev} />
                     ))}
                   </div>
-                  <p className="mt-4 font-display lowercase italic text-[17px] leading-none text-white/90">
+                  <p className="mt-4 font-display lowercase italic text-lead leading-none text-fg">
                     {t('events.this_week', { defaultValue: 'this week' })}
                   </p>
                   <div className="mt-2.5 grid grid-cols-2 gap-2.5">
@@ -310,7 +311,7 @@ export default function AppScrub({
                       <FeedCard key={`${ev.id}-w${i}`} ev={ev} />
                     ))}
                   </div>
-                  <p className="mt-4 font-display lowercase italic text-[17px] leading-none text-white/90">
+                  <p className="mt-4 font-display lowercase italic text-lead leading-none text-fg">
                     {t('events.rail_diaspora', { defaultValue: 'in the diaspora' })}
                   </p>
                   <div className="mt-2.5 grid grid-cols-2 gap-2.5 pb-20">
@@ -325,33 +326,33 @@ export default function AppScrub({
 
                 {/* ---------- phase 2: the event screen pushes in ---------- */}
                 <div
-                  className="absolute inset-0 z-10 flex flex-col bg-[#0a0a0a]"
+                  className="absolute inset-0 z-10 flex flex-col bg-canvas"
                   style={{ transform: `translate3d(0, ${eventY}%, 0)`, willChange: still ? undefined : 'transform' }}
                 >
                   <div className="relative aspect-[4/5] w-full shrink-0 overflow-hidden">
                     <Image src={star.banner_image_url} alt="" fill sizes="280px" quality={60} className="object-cover" />
-                    <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#0a0a0a] to-transparent" />
+                    <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-canvas to-transparent" />
                     {/* push-screen chrome over the poster */}
-                    <span className="absolute left-3 top-10 grid h-7 w-7 place-items-center rounded bg-black/40 backdrop-blur-md">
-                      <ChevronLeft className="h-4 w-4 text-white" />
+                    <span className="absolute left-3 top-10 grid h-7 w-7 place-items-center rounded bg-scrim-light backdrop-blur-md">
+                      <ChevronLeft className="h-4 w-4 text-fg" />
                     </span>
-                    <span className="absolute right-3 top-10 grid h-7 w-7 place-items-center rounded bg-black/40 backdrop-blur-md">
-                      <Share className="h-3.5 w-3.5 text-white" />
+                    <span className="absolute right-3 top-10 grid h-7 w-7 place-items-center rounded bg-scrim-light backdrop-blur-md">
+                      <Share className="h-3.5 w-3.5 text-fg" />
                     </span>
                   </div>
                   <div className="flex min-h-0 flex-1 flex-col px-4 pb-5">
-                    <p className="line-clamp-2 font-grotesk text-[16px] font-bold leading-tight text-white">
+                    <p className="line-clamp-2 font-grotesk text-base font-bold leading-tight text-fg">
                       {star.title}
                     </p>
-                    {place && <p className="mt-1 truncate text-[11px] text-white/55">{place}</p>}
+                    {place && <p className="mt-1 truncate text-eyebrow text-fg-muted">{place}</p>}
                     {priceLabel && (
-                      <p className="mt-1 text-[11px] font-semibold text-brand-400">{priceLabel}</p>
+                      <p className="mt-1 text-eyebrow font-semibold text-brand-400">{priceLabel}</p>
                     )}
                     <div className="mt-3 space-y-1.5">
-                      <span className="block h-1.5 w-full rounded bg-white/[0.07]" />
-                      <span className="block h-1.5 w-4/5 rounded bg-white/[0.07]" />
+                      <span className="block h-1.5 w-full rounded bg-surface-raised" />
+                      <span className="block h-1.5 w-4/5 rounded bg-surface-raised" />
                     </div>
-                    <div className="mt-auto rounded bg-white py-2.5 text-center text-[12px] font-medium text-black">
+                    <div className="mt-auto rounded bg-inverse py-2.5 text-center text-caption font-medium text-on-inverse">
                       {t('events.get_tickets', { defaultValue: 'Get tickets' })}
                     </div>
                   </div>
@@ -359,10 +360,10 @@ export default function AppScrub({
 
                 {/* ---------- phase 3: the ticket ---------- */}
                 <div
-                  className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-[#0a0a0a] px-5"
+                  className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-canvas px-5"
                   style={{ transform: `translate3d(0, ${ticketY}%, 0)`, willChange: still ? undefined : 'transform' }}
                 >
-                  <p className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-[0.14em] text-white/40">
+                  <p className="flex items-center gap-1.5 text-eyebrow font-medium uppercase tracking-[0.14em] text-fg-subtle">
                     <span className="h-1.5 w-1.5 rounded-full bg-brand-400" />
                     {t('home.appscrub_ticket', { defaultValue: 'Your ticket' })}
                   </p>
@@ -372,7 +373,7 @@ export default function AppScrub({
                   <div className="relative mt-4 w-full max-w-[216px]">
                     {/* soft brand glow behind the card */}
                     <span aria-hidden className="absolute -inset-5 rounded bg-brand-400/15 blur-2xl" />
-                    <div className="relative overflow-hidden rounded bg-white text-center shadow-[0_24px_60px_-18px_rgba(0,0,0,0.9)]">
+                    <div className="relative overflow-hidden rounded bg-inverse text-center shadow-[0_24px_60px_-18px_rgba(0,0,0,0.9)]">
                       {/* event artwork band */}
                       <div className="relative h-14 w-full">
                         <Image
@@ -383,41 +384,41 @@ export default function AppScrub({
                           quality={55}
                           className="object-cover"
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-white via-white/10 to-transparent" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-white via-surface-raised to-transparent" />
                       </div>
                       <div className="px-5 pb-1 pt-1.5">
-                        <p className="line-clamp-1 font-grotesk text-[13px] font-bold text-black">{star.title}</p>
-                        {place && <p className="mt-0.5 truncate text-[9px] text-black/50">{place}</p>}
+                        <p className="line-clamp-1 font-grotesk text-meta font-bold text-on-inverse">{star.title}</p>
+                        {place && <p className="mt-0.5 truncate text-eyebrow text-on-inverse/50">{place}</p>}
                         {/* the QR, framed like the real ticket screen */}
                         <div className="mt-3 flex justify-center">
-                          <div className="rounded border border-black/[0.08] bg-white p-2.5 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)]">
+                          <div className="rounded border border-shade/[0.08] bg-inverse p-2.5 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)]">
                             <QRCodeSVG
                               value={`tikem://ticket/${code}`}
                               size={100}
                               level="M"
                               includeMargin={false}
-                              bgColor="#ffffff"
-                              fgColor="#0a0a0a"
+                              bgColor={color.fg.DEFAULT}
+                              fgColor={color.canvas}
                             />
                           </div>
                         </div>
                       </div>
                       {/* perforation: punched notches clip into the card edges */}
                       <div className="relative mt-3">
-                        <span className="absolute -left-2 top-1/2 h-4 w-4 -translate-y-1/2 rounded-full bg-[#0a0a0a]" />
-                        <span className="absolute -right-2 top-1/2 h-4 w-4 -translate-y-1/2 rounded-full bg-[#0a0a0a]" />
-                        <span className="mx-4 block border-t border-dashed border-black/20" />
+                        <span className="absolute -left-2 top-1/2 h-4 w-4 -translate-y-1/2 rounded-full bg-canvas" />
+                        <span className="absolute -right-2 top-1/2 h-4 w-4 -translate-y-1/2 rounded-full bg-canvas" />
+                        <span className="mx-4 block border-t border-dashed border-shade/20" />
                       </div>
                       {/* the stub */}
                       <div className="flex items-center justify-between px-5 pb-3.5 pt-2.5">
-                        <span className="label-mono text-[10px] tracking-[0.08em] text-black/75">{code}</span>
-                        <span className="text-[9px] font-medium text-black/45">1 × General</span>
+                        <span className="label-mono text-eyebrow tracking-[0.08em] text-on-inverse/75">{code}</span>
+                        <span className="text-eyebrow font-medium text-on-inverse/45">1 × General</span>
                       </div>
                     </div>
                   </div>
 
-                  <p className="mt-4 flex items-center gap-1.5 text-[11px] text-white/55">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                  <p className="mt-4 flex items-center gap-1.5 text-eyebrow text-fg-muted">
+                    <span className="h-1.5 w-1.5 rounded-full bg-success" />
                     {t('home.appscrub_valid', { defaultValue: 'valid · 1 × General' })}
                   </p>
                 </div>

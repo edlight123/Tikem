@@ -120,7 +120,7 @@ export function AdminDisbursementDashboard({ endedEvents, stats }: Props) {
   ]
 
   const filterButtonClass = (active: boolean) =>
-    `rounded px-3 py-1.5 text-[13px] font-semibold transition-colors ${
+    `rounded px-3 py-1.5 text-meta font-semibold transition-colors ${
       active ? 'bg-console-raise text-console-text' : 'text-console-mut hover:text-console-text'
     }`
 
@@ -130,7 +130,7 @@ export function AdminDisbursementDashboard({ endedEvents, stats }: Props) {
       <div className="grid grid-cols-2 gap-x-6 gap-y-4 sm:flex sm:flex-wrap sm:gap-x-8 sm:gap-y-4">
         {statItems.map((item) => (
           <div key={item.label}>
-            <p className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint">{item.label}</p>
+            <p className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint">{item.label}</p>
             <p className="mt-1 font-mono text-xl tabular-nums text-console-text">{item.value}</p>
           </div>
         ))}
@@ -155,7 +155,7 @@ export function AdminDisbursementDashboard({ endedEvents, stats }: Props) {
       {/* Events Table */}
       <ConsolePanel className="overflow-hidden">
         <div className="px-4 py-3">
-          <h2 className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint">Ended Events</h2>
+          <h2 className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint">Ended Events</h2>
         </div>
 
         {filteredEvents.length === 0 ? (
@@ -167,14 +167,14 @@ export function AdminDisbursementDashboard({ endedEvents, stats }: Props) {
             <table className="min-w-full divide-y divide-console-raise">
               <thead>
                 <tr>
-                  <th className="label-mono px-6 py-3 text-left text-[10px] uppercase tracking-wide text-console-faint">Event</th>
-                  <th className="label-mono px-6 py-3 text-left text-[10px] uppercase tracking-wide text-console-faint">Organizer</th>
-                  <th className="label-mono px-6 py-3 text-left text-[10px] uppercase tracking-wide text-console-faint">Ended</th>
-                  <th className="label-mono px-6 py-3 text-left text-[10px] uppercase tracking-wide text-console-faint">Tickets</th>
-                  <th className="label-mono px-6 py-3 text-left text-[10px] uppercase tracking-wide text-console-faint">To Send</th>
-                  <th className="label-mono px-6 py-3 text-left text-[10px] uppercase tracking-wide text-console-faint">Payment Method</th>
-                  <th className="label-mono px-6 py-3 text-left text-[10px] uppercase tracking-wide text-console-faint">Status</th>
-                  <th className="label-mono px-6 py-3 text-left text-[10px] uppercase tracking-wide text-console-faint">Actions</th>
+                  <th className="label-mono px-6 py-3 text-left text-eyebrow uppercase tracking-wide text-console-faint">Event</th>
+                  <th className="label-mono px-6 py-3 text-left text-eyebrow uppercase tracking-wide text-console-faint">Organizer</th>
+                  <th className="label-mono px-6 py-3 text-left text-eyebrow uppercase tracking-wide text-console-faint">Ended</th>
+                  <th className="label-mono px-6 py-3 text-left text-eyebrow uppercase tracking-wide text-console-faint">Tickets</th>
+                  <th className="label-mono px-6 py-3 text-left text-eyebrow uppercase tracking-wide text-console-faint">To Send</th>
+                  <th className="label-mono px-6 py-3 text-left text-eyebrow uppercase tracking-wide text-console-faint">Payment Method</th>
+                  <th className="label-mono px-6 py-3 text-left text-eyebrow uppercase tracking-wide text-console-faint">Status</th>
+                  <th className="label-mono px-6 py-3 text-left text-eyebrow uppercase tracking-wide text-console-faint">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-console-raise">
@@ -287,18 +287,18 @@ export function AdminDisbursementDashboard({ endedEvents, stats }: Props) {
 
       {/* Details Modal */}
       {showModal && selectedEvent && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-scrim p-4">
           <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-console-panel p-6 shadow-xl">
-            <h3 className="label-mono mb-4 text-[15px] font-bold uppercase tracking-[0.14em] text-console-text">{selectedEvent.eventTitle}</h3>
+            <h3 className="label-mono mb-4 text-body font-bold uppercase tracking-[0.14em] text-console-text">{selectedEvent.eventTitle}</h3>
 
             <div className="grid grid-cols-2 gap-4 mb-6">
               <div>
-                <p className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint">Organizer</p>
+                <p className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint">Organizer</p>
                 <p className="font-medium text-console-text">{selectedEvent.organizerName}</p>
                 <p className="text-xs text-console-mut">{selectedEvent.organizerEmail}</p>
               </div>
               <div>
-                <p className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint">Event Dates</p>
+                <p className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint">Event Dates</p>
                 <p className="font-mono text-sm tabular-nums text-console-text">Start: {new Date(selectedEvent.startDate).toLocaleDateString()}</p>
                 <p className="font-mono text-sm tabular-nums text-console-text">End: {new Date(selectedEvent.endDate).toLocaleDateString()}</p>
                 <p className="font-mono text-xs tabular-nums text-console-mut">Ended {selectedEvent.daysEnded} days ago</p>
@@ -306,7 +306,7 @@ export function AdminDisbursementDashboard({ endedEvents, stats }: Props) {
             </div>
 
             <div className="mb-6 rounded-lg bg-console-ground p-4">
-              <h4 className="label-mono mb-3 text-[10px] uppercase tracking-[0.18em] text-console-faint">Financial Summary</h4>
+              <h4 className="label-mono mb-3 text-eyebrow uppercase tracking-[0.18em] text-console-faint">Financial Summary</h4>
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span className="text-sm text-console-mut">Tickets Sold:</span>
@@ -328,7 +328,7 @@ export function AdminDisbursementDashboard({ endedEvents, stats }: Props) {
             </div>
 
             <div className="mb-6 rounded-lg bg-console-ground p-4">
-              <h4 className="label-mono mb-2 text-[10px] uppercase tracking-[0.18em] text-console-faint">Preferred Transfer</h4>
+              <h4 className="label-mono mb-2 text-eyebrow uppercase tracking-[0.18em] text-console-faint">Preferred Transfer</h4>
               <div className="flex items-center gap-2 text-sm">
                 {selectedEvent.payoutMethod === 'bank_transfer' ? (
                   <Building2 className="w-4 h-4 text-console-mut" />
@@ -350,7 +350,7 @@ export function AdminDisbursementDashboard({ endedEvents, stats }: Props) {
 
             {selectedEvent.payoutMethod === 'bank_transfer' && hasBankDetails(selectedEvent.bankInfo) && (
               <div className="mb-6 rounded-lg bg-console-ground p-4">
-                <h4 className="label-mono mb-3 flex items-center gap-2 text-[10px] uppercase tracking-[0.18em] text-console-faint">
+                <h4 className="label-mono mb-3 flex items-center gap-2 text-eyebrow uppercase tracking-[0.18em] text-console-faint">
                   <><Building2 className="w-4 h-4" /> Bank Account Details</>
                 </h4>
                 <div className="space-y-2 text-sm">
@@ -412,7 +412,7 @@ export function AdminDisbursementDashboard({ endedEvents, stats }: Props) {
 
             {selectedEvent.payoutMethod === 'mobile_money' && hasMobileDetails(selectedEvent.bankInfo) && (
               <div className="mb-6 rounded-lg bg-console-ground p-4">
-                <h4 className="label-mono mb-3 flex items-center gap-2 text-[10px] uppercase tracking-[0.18em] text-console-faint">
+                <h4 className="label-mono mb-3 flex items-center gap-2 text-eyebrow uppercase tracking-[0.18em] text-console-faint">
                   <><Smartphone className="w-4 h-4" /> Mobile Money Details</>
                 </h4>
                 <div className="space-y-2 text-sm">
@@ -437,7 +437,7 @@ export function AdminDisbursementDashboard({ endedEvents, stats }: Props) {
             <div className="flex gap-3">
               <button
                 onClick={() => setShowModal(false)}
-                className="flex-1 rounded bg-console-raise px-4 py-2 text-[13px] font-semibold text-console-mut transition-colors hover:text-console-text"
+                className="flex-1 rounded bg-console-raise px-4 py-2 text-meta font-semibold text-console-mut transition-colors hover:text-console-text"
               >
                 Close
               </button>
@@ -446,7 +446,7 @@ export function AdminDisbursementDashboard({ endedEvents, stats }: Props) {
                   type="button"
                   disabled
                   title="Manual payout creation isn't available yet, organizers request payouts from their dashboard"
-                  className="flex-1 cursor-not-allowed rounded bg-console-raise px-4 py-2 text-[13px] font-semibold text-console-faint opacity-50"
+                  className="flex-1 cursor-not-allowed rounded bg-console-raise px-4 py-2 text-meta font-semibold text-console-faint opacity-50"
                 >
                   Create Payout (coming soon)
                 </button>

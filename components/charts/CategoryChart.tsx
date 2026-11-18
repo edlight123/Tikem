@@ -1,6 +1,7 @@
 'use client';
 
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
+import { color } from '@/lib/design/tokens'
 
 interface CategoryChartProps {
   data: Array<{
@@ -10,7 +11,7 @@ interface CategoryChartProps {
 }
 
 // Restrained brand teal ramp + neutral (one accent, no rainbow).
-const COLORS = ['#0F766E', '#14B8A6', '#5EEAD4', '#99F6E4', '#94A3B8'];
+const COLORS = [color.brand[700], color.brand[500], color.brand[300], color.brand[200], '#94A3B8'];
 
 export default function CategoryChart({ data }: CategoryChartProps) {
   return (
@@ -23,7 +24,7 @@ export default function CategoryChart({ data }: CategoryChartProps) {
           labelLine={false}
           label={({ name, percent }) => `${name} ${percent ? (percent * 100).toFixed(0) : 0}%`}
           outerRadius={80}
-          fill="#0F766E"
+          fill={color.brand[700]}
           dataKey="value"
         >
           {data.map((entry, index) => (
@@ -32,13 +33,13 @@ export default function CategoryChart({ data }: CategoryChartProps) {
         </Pie>
         <Tooltip
           contentStyle={{
-            backgroundColor: '#1a1a1a',
+            backgroundColor: color.surface['raised-solid'],
             border: '1px solid rgba(255,255,255,0.12)',
             borderRadius: '4px',
             boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-            color: '#fff',
+            color: color.fg.DEFAULT,
           }}
-          itemStyle={{ color: '#fff' }}
+          itemStyle={{ color: color.fg.DEFAULT }}
         />
         <Legend wrapperStyle={{ color: 'rgba(255,255,255,0.6)', fontSize: 12 }} />
       </PieChart>

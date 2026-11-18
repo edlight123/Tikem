@@ -256,7 +256,7 @@ export default function OrganizerEventsPage() {
   // Show loading state during auth or initial fetch
   if (authLoading || (loading && events.length === 0)) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a]">
+      <div className="min-h-screen bg-canvas">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
           <PageHeader
             eyebrow={t('events_page.eyebrow', 'Organizer')}
@@ -281,7 +281,7 @@ export default function OrganizerEventsPage() {
   const hasSearchOrFilters = Boolean(searchQuery || activeFiltersCount > 0 || statusFilter !== 'all')
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a]">
+    <div className="min-h-screen bg-canvas">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
         {/* Header */}
         <PageHeader
@@ -291,7 +291,7 @@ export default function OrganizerEventsPage() {
           actions={
             <Link
               href="/organizer/events/new"
-              className="inline-flex items-center gap-2 rounded bg-white px-5 py-2.5 font-semibold text-black transition-colors hover:bg-white/90"
+              className="inline-flex items-center gap-2 rounded bg-inverse px-5 py-2.5 font-semibold text-on-inverse transition-colors hover:bg-inverse-hover"
             >
               <Plus className="h-5 w-5" />
               <span className="hidden sm:inline">{t('events_page.create_event', 'Create Event')}</span>
@@ -316,17 +316,17 @@ export default function OrganizerEventsPage() {
           <div className="flex items-center gap-2">
             {/* View toggle */}
             {/*
-              The track was a hairline around `bg-white/[0.03]` — the page's own
+              The track was a hairline around `bg-surface-low` — the page's own
               value — so the group read as an empty outline. It is a fill now,
               and each 36px icon button carries a 44px tap box on an ::after.
             */}
-            <div className="flex items-center rounded bg-white/[0.06] p-1">
+            <div className="flex items-center rounded bg-surface p-1">
               <button
                 type="button"
                 onClick={() => setView('list')}
                 aria-pressed={view === 'list'}
                 className={`relative rounded p-2 transition-colors after:absolute after:-inset-[4px] after:content-[''] ${
-                  view === 'list' ? 'bg-white text-black' : 'text-white/70 hover:bg-white/[0.12] hover:text-white'
+                  view === 'list' ? 'bg-inverse text-on-inverse' : 'text-fg-muted hover:bg-surface-high hover:text-fg'
                 }`}
                 aria-label={t('events_page.list_view', 'List view')}
               >
@@ -337,7 +337,7 @@ export default function OrganizerEventsPage() {
                 onClick={() => setView('calendar')}
                 aria-pressed={view === 'calendar'}
                 className={`relative rounded p-2 transition-colors after:absolute after:-inset-[4px] after:content-[''] ${
-                  view === 'calendar' ? 'bg-white text-black' : 'text-white/70 hover:bg-white/[0.12] hover:text-white'
+                  view === 'calendar' ? 'bg-inverse text-on-inverse' : 'text-fg-muted hover:bg-surface-high hover:text-fg'
                 }`}
                 aria-label={t('events_page.calendar_view', 'Calendar view')}
               >
@@ -349,12 +349,12 @@ export default function OrganizerEventsPage() {
             <button
               type="button"
               onClick={() => setShowFiltersModal(true)}
-              className="relative inline-flex h-11 items-center gap-2 rounded bg-white/[0.06] px-4 text-sm font-medium text-white/70 transition-colors hover:bg-white/[0.12] hover:text-white"
+              className="relative inline-flex h-11 items-center gap-2 rounded bg-surface px-4 text-sm font-medium text-fg-muted transition-colors hover:bg-surface-high hover:text-fg"
             >
               <SlidersHorizontal className="h-4 w-4" />
               <span>{t('events_page.filters', 'Filters')}</span>
               {activeFiltersCount > 0 && (
-                <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-white text-xs font-bold text-black">
+                <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-inverse text-xs font-bold text-on-inverse">
                   {activeFiltersCount}
                 </span>
               )}
@@ -410,7 +410,7 @@ export default function OrganizerEventsPage() {
                         type="button"
                         onClick={handleLoadMore}
                         disabled={loadingMore}
-                        className="inline-flex items-center gap-2 rounded bg-white px-5 py-2.5 font-semibold text-black transition-colors hover:bg-white/90 disabled:opacity-60"
+                        className="inline-flex items-center gap-2 rounded bg-inverse px-5 py-2.5 font-semibold text-on-inverse transition-colors hover:bg-inverse-hover disabled:opacity-60"
                       >
                         {loadingMore ? t('events_page.loading', 'Loading…') : t('events_page.load_more', 'Load more events')}
                       </button>
@@ -418,7 +418,7 @@ export default function OrganizerEventsPage() {
                     <button
                       type="button"
                       onClick={handleClearFilters}
-                      className="inline-flex items-center gap-2 rounded-lg bg-white/[0.06] px-5 py-2.5 font-semibold text-white/70 transition-colors hover:bg-white/[0.12] hover:text-white"
+                      className="inline-flex items-center gap-2 rounded-lg bg-surface px-5 py-2.5 font-semibold text-fg-muted transition-colors hover:bg-surface-high hover:text-fg"
                     >
                       {t('events_page.clear_filters', 'Clear filters')}
                     </button>
@@ -426,7 +426,7 @@ export default function OrganizerEventsPage() {
                 ) : (
                   <Link
                     href="/organizer/events/new"
-                    className="inline-flex items-center gap-2 rounded bg-white px-6 py-3 font-semibold text-black transition-colors hover:bg-white/90"
+                    className="inline-flex items-center gap-2 rounded bg-inverse px-6 py-3 font-semibold text-on-inverse transition-colors hover:bg-inverse-hover"
                   >
                     <Plus className="h-5 w-5" />
                     {t('events_page.create_event', 'Create Event')}
@@ -455,7 +455,7 @@ export default function OrganizerEventsPage() {
               {hasMore && view === 'list' && (
                 <div className="mt-8 flex flex-col items-center gap-2">
                   {hasSearchOrFilters && (
-                    <p className="text-xs text-white/70">
+                    <p className="text-xs text-fg-muted">
                       {t('events_page.search_scope_note', {
                         count: events.length,
                         defaultValue: `Search covers the ${events.length} events loaded so far, load more to search further.`,
@@ -466,7 +466,7 @@ export default function OrganizerEventsPage() {
                     type="button"
                     onClick={handleLoadMore}
                     disabled={loadingMore}
-                    className="inline-flex items-center gap-2 rounded-lg bg-white/[0.06] px-5 py-2.5 font-medium text-white transition-colors hover:bg-white/[0.12] disabled:opacity-60"
+                    className="inline-flex items-center gap-2 rounded-lg bg-surface px-5 py-2.5 font-medium text-fg transition-colors hover:bg-surface-high disabled:opacity-60"
                   >
                     {loadingMore ? t('events_page.loading', 'Loading…') : t('events_page.load_more', 'Load more events')}
                   </button>

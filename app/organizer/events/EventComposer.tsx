@@ -345,7 +345,7 @@ function FormProgress({ done, total }: { done: number; total: number }) {
      * either of those sits a few pixels under the navbar's border and reads as
      * a seam across the page — a mistake this codebase has already made once.
      */
-    <div className="sticky top-[var(--chrome-h)] z-30 bg-[#0a0a0a]/90 backdrop-blur-xl">
+    <div className="sticky top-[var(--chrome-h)] z-30 bg-canvas/90 backdrop-blur-xl">
       <div
         className="mx-auto flex max-w-5xl gap-1.5 px-4 py-3 sm:px-6 lg:px-8"
         role="progressbar"
@@ -357,13 +357,13 @@ function FormProgress({ done, total }: { done: number; total: number }) {
         {Array.from({ length: total }, (_, i) => (
           <span
             key={i}
-            // The unlit segments were `bg-white/12`, which at 1px on a black
+            // The unlit segments were `bg-surface-high`, which at 1px on a black
             // page is about #1f1f1f — invisible. The bar then read as one
             // short teal line rather than one quarter of four, which is the
             // entire thing it is meant to communicate. /20 keeps the track
             // quiet but present.
             className={`h-1 flex-1 rounded transition-colors duration-300 ${
-              i < done ? 'bg-brand-400' : 'bg-white/20'
+              i < done ? 'bg-brand-400' : 'bg-fg/20'
             }`}
           />
         ))}
@@ -395,10 +395,10 @@ function Toggle({
       onClick={() => onChange(!on)}
       // House rule: teal is a sparing ACCENT, never a fill. The on-state is a
       // white track with a dark knob (the reference composer's own treatment).
-      className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${on ? 'border-white bg-white' : 'border-white/20 bg-white/15'} disabled:cursor-not-allowed disabled:opacity-40`}
+      className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${on ? 'border-white bg-inverse' : 'border-line-strong bg-surface-high'} disabled:cursor-not-allowed disabled:opacity-40`}
     >
       <span
-        className={`absolute top-0.5 h-5 w-5 rounded-full shadow transition-all ${on ? 'left-[22px] bg-black' : 'left-0.5 bg-white'}`}
+        className={`absolute top-0.5 h-5 w-5 rounded-full shadow transition-all ${on ? 'left-[22px] bg-black' : 'left-0.5 bg-inverse'}`}
       />
     </button>
   )
@@ -412,8 +412,8 @@ function Toggle({
  * read as a wireframe. Fill-vs-fill still separates on from off unmistakably,
  * because on is white and off is barely there.
  */
-const CHIP_ON = 'bg-white text-black'
-const CHIP_OFF = 'bg-white/[0.06] text-white/70 hover:bg-white/[0.12] hover:text-white'
+const CHIP_ON = 'bg-inverse text-on-inverse'
+const CHIP_OFF = 'bg-surface text-fg-muted hover:bg-surface-high hover:text-fg'
 /**
  * Small, squarish, and tappable — in that order of difficulty.
  *
@@ -425,14 +425,14 @@ const CHIP_OFF = 'bg-white/[0.06] text-white/70 hover:bg-white/[0.12] hover:text
  * So the INK is 30px and `rounded`, and the TOUCH TARGET is separate: an
  * ::after pseudo-element stretched 7px past the top and bottom edges gives 44px
  * of tappable box without adding a pixel of visible height or shifting the
- * layout. `leading-[18px]` is explicit because an arbitrary `text-[13px]` sets
+ * layout. `leading-[18px]` is explicit because an arbitrary `text-meta` sets
  * only font-size and would otherwise inherit whatever line-height the parent
  * had, making the height drift between the rows that use this.
  */
 const chipCls = (on: boolean) =>
   [
     'relative inline-flex items-center rounded px-2.5 py-1.5',
-    'text-[13px] leading-[18px] font-medium transition-colors',
+    'text-meta leading-[18px] font-medium transition-colors',
     // Verified emitted: `.after\\:-inset-y-\\[7px\\]:after{top:-7px;bottom:-7px}`
     // is in the built CSS. Worth checking rather than assuming — a hit area
     // that silently failed to compile is not visible in a screenshot.
@@ -446,10 +446,10 @@ const chipCls = (on: boolean) =>
  */
 function DotLabel({ children, tone = 'muted' }: { children: React.ReactNode; tone?: 'muted' | 'warn' }) {
   return (
-    <span className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap text-xs text-white/60">
+    <span className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap text-xs text-fg-muted">
       <span
         aria-hidden="true"
-        className={`h-1.5 w-1.5 rounded-full ${tone === 'warn' ? 'bg-amber-300' : 'bg-brand-400'}`}
+        className={`h-1.5 w-1.5 rounded-full ${tone === 'warn' ? 'bg-warning-soft' : 'bg-brand-400'}`}
       />
       {children}
     </span>
@@ -496,7 +496,7 @@ function InfoPopover({ label, text }: { label: string; text: string }) {
         aria-expanded={open}
         aria-describedby={open ? id : undefined}
         aria-label={label}
-        className="inline-flex h-5 w-5 items-center justify-center rounded text-white/50 transition-colors hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50 bg-white/[0.07]"
+        className="inline-flex h-5 w-5 items-center justify-center rounded text-fg-subtle transition-colors hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-fg/50 bg-surface-raised"
       >
         <Info className="h-3 w-3" />
       </button>
@@ -504,7 +504,7 @@ function InfoPopover({ label, text }: { label: string; text: string }) {
         <span
           id={id}
           role="note"
-          className="absolute left-0 top-7 z-30 w-64 rounded-xl bg-[#1c1c1c] px-3 py-2.5 text-xs leading-relaxed text-white/75 shadow-xl"
+          className="absolute left-0 top-7 z-30 w-64 rounded-xl bg-surface-raised-solid px-3 py-2.5 text-xs leading-relaxed text-fg-soft shadow-xl"
         >
           {text}
         </span>
@@ -527,7 +527,7 @@ function SectionTitle({
   return (
     <div className="mb-3 flex flex-wrap items-end justify-between gap-x-3 gap-y-2">
       <span className="flex min-w-0 items-center gap-2">
-        <Icon className="h-[18px] w-[18px] shrink-0 text-white/45" />
+        <Icon className="h-[18px] w-[18px] shrink-0 text-fg-subtle" />
         {/* The sanctioned editorial heading, scaled down for a form column and
             with its own bottom margin neutralised (the row owns the spacing). */}
         <span className="min-w-0 [&_h2]:!text-[clamp(20px,2.6vw,26px)] [&>div]:mb-0">
@@ -2089,7 +2089,7 @@ export default function EventComposer({
    * because there a dashed edge around empty space is the meaning.
    * ---------------------------------------------------------------------- */
   const rowCls =
-    'flex min-h-11 w-full items-center gap-3 rounded-xl bg-white/[0.03] px-4 py-3.5 text-left text-[15px] text-white/70 transition-colors hover:bg-white/[0.06]'
+    'flex min-h-11 w-full items-center gap-3 rounded-xl bg-surface-low px-4 py-3.5 text-left text-body text-fg-muted transition-colors hover:bg-surface'
   // min-w-0 is load-bearing but NOT sufficient on its own: `field` is used by
   // four `<input type="datetime-local">` (a tier's sales and validity
   // windows), and a native datetime widget carries an intrinsic minimum width
@@ -2101,9 +2101,9 @@ export default function EventComposer({
   // note there before touching sizing on any of these.
   // 16px not 15px: iOS zooms the page on focus below that.
   const field =
-    'min-h-11 w-full min-w-0 rounded-xl bg-white/[0.05] px-4 py-3 text-[16px] text-white [color-scheme:dark] placeholder:text-white/40 transition-colors focus:bg-white/[0.08] focus:outline-none focus:ring-2 focus:ring-brand-400/50'
+    'min-h-11 w-full min-w-0 rounded-xl bg-surface px-4 py-3 text-base text-fg [color-scheme:dark] placeholder:text-fg-subtle transition-colors focus:bg-surface-raised focus:outline-none focus:ring-2 focus:ring-brand-400/50'
   const inset =
-    'rounded-lg bg-white/[0.06] px-2.5 py-1.5 text-sm text-white [color-scheme:dark] transition-colors focus:bg-white/[0.1] focus:outline-none focus:ring-2 focus:ring-brand-400/50'
+    'rounded-lg bg-surface px-2.5 py-1.5 text-sm text-fg [color-scheme:dark] transition-colors focus:bg-surface-raised focus:outline-none focus:ring-2 focus:ring-brand-400/50'
 
   /**
    * Readiness in quarters, in the order the owner asked for: poster first.
@@ -2132,7 +2132,7 @@ export default function EventComposer({
   const countryName = t(`composer.country.names.${country}`, { defaultValue: countryDisplayName(country) })
   const linkCls = 'font-medium underline underline-offset-2'
   const paidPublishNotice = missingStep ? (
-    <p className="text-center text-xs text-amber-300">
+    <p className="text-center text-xs text-warning-soft">
       {missingStep === 'identity'
         ? t('composer.publishGate.identity', {
             defaultValue:
@@ -2158,7 +2158,7 @@ export default function EventComposer({
       {isOrgOwner && (
       <a
         href={missingStep === 'identity' ? '/organizer/verify' : '/organizer/settings/payouts'}
-        className={`${linkCls} hover:text-amber-200`}
+        className={`${linkCls} hover:text-warning-soft`}
       >
         {missingStep === 'identity'
           ? t('composer.publishGate.verifyCta', { defaultValue: 'Verify identity' })
@@ -2168,9 +2168,9 @@ export default function EventComposer({
     </p>
   ) : paidPublishingBlocked && eligibility && !eligibility.allowed && eligibility.reason ? (
     // A block with no organizer step (e.g. a coming-soon market): the server's words.
-    <p className="text-center text-xs text-amber-300">{eligibility.reason}</p>
+    <p className="text-center text-xs text-warning-soft">{eligibility.reason}</p>
   ) : haitiVerifyNote ? (
-    <p className="text-center text-xs text-white/70">
+    <p className="text-center text-xs text-fg-muted">
       {t('composer.publishGate.haitiVerifyLater', {
         defaultValue: 'You can publish now. Verify your identity before you withdraw your earnings.',
       })}{' '}
@@ -2199,9 +2199,9 @@ export default function EventComposer({
         <div className="order-2 min-w-0 lg:col-start-1 lg:row-span-2 lg:row-start-1">
           {/* Region payout-profile nudge — which profile this event pays through. */}
           {payoutProfileGap && (
-            <div className="mb-6 flex items-start gap-3 rounded-xl bg-amber-500/10 px-4 py-3">
-              <Info className="mt-0.5 h-[18px] w-[18px] shrink-0 text-amber-300" />
-              <p className="text-sm leading-relaxed text-white/80">
+            <div className="mb-6 flex items-start gap-3 rounded-xl bg-warning-strong/10 px-4 py-3">
+              <Info className="mt-0.5 h-[18px] w-[18px] shrink-0 text-warning-soft" />
+              <p className="text-sm leading-relaxed text-fg-soft">
                 {payoutProfileGap === 'stripe_connect'
                   ? t('composer.payoutGap.stripe', {
                       defaultValue:
@@ -2216,7 +2216,7 @@ export default function EventComposer({
                 {isOrgOwner && (
                 <a
                   href="/organizer/settings/payouts"
-                  className="font-medium text-amber-300 underline underline-offset-2 hover:text-amber-200"
+                  className="font-medium text-warning-soft underline underline-offset-2 hover:text-warning-soft"
                 >
                   {t('composer.payoutGap.cta', { defaultValue: 'Set up payouts' })}
                 </a>
@@ -2227,14 +2227,14 @@ export default function EventComposer({
 
           {/* Draft signposting — makes the two-step create→edit flow explicit */}
           {isEdit && !isPublished && (
-            <div className="mb-6 flex items-start gap-3 rounded-xl bg-white/[0.055] px-4 py-3">
-              <Info className="mt-0.5 h-[18px] w-[18px] shrink-0 text-white/60" />
-              <p className="text-sm text-white/80">
-                <span className="font-semibold text-white">
+            <div className="mb-6 flex items-start gap-3 rounded-xl bg-surface px-4 py-3">
+              <Info className="mt-0.5 h-[18px] w-[18px] shrink-0 text-fg-muted" />
+              <p className="text-sm text-fg-soft">
+                <span className="font-semibold text-fg">
                   {t('composer.draftBanner.saved', { defaultValue: 'Draft saved.' })}
                 </span>{' '}
                 {t('composer.draftBanner.mid', { defaultValue: 'Add the finishing touches, then' })}{' '}
-                <span className="font-semibold text-white">
+                <span className="font-semibold text-fg">
                   {t('composer.draftBanner.publish', { defaultValue: 'Publish' })}
                 </span>{' '}
                 {t('composer.draftBanner.end', { defaultValue: 'when you’re ready.' })}
@@ -2243,7 +2243,7 @@ export default function EventComposer({
           )}
 
           {/* Sell Tickets / RSVP */}
-          <div className="mx-auto mb-8 grid max-w-md grid-cols-2 rounded bg-white/[0.05] p-1">
+          <div className="mx-auto mb-8 grid max-w-md grid-cols-2 rounded bg-surface p-1">
             {(['tickets', 'rsvp'] as const).map((m) => (
               <button
                 key={m}
@@ -2251,7 +2251,7 @@ export default function EventComposer({
                 onClick={() => setSellMode(m)}
                 aria-pressed={sellMode === m}
                 className={`rounded py-2.5 text-sm font-semibold transition-all ${
-                  sellMode === m ? 'bg-white text-black' : 'text-white/70 hover:text-white'
+                  sellMode === m ? 'bg-inverse text-on-inverse' : 'text-fg-muted hover:text-fg'
                 }`}
               >
                 {m === 'tickets'
@@ -2268,10 +2268,10 @@ export default function EventComposer({
             placeholder={t('composer.titlePlaceholder', { defaultValue: 'My event name' })}
             aria-label={tx('event_composer.event_name_required')}
             aria-required="true"
-            className="w-full bg-transparent font-display italic text-[clamp(34px,6vw,52px)] leading-[1.04] tracking-tight text-white placeholder:text-white/25 focus:outline-none"
+            className="w-full bg-transparent font-display italic text-[clamp(34px,6vw,52px)] leading-[1.04] tracking-tight text-fg placeholder:text-fg-faint focus:outline-none"
           />
           {titleInvalid && (
-            <p className="mt-1 text-sm text-red-300">
+            <p className="mt-1 text-sm text-danger-soft">
               {t('composer.titleError', { defaultValue: 'Give your event a name (3+ characters).' })}
             </p>
           )}
@@ -2286,13 +2286,13 @@ export default function EventComposer({
                 aria-label={tx('event_composer.short_summary')}
                 rows={2}
                 autoFocus={showSummary}
-                className="w-full resize-none bg-transparent text-[15px] leading-relaxed text-white/70 placeholder:text-white/30 focus:outline-none"
+                className="w-full resize-none bg-transparent text-body leading-relaxed text-fg-muted placeholder:text-fg-faint focus:outline-none"
               />
             ) : (
               <button
                 type="button"
                 onClick={() => setShowSummary(true)}
-                className="inline-flex items-center gap-1.5 rounded bg-white/[0.05] px-3.5 py-2 text-sm font-medium text-white/70 transition-colors hover:bg-white/[0.09] hover:text-white"
+                className="inline-flex items-center gap-1.5 rounded bg-surface px-3.5 py-2 text-sm font-medium text-fg-muted transition-colors hover:bg-surface-raised hover:text-fg"
               >
                 <Plus className="h-4 w-4" /> {t('composer.shortSummary', { defaultValue: 'Short Summary' })}
               </button>
@@ -2300,9 +2300,9 @@ export default function EventComposer({
           </div>
 
           {/* Dates */}
-          <div className="mt-8 border-t border-white/10 pt-6">
+          <div className="mt-8 border-t border-line pt-6">
             <SectionTitle icon={CalendarDays}>{t('composer.dates', { defaultValue: 'Dates' })}</SectionTitle>
-            <div className="overflow-hidden rounded-xl bg-white/[0.025]">
+            <div className="overflow-hidden rounded-xl bg-surface-low">
               {/* Label ABOVE the controls on a phone, beside them from sm.
                   The label and the two triggers cannot share one line at
                   402px — the controls need ~300px of the ~338px available, so
@@ -2312,11 +2312,11 @@ export default function EventComposer({
                   separate from each other whatever the locale does to their
                   widths. */}
               <div className="flex flex-col gap-2 px-4 py-3.5 sm:flex-row sm:flex-nowrap sm:items-center sm:justify-between sm:gap-3">
-                <span className="text-[15px] font-medium text-white">
-                  {t('composer.start', { defaultValue: 'Start' })} <span className="text-red-300" aria-hidden="true">*</span>
+                <span className="text-body font-medium text-fg">
+                  {t('composer.start', { defaultValue: 'Start' })} <span className="text-danger-soft" aria-hidden="true">*</span>
                 </span>
                 <div className="flex flex-nowrap items-center gap-2">
-                  <span className="label-mono shrink-0 text-[10px] uppercase text-white/70">{tzLabel}</span>
+                  <span className="label-mono shrink-0 text-eyebrow uppercase text-fg-muted">{tzLabel}</span>
                   <DatePicker
                     value={startDate}
                     onChange={setStartDate}
@@ -2326,12 +2326,12 @@ export default function EventComposer({
                   <TimePicker value={startTime} onChange={setStartTime} placeholder={t('composer.time', { defaultValue: 'Time' })} />
                 </div>
               </div>
-              <div className="flex flex-col gap-2 border-t border-white/10 px-4 py-3.5 sm:flex-row sm:flex-nowrap sm:items-center sm:justify-between sm:gap-3">
-                <span className="text-[15px] font-medium text-white">
-                  {t('composer.end', { defaultValue: 'End' })} <span className="text-red-300" aria-hidden="true">*</span>
+              <div className="flex flex-col gap-2 border-t border-line px-4 py-3.5 sm:flex-row sm:flex-nowrap sm:items-center sm:justify-between sm:gap-3">
+                <span className="text-body font-medium text-fg">
+                  {t('composer.end', { defaultValue: 'End' })} <span className="text-danger-soft" aria-hidden="true">*</span>
                 </span>
                 <div className="flex flex-nowrap items-center gap-2">
-                  <span className="label-mono shrink-0 text-[10px] uppercase text-white/70">{tzLabel}</span>
+                  <span className="label-mono shrink-0 text-eyebrow uppercase text-fg-muted">{tzLabel}</span>
                   <DatePicker
                     value={endDate}
                     onChange={setEndDate}
@@ -2348,12 +2348,12 @@ export default function EventComposer({
               </div>
             </div>
             {startInvalid && (
-              <p className="mt-1.5 text-sm text-red-300">
+              <p className="mt-1.5 text-sm text-danger-soft">
                 {t('composer.startError', { defaultValue: 'Pick when your event starts.' })}
               </p>
             )}
             {endInvalid && (
-              <p className="mt-1.5 text-sm text-red-300">
+              <p className="mt-1.5 text-sm text-danger-soft">
                 {endMissing
                   ? t('composer.endRequired', {
                       defaultValue: 'Add when your event ends, so attendees know how long it runs.',
@@ -2366,12 +2366,12 @@ export default function EventComposer({
 
             {/* National day: one quiet toggle, only when the date is near one. */}
             {eligibleNationalDay && (
-              <div className="mt-3 flex items-center justify-between gap-3 rounded-xl bg-white/[0.03] px-4 py-3.5">
+              <div className="mt-3 flex items-center justify-between gap-3 rounded-xl bg-surface-low px-4 py-3.5">
                 <span className="min-w-0">
-                  <span className="block text-[15px] text-white/80">
+                  <span className="block text-body text-fg-soft">
                     {t('composer.nationalDay.label', { day: nationalDayLabel, defaultValue: 'Part of {{day}}?' })}
                   </span>
-                  <span className="mt-0.5 block text-[13px] text-white/50">
+                  <span className="mt-0.5 block text-meta text-fg-subtle">
                     {t('composer.nationalDay.hint', { day: nationalDayLabel, defaultValue: 'Feature it on the {{day}} banner.' })}
                   </span>
                 </span>
@@ -2385,10 +2385,10 @@ export default function EventComposer({
 
             {/* Repeats — create-only. Generates a series of independent events. */}
             {!isEdit && (
-              <div className="mt-3 rounded-xl bg-white/[0.03] px-4 py-3.5">
+              <div className="mt-3 rounded-xl bg-surface-low px-4 py-3.5">
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <span className="flex items-center gap-2 text-[15px] text-white/80">
-                    <Repeat className="h-4 w-4 text-white/50" /> {t('composer.repeats', { defaultValue: 'Repeats' })}
+                  <span className="flex items-center gap-2 text-body text-fg-soft">
+                    <Repeat className="h-4 w-4 text-fg-subtle" /> {t('composer.repeats', { defaultValue: 'Repeats' })}
                   </span>
                   <div className="flex flex-wrap gap-2" role="group" aria-label={tx('event_composer.repeats')}>
                     {RECURRENCE_OPTIONS.map((opt) => (
@@ -2405,10 +2405,10 @@ export default function EventComposer({
                   </div>
                 </div>
                 {recurrence !== 'none' && (
-                  <div className="mt-3 space-y-3 border-t border-white/10 pt-3">
+                  <div className="mt-3 space-y-3 border-t border-line pt-3">
                     {/* Bound the series either by a count or by an end date. */}
                     <div className="flex flex-wrap items-center justify-between gap-3">
-                      <span className="text-sm text-white/70">{t('composer.ends', { defaultValue: 'Ends' })}</span>
+                      <span className="text-sm text-fg-muted">{t('composer.ends', { defaultValue: 'Ends' })}</span>
                       <div className="flex flex-wrap gap-2" role="group" aria-label={tx('event_composer.series_length')}>
                         {([
                           ['count', t('composer.forNDates', { defaultValue: 'For N dates' })],
@@ -2428,7 +2428,7 @@ export default function EventComposer({
                     </div>
                     {recurrenceMode === 'count' ? (
                       <label className="flex items-center justify-between gap-3">
-                        <span className="text-sm text-white/70">
+                        <span className="text-sm text-fg-muted">
                           {t('composer.occurrences', { defaultValue: 'Number of occurrences (2 to 52)' })}
                         </span>
                         <input
@@ -2446,7 +2446,7 @@ export default function EventComposer({
                       </label>
                     ) : (
                       <label className="flex flex-wrap items-center justify-between gap-3">
-                        <span className="text-sm text-white/70">
+                        <span className="text-sm text-fg-muted">
                           {t('composer.repeatUntil', { defaultValue: 'Repeat until (max 52 events)' })}
                         </span>
                         <input
@@ -2466,7 +2466,7 @@ export default function EventComposer({
           </div>
 
           {/* Event Details */}
-          <div className="mt-8 border-t border-white/10 pt-6">
+          <div className="mt-8 border-t border-line pt-6">
             <SectionTitle icon={Info}>{t('composer.details', { defaultValue: 'Event Details' })}</SectionTitle>
             <div className="space-y-3">
               {showDescription || description ? (
@@ -2481,20 +2481,20 @@ export default function EventComposer({
                 />
               ) : (
                 <button type="button" onClick={() => setShowDescription(true)} className={rowCls}>
-                  <Pencil className="h-[18px] w-[18px] text-white/50" /> {t('composer.addDescription', { defaultValue: 'Add Description' })}
+                  <Pencil className="h-[18px] w-[18px] text-fg-subtle" /> {t('composer.addDescription', { defaultValue: 'Add Description' })}
                 </button>
               )}
 
               {/* Country — stays visible for online events too: it still
                   decides the currency, the fee default and the payout rail. */}
-              <div className="rounded-xl bg-white/[0.03] px-4 py-3.5">
-                <div className="mb-2.5 flex items-center gap-2 text-[13px] font-medium text-white/50">
+              <div className="rounded-xl bg-surface-low px-4 py-3.5">
+                <div className="mb-2.5 flex items-center gap-2 text-meta font-medium text-fg-subtle">
                   <MapPin className="h-4 w-4" /> {t('composer.country.label', { defaultValue: 'Country' })}
                 </div>
                 {isEdit ? (
-                  <p className="text-[15px] text-white/80">
+                  <p className="text-body text-fg-soft">
                     {t(`composer.country.names.${country}`, { defaultValue: countryDisplayName(country) })}
-                    <span className="mt-0.5 block text-xs text-white/50">
+                    <span className="mt-0.5 block text-xs text-fg-subtle">
                       {t('composer.country.locked', {
                         defaultValue: 'An event’s country is set when it’s created.',
                       })}
@@ -2523,9 +2523,9 @@ export default function EventComposer({
               </div>
 
               {/* Online toggle (kept compact) */}
-              <div className="flex items-center justify-between rounded-xl bg-white/[0.03] px-4 py-3.5">
-                <span className="flex items-center gap-2 text-[15px] text-white/80">
-                  <Globe className="h-[18px] w-[18px] text-white/50" /> {t('composer.onlineEvent', { defaultValue: 'Online event' })}
+              <div className="flex items-center justify-between rounded-xl bg-surface-low px-4 py-3.5">
+                <span className="flex items-center gap-2 text-body text-fg-soft">
+                  <Globe className="h-[18px] w-[18px] text-fg-subtle" /> {t('composer.onlineEvent', { defaultValue: 'Online event' })}
                 </span>
                 <Toggle on={isOnline} onChange={setIsOnline} label={tx('event_composer.online_event')} />
               </div>
@@ -2538,28 +2538,28 @@ export default function EventComposer({
                   <div
                     className={`flex items-center gap-3 rounded-xl px-4 transition-colors ${
                       locationInvalid
-                        ? 'bg-red-500/[0.07] ring-1 ring-red-400/60'
-                        : 'bg-white/[0.05] focus-within:bg-white/[0.08] focus-within:ring-2 focus-within:ring-brand-400/50'
+                        ? 'bg-danger-strong/[0.07] ring-1 ring-danger/60'
+                        : 'bg-surface focus-within:bg-surface-raised focus-within:ring-2 focus-within:ring-brand-400/50'
                     }`}
                   >
-                    <MapPin className="h-[18px] w-[18px] shrink-0 text-white/50" />
+                    <MapPin className="h-[18px] w-[18px] shrink-0 text-fg-subtle" />
                     <input
                       value={address}
                       onChange={(e) => setAddress(e.target.value)}
                       placeholder={t('composer.locationPlaceholder', { defaultValue: 'Location / address' })}
                       aria-label={tx('event_composer.location_or_address')}
-                      className="w-full bg-transparent py-3.5 text-[15px] text-white placeholder:text-white/40 focus:outline-none"
+                      className="w-full bg-transparent py-3.5 text-body text-fg placeholder:text-fg-subtle focus:outline-none"
                     />
                   </div>
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <div className="flex items-center gap-3 rounded-xl bg-white/[0.05] px-4 transition-colors focus-within:bg-white/[0.08] focus-within:ring-2 focus-within:ring-brand-400/50">
-                      <Globe className="h-[18px] w-[18px] shrink-0 text-white/50" />
+                    <div className="flex items-center gap-3 rounded-xl bg-surface px-4 transition-colors focus-within:bg-surface-raised focus-within:ring-2 focus-within:ring-brand-400/50">
+                      <Globe className="h-[18px] w-[18px] shrink-0 text-fg-subtle" />
                       <input
                         value={venueName}
                         onChange={(e) => setVenueName(e.target.value)}
                         placeholder={t('composer.venuePlaceholder', { defaultValue: 'Venue name' })}
                         aria-label={tx('event_composer.venue_name')}
-                        className="w-full bg-transparent py-3.5 text-[15px] text-white placeholder:text-white/40 focus:outline-none"
+                        className="w-full bg-transparent py-3.5 text-body text-fg placeholder:text-fg-subtle focus:outline-none"
                       />
                     </div>
                     <input
@@ -2578,7 +2578,7 @@ export default function EventComposer({
                     />
                   </div>
                   {locationInvalid && (
-                    <p className="text-sm text-red-300">
+                    <p className="text-sm text-danger-soft">
                       {t('composer.locationError', {
                         defaultValue: 'Add a venue, address, or city for in-person events.',
                       })}
@@ -2588,8 +2588,8 @@ export default function EventComposer({
               )}
 
               {/* Category as a Posh-style row of chips */}
-              <div className="rounded-xl bg-white/[0.03] px-4 py-3.5">
-                <div className="mb-2.5 flex items-center gap-2 text-[13px] font-medium text-white/50">
+              <div className="rounded-xl bg-surface-low px-4 py-3.5">
+                <div className="mb-2.5 flex items-center gap-2 text-meta font-medium text-fg-subtle">
                   {/* Tag, not Star: a star means featured/favourite everywhere
                       else in this app, so it read as "star this category". */}
                   <Tag className="h-4 w-4" /> {t('composer.category', { defaultValue: 'Category' })}
@@ -2612,7 +2612,7 @@ export default function EventComposer({
 
           {/* Tickets */}
           {sellMode === 'tickets' && (
-            <div className="mt-8 border-t border-white/10 pt-6">
+            <div className="mt-8 border-t border-line pt-6">
               <SectionTitle
                 icon={Ticket}
                 right={
@@ -2620,7 +2620,7 @@ export default function EventComposer({
                     type="button"
                     onClick={addTier}
                     aria-label={t('composer.addTicketType', { defaultValue: 'Add ticket type' })}
-                    className="inline-flex h-8 w-8 items-center justify-center rounded bg-white/[0.07] text-white/70 transition-colors hover:bg-white/[0.14] hover:text-white"
+                    className="inline-flex h-8 w-8 items-center justify-center rounded bg-surface-raised text-fg-muted transition-colors hover:bg-surface-high hover:text-fg"
                   >
                     <Plus className="h-4 w-4" />
                   </button>
@@ -2630,11 +2630,11 @@ export default function EventComposer({
               </SectionTitle>
 
               {/* Currency — follows the country (HT: HTG or USD; US: USD; CA: CAD; FR: EUR) */}
-              <div className="mb-3 flex items-center justify-between rounded-xl bg-white/[0.03] px-4 py-3">
-                <span className="label-mono text-[11px] uppercase tracking-wide text-white/70">
+              <div className="mb-3 flex items-center justify-between rounded-xl bg-surface-low px-4 py-3">
+                <span className="label-mono text-eyebrow uppercase tracking-wide text-fg-muted">
                   {t('composer.currency', { defaultValue: 'Currency' })}
                 </span>
-                <div className="flex rounded bg-white/[0.06] p-0.5" role="group" aria-label={tx('event_composer.ticket_currency')}>
+                <div className="flex rounded bg-surface p-0.5" role="group" aria-label={tx('event_composer.ticket_currency')}>
                   {allowedCurrencies.map((c) => (
                     <button
                       key={c}
@@ -2642,7 +2642,7 @@ export default function EventComposer({
                       onClick={() => setCurrency(c)}
                       aria-pressed={currency === c}
                       className={`rounded px-3.5 py-1 text-xs font-semibold transition-colors ${
-                        currency === c ? 'bg-white text-black' : 'text-white/70 hover:text-white'
+                        currency === c ? 'bg-inverse text-on-inverse' : 'text-fg-muted hover:text-fg'
                       }`}
                     >
                       {c}
@@ -2662,7 +2662,7 @@ export default function EventComposer({
                   const menuOpen = menuTierId === tier.id
                   const rowLabel = tier.name.trim() || `#${i + 1}`
                   return (
-                    <div key={tier.id} className="rounded-xl bg-white/[0.03]">
+                    <div key={tier.id} className="rounded-xl bg-surface-low">
                       {/* ── SUMMARY ROW ───────────────────────────────────
                           An explicit two-line layout, not a wrapping flex.
                           As `flex flex-wrap` the five controls needed ~408px
@@ -2689,9 +2689,9 @@ export default function EventComposer({
                             defaultValue: 'Ticket type {{n}} name',
                             n: i + 1,
                           })}
-                          className="w-full rounded-lg bg-white/[0.05] px-2 py-2 text-[15px] text-white placeholder:text-white/35 transition-colors hover:bg-white/[0.08] focus:bg-white/[0.1] focus:outline-none focus:ring-2 focus:ring-brand-400/50"
+                          className="w-full rounded-lg bg-surface px-2 py-2 text-body text-fg placeholder:text-fg-faint transition-colors hover:bg-surface-raised focus:bg-surface-raised focus:outline-none focus:ring-2 focus:ring-brand-400/50"
                         />
-                          <span className="label-mono mt-1 block px-2 text-[10px] uppercase tracking-wider text-white/35">
+                          <span className="label-mono mt-1 block px-2 text-eyebrow uppercase tracking-wider text-fg-faint">
                             {t('composer.tierNameLabel', { defaultValue: 'Name' })}
                           </span>
                         </label>
@@ -2715,9 +2715,9 @@ export default function EventComposer({
                                     tier: rowLabel,
                                     currency,
                                   })}
-                                  className="w-[5.5rem] rounded-lg bg-white/[0.06] px-2 py-2 text-right text-[16px] text-white [color-scheme:dark] placeholder:text-white/30 transition-colors focus:bg-white/[0.1] focus:outline-none focus:ring-2 focus:ring-brand-400/50"
+                                  className="w-[5.5rem] rounded-lg bg-surface px-2 py-2 text-right text-base text-fg [color-scheme:dark] placeholder:text-fg-faint transition-colors focus:bg-surface-raised focus:outline-none focus:ring-2 focus:ring-brand-400/50"
                                 />
-                                <span className="label-mono mt-1 block text-right text-[10px] uppercase tracking-wider text-white/35">
+                                <span className="label-mono mt-1 block text-right text-eyebrow uppercase tracking-wider text-fg-faint">
                                   {t('composer.tierPriceLabel', { defaultValue: 'Price' })}
                                 </span>
                               </label>
@@ -2738,9 +2738,9 @@ export default function EventComposer({
                                     defaultValue: 'Quantity for {{tier}}',
                                     tier: rowLabel,
                                   })}
-                                  className="w-[4.5rem] rounded-lg bg-white/[0.06] px-2 py-2 text-right text-[16px] text-white [color-scheme:dark] placeholder:text-white/30 transition-colors focus:bg-white/[0.1] focus:outline-none focus:ring-2 focus:ring-brand-400/50"
+                                  className="w-[4.5rem] rounded-lg bg-surface px-2 py-2 text-right text-base text-fg [color-scheme:dark] placeholder:text-fg-faint transition-colors focus:bg-surface-raised focus:outline-none focus:ring-2 focus:ring-brand-400/50"
                                 />
-                                <span className="label-mono mt-1 block text-right text-[10px] uppercase tracking-wider text-white/35">
+                                <span className="label-mono mt-1 block text-right text-eyebrow uppercase tracking-wider text-fg-faint">
                                   {t('composer.tierQtyLabel', { defaultValue: 'Qty' })}
                                 </span>
                               </label>
@@ -2766,7 +2766,7 @@ export default function EventComposer({
                             defaultValue: 'Ticket options for {{tier}}',
                             tier: rowLabel,
                           })}
-                          className="shrink-0 rounded-lg p-2 text-white/45 transition-colors hover:bg-white/[0.05] hover:text-white"
+                          className="shrink-0 rounded-lg p-2 text-fg-subtle transition-colors hover:bg-surface hover:text-fg"
                         >
                           <ChevronDown
                             className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''}`}
@@ -2784,7 +2784,7 @@ export default function EventComposer({
                               defaultValue: 'More actions for {{tier}}',
                               tier: rowLabel,
                             })}
-                            className="rounded-lg p-2 text-white/45 transition-colors hover:bg-white/[0.05] hover:text-white"
+                            className="rounded-lg p-2 text-fg-subtle transition-colors hover:bg-surface hover:text-fg"
                           >
                             <MoreVertical className="h-4 w-4" />
                           </button>
@@ -2794,7 +2794,7 @@ export default function EventComposer({
                               /* max-w clamp as a belt: the anchor is now always the card's
                                  right edge, but a 224px menu must never be able to
                                  exceed a 402px screen minus its margins. */
-                              className="absolute right-0 top-10 z-30 w-56 max-w-[calc(100vw-2.5rem)] overflow-hidden rounded-xl bg-[#1c1c1c] py-1 shadow-2xl"
+                              className="absolute right-0 top-10 z-30 w-56 max-w-[calc(100vw-2.5rem)] overflow-hidden rounded-xl bg-surface-raised-solid py-1 shadow-2xl"
                             >
                               <button
                                 type="button"
@@ -2803,18 +2803,18 @@ export default function EventComposer({
                                   setOpenTierId(tier.id)
                                   setMenuTierId(null)
                                 }}
-                                className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left text-sm text-white/80 transition-colors hover:bg-white/[0.06] hover:text-white"
+                                className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left text-sm text-fg-soft transition-colors hover:bg-surface hover:text-fg"
                               >
-                                <SlidersHorizontal className="h-4 w-4 shrink-0 text-white/45" />
+                                <SlidersHorizontal className="h-4 w-4 shrink-0 text-fg-subtle" />
                                 {t('composer.tier.editDetails', { defaultValue: 'Ticket options' })}
                               </button>
                               <button
                                 type="button"
                                 role="menuitem"
                                 onClick={() => duplicateTier(tier.id)}
-                                className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left text-sm text-white/80 transition-colors hover:bg-white/[0.06] hover:text-white"
+                                className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left text-sm text-fg-soft transition-colors hover:bg-surface hover:text-fg"
                               >
-                                <Copy className="h-4 w-4 shrink-0 text-white/45" />
+                                <Copy className="h-4 w-4 shrink-0 text-fg-subtle" />
                                 {t('composer.tier.duplicate', { defaultValue: 'Duplicate tier' })}
                               </button>
                               {tiers.length > 1 && (
@@ -2826,9 +2826,9 @@ export default function EventComposer({
                                     setMenuTierId(null)
                                     if (openTierId === tier.id) setOpenTierId(null)
                                   }}
-                                  className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left text-sm text-white/70 transition-colors hover:bg-white/[0.06] hover:text-red-300"
+                                  className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left text-sm text-fg-muted transition-colors hover:bg-surface hover:text-danger-soft"
                                 >
-                                  <Trash2 className="h-4 w-4 shrink-0 text-white/45" />
+                                  <Trash2 className="h-4 w-4 shrink-0 text-fg-subtle" />
                                   {t('composer.removeTier', { defaultValue: 'Remove ticket type' })}
                                 </button>
                               )}
@@ -2838,7 +2838,7 @@ export default function EventComposer({
                           </div>
                         </div>
                         {qtyBelowSold(tier) && (
-                          <p className="mt-2 text-sm text-red-300">
+                          <p className="mt-2 text-sm text-danger-soft">
                             {t('composer.qtyBelowSold', {
                               defaultValue: '{{sold}} already sold. The quantity can’t go below that.',
                               sold: tier.soldQuantity || 0,
@@ -2849,10 +2849,10 @@ export default function EventComposer({
 
                       {/* ── DETAIL PANEL (collapsed by default) ───────── */}
                       {isOpen && (
-                        <div id={panelId} className="space-y-3 border-t border-white/10 p-4">
+                        <div id={panelId} className="space-y-3 border-t border-line p-4">
                           {/* Free ticket — the toggle removes the "type 0" hazard at its source. */}
                           <div className="flex flex-wrap items-center justify-between gap-3">
-                            <span className="flex items-center gap-2 text-[15px] text-white/80">
+                            <span className="flex items-center gap-2 text-body text-fg-soft">
                               {t('composer.tier.makeFree', { defaultValue: 'Make this a free ticket' })}
                               <InfoPopover
                                 label={t('composer.tier.makeFree', { defaultValue: 'Make this a free ticket' })}
@@ -2869,8 +2869,8 @@ export default function EventComposer({
                           </div>
 
                           {/* Unlimited quantity */}
-                          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-3">
-                            <span className="flex items-center gap-2 text-[15px] text-white/80">
+                          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-3">
+                            <span className="flex items-center gap-2 text-body text-fg-soft">
                               {t('composer.tier.unlimitedQty', { defaultValue: 'Unlimited quantity' })}
                               <InfoPopover
                                 label={t('composer.tier.unlimitedQty', { defaultValue: 'Unlimited quantity' })}
@@ -2887,9 +2887,9 @@ export default function EventComposer({
                           </div>
 
                           {/* Per-tier description (the column always existed; web used to null it) */}
-                          <div className="border-t border-white/10 pt-3">
+                          <div className="border-t border-line pt-3">
                             <label className="block">
-                              <span className="label-mono mb-1.5 block text-[10px] uppercase text-white/70">
+                              <span className="label-mono mb-1.5 block text-eyebrow uppercase text-fg-muted">
                                 {t('composer.tier.description', { defaultValue: 'Ticket description' })}
                               </span>
                               <textarea
@@ -2909,8 +2909,8 @@ export default function EventComposer({
                           </div>
 
                           {/* Limit purchase quantity — how many of THIS tier one order may hold. */}
-                          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-3">
-                            <span className="flex items-center gap-2 text-[15px] text-white/80">
+                          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-3">
+                            <span className="flex items-center gap-2 text-body text-fg-soft">
                               {t('composer.tier.limitQty', { defaultValue: 'Limit purchase quantity' })}
                               <InfoPopover
                                 label={t('composer.tier.limitQty', { defaultValue: 'Limit purchase quantity' })}
@@ -2944,8 +2944,8 @@ export default function EventComposer({
 
                           {/* Hide the tier — is_active:false. Already honoured by the
                               selector and all three payment-initiation routes. */}
-                          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-3">
-                            <span className="flex items-center gap-2 text-[15px] text-white/80">
+                          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-3">
+                            <span className="flex items-center gap-2 text-body text-fg-soft">
                               {t('composer.tier.hide', { defaultValue: 'Hide this ticket' })}
                               <InfoPopover
                                 label={t('composer.tier.hide', { defaultValue: 'Hide this ticket' })}
@@ -2963,8 +2963,8 @@ export default function EventComposer({
                           </div>
 
                           {/* Per-tier waitlist */}
-                          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-3">
-                            <span className="flex items-center gap-2 text-[15px] text-white/80">
+                          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-3">
+                            <span className="flex items-center gap-2 text-body text-fg-soft">
                               {t('composer.tier.waitlist', { defaultValue: 'Waitlist when sold out' })}
                               <InfoPopover
                                 label={t('composer.tier.waitlist', { defaultValue: 'Waitlist when sold out' })}
@@ -2982,9 +2982,9 @@ export default function EventComposer({
                           </div>
 
                           {/* Optional per-tier sale window. Leave blank for no bound. */}
-                          <div className="grid grid-cols-1 gap-3 border-t border-white/10 pt-3 sm:grid-cols-2">
+                          <div className="grid grid-cols-1 gap-3 border-t border-line pt-3 sm:grid-cols-2">
                             <label className="block">
-                              <span className="label-mono mb-1 block text-[10px] uppercase text-white/70">
+                              <span className="label-mono mb-1 block text-eyebrow uppercase text-fg-muted">
                                 {t('composer.salesStart', { defaultValue: 'Sales start' })}
                               </span>
                               <input
@@ -3000,7 +3000,7 @@ export default function EventComposer({
                               />
                             </label>
                             <label className="block">
-                              <span className="label-mono mb-1 block text-[10px] uppercase text-white/70">
+                              <span className="label-mono mb-1 block text-eyebrow uppercase text-fg-muted">
                                 {t('composer.salesEnd', { defaultValue: 'Sales end' })}
                               </span>
                               <input
@@ -3018,7 +3018,7 @@ export default function EventComposer({
                             </label>
                           </div>
                           {saleWindowInvalid(tier) && (
-                            <p className="text-sm text-red-300">
+                            <p className="text-sm text-danger-soft">
                               {t('composer.saleWindowError', { defaultValue: 'Sales end must be after sales start.' })}
                             </p>
                           )}
@@ -3026,7 +3026,7 @@ export default function EventComposer({
                               admits the holder. Leave blank to admit anytime. */}
                           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                             <label className="block">
-                              <span className="label-mono mb-1 block text-[10px] uppercase text-white/70">
+                              <span className="label-mono mb-1 block text-eyebrow uppercase text-fg-muted">
                                 {t('composer.validFrom', { defaultValue: 'Valid from' })}
                               </span>
                               <input
@@ -3042,7 +3042,7 @@ export default function EventComposer({
                               />
                             </label>
                             <label className="block">
-                              <span className="label-mono mb-1 block text-[10px] uppercase text-white/70">
+                              <span className="label-mono mb-1 block text-eyebrow uppercase text-fg-muted">
                                 {t('composer.validUntil', { defaultValue: 'Valid until' })}
                               </span>
                               <input
@@ -3060,7 +3060,7 @@ export default function EventComposer({
                             </label>
                           </div>
                           {validityWindowInvalid(tier) && (
-                            <p className="text-sm text-red-300">
+                            <p className="text-sm text-danger-soft">
                               {t('composer.validityError', { defaultValue: 'Valid until must be after valid from.' })}
                             </p>
                           )}
@@ -3073,7 +3073,7 @@ export default function EventComposer({
                 <button
                   type="button"
                   onClick={addTier}
-                  className="flex min-h-11 w-full items-center justify-center gap-2 rounded bg-white/[0.07] px-4 py-3 text-sm font-semibold text-white/70 transition-colors hover:bg-white/[0.12] hover:text-white"
+                  className="flex min-h-11 w-full items-center justify-center gap-2 rounded bg-surface-raised px-4 py-3 text-sm font-semibold text-fg-muted transition-colors hover:bg-surface-high hover:text-fg"
                 >
                   <Plus className="h-4 w-4" /> {t('composer.addTicketType', { defaultValue: 'Add ticket type' })}
                 </button>
@@ -3081,13 +3081,13 @@ export default function EventComposer({
 
               {/* WHO PAYS THE SERVICE FEE — only meaningful once something costs money. */}
               {isPaid && (
-                <div className="mt-3 rounded-xl bg-white/[0.025] p-4">
+                <div className="mt-3 rounded-xl bg-surface-low p-4">
                   <div className="flex items-center justify-between gap-4">
                     <div>
-                      <p className="text-[15px] text-white/80">
+                      <p className="text-body text-fg-soft">
                         {t('composer.fee.passTitle', { defaultValue: 'Pass the service fee to buyers' })}
                       </p>
-                      <p className="mt-1 text-xs text-white/50">
+                      <p className="mt-1 text-xs text-fg-subtle">
                         {passFeesToBuyer
                           ? t('composer.fee.onDesc', {
                               defaultValue:
@@ -3105,7 +3105,7 @@ export default function EventComposer({
                       label={tx('event_composer.pass_service_fee')}
                     />
                   </div>
-                  <p className="mt-3 border-t border-white/10 pt-3 text-xs text-white/50">
+                  <p className="mt-3 border-t border-line pt-3 text-xs text-fg-subtle">
                     {feeExample}
                   </p>
                 </div>
@@ -3114,7 +3114,7 @@ export default function EventComposer({
           )}
 
           {/* Guestlist — the lineup: artists, hosts & special guests joining */}
-          <div className="mt-8 border-t border-white/10 pt-6">
+          <div className="mt-8 border-t border-line pt-6">
             {/* The standing paragraph of explanation is now an (i) popover;
                 the show-on-page toggle moved into advanced Page Settings. */}
             <SectionTitle
@@ -3126,7 +3126,7 @@ export default function EventComposer({
               {t('composer.guestlist', { defaultValue: 'Guestlist' })}
             </SectionTitle>
 
-            <div className="space-y-4 rounded-xl bg-white/[0.025] p-4">
+            <div className="space-y-4 rounded-xl bg-surface-low p-4">
               {/* How the list appears to the public, chosen against a live
                   preview of the row the event page will draw. */}
               <GuestlistVisibilityPicker
@@ -3135,8 +3135,8 @@ export default function EventComposer({
                 faces={guests.map((g) => ({ id: g.id, name: g.name, photoUrl: g.photoUrl }))}
               />
               {guestlistVisibility !== 'hidden' && (
-                <div className="flex items-center justify-between rounded bg-white/[0.03] px-4 py-3.5">
-                  <span className="text-[15px] text-white/80">
+                <div className="flex items-center justify-between rounded bg-surface-low px-4 py-3.5">
+                  <span className="text-body text-fg-soft">
                     {t('composer.showGoingCount', { defaultValue: 'Show how many are going' })}
                   </span>
                   <Toggle
@@ -3147,7 +3147,7 @@ export default function EventComposer({
                 </div>
               )}
 
-              <div className="h-px bg-white/[0.07]" />
+              <div className="h-px bg-surface-raised" />
 
               {/* The bill so far, in running order. Each row is the whole entry
                   in miniature, face, name, role, set time, whether a link is
@@ -3157,7 +3157,7 @@ export default function EventComposer({
                   {guests.map((g, i) => (
                     <div
                       key={g.id}
-                      className="flex items-center gap-3 rounded-lg bg-white/[0.055] px-3 py-2.5"
+                      className="flex items-center gap-3 rounded-lg bg-surface px-3 py-2.5"
                     >
                       <button
                         type="button"
@@ -3173,13 +3173,13 @@ export default function EventComposer({
                             className="h-10 w-10 shrink-0 rounded-full object-cover"
                           />
                         ) : (
-                          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-sm font-bold text-white">
+                          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface text-sm font-bold text-fg">
                             {g.name.charAt(0).toUpperCase()}
                           </span>
                         )}
                         <span className="min-w-0 flex-1">
-                          <span className="block truncate text-[15px] font-semibold text-white">{g.name}</span>
-                          <span className="flex items-center gap-1.5 text-xs text-white/50">
+                          <span className="block truncate text-body font-semibold text-fg">{g.name}</span>
+                          <span className="flex items-center gap-1.5 text-xs text-fg-subtle">
                             <span>{t(`composer.roles.${g.role}`, { defaultValue: g.role })}</span>
                             {g.startTime && (
                               <>
@@ -3202,7 +3202,7 @@ export default function EventComposer({
                           type="button"
                           onClick={() => moveGuest(g.id, -1)}
                           disabled={i === 0}
-                          className="rounded p-0.5 text-white/40 transition-colors hover:text-white disabled:opacity-20 disabled:hover:text-white/40"
+                          className="rounded p-0.5 text-fg-subtle transition-colors hover:text-fg disabled:opacity-20 disabled:hover:text-fg-subtle"
                           aria-label={t('composer.moveUp', { defaultValue: 'Move earlier' })}
                         >
                           <ChevronUp className="h-3.5 w-3.5" />
@@ -3211,7 +3211,7 @@ export default function EventComposer({
                           type="button"
                           onClick={() => moveGuest(g.id, 1)}
                           disabled={i === guests.length - 1}
-                          className="rounded p-0.5 text-white/40 transition-colors hover:text-white disabled:opacity-20 disabled:hover:text-white/40"
+                          className="rounded p-0.5 text-fg-subtle transition-colors hover:text-fg disabled:opacity-20 disabled:hover:text-fg-subtle"
                           aria-label={t('composer.moveDown', { defaultValue: 'Move later' })}
                         >
                           <ChevronDown className="h-3.5 w-3.5" />
@@ -3220,7 +3220,7 @@ export default function EventComposer({
                       <button
                         type="button"
                         onClick={() => removeGuest(g.id)}
-                        className="shrink-0 rounded-lg p-1.5 text-white/40 transition-colors hover:bg-white/[0.04] hover:text-red-300"
+                        className="shrink-0 rounded-lg p-1.5 text-fg-subtle transition-colors hover:bg-surface-low hover:text-danger-soft"
                         aria-label={t('composer.removeGuest', { defaultValue: 'Remove {{name}}', name: g.name })}
                       >
                         <X className="h-4 w-4" />
@@ -3233,7 +3233,7 @@ export default function EventComposer({
               <button
                 type="button"
                 onClick={openNewGuest}
-                className="flex min-h-11 w-full items-center justify-center gap-2 rounded bg-white/[0.07] px-4 py-3 text-sm font-semibold text-white/70 transition-colors hover:bg-white/[0.12] hover:text-white"
+                className="flex min-h-11 w-full items-center justify-center gap-2 rounded bg-surface-raised px-4 py-3 text-sm font-semibold text-fg-muted transition-colors hover:bg-surface-high hover:text-fg"
               >
                 <Plus className="h-4 w-4" /> {t('composer.addToGuestlist', { defaultValue: 'Add to guestlist' })}
               </button>
@@ -3259,21 +3259,21 @@ export default function EventComposer({
               first load. Title, dates, location and tickets stay open above;
               everything here is a refinement, not a requirement. Conditional
               render (not opacity) so collapsed controls are untabbable. */}
-          <div className="mt-8 border-t border-white/10 pt-6">
+          <div className="mt-8 border-t border-line pt-6">
             <button
               type="button"
               onClick={() => setAdvancedOpen((v) => !v)}
               aria-expanded={advancedOpen}
-              className="flex w-full items-center justify-between rounded-xl px-1 py-2 text-left transition-colors hover:bg-white/[0.03]"
+              className="flex w-full items-center justify-between rounded-xl px-1 py-2 text-left transition-colors hover:bg-surface-low"
             >
-              <span className="flex items-center gap-2 text-[15px] font-medium text-white/80">
-                <Settings className="h-4 w-4 text-white/50" />
+              <span className="flex items-center gap-2 text-body font-medium text-fg-soft">
+                <Settings className="h-4 w-4 text-fg-subtle" />
                 {advancedOpen
                   ? t('composer.hideAdvanced', { defaultValue: 'Hide advanced settings' })
                   : t('composer.showAdvanced', { defaultValue: 'Advanced settings' })}
               </span>
               <ChevronDown
-                className={`h-4 w-4 shrink-0 text-white/40 transition-transform duration-200 ${
+                className={`h-4 w-4 shrink-0 text-fg-subtle transition-transform duration-200 ${
                   advancedOpen ? 'rotate-180' : ''
                 }`}
               />
@@ -3288,51 +3288,51 @@ export default function EventComposer({
               rather than left contradicting a shipped feature. */}
 
           {/* Media rows */}
-          <div className="mt-8 space-y-3 border-t border-white/10 pt-6">
+          <div className="mt-8 space-y-3 border-t border-line pt-6">
             {/* Promo video — optional link (persisted as video_url). */}
-            <div className="flex items-center gap-3 rounded-xl bg-white/[0.05] px-4 transition-colors focus-within:bg-white/[0.08] focus-within:ring-2 focus-within:ring-brand-400/50">
-              <Youtube className="h-[18px] w-[18px] shrink-0 text-white/50" />
+            <div className="flex items-center gap-3 rounded-xl bg-surface px-4 transition-colors focus-within:bg-surface-raised focus-within:ring-2 focus-within:ring-brand-400/50">
+              <Youtube className="h-[18px] w-[18px] shrink-0 text-fg-subtle" />
               <input
                 value={videoUrl}
                 onChange={(e) => setVideoUrl(e.target.value)}
                 placeholder={t('composer.promoVideoPlaceholder', { defaultValue: 'Promo video link (YouTube, Vimeo…)' })}
                 aria-label={tx('event_composer.promo_video_link')}
-                className="w-full bg-transparent py-3.5 text-[15px] text-white placeholder:text-white/40 focus:outline-none"
+                className="w-full bg-transparent py-3.5 text-body text-fg placeholder:text-fg-subtle focus:outline-none"
               />
             </div>
-            <div className="flex items-center justify-between gap-3 text-[15px] text-white/70">
+            <div className="flex items-center justify-between gap-3 text-body text-fg-muted">
               <span className="flex items-center gap-3">
                 <ImageIcon className="h-[18px] w-[18px]" /> {t('composer.imageGallery', { defaultValue: 'Image Gallery' })}
               </span>
-              <span className="inline-flex select-none items-center rounded bg-white/[0.07] px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-white/60">
+              <span className="inline-flex select-none items-center rounded bg-surface-raised px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-fg-muted">
                 {t('composer.comingSoon', { defaultValue: 'Coming soon' })}
               </span>
             </div>
           </div>
 
           {/* Page Settings */}
-          <div className="mt-8 border-t border-white/10 pt-6">
+          <div className="mt-8 border-t border-line pt-6">
             <SectionTitle icon={Settings}>{t('composer.pageSettings', { defaultValue: 'Page Settings' })}</SectionTitle>
             <div className="space-y-3">
-              <div className="flex items-center justify-between rounded-xl bg-white/[0.03] px-4 py-3.5">
+              <div className="flex items-center justify-between rounded-xl bg-surface-low px-4 py-3.5">
                 {/* "Discover", not "Explore". The field is `show_on_explore`
                     and the toggle said Explore, but there is no Explore
                     surface on the web — it governs /discover, the homepage
                     rails and the sitemap. The stored key keeps its name; the
                     label now matches what an organizer can actually go and
                     look at. */}
-                <span className="text-[15px] text-white/80">{t('composer.showOnExplore', { defaultValue: 'Show on Discover' })}</span>
+                <span className="text-body text-fg-soft">{t('composer.showOnExplore', { defaultValue: 'Show on Discover' })}</span>
                 <Toggle on={showOnExplore} onChange={setShowOnExplore} label={tx('event_composer.show_on_explore')} />
               </div>
-              <div className="rounded-xl bg-white/[0.03] px-4 py-3.5">
+              <div className="rounded-xl bg-surface-low px-4 py-3.5">
                 <div className="flex items-center justify-between">
-                  <span className="flex items-center gap-2 text-[15px] text-white/80">
-                    <Lock className="h-4 w-4 text-white/50" /> {t('composer.passwordProtected', { defaultValue: 'Password Protected Event' })}
+                  <span className="flex items-center gap-2 text-body text-fg-soft">
+                    <Lock className="h-4 w-4 text-fg-subtle" /> {t('composer.passwordProtected', { defaultValue: 'Password Protected Event' })}
                   </span>
                   <Toggle on={passwordProtected} onChange={setPasswordProtected} label={tx('event_composer.password_protected')} />
                 </div>
                 {passwordProtected && (
-                  <div className="mt-3 border-t border-white/10 pt-3">
+                  <div className="mt-3 border-t border-line pt-3">
                     <input
                       type="text"
                       value={accessCode}
@@ -3348,14 +3348,14 @@ export default function EventComposer({
                       }
                       aria-label={tx('event_composer.access_code')}
                       autoComplete="off"
-                      className={`${field} ${accessCodeInvalid ? 'border-red-400/60' : ''}`}
+                      className={`${field} ${accessCodeInvalid ? 'border-danger/60' : ''}`}
                     />
                     {accessCodeInvalid ? (
-                      <p className="mt-1.5 text-sm text-red-300">
+                      <p className="mt-1.5 text-sm text-danger-soft">
                         {t('composer.accessCodeError', { defaultValue: 'Access codes must be at least 6 characters.' })}
                       </p>
                     ) : (
-                      <p className="mt-1.5 text-xs text-white/50">
+                      <p className="mt-1.5 text-xs text-fg-subtle">
                         {t('composer.accessCodeHint', {
                           defaultValue:
                             'Attendees must enter this code to view and buy. It’s stored hashed, so we never keep the plain code.',
@@ -3365,10 +3365,10 @@ export default function EventComposer({
                   </div>
                 )}
               </div>
-              <div className="rounded-xl bg-white/[0.03] px-4 py-3.5">
+              <div className="rounded-xl bg-surface-low px-4 py-3.5">
                 <div className="flex items-center justify-between gap-3">
-                  <span className="flex items-center gap-2 text-[15px] text-white/80">
-                    <UserCheck className="h-4 w-4 text-white/50" /> {t('attend_requests.composer.require_approval')}
+                  <span className="flex items-center gap-2 text-body text-fg-soft">
+                    <UserCheck className="h-4 w-4 text-fg-subtle" /> {t('attend_requests.composer.require_approval')}
                   </span>
                   <Toggle
                     on={requiresApproval && !isPaid}
@@ -3377,16 +3377,16 @@ export default function EventComposer({
                     label={t('attend_requests.composer.require_approval')}
                   />
                 </div>
-                <p className="mt-1.5 text-xs text-white/50">
+                <p className="mt-1.5 text-xs text-fg-subtle">
                   {isPaid
                     ? t('attend_requests.composer.paid_disabled')
                     : t('attend_requests.composer.require_approval_hint')}
                 </p>
               </div>
-              <div className="rounded-xl bg-white/[0.03] px-4 py-3.5">
+              <div className="rounded-xl bg-surface-low px-4 py-3.5">
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <span className="flex items-center gap-2 text-[15px] text-white/80">
-                    <UserPlus className="h-4 w-4 text-white/50" /> {t('attend_requests.composer.plus_ones')}
+                  <span className="flex items-center gap-2 text-body text-fg-soft">
+                    <UserPlus className="h-4 w-4 text-fg-subtle" /> {t('attend_requests.composer.plus_ones')}
                   </span>
                   <div role="radiogroup" aria-label={t('attend_requests.composer.plus_ones')} className="flex gap-1.5">
                     {[0, 1, 2, 3].map((n) => (
@@ -3397,7 +3397,7 @@ export default function EventComposer({
                         aria-checked={plusOnesMax === n}
                         onClick={() => setPlusOnesMax(n)}
                         className={`min-w-[44px] rounded px-3 py-1.5 text-sm font-semibold transition-colors ${
-                          plusOnesMax === n ? 'bg-white text-black' : 'bg-white/[0.07] text-white/70 hover:bg-white/[0.12]'
+                          plusOnesMax === n ? 'bg-inverse text-on-inverse' : 'bg-surface-raised text-fg-muted hover:bg-surface-high'
                         }`}
                       >
                         {n === 0 ? t('attend_requests.composer.plus_ones_off') : `+${n}`}
@@ -3405,7 +3405,7 @@ export default function EventComposer({
                     ))}
                   </div>
                 </div>
-                <p className="mt-1.5 text-xs text-white/50">
+                <p className="mt-1.5 text-xs text-fg-subtle">
                   {plusOnesMax > 0 && effectivePlusOnes < plusOnesMax
                     ? t('attend_requests.composer.plus_ones_capped', { count: effectivePlusOnes, limit: MAX_FREE_TICKETS_PER_PERSON })
                     : t('attend_requests.composer.plus_ones_hint')}
@@ -3448,7 +3448,7 @@ export default function EventComposer({
               />
             )}
             {guest && (
-              <p className="-mt-1 text-center text-[11px] text-white/40">
+              <p className="-mt-1 text-center text-eyebrow text-fg-subtle">
                 {/* Short enough to hold one line at 11px in the 360px poster
                     column and on a phone, in all three locales — the longer
                     sentence wrapped to two and read as a warning. */}
@@ -3465,7 +3465,7 @@ export default function EventComposer({
             {/* Accent. The "Title Font" picker that sat here is gone: it saved
                 title_font and nothing on the event page or poster card ever
                 read it. Event titles use the house display face. */}
-            <div className="space-y-3 rounded-xl bg-white/[0.025] p-4">
+            <div className="space-y-3 rounded-xl bg-surface-low p-4">
               {/* The accent is TAKEN FROM THE POSTER, not chosen.
                   A seven-swatch picker used to sit here. It was dead: the
                   chosen hex was written to `accent_color` and read by nothing
@@ -3475,17 +3475,17 @@ export default function EventComposer({
                   client-side and shown here as a read-out, so it is honest
                   about being automatic. */}
               <div className="flex items-center justify-between">
-                <span className="flex items-center gap-2 text-sm text-white/80">
-                  <Palette className="h-4 w-4 text-white/50" />{' '}
+                <span className="flex items-center gap-2 text-sm text-fg-soft">
+                  <Palette className="h-4 w-4 text-fg-subtle" />{' '}
                   {t('composer.accentFromPoster', { defaultValue: 'Accent from poster' })}
                 </span>
                 <span className="flex items-center gap-2">
                   <span
                     aria-hidden
-                    className="h-5 w-5 rounded-full ring-1 ring-white/20"
+                    className="h-5 w-5 rounded-full ring-1 ring-line-strong"
                     style={{ backgroundColor: accentColor }}
                   />
-                  <span className="font-mono text-[11px] uppercase text-white/40">
+                  <span className="font-mono text-eyebrow uppercase text-fg-subtle">
                     {bannerUrl
                       ? accentColor
                       : t('composer.accentAwaitingPoster', { defaultValue: 'add a flyer' })}
@@ -3506,7 +3506,7 @@ export default function EventComposer({
 
             {/* Series edit — apply shared field changes to every sibling. */}
             {isEdit && seriesId && (
-              <label className="flex items-start gap-3 rounded-xl bg-white/[0.03] px-4 py-3.5 text-left transition-colors hover:bg-white/[0.06]">
+              <label className="flex items-start gap-3 rounded-xl bg-surface-low px-4 py-3.5 text-left transition-colors hover:bg-surface">
                 <input
                   type="checkbox"
                   checked={applyToSeries}
@@ -3515,11 +3515,11 @@ export default function EventComposer({
                   className="mt-0.5 h-4 w-4 shrink-0 accent-brand-600 [color-scheme:dark]"
                 />
                 <span className="min-w-0">
-                  <span className="flex items-center gap-2 text-sm font-semibold text-white">
-                    <Repeat className="h-4 w-4 text-white/50" />{' '}
+                  <span className="flex items-center gap-2 text-sm font-semibold text-fg">
+                    <Repeat className="h-4 w-4 text-fg-subtle" />{' '}
                     {t('composer.applySeries', { defaultValue: 'Apply changes to all events in this series' })}
                   </span>
-                  <span className="mt-0.5 block text-xs text-white/60">
+                  <span className="mt-0.5 block text-xs text-fg-muted">
                     {t('composer.applySeriesHint', {
                       defaultValue: 'Updates every event in the series. Each keeps its own date & time.',
                     })}
@@ -3546,8 +3546,8 @@ export default function EventComposer({
                 // One white pill per screen: while an unpublished edit shows the
                 // white "Publish event" pill below, saving is the secondary action.
                 isEdit && !isPublished
-                  ? 'bg-white/[0.07] text-white hover:bg-white/[0.12]'
-                  : 'bg-white text-black hover:bg-white/90'
+                  ? 'bg-surface-raised text-fg hover:bg-surface-high'
+                  : 'bg-inverse text-on-inverse hover:bg-inverse-hover'
               }`}
             >
               {guest
@@ -3584,8 +3584,8 @@ export default function EventComposer({
                   }
                   className={`w-full rounded px-7 py-3 text-sm font-semibold transition-all disabled:cursor-not-allowed disabled:opacity-60 ${
                     isPublished
-                      ? 'bg-white/[0.07] text-white/80 hover:bg-white/[0.12]'
-                      : 'bg-white text-black hover:bg-white/90'
+                      ? 'bg-surface-raised text-fg-soft hover:bg-surface-high'
+                      : 'bg-inverse text-on-inverse hover:bg-inverse-hover'
                   }`}
                 >
                   {publishing
@@ -3598,14 +3598,14 @@ export default function EventComposer({
                 {!isPublished && paidPublishingBlocked ? null : !isPublished && !readyToPublish ? (
                   /* A disabled button with no explanation is a dead end. The
                      bar at the top shows HOW far; this says how much is left. */
-                  <p className="text-center text-xs text-white/70">
+                  <p className="text-center text-xs text-fg-muted">
                     {t('composer.completeToPublish', {
                       count: quarters.length - quartersDone,
                       defaultValue: 'Fill in {{count}} more of the four to publish. Saved as a draft until then.',
                     })}
                   </p>
                 ) : (
-                  <p className="text-center text-xs text-white/70">
+                  <p className="text-center text-xs text-fg-muted">
                     {isPublished
                       ? t('composer.liveNote', { defaultValue: 'Live. Visible to attendees.' })
                       : t('composer.draftNote', { defaultValue: 'Draft. Only you can see this.' })}
@@ -3614,13 +3614,13 @@ export default function EventComposer({
               </>
             ) : guest ? (
               <>
-                <p className="text-center text-xs text-white/70">
+                <p className="text-center text-xs text-fg-muted">
                   {t('composer.guestFreeNote', {
                     defaultValue: 'Free to set up. Your draft is saved on this device, so nothing is lost at sign-in.',
                   })}
                 </p>
                 {isPaid && (
-                  <p className="text-center text-xs text-amber-300/90">
+                  <p className="text-center text-xs text-warning-soft/90">
                     {country === 'HT'
                       ? t('composer.guestPaidNoteHaiti', {
                           defaultValue:
@@ -3636,7 +3636,7 @@ export default function EventComposer({
               </>
             ) : (
               <>
-                <p className="text-center text-xs text-white/70">
+                <p className="text-center text-xs text-fg-muted">
                   {t('composer.savedPrivateNote', {
                     defaultValue: 'Saved as a private draft. Publish when you’re ready.',
                   })}
@@ -3659,7 +3659,7 @@ export default function EventComposer({
                   } catch {}
                   window.location.reload()
                 }}
-                className="w-full text-center text-xs text-white/45 underline decoration-white/20 underline-offset-4 transition-colors hover:text-white/80"
+                className="w-full text-center text-xs text-fg-subtle underline decoration-fg-faint underline-offset-4 transition-colors hover:text-fg-soft"
               >
                 {t('composer.startFresh', { defaultValue: 'Not your draft? Start fresh' })}
               </button>

@@ -86,14 +86,14 @@ export function AccountDetailsCard({ profile, onUpdate }: AccountDetailsCardProp
                 aria-label={t('header.full_name')}
               />
             ) : (
-              <p className={`!text-[15px] break-words ${profile.displayName ? 'text-white' : 'text-white/35'}`}>
+              <p className={`!text-body break-words ${profile.displayName ? 'text-fg' : 'text-fg-faint'}`}>
                 {profile.displayName || t('header.phone_not_set')}
               </p>
             )}
           </ReadoutRow>
 
           <ReadoutRow label={t('header.email')} icon={Mail} note={t('header.email_readonly')}>
-            <p className="!text-[15px] break-all text-white">{profile.email}</p>
+            <p className="!text-body break-all text-fg">{profile.email}</p>
           </ReadoutRow>
 
           <ReadoutRow label={t('header.phone')} icon={Phone}>
@@ -107,7 +107,7 @@ export function AccountDetailsCard({ profile, onUpdate }: AccountDetailsCardProp
                 aria-label={t('header.phone')}
               />
             ) : (
-              <p className={`!text-[15px] ${profile.phone ? 'text-white' : 'text-white/35'}`}>
+              <p className={`!text-body ${profile.phone ? 'text-fg' : 'text-fg-faint'}`}>
                 {profile.phone || t('header.phone_not_set')}
               </p>
             )}

@@ -45,7 +45,7 @@ export default function AnalyticsView({
     .sort((a, b) => b[1] - a[1])
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a]">
+    <div className="min-h-screen bg-canvas">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
         <TranslatedPageHeader
           eyebrowKey="organizer"
@@ -87,27 +87,27 @@ export default function AnalyticsView({
 
         {/* Charts */}
         <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <div className="rounded-2xl bg-white/[0.055] p-6">
+          <div className="rounded-2xl bg-surface p-6">
             <SectionHeader eyebrow={t('analytics.last_7_days')} title={t('analytics.sales_trend')} className="mb-5" />
             <SalesChart data={salesChartData} currency={organizerCurrency} />
             <div className="mt-4 flex justify-center gap-6">
               <div className="flex items-center gap-2">
                 <div className="h-2.5 w-2.5 rounded-full bg-brand-700" />
-                <span className="text-xs text-white/50">{t('analytics.tickets_sold')}</span>
+                <span className="text-xs text-fg-subtle">{t('analytics.tickets_sold')}</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="h-2.5 w-2.5 rounded-full bg-brand-400" />
-                <span className="text-xs text-white/50">{t('analytics.revenue')}</span>
+                <span className="text-xs text-fg-subtle">{t('analytics.revenue')}</span>
               </div>
             </div>
           </div>
 
-          <div className="rounded-2xl bg-white/[0.055] p-6">
+          <div className="rounded-2xl bg-surface p-6">
             <SectionHeader title={t('analytics.events_by_category')} className="mb-5" />
             {categoryChartData.length > 0 ? (
               <CategoryChart data={categoryChartData} />
             ) : (
-              <div className="flex h-[300px] items-center justify-center text-sm text-white/40">
+              <div className="flex h-[300px] items-center justify-center text-sm text-fg-subtle">
                 {t('analytics.no_category_data')}
               </div>
             )}
@@ -115,7 +115,7 @@ export default function AnalyticsView({
         </div>
 
         {/* Top events */}
-        <div className="mt-6 rounded-2xl bg-white/[0.055] p-6">
+        <div className="mt-6 rounded-2xl bg-surface p-6">
           <SectionHeader eyebrow={t('analytics.leaderboard')} title={t('analytics.top_performing_events')} className="mb-6" />
           {eventsWithSales.length === 0 ? (
             <OrgEmptyState
@@ -125,7 +125,7 @@ export default function AnalyticsView({
               action={
                 <Link
                   href="/organizer/events/new"
-                  className="inline-flex items-center gap-2 rounded bg-white px-6 py-3 font-semibold text-black hover:bg-white/90 transition-colors"
+                  className="inline-flex items-center gap-2 rounded bg-inverse px-6 py-3 font-semibold text-on-inverse hover:bg-inverse-hover transition-colors"
                 >
                   <Calendar className="h-5 w-5" />
                   {t('analytics.create_event')}
@@ -137,19 +137,19 @@ export default function AnalyticsView({
               {eventsWithSales.slice(0, 10).map((event: any, index: number) => (
                 <div
                   key={event.id}
-                  className="flex items-center gap-4 rounded-xl bg-white/[0.06] p-4 transition-colors hover:bg-white/[0.12]"
+                  className="flex items-center gap-4 rounded-xl bg-surface p-4 transition-colors hover:bg-surface-high"
                 >
-                  <div className="grid h-10 w-10 shrink-0 place-items-center rounded bg-white/[0.08] font-mono tabular-nums font-bold text-white text-sm">
+                  <div className="grid h-10 w-10 shrink-0 place-items-center rounded bg-surface-raised font-mono tabular-nums font-bold text-fg text-sm">
                     {index + 1}
                   </div>
                   <div className="min-w-0 flex-1">
                     <Link
                       href={`/organizer/events/${event.id}`}
-                      className="block truncate font-display italic text-white hover:text-white/75 transition-colors"
+                      className="block truncate font-display italic text-fg hover:text-fg-soft transition-colors"
                     >
                       {event.title}
                     </Link>
-                    <p className="font-mono tabular-nums text-xs text-white/50 mt-0.5">
+                    <p className="font-mono tabular-nums text-xs text-fg-subtle mt-0.5">
                       {new Date(event.start_datetime).toLocaleDateString('en-US', {
                         month: 'long',
                         day: 'numeric',
@@ -159,17 +159,17 @@ export default function AnalyticsView({
                   </div>
                   <div className="flex shrink-0 items-center gap-6">
                     <div className="text-right">
-                      <p className="label-mono text-[10px] uppercase text-white/40">{t('analytics.tickets')}</p>
+                      <p className="label-mono text-eyebrow uppercase text-fg-subtle">{t('analytics.tickets')}</p>
                       <p className="font-mono tabular-nums text-xl font-bold text-brand-300">{event.ticketCount}</p>
                     </div>
                     <div className="text-right">
-                      <p className="label-mono text-[10px] uppercase text-white/40">{t('analytics.revenue')}</p>
-                      <p className="font-mono tabular-nums text-xl font-bold text-white">
+                      <p className="label-mono text-eyebrow uppercase text-fg-subtle">{t('analytics.revenue')}</p>
+                      <p className="font-mono tabular-nums text-xl font-bold text-fg">
                         {money(event.revenueCents, event.currency || organizerCurrency)}
                       </p>
                     </div>
                     {!event.is_published && (
-                      <span className="rounded bg-white/[0.03] px-2.5 py-1 text-xs font-medium text-white/60">
+                      <span className="rounded bg-surface-low px-2.5 py-1 text-xs font-medium text-fg-muted">
                         {t('analytics.draft')}
                       </span>
                     )}

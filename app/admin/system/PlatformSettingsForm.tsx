@@ -11,7 +11,7 @@ function FieldLabel({ htmlFor, children }: { htmlFor: string; children: React.Re
   return (
     <label
       htmlFor={htmlFor}
-      className="label-mono mb-1.5 block text-[10px] uppercase tracking-[0.18em] text-console-faint"
+      className="label-mono mb-1.5 block text-eyebrow uppercase tracking-[0.18em] text-console-faint"
     >
       {children}
     </label>
@@ -22,7 +22,7 @@ function FieldLabel({ htmlFor, children }: { htmlFor: string; children: React.Re
 function SectionLabel({ children, sub }: { children: React.ReactNode; sub?: string }) {
   return (
     <div className="mb-3">
-      <div className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint">
+      <div className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint">
         {children}
       </div>
       {sub && <p className="mt-0.5 text-xs text-console-mut">{sub}</p>}
@@ -267,9 +267,9 @@ export function PlatformSettingsForm() {
     <>
       {/* Confirmation Modal */}
       {showConfirmModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-scrim p-4">
           <div className="w-full max-w-md rounded-lg bg-console-panel p-6 shadow-xl">
-            <h3 className="label-mono text-[13px] font-bold uppercase tracking-[0.14em] text-console-text">
+            <h3 className="label-mono text-meta font-bold uppercase tracking-[0.14em] text-console-text">
               Confirm Settings Update
             </h3>
             <p className="mb-4 mt-2 text-sm text-console-mut">
@@ -341,21 +341,21 @@ export function PlatformSettingsForm() {
           <div>
             <div className="grid grid-cols-2 gap-x-6 gap-y-4 sm:flex sm:flex-wrap sm:gap-x-8 sm:gap-y-4">
               <div>
-                <p className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint">Haiti fee</p>
+                <p className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint">Haiti fee</p>
                 <p className="mt-1 font-mono text-xl tabular-nums text-console-text">{(settings.haiti.platformFeePercentage * 100).toFixed(2)}%</p>
               </div>
               <div>
-                <p className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint">Haiti hold</p>
+                <p className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint">Haiti hold</p>
                 <p className="mt-1 font-mono text-xl tabular-nums text-console-text">{settings.haiti.settlementHoldDays}<span className="text-sm text-console-mut"> days</span></p>
               </div>
               {FEE_MARKETS.map((market) => (
                 <div key={market}>
-                  <p className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint">{market} fee</p>
+                  <p className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint">{market} fee</p>
                   <p className="mt-1 font-mono text-xl tabular-nums text-console-text">{termsLabel(storedMarket(settings, market), market)}</p>
                 </div>
               ))}
               <div>
-                <p className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint">Min payout</p>
+                <p className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint">Min payout</p>
                 <p className="mt-1 font-mono text-xl tabular-nums text-console-text">${(settings.minimumPayoutAmount / 100).toFixed(2)}</p>
               </div>
             </div>
@@ -368,7 +368,7 @@ export function PlatformSettingsForm() {
         )}
 
         {/* Info note */}
-        <p className="text-[13px] text-console-mut">
+        <p className="text-meta text-console-mut">
           These settings apply to all future transactions. Changes take effect immediately and are applied to new ticket sales and earnings calculations.
         </p>
 
@@ -389,7 +389,7 @@ export function PlatformSettingsForm() {
             <a
               key={l.href}
               href={l.href}
-              className="label-mono shrink-0 whitespace-nowrap rounded bg-console-panel px-3 py-1.5 text-[10px] uppercase tracking-[0.14em] text-console-mut transition-colors hover:bg-console-raise hover:text-console-text"
+              className="label-mono shrink-0 whitespace-nowrap rounded bg-console-panel px-3 py-1.5 text-eyebrow uppercase tracking-[0.14em] text-console-mut transition-colors hover:bg-console-raise hover:text-console-text"
             >
               {l.label}
             </a>
@@ -451,7 +451,7 @@ export function PlatformSettingsForm() {
               {/* Haiti Preview */}
               {haitiPreview && (
                 <div className="rounded bg-console-ground p-3">
-                  <p className="label-mono mb-2 text-[10px] uppercase tracking-[0.18em] text-console-faint">Example: $100 ticket sale</p>
+                  <p className="label-mono mb-2 text-eyebrow uppercase tracking-[0.18em] text-console-faint">Example: $100 ticket sale</p>
                   <div className="space-y-1.5 text-sm">
                     <div className="flex justify-between">
                       <span className="text-console-mut">Ticket Price</span>
@@ -551,7 +551,7 @@ export function PlatformSettingsForm() {
 
                   {preview && (
                     <div className="rounded bg-console-ground p-3">
-                      <p className="label-mono mb-2 text-[10px] uppercase tracking-[0.18em] text-console-faint">{`Example: ${meta.symbol}100 ticket, fee absorbed`}</p>
+                      <p className="label-mono mb-2 text-eyebrow uppercase tracking-[0.18em] text-console-faint">{`Example: ${meta.symbol}100 ticket, fee absorbed`}</p>
                       <div className="space-y-1.5 text-sm">
                         <div className="flex justify-between">
                           <span className="text-console-mut">Ticket Price</span>

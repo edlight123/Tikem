@@ -56,7 +56,7 @@ export function ConversionFunnelAnalytics() {
         <p className="mb-4 text-sm text-console-red">{loadError || 'Failed to load conversion data'}</p>
         <button
           onClick={() => void loadData()}
-          className="rounded bg-console-raise px-3 py-1.5 text-[13px] font-semibold text-console-mut transition-colors hover:text-console-text"
+          className="rounded bg-console-raise px-3 py-1.5 text-meta font-semibold text-console-mut transition-colors hover:text-console-text"
         >
           Retry
         </button>
@@ -74,14 +74,14 @@ export function ConversionFunnelAnalytics() {
     <div className="space-y-4">
       {/* Overall conversion — unboxed KPI figure */}
       <div>
-        <div className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint">Overall conversion</div>
+        <div className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint">Overall conversion</div>
         <div className="mt-1 font-mono text-xl tabular-nums text-console-text">{data.overallConversion.toFixed(2)}%</div>
         <div className="mt-0.5 text-xs text-console-mut">Views → purchases · last 30 days</div>
       </div>
 
       {/* Funnel */}
       <div className="rounded-lg bg-console-panel p-4">
-        <h3 className="label-mono mb-3 text-[10px] uppercase tracking-[0.18em] text-console-faint">Conversion funnel</h3>
+        <h3 className="label-mono mb-3 text-eyebrow uppercase tracking-[0.18em] text-console-faint">Conversion funnel</h3>
         <div className="space-y-3">
           {stages.map((stage) => {
             const StageIcon = stage.icon
@@ -107,7 +107,7 @@ export function ConversionFunnelAnalytics() {
 
         {/* Insights */}
         <div className="mt-4 rounded bg-console-raise p-3">
-          <div className="label-mono mb-1 flex items-center gap-1.5 text-[10px] uppercase tracking-[0.18em] text-console-faint">
+          <div className="label-mono mb-1 flex items-center gap-1.5 text-eyebrow uppercase tracking-[0.18em] text-console-faint">
             <TrendingUp className="h-3.5 w-3.5 text-console-faint" /> Insights
           </div>
           <ul className="space-y-0.5 text-xs text-console-mut">
@@ -118,7 +118,7 @@ export function ConversionFunnelAnalytics() {
         </div>
       </div>
 
-      <p className="text-center text-[11px] text-console-faint">
+      <p className="text-center text-eyebrow text-console-faint">
         Event views are estimated (10× favorites) until view tracking is implemented.
       </p>
     </div>

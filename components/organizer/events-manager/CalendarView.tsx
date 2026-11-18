@@ -64,12 +64,12 @@ export default function CalendarView({
   ]
 
   return (
-    <div className="overflow-hidden rounded-xl bg-white/[0.03] shadow-sm">
+    <div className="overflow-hidden rounded-xl bg-surface-low shadow-sm">
       {/* Calendar Header */}
-      <div className="flex items-center justify-between px-6 py-4 text-white">
+      <div className="flex items-center justify-between px-6 py-4 text-fg">
         <button
           onClick={handlePreviousMonth}
-          className="grid h-11 w-11 place-items-center rounded transition-colors hover:bg-white/[0.08]"
+          className="grid h-11 w-11 place-items-center rounded transition-colors hover:bg-surface-raised"
           aria-label={t('calendar.previous_month')}
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -83,7 +83,7 @@ export default function CalendarView({
 
         <button
           onClick={handleNextMonth}
-          className="grid h-11 w-11 place-items-center rounded transition-colors hover:bg-white/[0.08]"
+          className="grid h-11 w-11 place-items-center rounded transition-colors hover:bg-surface-raised"
           aria-label={t('calendar.next_month')}
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -93,11 +93,11 @@ export default function CalendarView({
       </div>
 
       {/* Week Days Header */}
-      <div className="grid grid-cols-7 border-b border-white/10 bg-white/[0.06]">
+      <div className="grid grid-cols-7 border-b border-line bg-surface">
         {weekDays.map((day) => (
           <div
             key={day}
-            className="py-3 text-center text-sm font-semibold text-white/70"
+            className="py-3 text-center text-sm font-semibold text-fg-muted"
           >
             {day}
           </div>
@@ -108,7 +108,7 @@ export default function CalendarView({
       <div className="grid grid-cols-7">
         {calendarDays.map((day, index) => {
           if (!day) {
-            return <div key={`empty-${index}`} className="h-28 border-b border-r border-white/[0.06] bg-black/20" />
+            return <div key={`empty-${index}`} className="h-28 border-b border-r border-line-soft bg-shade/20" />
           }
 
           const dateKey = format(day, 'yyyy-MM-dd')
@@ -119,8 +119,8 @@ export default function CalendarView({
           return (
             <div
               key={dateKey}
-              className={`min-h-28 border-b border-r border-white/[0.06] p-2 transition-colors ${
-                isCurrentMonth ? 'hover:bg-white/[0.07]' : 'bg-black/20'
+              className={`min-h-28 border-b border-r border-line-soft p-2 transition-colors ${
+                isCurrentMonth ? 'hover:bg-surface-raised' : 'bg-shade/20'
               }`}
             >
               {/* Day Number */}
@@ -128,16 +128,16 @@ export default function CalendarView({
                 <span
                   className={`text-sm font-semibold font-mono tabular-nums ${
                     isTodayDate
-                      ? 'w-7 h-7 rounded bg-white text-black flex items-center justify-center'
+                      ? 'w-7 h-7 rounded bg-inverse text-on-inverse flex items-center justify-center'
                       : isCurrentMonth
-                      ? 'text-white'
-                      : 'text-white/40'
+                      ? 'text-fg'
+                      : 'text-fg-subtle'
                   }`}
                 >
                   {format(day, 'd')}
                 </span>
                 {dayEvents.length > 0 && (
-                  <span className="rounded bg-white/[0.10] px-1.5 py-0.5 font-mono text-xs font-semibold tabular-nums text-white/80">
+                  <span className="rounded bg-surface-raised px-1.5 py-0.5 font-mono text-xs font-semibold tabular-nums text-fg-soft">
                     {dayEvents.length}
                   </span>
                 )}
@@ -151,8 +151,8 @@ export default function CalendarView({
                     href={`/organizer/events/${event.id}`}
                     className={`block px-2 py-1 rounded text-xs font-medium truncate transition-colors ${
                       event.is_published
-                        ? 'bg-white/[0.10] text-brand-200 hover:bg-white/[0.16]'
-                        : 'bg-white/[0.08] text-white/70 hover:bg-white/[0.14]'
+                        ? 'bg-surface-raised text-brand-200 hover:bg-surface-high'
+                        : 'bg-surface-raised text-fg-muted hover:bg-surface-high'
                     }`}
                     title={event.title}
                   >
@@ -160,7 +160,7 @@ export default function CalendarView({
                   </Link>
                 ))}
                 {dayEvents.length > 3 && (
-                  <div className="text-xs text-white/50 px-2 font-mono tabular-nums">
+                  <div className="text-xs text-fg-subtle px-2 font-mono tabular-nums">
                     +{dayEvents.length - 3} more
                   </div>
                 )}

@@ -146,10 +146,10 @@ export default function InvitePage() {
   }, [eventId, token, router, isMobile])
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a] px-4">
-      <div className="w-full max-w-md bg-white/[0.03] border border-white/10 rounded-xl p-6 shadow-sm">
-        <h1 className="text-xl font-bold text-white">{t('invite.title', 'Event Invite')}</h1>
-        <p className="mt-2 text-sm text-white/65">
+    <div className="min-h-screen flex items-center justify-center bg-canvas px-4">
+      <div className="w-full max-w-md bg-surface-low border border-line rounded-xl p-6 shadow-sm">
+        <h1 className="text-xl font-bold text-fg">{t('invite.title', 'Event Invite')}</h1>
+        <p className="mt-2 text-sm text-fg-muted">
           {status === 'loading' && t('invite.loading', 'Loading…')}
           {status === 'ready' && t('invite.accepting', 'Accepting invite…')}
           {status === 'success' && message}
@@ -160,11 +160,11 @@ export default function InvitePage() {
           <div className="mt-5 space-y-3">
             <a
               href={appInviteUrl}
-              className="block w-full text-center px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-medium rounded-lg transition-colors"
+              className="block w-full text-center px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-fg font-medium rounded-lg transition-colors"
             >
               {t('invite.open_in_app', 'Open in app')}
             </a>
-            <p className="text-xs text-white/50">
+            <p className="text-xs text-fg-subtle">
               {t('invite.install_note', "If you don't have the app installed, you can still accept on desktop.")}
             </p>
           </div>

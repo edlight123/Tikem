@@ -48,7 +48,7 @@ function Avatar({ user, size = 40 }: { user: PublicUserSummary; size?: number })
   // No photo: a drawn portrait (lib/defaultAvatar), not an initial.
   return (
     <div
-      className="rounded-full overflow-hidden bg-white/[0.08] ring-2 ring-black shrink-0"
+      className="rounded-full overflow-hidden bg-surface-raised ring-2 ring-black shrink-0"
       style={{ width: size, height: size }}
       title={user.displayName}
     >
@@ -107,7 +107,7 @@ export default function WhosGoing({
   if (loading) {
     return (
       <div className={`px-4 md:px-0 ${className}`}>
-        <div className="h-8 w-56 rounded bg-white/[0.05] animate-pulse" />
+        <div className="h-8 w-56 rounded bg-surface animate-pulse" />
       </div>
     )
   }
@@ -130,7 +130,7 @@ export default function WhosGoing({
   if (visibility === 'count') {
     if (!showCount && !viewerIsGoing) return null
     return (
-      <p className={`px-4 text-[14px] text-white/60 md:px-0 ${className}`}>
+      <p className={`px-4 text-sm text-fg-muted md:px-0 ${className}`}>
         {[
           viewerIsGoing ? t('whos_going.youre_going', "You're going") : '',
           showCount ? t('whos_going.going_count', { count: totalGoing, defaultValue: '{{count}} going' }) : '',
@@ -215,7 +215,7 @@ export default function WhosGoing({
   })
   const sub = template.split(/([\u0001\u0002\u0003])/).map((part, i) =>
     part === YOU || part === LEAD || part === SECOND ? (
-      <strong key={i} className="font-semibold text-white">
+      <strong key={i} className="font-semibold text-fg">
         {part === YOU ? t('whos_going.you_badge', 'You') : part === LEAD ? leadName : secondName}
       </strong>
     ) : (
@@ -249,15 +249,15 @@ export default function WhosGoing({
               key={u.uid}
               src={u.photoURL || defaultAvatarUrl(String(u.uid))}
               alt=""
-              className="h-[30px] w-[30px] rounded-full object-cover ring-2 ring-[#0a0a0a]"
+              className="h-[30px] w-[30px] rounded-full object-cover ring-2 ring-canvas"
             />
           ))}
           {anon.map((src, i) => (
             // eslint-disable-next-line @next/next/no-img-element
-            <img key={`anon-${i}`} src={src} alt="" className="h-[30px] w-[30px] rounded-full ring-2 ring-[#0a0a0a]" />
+            <img key={`anon-${i}`} src={src} alt="" className="h-[30px] w-[30px] rounded-full ring-2 ring-canvas" />
           ))}
         </span>
-        <span className="min-w-0 line-clamp-2 text-[14px] leading-[19px] text-white/60 group-hover:text-white/80">{sub}</span>
+        <span className="min-w-0 line-clamp-2 text-sm leading-[19px] text-fg-muted group-hover:text-fg-soft">{sub}</span>
       </button>
 
       {currentUserId && (

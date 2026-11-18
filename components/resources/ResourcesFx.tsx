@@ -96,22 +96,22 @@ export function FloatingGuides() {
           >
             <div className="plt-float" style={{ ['--dur' as any]: dur, ['--d' as any]: delay }}>
               <div
-                className="flex aspect-[4/5] w-36 flex-col justify-between rounded-lg border border-white/10 bg-[#111] p-3.5 shadow-[0_24px_60px_-18px_rgba(0,0,0,0.85)] xl:w-40"
+                className="flex aspect-[4/5] w-36 flex-col justify-between rounded-lg border border-line bg-surface-solid p-3.5 shadow-[0_24px_60px_-18px_rgba(0,0,0,0.85)] xl:w-40"
                 style={{ transform: `rotate(${rot}deg)` }}
               >
                 <div className="flex items-center justify-between">
-                  <span className="font-mono text-[8px] tracking-[0.28em] text-white/45">TIKÈM GUIDE</span>
+                  <span className="font-mono text-eyebrow tracking-[0.28em] text-fg-subtle">TIKÈM GUIDE</span>
                   <span className="h-1.5 w-1.5 rounded-full bg-brand-400/70" />
                 </div>
                 <c.icon className="h-7 w-7 text-brand-400/90" strokeWidth={1.5} />
                 <div>
-                  <p className="font-mono text-[9px] tracking-[0.22em] text-white/50">
+                  <p className="font-mono text-eyebrow tracking-[0.22em] text-fg-subtle">
                     {t(`resources.covers.${c.key}.label`)}
                   </p>
-                  <p className="mt-1 font-display lowercase italic text-[15px] leading-tight text-white/90">
+                  <p className="mt-1 font-display lowercase italic text-body leading-tight text-fg">
                     {t(`resources.covers.${c.key}.title`)}
                   </p>
-                  <p className="mt-2 border-t border-white/10 pt-1.5 font-mono text-[8px] tracking-[0.2em] text-white/35">
+                  <p className="mt-2 border-t border-line pt-1.5 font-mono text-eyebrow tracking-[0.2em] text-fg-faint">
                     {c.langs}
                   </p>
                 </div>
@@ -136,7 +136,7 @@ export function Marquee() {
     <span className="flex shrink-0 items-baseline">
       {run.map((v, i) => (
         <span key={i} className="flex items-baseline">
-          <span className="px-6 font-display lowercase italic text-[clamp(34px,5vw,64px)] leading-none text-white/[0.16] sm:px-9">
+          <span className="px-6 font-display lowercase italic text-[clamp(34px,5vw,64px)] leading-none text-fg/16 sm:px-9">
             {v}
           </span>
           <span className="h-1.5 w-1.5 shrink-0 self-center rounded-full bg-brand-400/40" />
@@ -145,7 +145,7 @@ export function Marquee() {
     </span>
   )
   return (
-    <div aria-hidden className="relative overflow-hidden border-y border-white/[0.06] bg-white/[0.03] py-7">
+    <div aria-hidden className="relative overflow-hidden border-y border-line-soft bg-surface-low py-7">
       <div className="tk-marquee flex w-max">
         {half}
         {half}
@@ -163,7 +163,7 @@ export function OuPare() {
   const text = 'ou pare?'
   return (
     <div ref={ref}>
-      <p className="font-display lowercase italic text-[clamp(36px,6vw,64px)] leading-[1.02] text-white">
+      <p className="font-display lowercase italic text-[clamp(36px,6vw,64px)] leading-[1.02] text-fg">
         {seen ? (
           <span className="inline-block overflow-hidden pt-[0.14em] align-bottom" style={{ marginTop: '-0.14em' }}>
             {text.split('').map((ch, j) => (

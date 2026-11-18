@@ -6,21 +6,21 @@
  * What this was: a bold-sans `<h1>` with a teal Users icon glued to it, three
  * equal tab buttons in a `p-1 rounded-xl` track that had no fill (so the
  * padding wrapped nothing), a red filled pill for the pending count, and every
- * list rendered as `bg-white/[0.03]` behind `border border-white/10` — the
+ * list rendered as `bg-surface-low` behind `border border-line` — the
  * wireframe-of-itself failure the design brief exists to stop. Both text
  * inputs had had their background classes stripped at some point and rendered
  * as invisible fields (`py-3 rounded-xl  focus:ring-2`, note the double
  * space). The contact-match card carried a hand-rolled `font-bold` h2, a teal
  * primary button (teal is semantic-only, never a button fill), a
- * `border-2 border-white/10` secondary with no fill at all, and an empty
+ * `border-2 border-line` secondary with no fill at all, and an empty
  * 40×40 box holding an icon.
  *
  * What it is now, per docs/POSH_DESIGN_BRIEF.md:
  * - the shared EditorialHeader (serif page title) + the shared SectionHeader
  *   (Instrument Serif, lowercased) for every in-page section. No hand-rolled
  *   headings.
- * - surfaces get a FILL: lists and cards are `bg-white/[0.03]` with no border,
- *   fields are `bg-white/[0.055]`, the disclosed manual panel is an inset.
+ * - surfaces get a FILL: lists and cards are `bg-surface-low` with no border,
+ *   fields are `bg-surface`, the disclosed manual panel is an inset.
  *   The only borders left are the tablist rule, the row dividers and the
  *   divider above the contact results — places where a hairline IS the meaning.
  * - the pending count is an amber dot + numeral ("action needed" in the locked
@@ -59,23 +59,23 @@ type Tab = 'friends' | 'requests' | 'find'
 
 /** The one pure-white surface on the page: the primary action. */
 const PILL_PRIMARY =
-  'inline-flex min-h-[42px] items-center justify-center gap-2 rounded-xl bg-white px-4 text-[13px] font-semibold text-black transition-colors hover:bg-white/90 disabled:opacity-50'
+  'inline-flex min-h-[42px] items-center justify-center gap-2 rounded-xl bg-inverse px-4 text-meta font-semibold text-on-inverse transition-colors hover:bg-inverse-hover disabled:opacity-50'
 
 /** Secondary action — a filled grey pill, never an outline around nothing. */
 const PILL_SECONDARY =
-  'inline-flex min-h-[42px] items-center justify-center gap-2 rounded-xl bg-white/[0.055] px-4 text-[13px] font-semibold text-white/80 transition-colors hover:bg-white/[0.12] hover:text-white disabled:opacity-50'
+  'inline-flex min-h-[42px] items-center justify-center gap-2 rounded-xl bg-surface px-4 text-meta font-semibold text-fg-soft transition-colors hover:bg-surface-high hover:text-fg disabled:opacity-50'
 
 /** A step up from secondary, for a submit that is not the screen's primary. */
 const PILL_STRONG =
-  'inline-flex min-h-[42px] items-center justify-center gap-2 rounded-xl bg-white/[0.14] px-4 text-[13px] font-semibold text-white transition-colors hover:bg-white/[0.2] disabled:opacity-50'
+  'inline-flex min-h-[42px] items-center justify-center gap-2 rounded-xl bg-surface-high px-4 text-meta font-semibold text-fg transition-colors hover:bg-fg/20 disabled:opacity-50'
 
 const FIELD =
-  'w-full rounded-xl bg-white/[0.055] text-white placeholder:text-white/30 transition-colors focus:bg-white/[0.07] focus:outline-none focus:ring-2 focus:ring-brand-400/60'
+  'w-full rounded-xl bg-surface text-fg placeholder:text-fg-faint transition-colors focus:bg-surface-raised focus:outline-none focus:ring-2 focus:ring-brand-400/60'
 
 function Avatar({ user, size = 44 }: { user: PublicUserSummary; size?: number }) {
   return (
     <div
-      className="flex flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/[0.08]"
+      className="flex flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-surface-raised"
       style={{ width: size, height: size }}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -94,7 +94,7 @@ function Avatar({ user, size = 44 }: { user: PublicUserSummary; size?: number })
  */
 function PeopleList({ children }: { children: React.ReactNode }) {
   return (
-    <div className="divide-y divide-white/[0.06] overflow-hidden rounded-2xl bg-white/[0.03] px-3 sm:px-4">
+    <div className="divide-y divide-line-soft overflow-hidden rounded-2xl bg-surface-low px-3 sm:px-4">
       {children}
     </div>
   )
@@ -127,7 +127,7 @@ function PersonRow({
 
       <Link href={href} className="min-w-0 flex-1 basis-0">
         <span className="flex items-center gap-1.5">
-          <span className="truncate text-[15px] font-semibold tracking-tight text-white decoration-white/30 underline-offset-4 hover:underline">
+          <span className="truncate text-body font-semibold tracking-tight text-fg decoration-fg-faint underline-offset-4 hover:underline">
             {user.displayName}
           </span>
           {user.isVerified && (
@@ -193,7 +193,7 @@ export default function ConnectionsClient({
       <div
         role="tablist"
         aria-label={t('connections.eyebrow', { defaultValue: 'Connections' })}
-        className="-mx-4 mb-6 mt-6 flex gap-5 overflow-x-auto border-b border-white/10 px-4 sm:mx-0 sm:mb-7 sm:mt-7 sm:gap-7 sm:px-0"
+        className="-mx-4 mb-6 mt-6 flex gap-5 overflow-x-auto border-b border-line px-4 sm:mx-0 sm:mb-7 sm:mt-7 sm:gap-7 sm:px-0"
       >
         <TabButton
           id="friends"
@@ -257,8 +257,8 @@ function TabButton({
       aria-selected={active}
       aria-controls={`panel-${id}`}
       onClick={onClick}
-      className={`relative -mb-px shrink-0 whitespace-nowrap pb-3 pt-1 text-[13px] font-semibold tracking-tight transition-colors ${
-        active ? 'text-white' : 'text-white/45 hover:text-white/75'
+      className={`relative -mb-px shrink-0 whitespace-nowrap pb-3 pt-1 text-meta font-semibold tracking-tight transition-colors ${
+        active ? 'text-fg' : 'text-fg-subtle hover:text-fg-soft'
       }`}
     >
       <span className="inline-flex items-baseline gap-1.5">
@@ -278,18 +278,18 @@ function TabButton({
 /**
  * A count beside a tab label. `attention` is a pending inbox: an amber dot plus
  * the numeral, per the locked status-colour map (amber = action needed). It
- * replaces a `bg-red-500` filled pill — a status is a dot and a label, never a
+ * replaces a `bg-danger-strong` filled pill — a status is a dot and a label, never a
  * fill that reads as a button.
  */
 function Count({ value, attention }: { value: number; attention?: boolean }) {
   if (value <= 0) return null
   return (
     <span
-      className={`label-mono inline-flex items-center gap-1 text-[11px] ${
-        attention ? 'text-amber-300' : 'text-white/35'
+      className={`label-mono inline-flex items-center gap-1 text-eyebrow ${
+        attention ? 'text-warning-soft' : 'text-fg-faint'
       }`}
     >
-      {attention && <span aria-hidden className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400" />}
+      {attention && <span aria-hidden className="h-1.5 w-1.5 shrink-0 rounded-full bg-warning" />}
       {value}
     </span>
   )
@@ -510,7 +510,7 @@ function FindTab({ onChange }: { onChange: () => void }) {
         <div className="relative">
           <Search
             aria-hidden
-            className="pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-white/40"
+            className="pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-fg-subtle"
           />
           <input
             id="connections-search"
@@ -523,7 +523,7 @@ function FindTab({ onChange }: { onChange: () => void }) {
             className={`${FIELD} py-3 pl-11 pr-11`}
           />
           {searching && (
-            <Loader2 className="absolute right-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 animate-spin text-white/40" />
+            <Loader2 className="absolute right-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 animate-spin text-fg-subtle" />
           )}
         </div>
 
@@ -537,7 +537,7 @@ function FindTab({ onChange }: { onChange: () => void }) {
           </div>
         )}
         {showsNoResults && (
-          <p className="mt-4 text-center !text-[13px] text-white/45">
+          <p className="mt-4 text-center !text-meta text-fg-subtle">
             {t('connections.no_results', {
               query,
               defaultValue: 'No people found for “{{query}}”.',
@@ -556,7 +556,7 @@ function FindTab({ onChange }: { onChange: () => void }) {
           })}
         />
 
-        <div className="rounded-2xl bg-white/[0.03] p-4 sm:p-5">
+        <div className="rounded-2xl bg-surface-low p-4 sm:p-5">
           <div className="flex flex-wrap gap-2">
             {supportsContactPicker && (
               <button onClick={syncContacts} disabled={contactLoading} className={PILL_PRIMARY}>
@@ -610,12 +610,12 @@ function FindTab({ onChange }: { onChange: () => void }) {
             </div>
           )}
 
-          {contactError && <p className="mt-3 !text-[13px] text-red-300">{contactError}</p>}
+          {contactError && <p className="mt-3 !text-meta text-danger-soft">{contactError}</p>}
 
           {contactMatches !== null && (
-            <div className="mt-4 border-t border-white/[0.08] pt-3">
+            <div className="mt-4 border-t border-line pt-3">
               {contactMatches.length === 0 ? (
-                <p className="py-2 text-center !text-[13px] text-white/45">
+                <p className="py-2 text-center !text-meta text-fg-subtle">
                   {t('connections.contacts_none_on_tikem', {
                     defaultValue: 'None of your contacts are on Tikèm yet, invite them!',
                   })}
@@ -623,13 +623,13 @@ function FindTab({ onChange }: { onChange: () => void }) {
               ) : (
                 <>
                   {/* A div, not a p: `.mobile-typography p` would drag .eyebrow back to 14px. */}
-                  <div className="eyebrow mb-1.5 text-white/40">
+                  <div className="eyebrow mb-1.5 text-fg-subtle">
                     {t('connections.on_tikem_count', {
                       count: contactMatches.length,
                       defaultValue: '{{count}} on Tikèm',
                     })}
                   </div>
-                  <div className="divide-y divide-white/[0.06]">
+                  <div className="divide-y divide-line-soft">
                     {contactMatches.map((m) => (
                       <PersonRow
                         key={m.uid}

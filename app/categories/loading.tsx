@@ -2,7 +2,7 @@
  * Categories hub loading skeleton.
  *
  * The shapes were roughly right but nothing was VISIBLE: the six category
- * cards and nine event cards were `bg-white/[0.03] border border-white/10`,
+ * cards and nine event cards were `bg-surface-low border border-line`,
  * which on a `#0a0a0a` page paints six and then nine empty outlines. The nine
  * event cards were also a layout the hub does not have — the event grid only
  * appears when a `?category=` is set, and it is a 4:5 poster grid, not a
@@ -29,9 +29,9 @@ function Bar({ className = '' }: { className?: string }) {
 
 export default function Loading() {
   return (
-    <div className="min-h-screen bg-[#0a0a0a] pb-mobile-nav">
+    <div className="min-h-screen bg-canvas pb-mobile-nav">
       {/* Navbar — h-14 / sm:h-16 with this page's bottom rule. */}
-      <div className="sticky top-0 z-50 border-b border-white/10 bg-[#0a0a0a]/80 backdrop-blur-xl">
+      <div className="sticky top-0 z-50 border-b border-line bg-canvas/80 backdrop-blur-xl">
         <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:h-16 sm:px-6 lg:px-8">
           <Bar className="h-7 w-24" />
           <Bar className="h-8 w-20 rounded" />

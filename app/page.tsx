@@ -271,8 +271,8 @@ export default async function HomePage({
       )}
 
       {isDemoMode() && (
-        <div className="bg-white/[0.06]">
-          <p className="mx-auto max-w-7xl px-4 py-3 text-sm text-white/80 sm:px-6 lg:px-8">
+        <div className="bg-surface">
+          <p className="mx-auto max-w-7xl px-4 py-3 text-sm text-fg-soft sm:px-6 lg:px-8">
             <strong>Demo Mode:</strong> You&apos;re viewing sample events. Login with{' '}
             <code>demo-organizer@tikem.co</code> or <code>demo-attendee@tikem.co</code> (password:{' '}
             <code>demo123</code>)

@@ -170,19 +170,19 @@ export default function PayoutsPageWrapper({
 
   // Dashboard view
   return (
-    <div className="min-h-screen bg-[#0a0a0a]">
+    <div className="min-h-screen bg-canvas">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-6">
-          <div className="flex items-center gap-2 text-sm text-white/60 mb-2">
-            <Link href="/organizer/settings" className="hover:text-white">
+          <div className="flex items-center gap-2 text-sm text-fg-muted mb-2">
+            <Link href="/organizer/settings" className="hover:text-fg">
               {t('actions.settings')}
             </Link>
-            <span className="text-white/40">/</span>
-            <span className="text-white font-medium">{t('actions.payouts')}</span>
+            <span className="text-fg-subtle">/</span>
+            <span className="text-fg font-medium">{t('actions.payouts')}</span>
           </div>
-          <h1 className="font-display lowercase italic !text-[28px] sm:!text-[32px] !leading-tight text-white">{t('actions.payouts')}</h1>
-          <p className="text-white/60 mt-1">
+          <h1 className="font-display lowercase italic !text-headline sm:!text-display !leading-tight text-fg">{t('actions.payouts')}</h1>
+          <p className="text-fg-muted mt-1">
             {t('payouts_wrapper.manage_earnings')}
           </p>
         </div>
@@ -211,7 +211,7 @@ export default function PayoutsPageWrapper({
           <div className="mt-8 pt-6">
             <Link 
               href="/organizer/settings/payouts?view=advanced"
-              className="inline-flex items-center gap-1 text-sm font-medium text-white/50 hover:text-white/70"
+              className="inline-flex items-center gap-1 text-sm font-medium text-fg-subtle hover:text-fg-muted"
             >
               {t('payouts_wrapper.advanced_payout_settings')}
               <ArrowRight className="h-4 w-4" />

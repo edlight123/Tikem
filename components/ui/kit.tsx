@@ -1,13 +1,14 @@
 import React from 'react'
 import Link from 'next/link'
+import { color } from '@/lib/design/tokens'
 
 type IconType = React.ComponentType<{ className?: string }>
 
 /**
  * Standard surface card — a FILL and a radius, no hairline.
  *
- * It used to be `border border-white/10` over `bg-white/[0.03]`. On the
- * `#0a0a0a` page a 3% white fill is very nearly the page colour, so the only
+ * It used to be `border border-line` over `bg-surface-low`. On the
+ * `${color.canvas}` page a 3% white fill is very nearly the page colour, so the only
  * thing that read was the outline: the wireframe look the owner has rejected
  * five times (see "Surfaces: a fill, not a hairline around nothing" in
  * docs/POSH_DESIGN_BRIEF.md). The same correction already shipped on /profile
@@ -24,13 +25,13 @@ export function Card({
   className?: string
   children: React.ReactNode
 }) {
-  return <div className={`rounded-2xl bg-white/[0.03] ${className}`}>{children}</div>
+  return <div className={`rounded-2xl bg-surface-low ${className}`}>{children}</div>
 }
 
 /**
  * KPI tile — brand-tinted icon chip + label + value. Value stays bold sans.
  *
- * Same fix as `Card`: a tile sitting on the page is `bg-white/[0.03]` with no
+ * Same fix as `Card`: a tile sitting on the page is `bg-surface-low` with no
  * border. Stat tiles come in rows of three or four, so the old hairline version
  * was the worst offender — a whole rank of empty outlines.
  */
@@ -48,17 +49,17 @@ export function StatTile({
   className?: string
 }) {
   return (
-    <div className={`rounded-2xl bg-white/[0.03] p-4 ${className}`}>
+    <div className={`rounded-2xl bg-surface-low p-4 ${className}`}>
       <div className="mb-2 flex items-center gap-2">
         {Icon && (
           <span className="grid h-8 w-8 place-items-center rounded-lg text-brand-300">
             <Icon className="h-4 w-4" />
           </span>
         )}
-        <p className="text-xs font-semibold uppercase tracking-wide text-white/50">{label}</p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-fg-subtle">{label}</p>
       </div>
-      <p className="text-2xl font-bold text-white">{value}</p>
-      {sublabel && <p className="mt-0.5 text-xs text-white/50">{sublabel}</p>}
+      <p className="text-2xl font-bold text-fg">{value}</p>
+      {sublabel && <p className="mt-0.5 text-xs text-fg-subtle">{sublabel}</p>}
     </div>
   )
 }
@@ -70,7 +71,7 @@ export function StatTile({
  *
  * Two ladder corrections. The chosen chip was `bg-brand-700`, but teal is
  * semantic in this app — a focus ring, a selected marker, an on switch, never a
- * surface — and the brief's ladder gives `bg-white text-black` for "a chosen
+ * surface — and the brief's ladder gives `bg-inverse text-on-inverse` for "a chosen
  * chip or a primary button". The unchosen chip's `0.04` fill and `0.06` hover
  * were both below the ladder's steps. Both now match the category chips and
  * language segments already shipped in components/profile/PreferencesCard.tsx.
@@ -93,8 +94,8 @@ export function Chip({
 }) {
   const base = `inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
     active
-      ? 'bg-white text-black'
-      : 'bg-white/[0.055] text-white/70 hover:bg-white/[0.12] hover:text-white'
+      ? 'bg-inverse text-on-inverse'
+      : 'bg-surface text-fg-muted hover:bg-surface-high hover:text-fg'
   } ${className}`
   if (href) {
     return (
@@ -131,7 +132,7 @@ export function EmptyState({
   className?: string
 }) {
   return (
-    <div className={`rounded-2xl bg-white/[0.03] p-10 text-center ${className}`}>
+    <div className={`rounded-2xl bg-surface-low p-10 text-center ${className}`}>
       {Icon && (
         <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl text-brand-300">
           <Icon className="h-7 w-7" />
@@ -139,8 +140,8 @@ export function EmptyState({
       )}
       {/* `!text-xl`: `.mobile-typography h3` (0,1,1) outranks `text-xl` (0,1,0),
           so the serif headline was rendering at 16px on every phone. */}
-      <h3 className="font-display italic !text-xl text-white">{title}</h3>
-      {description && <p className="mx-auto mt-1.5 max-w-md text-sm text-white/50">{description}</p>}
+      <h3 className="font-display italic !text-xl text-fg">{title}</h3>
+      {description && <p className="mx-auto mt-1.5 max-w-md text-sm text-fg-subtle">{description}</p>}
       {action && <div className="mt-5 flex justify-center">{action}</div>}
     </div>
   )
@@ -154,25 +155,25 @@ export type ChipTone = 'brand' | 'neutral' | 'success' | 'warning' | 'danger'
  *
  * Two reasons this changed. The house rule: a filled status pill reads as a
  * button, so PUBLISHED / ACTIVE / PENDING looked like things to press. And the
- * borders here were quietly broken — `border-green-200`, `border-amber-200`,
+ * borders here were quietly broken — `border-success-soft`, `border-warning-soft`,
  * `border-brand-100` are Tailwind's LIGHT tints, so on a black canvas each chip
  * drew a near-white hairline and every tone looked the same. A coloured dot
  * carries the state; the label stays plain text at normal weight.
  */
 const toneDot: Record<ChipTone, string> = {
   brand: 'bg-brand-400',
-  neutral: 'bg-white/35',
-  success: 'bg-emerald-400',
-  warning: 'bg-amber-400',
-  danger: 'bg-red-400',
+  neutral: 'bg-fg/35',
+  success: 'bg-success',
+  warning: 'bg-warning',
+  danger: 'bg-danger',
 }
 
 const toneText: Record<ChipTone, string> = {
   brand: 'text-brand-300',
-  neutral: 'text-white/60',
-  success: 'text-emerald-300',
-  warning: 'text-amber-300',
-  danger: 'text-red-300',
+  neutral: 'text-fg-muted',
+  success: 'text-success-soft',
+  warning: 'text-warning-soft',
+  danger: 'text-danger-soft',
 }
 
 /**

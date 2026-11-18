@@ -48,11 +48,11 @@ export function ExportButtons({
 
   const isConsole = variant === 'console'
   const h = size === 'sm' ? 'h-9' : isConsole ? 'h-9' : 'h-11'
-  const group = isConsole ? 'bg-console-raise' : 'bg-white/[0.08]'
+  const group = isConsole ? 'bg-console-raise' : 'bg-surface-raised'
   const btn = isConsole
-    ? 'text-console-mut hover:text-console-text hover:bg-white/[0.06] focus-visible:ring-console-mut text-[13px]'
-    : 'text-white/80 hover:text-white hover:bg-white/[0.08] focus-visible:ring-brand-500 text-sm'
-  const divider = isConsole ? 'bg-console-ground/70' : 'bg-black/40'
+    ? 'text-console-mut hover:text-console-text hover:bg-surface focus-visible:ring-console-mut text-meta'
+    : 'text-fg-soft hover:text-fg hover:bg-surface-raised focus-visible:ring-brand-500 text-sm'
+  const divider = isConsole ? 'bg-console-ground/70' : 'bg-scrim-light'
 
   const item = (format: ExportFormat, label: string, Icon: typeof FileText) => (
     <button

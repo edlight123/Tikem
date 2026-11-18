@@ -42,9 +42,9 @@ export default function FindTicketsForm({ smsEnabled = false }: { smsEnabled?: b
 
   if (status === 'sent') {
     return (
-      <div className="rounded-2xl bg-emerald-500/10 px-5 py-6 text-center">
-        <p className="text-emerald-200 font-semibold">{t('find_tickets.success_title', 'Check your messages')}</p>
-        <p className="text-sm text-white/70 mt-2 leading-relaxed">
+      <div className="rounded-2xl bg-success-strong/10 px-5 py-6 text-center">
+        <p className="text-success-soft font-semibold">{t('find_tickets.success_title', 'Check your messages')}</p>
+        <p className="text-sm text-fg-muted mt-2 leading-relaxed">
           {sentBy === 'email'
             ? t('find_tickets.success_desc_email', 'If we have tickets for that email address, the link is on its way to it now.')
             : smsEnabled
@@ -61,7 +61,7 @@ export default function FindTicketsForm({ smsEnabled = false }: { smsEnabled?: b
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label htmlFor="contact" className="block text-xs uppercase tracking-wider text-white/50 mb-1.5">
+        <label htmlFor="contact" className="block text-xs uppercase tracking-wider text-fg-subtle mb-1.5">
           {t('find_tickets.label', 'Email or phone')}
         </label>
         <input
@@ -71,14 +71,14 @@ export default function FindTicketsForm({ smsEnabled = false }: { smsEnabled?: b
           onChange={(e) => setContact(e.target.value)}
           disabled={status === 'sending'}
           placeholder={t('find_tickets.placeholder', 'you@example.com')}
-          className="w-full rounded-lg bg-white/[0.055] px-4 py-3 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-brand-400/60 disabled:opacity-50"
+          className="w-full rounded-lg bg-surface px-4 py-3 text-fg placeholder-fg-subtle focus:outline-none focus:ring-2 focus:ring-brand-400/60 disabled:opacity-50"
         />
       </div>
 
       <button
         type="submit"
         disabled={status === 'sending' || !contact.trim()}
-        className="block w-full bg-white hover:bg-white/90 text-black font-semibold py-3 px-5 rounded transition-colors disabled:opacity-50 min-h-[44px]"
+        className="block w-full bg-inverse hover:bg-inverse-hover text-on-inverse font-semibold py-3 px-5 rounded transition-colors disabled:opacity-50 min-h-[44px]"
       >
         {status === 'sending' ? t('find_tickets.sending', 'Sending…') : t('find_tickets.submit', 'Send my ticket link')}
       </button>

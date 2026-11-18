@@ -118,7 +118,7 @@ export function AdminReportsPanel({
     <div>
       <div className="mb-3 flex items-center gap-2">
         <AlertTriangle className="h-4 w-4 text-console-amber" />
-        <h4 className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-amber">
+        <h4 className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-amber">
           Open reports ({reports.length})
         </h4>
       </div>

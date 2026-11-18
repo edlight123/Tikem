@@ -34,7 +34,7 @@ export default function PosterFilmStrip({ events }: { events: StripEvent[] }) {
   return (
     <section
       aria-label="Event posters"
-      className="film-strip group relative isolate overflow-hidden bg-white/[0.03] py-6"
+      className="film-strip group relative isolate overflow-hidden bg-surface-low py-6"
     >
       <div
         className={

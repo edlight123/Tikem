@@ -61,14 +61,14 @@ export default function ReviewForm({ eventId, ticketId, eventTitle, onSuccess }:
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white/[0.055] rounded-2xl p-6">
-      <h3 className="mb-5 font-display lowercase italic !text-[22px] !leading-snug text-white">
+    <form onSubmit={handleSubmit} className="bg-surface rounded-2xl p-6">
+      <h3 className="mb-5 font-display lowercase italic !text-section !leading-snug text-fg">
         {t('review_form.heading', { defaultValue: 'Review: {{eventTitle}}', eventTitle })}
       </h3>
 
       {/* Event Rating */}
       <div className="mb-6">
-        <label className="block text-sm font-medium text-white/70 mb-2">
+        <label className="block text-sm font-medium text-fg-muted mb-2">
           {t('review_form.rating_label', 'How was the event? *')}
         </label>
         <div className="flex gap-2">
@@ -83,8 +83,8 @@ export default function ReviewForm({ eventId, ticketId, eventTitle, onSuccess }:
             >
               <span className={
                 star <= (hoverRating || rating)
-                  ? 'text-yellow-400'
-                  : 'text-white/40'
+                  ? 'text-warning'
+                  : 'text-fg-subtle'
               }>
                 ★
               </span>
@@ -95,25 +95,25 @@ export default function ReviewForm({ eventId, ticketId, eventTitle, onSuccess }:
 
       {/* Comment */}
       <div className="mb-6">
-        <label className="block text-sm font-medium text-white/70 mb-2">
+        <label className="block text-sm font-medium text-fg-muted mb-2">
           {t('review_form.comment_label', 'Your review (optional)')}
         </label>
         <textarea
           value={comment}
           onChange={(e) => setComment(e.target.value)}
           rows={4}
-          className="w-full rounded-xl bg-white/[0.07] px-4 py-3 text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-brand-400/60"
+          className="w-full rounded-xl bg-surface-raised px-4 py-3 text-fg placeholder:text-fg-faint focus:outline-none focus:ring-2 focus:ring-brand-400/60"
           placeholder={t('review_form.comment_placeholder', 'Share your experience...')}
           maxLength={500}
         />
-        <div className="text-xs text-white/50 mt-1">
+        <div className="text-xs text-fg-subtle mt-1">
           {t('review_form.comment_counter', { defaultValue: '{{count}}/500 characters', count: comment.length })}
         </div>
       </div>
 
       {/* Organizer Rating */}
       <div className="mb-6">
-        <label className="block text-sm font-medium text-white/70 mb-2">
+        <label className="block text-sm font-medium text-fg-muted mb-2">
           {t('review_form.organizer_rating_label', 'How was the organizer? (optional)')}
         </label>
         <div className="flex gap-2">
@@ -124,7 +124,7 @@ export default function ReviewForm({ eventId, ticketId, eventTitle, onSuccess }:
               onClick={() => setOrganizerRating(star)}
               className="text-2xl transition-colors"
             >
-              <span className={star <= organizerRating ? 'text-teal-500' : 'text-white/40'}>
+              <span className={star <= organizerRating ? 'text-brand-500' : 'text-fg-subtle'}>
                 ★
               </span>
             </button>
@@ -134,7 +134,7 @@ export default function ReviewForm({ eventId, ticketId, eventTitle, onSuccess }:
 
       {/* Recommendation */}
       <div className="mb-6">
-        <label className="block text-sm font-medium text-white/70 mb-2">
+        <label className="block text-sm font-medium text-fg-muted mb-2">
           {t('review_form.recommend_label', 'Would you recommend this event?')}
         </label>
         <div className="flex gap-3">
@@ -151,8 +151,8 @@ export default function ReviewForm({ eventId, ticketId, eventTitle, onSuccess }:
                 aria-pressed={selected}
                 className={`inline-flex items-center gap-2 rounded px-5 py-2.5 text-sm font-medium transition-colors ${
                   selected
-                    ? 'bg-white/[0.16] text-white'
-                    : 'bg-white/[0.07] text-white/70 hover:bg-white/[0.1] hover:text-white'
+                    ? 'bg-surface-high text-fg'
+                    : 'bg-surface-raised text-fg-muted hover:bg-surface-raised hover:text-fg'
                 }`}
               >
                 <Icon className={`h-4 w-4 ${selected ? 'text-brand-300' : ''}`} aria-hidden />
@@ -164,7 +164,7 @@ export default function ReviewForm({ eventId, ticketId, eventTitle, onSuccess }:
       </div>
 
       {error && (
-        <div role="alert" className="mb-4 rounded-xl bg-red-500/10 p-3 text-sm text-red-300">
+        <div role="alert" className="mb-4 rounded-xl bg-danger-strong/10 p-3 text-sm text-danger-soft">
           {error}
         </div>
       )}
@@ -172,7 +172,7 @@ export default function ReviewForm({ eventId, ticketId, eventTitle, onSuccess }:
       <button
         type="submit"
         disabled={loading || rating === 0}
-        className="w-full rounded bg-white py-3 font-semibold text-black transition-colors hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50"
+        className="w-full rounded bg-inverse py-3 font-semibold text-on-inverse transition-colors hover:bg-inverse-hover disabled:cursor-not-allowed disabled:opacity-50"
       >
         {loading ? t('review_form.submitting', 'Submitting...') : t('review_form.submit', 'Submit Review')}
       </button>

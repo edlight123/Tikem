@@ -295,13 +295,13 @@ export default function PayoutReviewQueue() {
       {/* Summary figures */}
       <div className="grid grid-cols-2 gap-x-6 gap-y-4 sm:flex sm:flex-wrap sm:gap-x-8 sm:gap-y-4">
         <div>
-          <p className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint">
+          <p className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint">
             Waiting on a decision
           </p>
           <p className="mt-1 font-mono text-xl tabular-nums text-console-text">{pending.length}</p>
         </div>
         <div>
-          <p className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint">
+          <p className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint">
             Held from organizers
           </p>
           <p className="mt-1 font-mono text-xl tabular-nums text-console-text">
@@ -317,7 +317,7 @@ export default function PayoutReviewQueue() {
           </p>
         </div>
         <div>
-          <p className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint">
+          <p className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint">
             Recently resolved
           </p>
           <p className="mt-1 font-mono text-xl tabular-nums text-console-text">{resolved.length}</p>
@@ -353,7 +353,7 @@ export default function PayoutReviewQueue() {
       )}
 
       <div className="flex items-center justify-between gap-3">
-        <h2 className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint">Pending review</h2>
+        <h2 className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint">Pending review</h2>
         <ConsoleButton
           type="button"
           onClick={() => load(false)}
@@ -410,13 +410,13 @@ export default function PayoutReviewQueue() {
                         <span className="text-console-faint"> · {item.organizerEmail}</span>
                       ) : null}
                     </p>
-                    <p className="mt-1 font-mono text-[11px] text-console-faint">{item.eventId}</p>
+                    <p className="mt-1 font-mono text-eyebrow text-console-faint">{item.eventId}</p>
                   </div>
 
                   <div className="text-right">
                     {/* How long this organizer has been unpaid — the reason this queue is urgent. */}
                     <p
-                      className={`label-mono text-[13px] tabular-nums ${
+                      className={`label-mono text-meta tabular-nums ${
                         now ? consoleAgeClass(since, now) : 'text-console-faint'
                       }`}
                       title={waitingSinceTitle(since)}
@@ -426,7 +426,7 @@ export default function PayoutReviewQueue() {
                     <p className="mt-1 font-mono text-2xl font-bold tabular-nums text-console-text">
                       {formatMinor(item.amountMinor, item.currency)}
                     </p>
-                    <p className="mt-0.5 text-[11px] text-console-faint">held from this organizer</p>
+                    <p className="mt-0.5 text-eyebrow text-console-faint">held from this organizer</p>
                   </div>
                 </div>
 
@@ -435,10 +435,10 @@ export default function PayoutReviewQueue() {
                     <span className="text-console-amber">●</span> {describeReason(item.reason)}
                   </p>
                   {hint && <p className="mt-1 text-xs text-console-mut">{hint}</p>}
-                  <p className="mt-2 font-mono text-[11px] text-console-faint">{item.reason}</p>
+                  <p className="mt-2 font-mono text-eyebrow text-console-faint">{item.reason}</p>
                 </div>
 
-                <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-console-faint">
+                <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-eyebrow text-console-faint">
                   <span>Queued {timeAgo(item.createdAt)}</span>
                   {item.tier && <span>{TIER_LABELS[item.tier] || item.tier}</span>}
                   {item.updatedAt && item.updatedAt !== item.createdAt && (
@@ -477,7 +477,7 @@ export default function PayoutReviewQueue() {
       {/* Recently resolved */}
       <section>
         <div className="mb-2">
-          <h2 className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint">Recently resolved</h2>
+          <h2 className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint">Recently resolved</h2>
           <p className="mt-1 text-xs text-console-mut">
             The last decisions made here, so you can see what a colleague already actioned. Every one is also in the
             admin audit log.
@@ -495,7 +495,7 @@ export default function PayoutReviewQueue() {
                 <li key={item.eventId} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3">
                   <div className="min-w-0">
                     <p className="truncate text-sm text-console-text">{item.eventTitle || item.eventId}</p>
-                    <p className="text-[11px] text-console-faint">
+                    <p className="text-eyebrow text-console-faint">
                       {item.organizerName || item.organizerEmail || item.organizerId} · {describeReason(item.reason)}
                     </p>
                   </div>
@@ -503,7 +503,7 @@ export default function PayoutReviewQueue() {
                     <p className="font-mono text-sm font-semibold tabular-nums text-console-text">
                       {formatMinor(item.amountMinor, item.currency)}
                     </p>
-                    <p className="text-[11px] text-console-faint">
+                    <p className="text-eyebrow text-console-faint">
                       <ConsoleState tone={item.status === 'released' ? 'good' : 'neutral'}>
                         {item.status === 'released' ? 'Released' : 'Dismissed'}
                       </ConsoleState>{' '}

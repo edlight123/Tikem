@@ -189,7 +189,7 @@ export default async function OrganizerProfilePage({ params }: { params: Promise
     userData?.is_organizer === true
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] pb-mobile-nav">
+    <div className="min-h-screen bg-canvas pb-mobile-nav">
       <Navbar user={user} />
 
       <OrganizerProfileClient

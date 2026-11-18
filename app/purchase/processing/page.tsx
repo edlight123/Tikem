@@ -71,18 +71,18 @@ export default function PurchaseProcessingPage() {
   }, [orderId, provider, statusToken, router])
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-canvas flex items-center justify-center p-4">
       <div className="max-w-md w-full">
-        <div className="bg-white/[0.055] rounded-2xl p-6 md:p-8 text-center">
+        <div className="bg-surface rounded-2xl p-6 md:p-8 text-center">
           {!timedOut ? (
             <>
               <div className="w-14 h-14 md:w-16 md:h-16 mx-auto mb-4 flex items-center justify-center">
-                <div className="w-10 h-10 border-4 border-white/15 border-t-white rounded-full animate-spin" />
+                <div className="w-10 h-10 border-4 border-line-strong border-t-white rounded-full animate-spin" />
               </div>
-              <h1 className="font-display lowercase italic !text-[28px] md:!text-[32px] !leading-tight text-white mb-2">
+              <h1 className="font-display lowercase italic !text-headline md:!text-display !leading-tight text-fg mb-2">
                 {t('purchase.confirming_payment', { defaultValue: 'Confirming your payment…' })}
               </h1>
-              <p className="text-sm md:text-base text-white/65">
+              <p className="text-sm md:text-base text-fg-muted">
                 {t('purchase.confirming_payment_detail', {
                   defaultValue:
                     'Please wait while we confirm your payment and issue your ticket. This usually takes a few seconds.',
@@ -91,15 +91,15 @@ export default function PurchaseProcessingPage() {
             </>
           ) : (
             <>
-              <div className="w-14 h-14 md:w-16 md:h-16 bg-amber-500/10 rounded flex items-center justify-center mx-auto mb-4">
-                <svg className="w-7 h-7 md:w-8 md:h-8 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="w-14 h-14 md:w-16 md:h-16 bg-warning-strong/10 rounded flex items-center justify-center mx-auto mb-4">
+                <svg className="w-7 h-7 md:w-8 md:h-8 text-warning" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <h1 className="font-display lowercase italic !text-[28px] md:!text-[32px] !leading-tight text-white mb-2">
+              <h1 className="font-display lowercase italic !text-headline md:!text-display !leading-tight text-fg mb-2">
                 {t('purchase.still_confirming_payment', { defaultValue: 'Still confirming your payment' })}
               </h1>
-              <p className="text-sm md:text-base text-white/65 mb-6">
+              <p className="text-sm md:text-base text-fg-muted mb-6">
                 {t('purchase.still_confirming_payment_detail_pre', {
                   defaultValue: 'Your payment is being processed. If it was successful, your ticket will appear under',
                 })}{' '}
@@ -110,7 +110,7 @@ export default function PurchaseProcessingPage() {
               </p>
               <Link
                 href="/tickets"
-                className="flex h-12 w-full items-center justify-center bg-white hover:bg-white/90 text-black font-semibold px-6 rounded transition-colors text-base"
+                className="flex h-12 w-full items-center justify-center bg-inverse hover:bg-inverse-hover text-on-inverse font-semibold px-6 rounded transition-colors text-base"
               >
                 {t('purchase.view_my_tickets', { defaultValue: 'View My Tickets' })}
               </Link>

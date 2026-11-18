@@ -13,7 +13,7 @@ interface AdminBreadcrumbsProps {
 
 export function AdminBreadcrumbs({ items }: AdminBreadcrumbsProps) {
   return (
-    <nav className="label-mono mb-6 flex items-center gap-1.5 text-[11px] text-console-faint">
+    <nav className="label-mono mb-6 flex items-center gap-1.5 text-eyebrow text-console-faint">
       <Link href="/admin" className="transition-colors hover:text-console-mut">
         Admin
       </Link>

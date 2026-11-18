@@ -19,7 +19,7 @@ export default function CategoryPageContent({ category, events }: CategoryPageCo
       {/* Back link */}
       <Link
         href="/"
-        className="group mb-5 inline-flex items-center gap-1.5 text-sm font-medium text-white/50 transition-colors hover:text-white"
+        className="group mb-5 inline-flex items-center gap-1.5 text-sm font-medium text-fg-subtle transition-colors hover:text-fg"
       >
         <ArrowLeft className="h-4 w-4 transition-transform duration-200 group-hover:-translate-x-0.5" />
         {t('common.back', { defaultValue: 'Back' })}
@@ -27,11 +27,11 @@ export default function CategoryPageContent({ category, events }: CategoryPageCo
 
       {/* Header */}
       <header className="mb-7 md:mb-9">
-        <p className="eyebrow text-white/45">{t('events.eyebrow_browse')}</p>
-        <h1 className="mt-1.5 font-display italic text-[clamp(28px,5vw,44px)] leading-[1.02] text-white">
+        <p className="eyebrow text-fg-subtle">{t('events.eyebrow_browse')}</p>
+        <h1 className="mt-1.5 font-display italic text-[clamp(28px,5vw,44px)] leading-[1.02] text-fg">
           {label}
         </h1>
-        <p className="mt-1.5 text-sm text-white/55 sm:text-[15px]">
+        <p className="mt-1.5 text-sm text-fg-muted sm:text-body">
           {events.length === 1
             ? t('events.event_found', { count: events.length })
             : t('events.events_found', { count: events.length })}
@@ -49,13 +49,13 @@ export default function CategoryPageContent({ category, events }: CategoryPageCo
         // A label and one white action: no teal button (teal is for state),
         // no "check back later" sentence.
         <div className="flex flex-col items-center px-6 py-16 text-center sm:py-20">
-          <Inbox className="h-8 w-8 text-white/35" aria-hidden />
-          <h3 className="mt-5 font-display italic !text-2xl text-white">
+          <Inbox className="h-8 w-8 text-fg-faint" aria-hidden />
+          <h3 className="mt-5 font-display italic !text-2xl text-fg">
             {t('events.no_category_events', { category: label })}
           </h3>
           <Link
             href="/discover"
-            className="mt-7 inline-flex h-12 items-center rounded bg-white px-6 text-[15px] font-semibold text-black transition-colors hover:bg-white/85"
+            className="mt-7 inline-flex h-12 items-center rounded bg-inverse px-6 text-body font-semibold text-on-inverse transition-colors hover:bg-inverse-hover"
           >
             {t('events.all_events')}
           </Link>

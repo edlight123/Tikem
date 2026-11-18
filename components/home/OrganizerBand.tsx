@@ -21,15 +21,15 @@ export default function OrganizerBand() {
     t('home.org.fact_payout', { defaultValue: 'Funds available 72 hours after your event ends, 24 hours once you’re established' }),
   ]
   return (
-    <section className="rounded bg-white/[0.045] px-6 py-10 sm:px-10 sm:py-14 lg:px-14 lg:py-16">
+    <section className="rounded bg-surface-low px-6 py-10 sm:px-10 sm:py-14 lg:px-14 lg:py-16">
       <div className="grid gap-10 lg:grid-cols-12 lg:items-end lg:gap-12">
-        <h2 className="font-grotesk font-bold text-white text-balance !text-[clamp(34px,4.6vw,64px)] !leading-[0.95] tracking-[-0.035em] lg:col-span-7">
+        <h2 className="font-grotesk font-bold text-fg text-balance !text-[clamp(34px,4.6vw,64px)] !leading-[0.95] tracking-[-0.035em] lg:col-span-7">
           {t('home.org.line', { defaultValue: 'Throw the fèt. We’ll run the door.' })}
         </h2>
         <div className="lg:col-span-5">
           <ul className="space-y-3">
             {facts.map((f) => (
-              <li key={f} className="text-[16px] leading-snug text-white/75">
+              <li key={f} className="text-base leading-snug text-fg-soft">
                 {f}
               </li>
             ))}
@@ -37,13 +37,13 @@ export default function OrganizerBand() {
           <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
             <Link
               href="/create"
-              className="inline-flex h-12 items-center rounded bg-white px-6 font-grotesk text-[15px] font-semibold text-black outline-none transition-colors hover:bg-white/85 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+              className="inline-flex h-12 items-center rounded bg-inverse px-6 font-grotesk text-body font-semibold text-on-inverse outline-none transition-colors hover:bg-inverse-hover focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black"
             >
               {t('home.org.cta', { defaultValue: 'Start selling' })}
             </Link>
             <Link
               href="/platform"
-              className="rounded text-[14px] text-white/55 underline-offset-4 outline-none transition-colors hover:text-white hover:underline focus-visible:ring-2 focus-visible:ring-white/70"
+              className="rounded text-sm text-fg-muted underline-offset-4 outline-none transition-colors hover:text-fg hover:underline focus-visible:ring-2 focus-visible:ring-fg/70"
             >
               {t('home.org.how', { defaultValue: 'How it works' })}
             </Link>

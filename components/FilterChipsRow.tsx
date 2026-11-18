@@ -85,7 +85,7 @@ export function FilterChipsRow({ filters, onRemoveFilter, onClearAll, userCountr
 
   return (
     <div className="flex flex-wrap items-center gap-2 rounded-2xl  p-3.5 shadow-poster-sm">
-      <span className="eyebrow text-[11px] text-white/50">{t('filters.active_filters')}</span>
+      <span className="eyebrow text-eyebrow text-fg-subtle">{t('filters.active_filters')}</span>
       {chips.map((chip, index) => (
         <FilterChip
           key={`${chip.key}-${chip.value || index}`}

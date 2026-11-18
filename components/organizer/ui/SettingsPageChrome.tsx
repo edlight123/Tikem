@@ -32,7 +32,7 @@ export function SettingsPageChrome({
     <>
       <Link
         href="/organizer/settings"
-        className="inline-flex items-center gap-2 text-sm text-white/60 hover:text-white mb-6 transition-colors"
+        className="inline-flex items-center gap-2 text-sm text-fg-muted hover:text-fg mb-6 transition-colors"
       >
         <ChevronLeft className="w-4 h-4" />
         {t('settings_pages.back_to_settings')}

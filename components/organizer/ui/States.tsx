@@ -37,8 +37,8 @@ export function OrgEmptyState({
     const QuietIcon = Icon as StrokeIconType | undefined
     return (
       <div className={`flex flex-col items-center px-6 pb-6 pt-16 text-center ${className}`}>
-        {QuietIcon && <QuietIcon className="h-[22px] w-[22px] text-white/40" strokeWidth={1.5} />}
-        <p className="mt-3 text-[15px] font-semibold leading-5 text-white">{title}</p>
+        {QuietIcon && <QuietIcon className="h-[22px] w-[22px] text-fg-subtle" strokeWidth={1.5} />}
+        <p className="mt-3 text-body font-semibold leading-5 text-fg">{title}</p>
         {action && <div className="mt-4 flex justify-center">{action}</div>}
       </div>
     )
@@ -48,16 +48,16 @@ export function OrgEmptyState({
       // The dashed hairline was doing the "nothing here" work that the fill can
       // do on its own; a dashed box around a near-empty fill is the wireframe
       // look the house rule exists to stop.
-      className={`flex flex-col items-center justify-center rounded-2xl bg-white/[0.03] p-10 text-center ${className}`}
+      className={`flex flex-col items-center justify-center rounded-2xl bg-surface-low p-10 text-center ${className}`}
     >
       {Icon && (
-        <div className="mx-auto mb-5 grid h-14 w-14 place-items-center rounded-2xl text-white/40">
+        <div className="mx-auto mb-5 grid h-14 w-14 place-items-center rounded-2xl text-fg-subtle">
           <Icon className="h-7 w-7" />
         </div>
       )}
-      <h3 className="font-display italic text-xl text-white">{title}</h3>
+      <h3 className="font-display italic text-xl text-fg">{title}</h3>
       {description && (
-        <p className="mx-auto mt-2 max-w-sm text-sm text-white/50">{description}</p>
+        <p className="mx-auto mt-2 max-w-sm text-sm text-fg-subtle">{description}</p>
       )}
       {action && <div className="mt-6 flex justify-center">{action}</div>}
     </div>
@@ -83,14 +83,14 @@ export function OrgErrorState({
     <div
       // Was a red hairline around nothing. The tint carries the alarm; the ring
       // is the accent on top of a fill, not a substitute for one.
-      className={`flex flex-col items-center justify-center rounded-2xl bg-red-500/[0.07] p-10 text-center ${className}`}
+      className={`flex flex-col items-center justify-center rounded-2xl bg-danger-strong/[0.07] p-10 text-center ${className}`}
     >
-      <div className="mx-auto mb-5 grid h-14 w-14 place-items-center rounded-2xl text-red-400">
+      <div className="mx-auto mb-5 grid h-14 w-14 place-items-center rounded-2xl text-danger">
         <AlertCircle className="h-7 w-7" />
       </div>
-      <h3 className="font-display italic text-xl text-white">{title ?? <T k="server_bits.something_went_wrong" />}</h3>
+      <h3 className="font-display italic text-xl text-fg">{title ?? <T k="server_bits.something_went_wrong" />}</h3>
       {description && (
-        <p className="mx-auto mt-2 max-w-sm text-sm text-white/50">{description}</p>
+        <p className="mx-auto mt-2 max-w-sm text-sm text-fg-subtle">{description}</p>
       )}
       {action && <div className="mt-6 flex justify-center">{action}</div>}
     </div>
@@ -109,15 +109,15 @@ export function OrgLoadingSkeleton({
   className?: string
 }) {
   return (
-    <div className={`animate-pulse space-y-0 divide-y divide-white/5 ${className}`}>
+    <div className={`animate-pulse space-y-0 divide-y divide-line-soft ${className}`}>
       {Array.from({ length: rows }).map((_, i) => (
         <div key={i} className="flex items-center gap-4 px-4 py-4 sm:px-6">
-          <div className="h-10 w-10 shrink-0 rounded-lg bg-white/[0.06]" />
+          <div className="h-10 w-10 shrink-0 rounded-lg bg-surface" />
           <div className="flex-1 space-y-2">
-            <div className="h-3.5 w-2/5 rounded bg-white/[0.06]" />
-            <div className="h-3 w-1/4 rounded bg-white/[0.06]" />
+            <div className="h-3.5 w-2/5 rounded bg-surface" />
+            <div className="h-3 w-1/4 rounded bg-surface" />
           </div>
-          <div className="h-6 w-16 rounded bg-white/[0.06]" />
+          <div className="h-6 w-16 rounded bg-surface" />
         </div>
       ))}
     </div>
@@ -132,15 +132,15 @@ export function OrgPageSkeleton({ rows = 8 }: { rows?: number }) {
     <div className="animate-pulse space-y-6 px-4 py-6 sm:px-6 lg:px-8">
       {/* Header skeleton */}
       <div className="space-y-2">
-        <div className="h-3 w-16 rounded bg-white/[0.06]" />
-        <div className="h-9 w-56 rounded-lg bg-white/[0.06]" />
-        <div className="h-4 w-80 rounded bg-white/[0.06]" />
+        <div className="h-3 w-16 rounded bg-surface" />
+        <div className="h-9 w-56 rounded-lg bg-surface" />
+        <div className="h-4 w-80 rounded bg-surface" />
       </div>
       {/* Content skeleton */}
-      <div className="overflow-hidden rounded-2xl bg-white/[0.03]">
+      <div className="overflow-hidden rounded-2xl bg-surface-low">
         {/* Toolbar — the divider stays: it separates two stacked regions. */}
-        <div className="border-b border-white/10 px-4 py-3">
-          <div className="h-9 w-52 rounded-lg bg-white/[0.06]" />
+        <div className="border-b border-line px-4 py-3">
+          <div className="h-9 w-52 rounded-lg bg-surface" />
         </div>
         <OrgLoadingSkeleton rows={rows} />
       </div>

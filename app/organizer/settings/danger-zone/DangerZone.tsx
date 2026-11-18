@@ -94,21 +94,21 @@ export default function DangerZone({ userId }: DangerZoneProps) {
   return (
     <div className="space-y-4">
       {/* Export Data */}
-      <div className="bg-white/[0.055] rounded-2xl p-6">
+      <div className="bg-surface rounded-2xl p-6">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2">
-              <Download className="w-5 h-5 text-white/70" />
-              <h3 className="font-semibold text-white">{t('danger_zone.export_your_data')}</h3>
+              <Download className="w-5 h-5 text-fg-muted" />
+              <h3 className="font-semibold text-fg">{t('danger_zone.export_your_data')}</h3>
             </div>
-            <p className="text-sm text-white/60">
+            <p className="text-sm text-fg-muted">
               {t('danger_zone.export_desc')}
             </p>
           </div>
           <button
             onClick={handleExportData}
             disabled={isExporting}
-            className="px-4 py-2 bg-white/[0.07] hover:bg-white/[0.12] text-white font-medium rounded transition-colors flex items-center gap-2 disabled:opacity-50"
+            className="px-4 py-2 bg-surface-raised hover:bg-surface-high text-fg font-medium rounded transition-colors flex items-center gap-2 disabled:opacity-50"
           >
             {isExporting && <Loader2 className="w-4 h-4 animate-spin" />}
             {isExporting ? t('danger_zone.exporting') : t('danger_zone.export_button')}
@@ -117,20 +117,20 @@ export default function DangerZone({ userId }: DangerZoneProps) {
       </div>
 
       {/* Deactivate Account */}
-      <div className="bg-amber-500/10 rounded-2xl p-6">
+      <div className="bg-warning-strong/10 rounded-2xl p-6">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2">
-              <XCircle className="w-5 h-5 text-amber-300" />
-              <h3 className="font-semibold text-white">{t('danger_zone.deactivate_account')}</h3>
+              <XCircle className="w-5 h-5 text-warning-soft" />
+              <h3 className="font-semibold text-fg">{t('danger_zone.deactivate_account')}</h3>
             </div>
-            <p className="text-sm text-white/60">
+            <p className="text-sm text-fg-muted">
               {t('danger_zone.deactivate_desc')}
             </p>
           </div>
           <button
             onClick={() => setShowDeactivateModal(true)}
-            className="px-4 py-2 bg-amber-500/15 hover:bg-amber-500/25 text-amber-200 font-medium rounded transition-colors"
+            className="px-4 py-2 bg-warning-strong/15 hover:bg-warning-strong/25 text-warning-soft font-medium rounded transition-colors"
           >
             {t('danger_zone.deactivate')}
           </button>
@@ -138,17 +138,17 @@ export default function DangerZone({ userId }: DangerZoneProps) {
       </div>
 
       {/* Delete Account */}
-      <div className="bg-red-500/10 rounded-2xl p-6">
+      <div className="bg-danger-strong/10 rounded-2xl p-6">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2">
-              <Trash2 className="w-5 h-5 text-red-300" />
-              <h3 className="font-semibold text-white">{t('danger_zone.delete_permanently')}</h3>
+              <Trash2 className="w-5 h-5 text-danger-soft" />
+              <h3 className="font-semibold text-fg">{t('danger_zone.delete_permanently')}</h3>
             </div>
-            <p className="text-sm text-white/60 mb-3">
+            <p className="text-sm text-fg-muted mb-3">
               {t('danger_zone.delete_desc')}
             </p>
-            <ul className="text-xs text-red-300 space-y-1 list-disc list-inside">
+            <ul className="text-xs text-danger-soft space-y-1 list-disc list-inside">
               <li>{t('danger_zone.all_data_deleted')}</li>
               <li>{t('danger_zone.pending_payouts_forfeited')}</li>
               <li>{t('danger_zone.profile_removed')}</li>
@@ -157,7 +157,7 @@ export default function DangerZone({ userId }: DangerZoneProps) {
           </div>
           <button
             onClick={() => setShowDeleteModal(true)}
-            className="px-4 py-2 bg-red-500/15 hover:bg-red-500/25 text-red-200 font-medium rounded transition-colors"
+            className="px-4 py-2 bg-danger-strong/15 hover:bg-danger-strong/25 text-danger-soft font-medium rounded transition-colors"
           >
             {t('danger_zone.delete_account')}
           </button>
@@ -166,23 +166,23 @@ export default function DangerZone({ userId }: DangerZoneProps) {
 
       {/* Deactivate Confirmation Modal */}
       {showDeactivateModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-[#1c1c1c] rounded-2xl max-w-md w-full p-6">
+        <div className="fixed inset-0 bg-scrim-light z-50 flex items-center justify-center p-4">
+          <div className="bg-surface-raised-solid rounded-2xl max-w-md w-full p-6">
             <div className="flex items-center gap-3 mb-4">
-              <AlertTriangle className="w-6 h-6 text-amber-300" />
-              <h3 className="font-display italic text-xl text-white">{t('danger_zone.deactivate_account_q')}</h3>
+              <AlertTriangle className="w-6 h-6 text-warning-soft" />
+              <h3 className="font-display italic text-xl text-fg">{t('danger_zone.deactivate_account_q')}</h3>
             </div>
             {blockedEvents ? (
               <div className="mb-6">
-                <p className="font-semibold text-white mb-2">{t('danger_zone.deactivate_blocked_title')}</p>
-                <p className="text-sm text-white/60 mb-3">{t('danger_zone.deactivate_blocked_body')}</p>
+                <p className="font-semibold text-fg mb-2">{t('danger_zone.deactivate_blocked_title')}</p>
+                <p className="text-sm text-fg-muted mb-3">{t('danger_zone.deactivate_blocked_body')}</p>
                 <ul className="space-y-2">
                   {blockedEvents.map((ev) => (
-                    <li key={ev.id} className="rounded bg-white/[0.06] px-3 py-2 text-sm">
-                      <a href={`/organizer/events/${encodeURIComponent(ev.id)}`} className="font-medium text-white hover:underline">
+                    <li key={ev.id} className="rounded bg-surface px-3 py-2 text-sm">
+                      <a href={`/organizer/events/${encodeURIComponent(ev.id)}`} className="font-medium text-fg hover:underline">
                         {ev.title}
                       </a>
-                      <span className="block text-white/55">
+                      <span className="block text-fg-muted">
                         {t('danger_zone.deactivate_blocked_tickets', { count: ev.ticketsSold })}
                       </span>
                     </li>
@@ -190,12 +190,12 @@ export default function DangerZone({ userId }: DangerZoneProps) {
                 </ul>
               </div>
             ) : (
-              <p className="text-white/60 mb-6">
+              <p className="text-fg-muted mb-6">
                 {t('danger_zone.deactivate_confirm')}
               </p>
             )}
             {deactivateError && (
-              <div role="alert" className="mb-4 rounded bg-red-500/10 px-4 py-2.5 text-sm text-red-200">
+              <div role="alert" className="mb-4 rounded bg-danger-strong/10 px-4 py-2.5 text-sm text-danger-soft">
                 {deactivateError}
               </div>
             )}
@@ -206,7 +206,7 @@ export default function DangerZone({ userId }: DangerZoneProps) {
                   setBlockedEvents(null);
                   setDeactivateError(null);
                 }}
-                className="flex-1 px-4 py-3 text-white/70 font-medium rounded bg-white/[0.07] hover:bg-white/[0.12] text-[16px] focus:outline-none"
+                className="flex-1 px-4 py-3 text-fg-muted font-medium rounded bg-surface-raised hover:bg-surface-high text-base focus:outline-none"
               >
                 {t('actions.cancel')}
               </button>
@@ -214,7 +214,7 @@ export default function DangerZone({ userId }: DangerZoneProps) {
               <button
                 onClick={handleDeactivate}
                 disabled={isDeactivating}
-                className="flex-1 px-4 py-2.5 bg-amber-500/15 hover:bg-amber-500/25 text-amber-200 font-medium rounded disabled:opacity-50 flex items-center justify-center gap-2"
+                className="flex-1 px-4 py-2.5 bg-warning-strong/15 hover:bg-warning-strong/25 text-warning-soft font-medium rounded disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {isDeactivating && <Loader2 className="w-4 h-4 animate-spin" />}
                 {isDeactivating ? t('danger_zone.deactivating') : t('danger_zone.deactivate')}

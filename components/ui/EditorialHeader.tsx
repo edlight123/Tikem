@@ -35,11 +35,11 @@ export function EditorialHeader({
             `h1 { @apply text-xl leading-tight }` is an element+class selector
             (0,1,1) and beats a bare arbitrary utility (0,1,0) — without this the
             editorial title collapses to 20px on every phone. */}
-        <h1 className={`mt-1.5 font-display italic !text-[clamp(28px,4vw,40px)] !leading-[1.02] ${dark ? 'text-white' : 'text-white'}`}>
+        <h1 className={`mt-1.5 font-display italic !text-[clamp(28px,4vw,40px)] !leading-[1.02] ${dark ? 'text-fg' : 'text-fg'}`}>
           {title}
         </h1>
         {subtitle && (
-          <p className={`mt-1.5 text-sm sm:text-[15px] ${dark ? 'text-white/55' : 'text-white/50'}`}>{subtitle}</p>
+          <p className={`mt-1.5 text-sm sm:text-body ${dark ? 'text-fg-muted' : 'text-fg-subtle'}`}>{subtitle}</p>
         )}
       </div>
       {actions && <div className="shrink-0">{actions}</div>}
@@ -77,11 +77,11 @@ export function EditorialSectionHeading({
     <div className={`flex items-end justify-between gap-4 ${className}`}>
       <div className="min-w-0">
         {eyebrow && <p className="eyebrow text-brand-400">{eyebrow}</p>}
-        <h2 className="mt-1.5 font-display italic lowercase !text-[clamp(22px,3.4vw,30px)] !leading-[1.04] text-white">
+        <h2 className="mt-1.5 font-display italic lowercase !text-[clamp(22px,3.4vw,30px)] !leading-[1.04] text-fg">
           {title}
         </h2>
         {description && (
-          <p className="mt-1.5 text-sm text-white/50 sm:text-[15px]">{description}</p>
+          <p className="mt-1.5 text-sm text-fg-subtle sm:text-body">{description}</p>
         )}
       </div>
       {actions && <div className="shrink-0">{actions}</div>}

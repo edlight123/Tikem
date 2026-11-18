@@ -66,11 +66,11 @@ export function OrganizerTopNav({
   const settingsActive = pathname?.startsWith('/organizer/settings')
 
   return (
-    <div className="sticky top-0 z-40 border-b border-white/10 bg-[#0a0a0a]/90 backdrop-blur-xl">
+    <div className="sticky top-0 z-40 border-b border-line bg-canvas/90 backdrop-blur-xl">
       <div className="mx-auto flex h-14 max-w-7xl items-center gap-3 px-4 sm:px-6 lg:px-8">
         {/* Brand */}
         <Link href="/" className="shrink-0 pr-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded">
-          <TikemWordmark italic className="text-2xl text-white" />
+          <TikemWordmark italic className="text-2xl text-fg" />
         </Link>
 
         {/* Tabs */}
@@ -82,12 +82,12 @@ export function OrganizerTopNav({
                 key={tab.href}
                 href={tab.href}
                 className={`relative flex h-14 shrink-0 items-center gap-2 whitespace-nowrap px-3 text-sm font-semibold transition-colors ${
-                  active ? 'text-white' : 'text-white/55 hover:text-white/80'
+                  active ? 'text-fg' : 'text-fg-muted hover:text-fg-soft'
                 }`}
               >
                 {tab.label}
                 {tab.badge ? (
-                  <span className="grid h-5 min-w-[20px] place-items-center rounded-full bg-white/[0.14] px-1.5 text-[11px] font-bold text-white">
+                  <span className="grid h-5 min-w-[20px] place-items-center rounded-full bg-surface-high px-1.5 text-eyebrow font-bold text-fg">
                     {tab.badge > 9 ? '9+' : tab.badge}
                   </span>
                 ) : null}
@@ -105,12 +105,12 @@ export function OrganizerTopNav({
             href="/organizer/finance"
             aria-label={t('actions.finance')}
             className={`relative grid h-9 w-9 place-items-center rounded-lg transition-colors ${
-              financeActive ? 'bg-white/[0.12] text-white' : 'text-white/55 hover:bg-white/[0.08] hover:text-white'
+              financeActive ? 'bg-surface-high text-fg' : 'text-fg-muted hover:bg-surface-raised hover:text-fg'
             }`}
           >
             <DollarSign className="h-[18px] w-[18px]" />
             {pendingPayouts > 0 && (
-              <span className="absolute -right-0.5 -top-0.5 grid h-4 min-w-[16px] place-items-center rounded-full bg-white px-1 text-[10px] font-bold text-black">
+              <span className="absolute -right-0.5 -top-0.5 grid h-4 min-w-[16px] place-items-center rounded-full bg-inverse px-1 text-eyebrow font-bold text-on-inverse">
                 {pendingPayouts > 9 ? '9+' : pendingPayouts}
               </span>
             )}
@@ -121,7 +121,7 @@ export function OrganizerTopNav({
             href="/organizer/settings"
             aria-label={t('actions.settings')}
             className={`grid h-9 w-9 place-items-center rounded-lg transition-colors ${
-              settingsActive ? 'bg-white/[0.12] text-white' : 'text-white/55 hover:bg-white/[0.08] hover:text-white'
+              settingsActive ? 'bg-surface-high text-fg' : 'text-fg-muted hover:bg-surface-raised hover:text-fg'
             }`}
           >
             <Settings className="h-[18px] w-[18px]" />
@@ -130,7 +130,7 @@ export function OrganizerTopNav({
           <Link
             href="/profile"
             aria-label={t('actions.account')}
-            className="ml-1 grid h-9 w-9 place-items-center rounded-full bg-white/[0.12] text-sm font-bold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+            className="ml-1 grid h-9 w-9 place-items-center rounded-full bg-surface-high text-sm font-bold text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
           >
             {accountInitial}
           </Link>

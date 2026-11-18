@@ -161,9 +161,9 @@ function outcomeTone(outcome: string): ConsoleTone {
 function Figure({ label, value, sub }: { label: string; value: number | string; sub?: string }) {
   return (
     <div>
-      <div className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint">{label}</div>
+      <div className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint">{label}</div>
       <div className="mt-0.5 font-mono text-xl tabular-nums text-console-text">{value}</div>
-      {sub && <div className="mt-0.5 text-[11.5px] text-console-mut">{sub}</div>}
+      {sub && <div className="mt-0.5 text-eyebrow text-console-mut">{sub}</div>}
     </div>
   )
 }
@@ -231,12 +231,12 @@ function DisputeRow({ item, now }: { item: DisputeItem; now: Date | null }) {
           {waitingSince && now && (
             <div className="flex items-baseline justify-end gap-1.5">
               <span
-                className={`label-mono text-[13px] tabular-nums ${consoleAgeClass(waitingSince, now)}`}
+                className={`label-mono text-meta tabular-nums ${consoleAgeClass(waitingSince, now)}`}
                 title={`Open since ${fullTimestamp(waitingSince)}`}
               >
                 {formatAge(waitingSince, now)}
               </span>
-              <span className="text-[11px] text-console-faint">waiting</span>
+              <span className="text-eyebrow text-console-faint">waiting</span>
             </div>
           )}
           <div>Opened {shortDate(item.stripeCreatedAt || item.firstSeenAt)}</div>
@@ -271,7 +271,7 @@ function DisputeRow({ item, now }: { item: DisputeItem; now: Date | null }) {
         </div>
       )}
 
-      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 font-mono text-[11px] text-console-faint">
+      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 font-mono text-eyebrow text-console-faint">
         <span>dispute {item.disputeId}</span>
         {item.paymentIntentId && <span>pi {item.paymentIntentId}</span>}
         {item.ticketId && <span>ticket {item.ticketId}</span>}
@@ -352,16 +352,16 @@ export default function DisputesLog() {
       </div>
 
       <section>
-        <h2 className="label-mono mb-2 text-[10px] uppercase tracking-[0.18em] text-console-faint">
+        <h2 className="label-mono mb-2 text-eyebrow uppercase tracking-[0.18em] text-console-faint">
           Still open
         </h2>
         {open.length === 0 ? (
           <ConsolePanel className="px-4 py-12 text-center">
             <ShieldAlert className="mx-auto mb-2 h-6 w-6 text-console-faint" />
-            <p className="label-mono text-[12px] uppercase tracking-[0.14em] text-console-mut">
+            <p className="label-mono text-caption uppercase tracking-[0.14em] text-console-mut">
               No open chargebacks
             </p>
-            <p className="mx-auto mt-1 max-w-md text-[13px] text-console-faint">
+            <p className="mx-auto mt-1 max-w-md text-meta text-console-faint">
               Nothing is currently being disputed. New disputes land here the moment Stripe tells us,
               and the organizer is emailed at the same time.
             </p>
@@ -376,15 +376,15 @@ export default function DisputesLog() {
       </section>
 
       <section>
-        <h2 className="label-mono mb-2 text-[10px] uppercase tracking-[0.18em] text-console-faint">
+        <h2 className="label-mono mb-2 text-eyebrow uppercase tracking-[0.18em] text-console-faint">
           Resolved
         </h2>
         {closed.length === 0 ? (
           <ConsolePanel className="px-4 py-12 text-center">
-            <p className="label-mono text-[12px] uppercase tracking-[0.14em] text-console-mut">
+            <p className="label-mono text-caption uppercase tracking-[0.14em] text-console-mut">
               Nothing resolved yet
             </p>
-            <p className="mt-1 text-[13px] text-console-faint">
+            <p className="mt-1 text-meta text-console-faint">
               Closed disputes stay here as an organizer’s risk history.
             </p>
           </ConsolePanel>
