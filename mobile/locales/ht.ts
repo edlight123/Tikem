@@ -2915,6 +2915,10 @@ export default {
     noRatings: 'Poko gen nòt.',
     loadFailed: 'Nou pa t ka chaje rezime a. Rale anba pou eseye ankò.',
   },
+  followers: {
+    title: "Abòne",
+    empty: "Poko gen abòne",
+  },
   transferTicket: {
     friends: "Zanmi ou sou Tikèm",
     orEmail: "Oswa pa imèl",
@@ -2938,6 +2942,14 @@ export default {
     failed: "Nou pa t ka transfere biyè a. Eseye ankò.",
   },
   organizerMessages: {
+    preview: {
+      followupTitle: "Kijan {event} te ye?",
+      followupBody: "Di {org} sa w panse.",
+      channelsAll: "Push, nan app la, imèl ak WhatsApp",
+      channelsPush: "Push ak nan app la",
+      whoTicketHolders: "Tout moun ki gen tikè",
+      whoCheckedIn: "Tout moun ki te antre",
+    },
     showAllSent: "Montre tout ({count})",
     noEventsYet: "Poko gen evènman",
     tabQuestions: "Kesyon",

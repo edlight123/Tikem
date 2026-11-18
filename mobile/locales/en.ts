@@ -2984,6 +2984,10 @@ export default {
     noRatings: 'No ratings yet.',
     loadFailed: "Couldn't load the recap. Pull down to try again.",
   },
+  followers: {
+    title: "Followers",
+    empty: "No followers yet",
+  },
   transferTicket: {
     friends: "Your friends on Tikèm",
     orEmail: "Or send by email",
@@ -3007,6 +3011,14 @@ export default {
     failed: "Couldn't transfer the ticket. Try again.",
   },
   organizerMessages: {
+    preview: {
+      followupTitle: "How was {event}?",
+      followupBody: "Tell {org} in one tap.",
+      channelsAll: "Push, in-app, email and WhatsApp",
+      channelsPush: "Push and in-app",
+      whoTicketHolders: "Every ticket holder",
+      whoCheckedIn: "Everyone who checked in",
+    },
     showAllSent: "Show all ({count})",
     noEventsYet: "No events yet",
     tabQuestions: "Questions",

@@ -1,7 +1,9 @@
 import React, { useCallback, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { Bell, Clock, Heart, Send } from 'lucide-react-native';
+import { Bell, Clock, Heart, Send, X } from 'lucide-react-native';
+import { useAuth } from '../../contexts/AuthContext';
+import { font } from '../../theme/tokens';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useI18n } from '../../contexts/I18nContext';
 import { colors as T } from '../../theme/tokens';
@@ -44,6 +46,8 @@ export default function EventAnnouncements({ eventId, eventTitle }: { eventId: s
   const [data, setData] = useState<Data | null>(null);
   const [failed, setFailed] = useState(false);
   const [showAll, setShowAll] = useState(false);
+  const [preview, setPreview] = useState<Auto | null>(null);
+  const { userProfile } = useAuth() as any;
 
   useFocusEffect(
     useCallback(() => {
@@ -69,8 +73,71 @@ export default function EventAnnouncements({ eventId, eventTitle }: { eventId: s
     return { color: T.accent, label: when };
   };
 
+  // What attendees actually receive, mirrored from the server copy
+  // (lib/notifications/helpers notifyEventReminder; lib/postEvent/server).
+  const org = (userProfile?.organization_name || userProfile?.full_name || 'Tikèm').trim();
+  const previewOf = (a: Auto) => {
+    const span: Record<string, string> = { event_reminder_24h: '24 hours', event_reminder_3h: '3 hours', event_reminder_30min: '30 minutes' };
+    if (a.type === 'post_event_followup') {
+      return {
+        title: t('organizerMessages.preview.followupTitle', { event: eventTitle }),
+        body: t('organizerMessages.preview.followupBody', { org }),
+        channels: t('organizerMessages.preview.channelsPush'),
+        who: t('organizerMessages.preview.whoCheckedIn'),
+      };
+    }
+    return {
+      title: 'Event Reminder',
+      body: `"${eventTitle}" starts in ${span[a.type] || ''}!`,
+      channels:
+        a.type === 'event_reminder_24h'
+          ? t('organizerMessages.preview.channelsAll')
+          : t('organizerMessages.preview.channelsPush'),
+      who: t('organizerMessages.preview.whoTicketHolders'),
+    };
+  };
+
+  const pv = preview ? previewOf(preview) : null;
+  const pvStatus = preview ? status(preview) : null;
+
   return (
     <View style={styles.wrap}>
+      <Modal visible={!!preview} transparent animationType="slide" onRequestClose={() => setPreview(null)}>
+        <View style={styles.sheetOverlay}>
+          <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={() => setPreview(null)} accessible={false} />
+          <View style={[styles.sheet, { backgroundColor: colors.surface }]}>
+            <View style={styles.sheetHead}>
+              <Text style={[styles.sheetTitle, { color: colors.text }]}>
+                {preview ? t(`organizerMessages.auto.${preview.type}`).toLowerCase() : ''}
+              </Text>
+              <TouchableOpacity
+                onPress={() => setPreview(null)}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                accessibilityRole="button"
+                accessibilityLabel={t('common.close')}
+              >
+                <X size={18} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+            {pv ? (
+              <>
+                {/* The notification as it lands on a phone. */}
+                <View style={[styles.notif, { backgroundColor: colors.surfaceRaised }]}>
+                  <Text style={[styles.notifApp, { color: colors.textSecondary }]}>TIKÈM</Text>
+                  <Text style={[styles.notifTitle, { color: colors.text }]} numberOfLines={2}>{pv.title}</Text>
+                  <Text style={[styles.notifBody, { color: colors.textSecondary }]} numberOfLines={3}>{pv.body}</Text>
+                </View>
+                <View style={styles.facts}>
+                  <Text style={[styles.fact, { color: colors.textSecondary }]}>
+                    {pvStatus?.label || t('organizerMessages.statusSent')} · {pv.who}
+                  </Text>
+                  <Text style={[styles.fact, { color: colors.textSecondary }]}>{pv.channels}</Text>
+                </View>
+              </>
+            ) : null}
+          </View>
+        </View>
+      </Modal>
       <WhitePillCTA
         size="sm"
         label={t('organizerMessages.newMessage')}
@@ -94,6 +161,7 @@ export default function EventAnnouncements({ eventId, eventTitle }: { eventId: s
               key={a.type}
               icon={AUTO_ICON[a.type] || Bell}
               title={t(`organizerMessages.auto.${a.type}`)}
+              onPress={() => setPreview(a)}
               trailing={
                 s ? (
                   <View style={styles.dotRow}>
@@ -154,6 +222,16 @@ const styles = StyleSheet.create({
   quiet: { fontSize: 13, color: T.textSecondary },
   gap: { height: 28 },
   showAll: { paddingVertical: 12, alignSelf: 'flex-start' },
+  sheetOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.6)' },
+  sheet: { borderTopLeftRadius: 4, borderTopRightRadius: 4, paddingHorizontal: 20, paddingTop: 18, paddingBottom: 40 },
+  sheetHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 },
+  sheetTitle: { fontFamily: font.serif, fontSize: 24, lineHeight: 28 },
+  notif: { borderRadius: 4, padding: 14 },
+  notifApp: { fontSize: 11, fontWeight: '700', letterSpacing: 1.2, marginBottom: 6 },
+  notifTitle: { fontSize: 15, fontWeight: '600' },
+  notifBody: { fontSize: 14, lineHeight: 19, marginTop: 2 },
+  facts: { marginTop: 14, gap: 4 },
+  fact: { fontSize: 13 },
   showAllText: { fontSize: 13, fontWeight: '600', color: T.textSecondary },
   dotRow: { flexDirection: 'row', alignItems: 'center', gap: 6, maxWidth: 160 },
   dot: { width: 6, height: 6, borderRadius: 3 },

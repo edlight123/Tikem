@@ -521,8 +521,8 @@ export default function ProfileScreen() {
               key: 'followers',
               label: t('profile.followers'),
               value: accountStats.followers,
-              // A COUNT only: who follows you is not exposed (privacy).
-              onPress: undefined,
+              // Who follows you: public fields only (owner call, 2026-11-18).
+              onPress: accountStats.followers > 0 ? () => navigation.navigate('Followers') : undefined,
             },
           ].map((s) => {
             const tappable = statsLoaded && !!s.onPress;
