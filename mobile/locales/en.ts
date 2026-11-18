@@ -3007,6 +3007,7 @@ export default {
     failed: "Couldn't transfer the ticket. Try again.",
   },
   organizerMessages: {
+    noEventsYet: "No events yet",
     tabQuestions: "Questions",
     tabAnnouncements: "Announcements",
     newMessage: "New message",
@@ -3018,10 +3019,10 @@ export default {
     statusSent: "Sent",
     morningAfter: "Morning after",
     auto: {
-      event_reminder_24h: "Reminder · day before",
-      event_reminder_3h: "Reminder · 3 hours before",
-      event_reminder_30min: "Reminder · 30 min before",
-      post_event_followup: "Thank-you · morning after",
+      event_reminder_24h: "Reminder · 1 day",
+      event_reminder_3h: "Reminder · 3 hours",
+      event_reminder_30min: "Reminder · 30 min",
+      post_event_followup: "Thank you",
     },
     segmentWaiting: 'Needs reply',
     segmentAll: 'All',
