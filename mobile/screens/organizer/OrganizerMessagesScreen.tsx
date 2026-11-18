@@ -20,6 +20,7 @@ import { defaultAvatar } from '../../lib/defaultAvatar';
 import { inboxTime } from '../../lib/messageTime';
 import { select as hapticSelect } from '../../lib/haptics';
 import { useTabBarSpace } from '../../hooks/useTabBarSpace';
+import EventAnnouncements from '../../components/organizer/EventAnnouncements';
 
 type RouteParams = {
   OrganizerMessages:
@@ -105,6 +106,8 @@ export default function OrganizerMessagesScreen({ asTab = false }: { asTab?: boo
   const [refreshing, setRefreshing] = useState(false);
   const [segment, setSegment] = useState<'waiting' | 'all' | null>(null);
   const [eventFilter, setEventFilter] = useState<string | null>(null);
+  // Event page only: one-to-one questions vs one-to-many announcements.
+  const [pane, setPane] = useState<'questions' | 'announcements'>('questions');
 
   const load = useCallback(async () => {
     try {
@@ -410,24 +413,43 @@ export default function OrganizerMessagesScreen({ asTab = false }: { asTab?: boo
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.textSecondary} />
         }
       >
-        {/* One-to-many lives next to one-to-one: the existing event update
-            (SendEventUpdate) reaches every ticket holder. Event-scoped only;
-            the server checks the sender may message this event. */}
-        {eventId && !loading ? (
-          <View style={styles.broadcastWrap}>
-            <ListGroup>
-              <ListRow
-                icon={Send}
-                title={t('organizerMessages.messageAll')}
-                onPress={() =>
-                  navigation.navigate('SendEventUpdate', { eventId, eventTitle: eventTitle || '' })
-                }
-              />
-            </ListGroup>
+        {/* Event page: Questions (one-to-one) and Announcements (bulk
+            messages + the automatic reminders), owner 2026-11-18. */}
+        {eventId ? (
+          <View style={[styles.stackSegments, { marginBottom: 12 }]}>
+            <View style={styles.segmentTrack} accessibilityRole="tablist">
+              {(['questions', 'announcements'] as const).map((k) => {
+                const active = pane === k;
+                return (
+                  <TouchableOpacity
+                    key={k}
+                    style={[styles.segment, active && styles.segmentActive]}
+                    onPress={() => {
+                      hapticSelect();
+                      setPane(k);
+                    }}
+                    accessibilityRole="tab"
+                    accessibilityState={{ selected: active }}
+                  >
+                    <Text style={[styles.segmentLabel, active ? styles.segmentLabelActive : styles.segmentLabelInactive]}>
+                      {k === 'questions'
+                        ? t('organizerMessages.tabQuestions')
+                        : t('organizerMessages.tabAnnouncements')}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
           </View>
         ) : null}
-        {showSegments ? <View style={styles.stackSegments}>{segments}</View> : null}
-        {body}
+        {eventId && pane === 'announcements' ? (
+          <EventAnnouncements eventId={eventId} eventTitle={eventTitle || ''} />
+        ) : (
+          <>
+            {showSegments ? <View style={styles.stackSegments}>{segments}</View> : null}
+            {body}
+          </>
+        )}
       </ScrollView>
     </View>
   );

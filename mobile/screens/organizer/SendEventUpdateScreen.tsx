@@ -144,6 +144,23 @@ export default function SendEventUpdateScreen() {
       >
         <Text style={styles.eventLine} numberOfLines={1}>{eventTitle}</Text>
 
+        {/* Templates first: one tap fills the title and message (owner,
+            2026-11-18: "include the template messages"). */}
+        <View style={styles.examples}>
+          {(['reminder', 'doorsOpen', 'timeUpdate', 'venueChange', 'thankYou'] as const).map((k) => (
+            <Touchable
+              key={k}
+              style={styles.chip}
+              onPress={() => {
+                setTitle(t(`organizerSendUpdate.examples.${k}.title`));
+                setMessage(t(`organizerSendUpdate.examples.${k}.message`));
+              }}
+              accessibilityRole="button"
+            >
+              <Text style={styles.chipText}>{t(`organizerSendUpdate.examples.${k}.cardTitle`)}</Text>
+            </Touchable>
+          ))}
+        </View>
         <View style={styles.form}>
           <Text style={styles.label}>{t('organizerSendUpdate.fields.titleLabel')}</Text>
           <TextInput
@@ -173,23 +190,6 @@ export default function SendEventUpdateScreen() {
           {message.length > 400 ? <Text style={styles.charCount}>{message.length}/500</Text> : <View style={styles.fieldGap} />}
         </View>
 
-        {/* Quick starts as chips (were three bordered cards under an
-            "EXAMPLE UPDATES:" eyebrow). One tap fills the title and message. */}
-        <View style={styles.examples}>
-          {(['venueChange', 'timeUpdate', 'reminder'] as const).map((k) => (
-            <Touchable
-              key={k}
-              style={styles.chip}
-              onPress={() => {
-                setTitle(t(`organizerSendUpdate.examples.${k}.title`));
-                setMessage(t(`organizerSendUpdate.examples.${k}.message`));
-              }}
-              accessibilityRole="button"
-            >
-              <Text style={styles.chipText}>{t(`organizerSendUpdate.examples.${k}.cardTitle`)}</Text>
-            </Touchable>
-          ))}
-        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -289,7 +289,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     gap: 8,
     paddingHorizontal: 16,
     paddingTop: 4,
-    paddingBottom: 24,
+    paddingBottom: 12,
   },
   chip: {
     paddingHorizontal: 14,
