@@ -352,7 +352,6 @@ export default function OrganizerPromotersScreen() {
             variant="panel"
             icon={Megaphone}
             title={t('organizerPromoters.empty')}
-            subtitle={t('organizerPromoters.emptySubtitle')}
             actionLabel={t('organizerPromoters.formTitle')}
             onAction={() => setFormOpen(true)}
           />

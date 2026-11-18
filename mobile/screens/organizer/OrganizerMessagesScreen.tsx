@@ -352,7 +352,6 @@ export default function OrganizerMessagesScreen({ asTab = false }: { asTab?: boo
         variant="panel"
         icon={MessageSquare}
         title={t('organizerMessages.empty')}
-        subtitle={t('organizerMessages.emptySubtitle')}
       />
     </View>
   ) : shown.length === 0 ? (
@@ -420,7 +419,6 @@ export default function OrganizerMessagesScreen({ asTab = false }: { asTab?: boo
               <ListRow
                 icon={Send}
                 title={t('organizerMessages.messageAll')}
-                subtitle={t('organizerMessages.messageAllHint')}
                 onPress={() =>
                   navigation.navigate('SendEventUpdate', { eventId, eventTitle: eventTitle || '' })
                 }

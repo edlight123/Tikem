@@ -205,7 +205,6 @@ export default function OrganizerTrackingLinksScreen() {
             variant="panel"
             icon={Link2}
             title={t('organizerTracking.empty')}
-            subtitle={t('organizerTracking.emptySubtitle')}
             actionLabel={t('organizerTracking.newLink')}
             onAction={openSheet}
           />

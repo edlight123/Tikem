@@ -369,7 +369,6 @@ export default function OrganizerCompsScreen() {
               variant="panel"
               icon={Gift}
               title={t('organizerComps.empty')}
-              subtitle={t('organizerComps.emptySubtitle')}
             />
           ) : (
             comps.map((c) => (
@@ -410,16 +409,15 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       paddingBottom: 40,
     },
     formCard: {
-      backgroundColor: colors.surface,
-      borderRadius: RADIUS.xl,
-      padding: 20,
+      // On the page, no card around the form (owner: "avoid big cards").
+      paddingTop: 4,
     },
     // Serif, lowercased: the same editorial voice as SectionHeader and the
     // promo-code form, instead of a bold sans block title.
     formTitle: {
       fontFamily: font.serif,
-      fontSize: 24,
-      lineHeight: 28,
+      fontSize: 22,
+      lineHeight: 26,
       color: colors.text,
       marginBottom: 2,
     },

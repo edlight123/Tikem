@@ -870,18 +870,10 @@ export default function OrganizerEventEarningsScreen() {
               },
             ]}
           />
-          <View style={styles.freeCard}>
-            <View style={styles.freeIcon}>
-              <Gift size={20} color={colors.textSecondary} strokeWidth={1.75} />
-            </View>
-            <Text style={styles.freeTitle}>{t('organizerEarnings.freeEvent.title')}</Text>
-            <Text style={styles.freeBody}>{t('organizerEarnings.freeEvent.body')}</Text>
-            <SecondaryPill
-              size="sm"
-              style={styles.freeCta}
-              label={t('organizerEarnings.freeEvent.openAnalytics')}
-              onPress={() => navigation.navigate('EventAnalytics', { eventId, eventTitle })}
-            />
+          {/* One quiet line, no card (owner, 2026-11-18: "avoid big cards"). */}
+          <View style={styles.freeLine}>
+            <Gift size={16} color={colors.textTertiary} strokeWidth={1.75} />
+            <Text style={styles.freeLineText}>{t('organizerEarnings.freeEvent.body')}</Text>
           </View>
         </ScrollView>
       </View>
@@ -1302,6 +1294,14 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     paddingTop: 16,
   },
   // Filled card (no hairline), 4pt radius, left-aligned like EmptyState panel.
+  freeLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+    marginTop: 20,
+  },
+  freeLineText: { fontSize: 13, color: colors.textSecondary },
   freeCard: {
     marginTop: 24,
     backgroundColor: colors.surface,

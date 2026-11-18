@@ -391,7 +391,6 @@ export default function OrganizerEventStaffScreen() {
         contentContainerStyle={[styles.content, { paddingTop: headerH + 8, paddingBottom: 40 + insets.bottom }]}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.intro}>{t('organizerStaff.intro')}</Text>
 
         {/* ---------------------------------------------- on this event */}
         <View style={styles.section}>
@@ -528,6 +527,7 @@ export default function OrganizerEventStaffScreen() {
         </View>
 
         {/* ---------------------------------------------- pending invites */}
+        {openInvites.length > 0 && (
         <View style={styles.section}>
           <SectionHeader
             title={t('organizerStaff.invitesTitle')}
@@ -569,24 +569,8 @@ export default function OrganizerEventStaffScreen() {
               })}
             </View>
           )}
-          <Touchable
-            style={[styles.card, styles.row, authLoading && styles.disabled]}
-            onPress={openInviteModal}
-            disabled={authLoading}
-            accessibilityRole="button"
-            accessibilityLabel={t('organizerStaff.inviteSomeoneNew')}
-          >
-            <View style={styles.iconTile}>
-              <Plus size={18} color={T.textPrimary} />
-            </View>
-            <View style={styles.rowText}>
-              <Text style={styles.name}>{t('organizerStaff.inviteSomeoneNew')}</Text>
-              <Text style={styles.meta} numberOfLines={2}>
-                {t('organizerStaff.inviteNewHint')}
-              </Text>
-            </View>
-          </Touchable>
         </View>
+        )}
       </ScrollView>
 
       {/* ---------------------------------------------- invite sheet */}

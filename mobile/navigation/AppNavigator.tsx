@@ -6,6 +6,7 @@ import { NavigationContainer, useNavigationContainerRef } from '@react-navigatio
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator, BottomTabBarHeightCallbackContext } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
+import { CalendarDays, ChartNoAxesColumnIncreasing, Inbox, ScanLine, UserRound } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
@@ -249,7 +250,19 @@ interface TabBarProps {
   state: any;
   descriptors: any;
   navigation: any;
-  tabs: Array<{ name: string; label: string; icon: string; activeIcon: string; isCreate?: boolean; dot?: boolean; badge?: number }>;
+  tabs: Array<{
+    name: string;
+    label: string;
+    icon: string;
+    activeIcon: string;
+    /** A lucide line icon instead of the Ionicons pair: one stroke family,
+     *  heavier when active (organizer/staff bars, owner 2026-11-18: "more
+     *  premium icons"). */
+    line?: React.ComponentType<{ size?: number; color?: string; strokeWidth?: number }>;
+    isCreate?: boolean;
+    dot?: boolean;
+    badge?: number;
+  }>;
 }
 
 // Whether the signed-in account can use organizer mode. Computed once in
@@ -440,11 +453,15 @@ function CustomTabBar({ state, descriptors, navigation, tabs }: TabBarProps) {
                 keeps every tab named for screen readers; teal active tint
                 stays semantic. */}
             <Animated.View style={[tabBarStyles.iconWrap, { transform: [{ scale }, { translateY: lift }] }]}>
-              <Ionicons
-                name={(isFocused ? tab.activeIcon : tab.icon) as any}
-                size={26}
-                color={iconColor}
-              />
+              {tab.line ? (
+                <tab.line size={25} color={iconColor} strokeWidth={isFocused ? 2.3 : 1.6} />
+              ) : (
+                <Ionicons
+                  name={(isFocused ? tab.activeIcon : tab.icon) as any}
+                  size={26}
+                  color={iconColor}
+                />
+              )}
               {tab.dot ? <View style={[tabBarStyles.dot, { backgroundColor: colors.primary }]} /> : null}
               {tab.badge && tab.badge > 0 ? (
                 // Count badge (organizer Messages: questions not yet opened).
@@ -653,8 +670,8 @@ function OrganizerTabNavigator() {
     orgKey: activeOrg.orgId,
   });
   const organizerTabs = [
-    { name: 'Dashboard', label: t('tabs.dashboard'), icon: 'stats-chart-outline', activeIcon: 'stats-chart' },
-    { name: 'MyEvents', label: t('tabs.myEvents'), icon: 'calendar-outline', activeIcon: 'calendar' },
+    { name: 'Dashboard', label: t('tabs.dashboard'), icon: 'stats-chart-outline', activeIcon: 'stats-chart', line: ChartNoAxesColumnIncreasing },
+    { name: 'MyEvents', label: t('tabs.myEvents'), icon: 'calendar-outline', activeIcon: 'calendar', line: CalendarDays },
     ...(canMessage
       ? [
           {
@@ -662,12 +679,13 @@ function OrganizerTabNavigator() {
             label: t('tabs.messages'),
             icon: 'chatbubble-outline',
             activeIcon: 'chatbubble',
+            line: Inbox,
             badge: unreadMessages,
           },
         ]
       : []),
-    { name: 'Scan', label: t('tabs.scan'), icon: 'qr-code-outline', activeIcon: 'qr-code' },
-    { name: 'Profile', label: t('tabs.profile'), icon: 'person-outline', activeIcon: 'person' },
+    { name: 'Scan', label: t('tabs.scan'), icon: 'qr-code-outline', activeIcon: 'qr-code', line: ScanLine },
+    { name: 'Profile', label: t('tabs.profile'), icon: 'person-outline', activeIcon: 'person', line: UserRound },
   ];
   return (
     <OrganizerTab.Navigator
@@ -686,9 +704,9 @@ function OrganizerTabNavigator() {
 function StaffTabNavigator() {
   const { t } = useI18n();
   const staffTabs = [
-    { name: 'Events', label: t('tabs.events'), icon: 'calendar-outline', activeIcon: 'calendar' },
-    { name: 'Scan', label: t('tabs.scan'), icon: 'qr-code-outline', activeIcon: 'qr-code' },
-    { name: 'Profile', label: t('tabs.profile'), icon: 'person-outline', activeIcon: 'person' },
+    { name: 'Events', label: t('tabs.events'), icon: 'calendar-outline', activeIcon: 'calendar', line: CalendarDays },
+    { name: 'Scan', label: t('tabs.scan'), icon: 'qr-code-outline', activeIcon: 'qr-code', line: ScanLine },
+    { name: 'Profile', label: t('tabs.profile'), icon: 'person-outline', activeIcon: 'person', line: UserRound },
   ];
   return (
     <StaffTab.Navigator

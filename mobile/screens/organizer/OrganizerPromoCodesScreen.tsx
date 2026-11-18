@@ -581,7 +581,6 @@ export default function OrganizerPromoCodesScreen() {
                 variant="panel"
                 icon={Tag}
                 title={t('organizerPromoCodes.list.empty')}
-                subtitle={t('organizerPromoCodes.list.emptySubtitle')}
                 actionLabel={t('organizerPromoCodes.create.show')}
                 onAction={() => setShowForm(true)}
               />
@@ -755,9 +754,8 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   // Fill, not a hairline: the form is one surface step, its fields one more.
   formCard: {
-    backgroundColor: colors.surface,
-    borderRadius: RADIUS.xl,
-    padding: 20,
+      // On the page, no card around the form (owner: "avoid big cards").
+      paddingTop: 4,
     marginTop: 0,
     marginBottom: 24,
   },

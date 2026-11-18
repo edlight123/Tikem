@@ -432,7 +432,6 @@ export default function OrganizerGuestListScreen() {
               variant="panel"
               icon={Users}
               title={t('organizerGuestList.empty')}
-              subtitle={t('organizerGuestList.emptySubtitle')}
               actionLabel={t('organizerGuestList.add')}
               onAction={openAdd}
             />

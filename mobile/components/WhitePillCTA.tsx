@@ -109,8 +109,8 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   buttonSmall: {
-    height: 44,
-    paddingHorizontal: 20,
+    height: 40,
+    paddingHorizontal: 18,
     gap: 6,
   },
   disabled: {
@@ -129,9 +129,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   labelSmall: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600',
-    lineHeight: 20,
+    lineHeight: 18,
   },
   subLabel: {
     ...type.label,

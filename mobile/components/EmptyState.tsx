@@ -116,12 +116,13 @@ export default function EmptyState({
 
   if (variant === 'panel') {
     const PanelIcon = Icon || Inbox;
+    // Quiet and small: a thin icon, one short line, a compact button. No card,
+    // no tile, no big serif (owner, 2026-11-18: "avoid big cards", "avoid too
+    // big texts", "avoid too many explanations").
     return (
       <View style={styles.panel}>
-        <View style={styles.panelIcon}>
-          <PanelIcon size={20} color={colors.textSecondary} strokeWidth={1.75} />
-        </View>
-        <Text style={styles.panelTitle}>{title.toLocaleLowerCase()}</Text>
+        <PanelIcon size={22} color={colors.textTertiary} strokeWidth={1.5} />
+        <Text style={styles.panelTitle}>{title}</Text>
         {!!subtitle && <Text style={styles.panelSubtitle}>{subtitle}</Text>}
         {actionLabel && onAction && (
           <WhitePillCTA label={actionLabel} onPress={onAction} size="sm" style={styles.panelCta} />
@@ -184,37 +185,29 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     },
     // ── panel variant ──
     panel: {
-      backgroundColor: colors.surface,
-      borderRadius: radius.poster,
-      paddingHorizontal: 20,
-      paddingTop: 20,
-      paddingBottom: 22,
-      alignItems: 'flex-start',
-    },
-    panelIcon: {
-      width: 40,
-      height: 40,
-      borderRadius: radius.poster,
-      backgroundColor: colors.surfaceRaised,
       alignItems: 'center',
-      justifyContent: 'center',
-      marginBottom: 16,
+      paddingTop: 72,
+      paddingBottom: 24,
+      paddingHorizontal: 24,
     },
     panelTitle: {
-      fontFamily: font.serif,
-      fontSize: 26,
-      lineHeight: 30,
+      fontSize: 15,
+      lineHeight: 20,
+      fontWeight: '600',
       color: colors.text,
+      marginTop: 12,
+      textAlign: 'center',
     },
     panelSubtitle: {
-      fontSize: 14,
-      lineHeight: 20,
+      fontSize: 13,
+      lineHeight: 18,
       color: colors.textSecondary,
-      marginTop: 6,
+      marginTop: 4,
+      textAlign: 'center',
     },
     panelCta: {
-      marginTop: 18,
-      alignSelf: 'flex-start',
+      marginTop: 16,
+      alignSelf: 'center',
     },
     // ── art variant ──
     artContainer: {
