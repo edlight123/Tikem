@@ -8,7 +8,9 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  Animated,
 } from 'react-native';
+import { useSwipeToClose } from '../../hooks/useSwipeToClose';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Search, X, ScanSearch, CloudOff } from 'lucide-react-native';
 import { colors, font, radius, spacing } from '../../theme/tokens';
@@ -60,6 +62,7 @@ export default function ManualLookupSheet({
   const { t } = useI18n();
   const insets = useSafeAreaInsets();
   const [query, setQuery] = useState('');
+  const swipe = useSwipeToClose(onClose, visible);
 
   useEffect(() => {
     if (!visible) setQuery('');
@@ -108,7 +111,8 @@ export default function ManualLookupSheet({
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <Touchable style={styles.backdrop} onPress={onClose} scale={false} haptic={false} />
-        <View style={[styles.sheet, { paddingBottom: insets.bottom + spacing.sm }]}>
+        <Animated.View style={[styles.sheet, swipe.sheetStyle, { paddingBottom: insets.bottom + spacing.sm }]}>
+          <View {...swipe.panHandlers}>
           <View style={styles.grabber} />
 
           <View style={styles.headerRow}>
@@ -128,6 +132,7 @@ export default function ManualLookupSheet({
             >
               <X size={20} color={colors.textPrimary} />
             </Touchable>
+          </View>
           </View>
 
           <View style={styles.searchField}>
@@ -219,7 +224,7 @@ export default function ManualLookupSheet({
               </Touchable>
             )}
           />
-        </View>
+        </Animated.View>
       </KeyboardAvoidingView>
     </Modal>
   );

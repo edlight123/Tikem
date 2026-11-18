@@ -16,7 +16,9 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Animated,
 } from 'react-native';
+import { useSwipeToClose } from '../hooks/useSwipeToClose';
 import { Minus, Plus, X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useI18n } from '../contexts/I18nContext';
@@ -177,6 +179,7 @@ export default function AttendRequestSheet({ visible, onClose, eventId, allowedP
   const close = () => {
     if (!sending) onClose();
   };
+  const swipe = useSwipeToClose(close, visible);
 
   const submit = async () => {
     if (sending) return;
@@ -202,17 +205,20 @@ export default function AttendRequestSheet({ visible, onClose, eventId, allowedP
     <Modal visible={visible} transparent animationType="slide" onRequestClose={close}>
       <KeyboardAvoidingView style={styles.overlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <Pressable style={StyleSheet.absoluteFill} onPress={close} accessibilityRole="button" accessibilityLabel={t('attendRequests.sheet.close')} />
-        <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, spacing.lg) + spacing.sm }]}>
+        <Animated.View style={[styles.sheet, swipe.sheetStyle, { paddingBottom: Math.max(insets.bottom, spacing.lg) + spacing.sm }]}>
           {/* Paints below the sheet edge so the event page never shows through. */}
           <View pointerEvents="none" style={styles.bottomFill} />
-          <View style={styles.handle} />
-          <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+          {/* Handle + title are the drag target; no swipe while a request is in flight. */}
+          <View {...(sending ? {} : swipe.panHandlers)}>
+            <View style={styles.handle} />
             <View style={styles.titleRow}>
               <Text style={styles.title}>{t('attendRequests.sheet.title')}</Text>
               <TouchableOpacity onPress={close} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} accessibilityRole="button" accessibilityLabel={t('attendRequests.sheet.close')}>
                 <X size={22} color={T.textSecondary} />
               </TouchableOpacity>
             </View>
+          </View>
+          <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
 
             {allowedPlusOnes > 0 && (
               <>
@@ -257,7 +263,7 @@ export default function AttendRequestSheet({ visible, onClose, eventId, allowedP
               style={{ marginTop: spacing.xl }}
             />
           </ScrollView>
-        </View>
+        </Animated.View>
       </KeyboardAvoidingView>
     </Modal>
   );

@@ -132,6 +132,18 @@ export default {
     friendsGoingSuffix: 'amis y vont',
   },
   whosGoing: {
+    seeAll: "Tout voir",
+    line: {
+      youLeadOthers: "{you}, {lead} et {count} autres",
+      youLead: "{you} et {lead}",
+      youOthers: "{you} et {count} autres",
+      youOnly: "{you} y allez",
+      leadOnly: "{lead} y va",
+      leadOthers: "{lead} et {count} autres",
+      leadOthersVague: "{lead} et d'autres",
+      count: "{total} participants",
+      vague: "Voir qui y va",
+    },
     othersGoing: "D'autres y vont",
     privateSub: "Les invités gardent leur présence privée.",
     title: 'Qui y va',

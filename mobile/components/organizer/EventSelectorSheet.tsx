@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable, Modal, FlatList } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Modal, FlatList, Animated } from 'react-native';
+import { useSwipeToClose } from '../../hooks/useSwipeToClose';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { radius } from '../../theme/tokens';
@@ -39,12 +40,14 @@ export default function EventSelectorSheet({
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const styles = getStyles(colors);
+  const swipe = useSwipeToClose(onClose, visible);
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.overlay}>
         <Pressable style={styles.backdrop} onPress={onClose} />
-        <View style={[styles.sheet, { paddingBottom: insets.bottom + 8 }]}>
+        <Animated.View style={[styles.sheet, swipe.sheetStyle, { paddingBottom: insets.bottom + 8 }]}>
+          <View {...swipe.panHandlers}>
           <View style={styles.grabber} />
           <View style={styles.header}>
             <Text style={styles.title}>{title}</Text>
@@ -56,6 +59,7 @@ export default function EventSelectorSheet({
             >
               <Ionicons name="close" size={22} color={colors.text} />
             </Touchable>
+          </View>
           </View>
 
           <FlatList
@@ -90,7 +94,7 @@ export default function EventSelectorSheet({
               );
             }}
           />
-        </View>
+        </Animated.View>
       </View>
     </Modal>
   );

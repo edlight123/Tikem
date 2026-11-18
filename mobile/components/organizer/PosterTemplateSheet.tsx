@@ -7,7 +7,9 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Animated,
 } from 'react-native';
+import { useSwipeToClose } from '../../hooks/useSwipeToClose';
 import { Image } from 'expo-image';
 import { Check, X } from 'lucide-react-native';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -116,6 +118,7 @@ export default function PosterTemplateSheet({
   const [photo, setPhoto] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const swipe = useSwipeToClose(onClose, visible);
 
   useEffect(() => {
     if (!visible) return;
@@ -168,7 +171,9 @@ export default function PosterTemplateSheet({
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.backdrop}>
-        <View style={styles.sheet}>
+        <Animated.View style={[styles.sheet, swipe.sheetStyle]}>
+          {/* No swipe-to-close while the poster is being rendered/saved. */}
+          <View {...(saving ? {} : swipe.panHandlers)}>
           <View style={styles.grabber} />
           <View style={styles.header}>
             <View style={{ flex: 1 }}>
@@ -182,6 +187,7 @@ export default function PosterTemplateSheet({
             >
               <X size={22} color={colors.textSecondary} />
             </Touchable>
+          </View>
           </View>
 
           <UIText variant="eyebrow" style={styles.label}>{t('posterTemplates.photo')}</UIText>
@@ -268,7 +274,7 @@ export default function PosterTemplateSheet({
           <Touchable style={[styles.use, saving && { opacity: 0.6 }]} onPress={use} disabled={saving || !selected} accessibilityRole="button">
             {saving ? <ActivityIndicator color="#0A0A0A" /> : <Text style={styles.useText}>{t('posterTemplates.use')}</Text>}
           </Touchable>
-        </View>
+        </Animated.View>
       </View>
     </Modal>
   );

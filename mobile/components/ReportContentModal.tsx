@@ -11,7 +11,9 @@ import {
   KeyboardAvoidingView,
   Platform,
   useWindowDimensions,
+  Animated,
 } from 'react-native';
+import { useSwipeToClose } from '../hooks/useSwipeToClose';
 import { X, Check } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../contexts/ThemeContext';
@@ -51,6 +53,7 @@ export default function ReportContentModal({ visible, onClose, kind, targetId }:
   const { colors } = useTheme();
   const { t } = useI18n();
   const styles = getStyles(colors);
+  const swipe = useSwipeToClose(onClose, visible);
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
 
@@ -104,9 +107,10 @@ export default function ReportContentModal({ visible, onClose, kind, targetId }:
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.backdrop}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.sheetWrap}>
-          <View
+          <Animated.View
             style={[
               styles.sheet,
+              swipe.sheetStyle,
               {
                 // A number, not '90%': a percentage inside the auto-height
                 // KeyboardAvoidingView has nothing to resolve against.
@@ -120,6 +124,7 @@ export default function ReportContentModal({ visible, onClose, kind, targetId }:
                 through the gap; whatever opens that gap, the fill covers it
                 (same fix as ContactOrganizerModal). */}
             <View pointerEvents="none" style={styles.bottomFill} />
+            <View {...swipe.panHandlers}>
             <View style={styles.grabber} />
             <View style={styles.header}>
               <Text style={styles.title} numberOfLines={2}>
@@ -133,6 +138,7 @@ export default function ReportContentModal({ visible, onClose, kind, targetId }:
               >
                 <X size={22} color={colors.textSecondary} />
               </TouchableOpacity>
+            </View>
             </View>
 
             {done ? (
@@ -197,7 +203,7 @@ export default function ReportContentModal({ visible, onClose, kind, targetId }:
                 <Text style={styles.contact}>{t('moderation.contactLine')}</Text>
               </ScrollView>
             )}
-          </View>
+          </Animated.View>
         </KeyboardAvoidingView>
       </View>
     </Modal>

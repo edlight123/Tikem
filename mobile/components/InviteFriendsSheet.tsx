@@ -13,7 +13,9 @@ import {
   TouchableOpacity,
   View,
   useWindowDimensions,
+  Animated,
 } from 'react-native';
+import { useSwipeToClose } from '../hooks/useSwipeToClose';
 import { Check, MessageSquare, Search, Share2, User, UserPlus, Users, X } from 'lucide-react-native';
 import Svg, { Path } from 'react-native-svg';
 import { defaultAvatar } from '../lib/defaultAvatar';
@@ -136,6 +138,7 @@ export function InviteFriendsSheet({
   const styles = getStyles(colors);
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
+  const swipe = useSwipeToClose(onClose, visible);
   const needsPhone = usePhonePromptAvailable();
   const [friends, setFriends] = useState<InvitePickerFriend[] | null>(null);
   const [failed, setFailed] = useState(false);
@@ -329,9 +332,10 @@ export function InviteFriendsSheet({
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.backdrop}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.sheetWrap}>
-          <View
+          <Animated.View
             style={[
               styles.sheet,
+              swipe.sheetStyle,
               {
                 // Sized to its content, capped below the status bar. The cap is
                 // a number, not '90%': a percentage height inside the auto-height
@@ -344,6 +348,7 @@ export function InviteFriendsSheet({
             {/* Paints below the sheet's edge: on device the sheet stopped short
                 of the screen bottom and the page showed through the gap. */}
             <View pointerEvents="none" style={styles.bottomFill} />
+            <View {...swipe.panHandlers}>
             <View style={styles.grabber} />
             <View style={styles.header}>
               <View style={{ flex: 1 }}>
@@ -363,6 +368,7 @@ export function InviteFriendsSheet({
               >
                 <X size={18} color={colors.text} />
               </TouchableOpacity>
+            </View>
             </View>
 
             {going.length > 0 && (
@@ -623,7 +629,7 @@ export function InviteFriendsSheet({
                 </TouchableOpacity>
               </View>
             )}
-          </View>
+          </Animated.View>
         </KeyboardAvoidingView>
       </View>
     </Modal>

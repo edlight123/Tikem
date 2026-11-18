@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, Modal, Platform, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Modal, Platform, Pressable, StyleSheet, Animated } from 'react-native';
+import { useSwipeToClose } from '../hooks/useSwipeToClose';
 import { Touchable } from './ui/Touchable';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -31,6 +32,7 @@ export default function WhenPickerSheet({ visible, onClose, value, onSelect }: W
   const { t } = useI18n();
   const insets = useSafeAreaInsets();
   const styles = getStyles(colors);
+  const swipe = useSwipeToClose(onClose, visible);
   // Expands the row into an inline calendar rather than opening a second
   // modal — posh's "Choose Date" is a month view inside the same sheet.
   const [showCalendar, setShowCalendar] = useState(false);
@@ -38,13 +40,15 @@ export default function WhenPickerSheet({ visible, onClose, value, onSelect }: W
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose} />
-      <View style={[styles.sheet, { paddingBottom: insets.bottom + 16 }]}>
-        <View style={styles.handle} />
-        <View style={styles.header}>
-          <Text style={styles.title}>{t('discover.when')}</Text>
-          <Touchable style={styles.closeBtn} onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <X size={20} color={colors.text} />
-          </Touchable>
+      <Animated.View style={[styles.sheet, swipe.sheetStyle, { paddingBottom: insets.bottom + 16 }]}>
+        <View {...swipe.panHandlers}>
+          <View style={styles.handle} />
+          <View style={styles.header}>
+            <Text style={styles.title}>{t('discover.when')}</Text>
+            <Touchable style={styles.closeBtn} onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <X size={20} color={colors.text} />
+            </Touchable>
+          </View>
         </View>
 
         {DATE_OPTIONS.map((option) => {
@@ -102,7 +106,7 @@ export default function WhenPickerSheet({ visible, onClose, value, onSelect }: W
             }}
           />
         )}
-      </View>
+      </Animated.View>
     </Modal>
   );
 }

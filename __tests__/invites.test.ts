@@ -104,11 +104,11 @@ describe('policy', () => {
     const plan = planInvites(['bob', 'carl', 'dana', 'erin', 'zed'], facts)
     expect(plan.notConnected).toEqual(['zed'])
     expect(plan.send).toEqual(['bob'])
+    // A mute is never named: it reads as sent and is never delivered.
+    expect(plan.quiet).toEqual(['erin'])
     expect(plan.skipped).toEqual([
       { uid: 'carl', reason: 'already_invited' },
       { uid: 'dana', reason: 'already_going' },
-      // A mute is never named: just "unavailable".
-      { uid: 'erin', reason: 'unavailable' },
     ])
   })
 
@@ -180,11 +180,10 @@ describe('sendEventInvites', () => {
       { now }
     )
     expect(r.status).toBe('ok')
-    expect(r.sent).toEqual(['bob'])
-    expect(r.skipped).toEqual([
-      { uid: 'dana', reason: 'already_going' },
-      { uid: 'erin', reason: 'unavailable' },
-    ])
+    // The muted friend reads as sent (a quiet record, never delivered).
+    expect(r.sent).toEqual(['bob', 'erin'])
+    expect(r.skipped).toEqual([{ uid: 'dana', reason: 'already_going' }])
+    expect(mockDb.store.get('event_invites/ev1__alice__erin')).toMatchObject({ status: 'quiet' })
     expect(mockDb.store.get('event_invites/ev1__alice__bob')).toMatchObject({
       event_id: 'ev1',
       inviter_uid: 'alice',
@@ -245,14 +244,14 @@ describe('sendEventInvites', () => {
     expect(mockDb.docsIn('event_invites')).toHaveLength(0)
   })
 
-  it('picker lists only accepted connections, a mute reading as "unavailable"', async () => {
+  it('picker lists only accepted connections, a mute reading as "available"', async () => {
     put('tickets/t1', { event_id: 'ev1', attendee_id: 'dana', status: 'valid' })
     put('event_invites/ev1__alice__carl', { event_id: 'ev1', inviter_uid: 'alice', target_uid: 'carl', status: 'sent' })
     await muteInviter('erin', 'alice', now)
     const r: any = await getInvitePicker('alice', 'ev1', now)
     expect(r.ok).toBe(true)
     const byUid = Object.fromEntries(r.friends.map((f: any) => [f.uid, f.state]))
-    expect(byUid).toEqual({ bob: 'available', carl: 'invited', dana: 'going', erin: 'unavailable' })
+    expect(byUid).toEqual({ bob: 'available', carl: 'invited', dana: 'going', erin: 'available' })
     expect(JSON.stringify(r.friends)).not.toMatch(/example\.com|\+509|muted/)
   })
 
@@ -261,7 +260,8 @@ describe('sendEventInvites', () => {
     put('users/dana', { full_name: 'Dana', privacy: { attendance_visibility: 'nobody' } })
     const r: any = await getInvitePicker('alice', 'ev1', now)
     const byUid = Object.fromEntries(r.friends.map((f: any) => [f.uid, f.state]))
-    expect(byUid.dana).toBe('unavailable')
+    // Neither "going" nor a dead-end "can't invite": just invitable.
+    expect(byUid.dana).toBe('available')
   })
 })
 

@@ -778,7 +778,8 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
             </View>
           )}
 
-          {/* About Section */}
+          {/* About Section: hidden for a person with nothing to say in it. */}
+          {(isHost || !!aboutText || (personHidden && !isSelf) || !!(organizer.city && organizer.country) || (organizer.languages && organizer.languages.length > 0)) && (
           <View style={styles.section}>
             <SectionHeader title={t('organizerProfile.aboutTitle')} />
             
@@ -808,7 +809,8 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
                 </View>
               )}
 
-              {hostingSince && (
+              {/* A person's join date is already the line under their name. */}
+              {hostingSince && isHost && (
                 <View style={styles.aboutRow}>
                   <Calendar size={18} color={colors.textSecondary} />
                   <Text style={styles.aboutLabel}>
@@ -819,6 +821,7 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
               )}
             </View>
           </View>
+          )}
 
           {/* Social & Contact Section */}
           {socialLinks.length > 0 && (

@@ -118,11 +118,8 @@ async function inviteFacts(
   candidates: string[]
 ): Promise<Omit<InviteFacts, 'accepted'>> {
   const users = adminDb.collection('users')
-  const [alreadyInvited, holders, mutedBy, blockedMe, myBlocks] = await Promise.all([
-    existingAmong(
-      candidates.map((c) => adminDb.collection(COLLECTIONS.eventInvites).doc(eventInviteDocId(eventId, inviterUid, c))),
-      candidates
-    ),
+  const [inviteDocs, holders, mutedBy, blockedMe, myBlocks] = await Promise.all([
+    getAll(candidates.map((c) => adminDb.collection(COLLECTIONS.eventInvites).doc(eventInviteDocId(eventId, inviterUid, c)))),
     liveHolders(eventId, candidates),
     existingAmong(
       candidates.map((c) => users.doc(c).collection(COLLECTIONS.mutes).doc(inviterUid)),
@@ -135,6 +132,7 @@ async function inviteFacts(
     getBlockedOrganizerIds(inviterUid),
   ])
   const blocked = new Set<string>(blockedMe)
+  const quiet = new Set<string>(mutedBy)
   candidates.forEach((c) => {
     if (myBlocks.has(c)) blocked.add(c)
   })
@@ -147,11 +145,20 @@ async function inviteFacts(
       const vis = normalizeAttendanceVisibility(d?.exists ? d.data()?.privacy?.attendance_visibility : undefined)
       if (vis === 'nobody') {
         holders.delete(d.id)
-        blocked.add(d.id)
+        quiet.add(d.id)
       }
     })
   }
-  return { alreadyInvited, holders, mutedBy, blocked }
+  // A quiet record counts as an invite only while its reason holds; once it
+  // is gone (unmuted, say) the friend can be invited for real.
+  const alreadyInvited = new Set<string>()
+  inviteDocs.forEach((d: any, i: number) => {
+    if (!d?.exists) return
+    const uid = candidates[i]
+    if (d.data()?.status === 'quiet' && !quiet.has(uid)) return
+    alreadyInvited.add(uid)
+  })
+  return { alreadyInvited, holders, mutedBy, blocked, quiet }
 }
 
 // ── Feature 1: invite connections to an event ───────────────────────────────
@@ -240,12 +247,13 @@ export async function sendEventInvites(
   const facts = await inviteFacts(inviterUid, eventId, connected)
   const plan = planInvites(friendIds, { accepted, ...facts })
   if (plan.notConnected.length > 0) return { status: 'not_connected' }
-  if (plan.send.length === 0) return { status: 'ok', sent: [], skipped: plan.skipped }
+  if (plan.send.length === 0 && plan.quiet.length === 0) return { status: 'ok', sent: [], skipped: plan.skipped }
 
   // Daily caps, charged for the invites actually going out. Per event first:
   // the tighter one, so a refusal there does not burn the global budget.
   const keys = inviteCapKeys(inviterUid, eventId)
-  const cost = plan.send.length
+  // Quiet targets cost the same, so the caps cannot reveal who they are.
+  const cost = plan.send.length + plan.quiet.length
   const perEvent = await consume({ key: keys.perEvent, limit: INVITE_CAPS.perEventPerDay, windowMs: DAY_MS, cost })
   if (perEvent.limited) return { status: 'rate_limited' }
   const perDay = await consume({ key: keys.perDay, limit: INVITE_CAPS.perDay, windowMs: DAY_MS, cost })
@@ -254,18 +262,22 @@ export async function sendEventInvites(
   const sent: string[] = []
   const skipped = [...plan.skipped]
   const inviterName = String(params.inviterName || '').trim()
-  for (const targetUid of plan.send) {
+  const quietSet = new Set(plan.quiet)
+  for (const targetUid of [...plan.send, ...plan.quiet]) {
+    const isQuiet = quietSet.has(targetUid)
     const ref = adminDb.collection(COLLECTIONS.eventInvites).doc(eventInviteDocId(eventId, inviterUid, targetUid))
     // Create-if-absent: a double tap or a second device cannot invite twice.
     const created = await adminDb.runTransaction(async (tx: any) => {
       const snap = await tx.get(ref)
-      if (snap.exists) return false
+      // A quiet record upgrades once the reason is gone (unmuted, say).
+      if (snap.exists && !(snap.data()?.status === 'quiet' && !isQuiet)) return false
       tx.set(ref, {
         event_id: eventId,
         inviter_uid: inviterUid,
         target_uid: targetUid,
         created_at: now,
-        status: 'sent',
+        // 'quiet': kept so the picker shows "Invited" again, never delivered.
+        status: isQuiet ? 'quiet' : 'sent',
       })
       return true
     })
@@ -274,6 +286,7 @@ export async function sendEventInvites(
       continue
     }
     sent.push(targetUid)
+    if (isQuiet) continue
     try {
       await notify({ targetUid, inviterUid, inviterName, eventId, event })
     } catch (err) {
@@ -517,6 +530,8 @@ export async function recordInvitePurchase(input: InvitePurchaseInput): Promise<
 
     const invites = (invitesSnap.docs || [])
       .map((d: any) => ({ ref: d.ref, data: d.data() || {} }))
+      // A quiet invite was never delivered: it credits no one.
+      .filter((x: any) => x.data.status !== 'quiet')
       .sort((a: any, b: any) => (toMs(a.data.created_at) ?? 0) - (toMs(b.data.created_at) ?? 0))
     if (!inviter && invites.length > 0) {
       inviter = String(invites[0].data.inviter_uid || '') || null

@@ -9,7 +9,9 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  Animated,
 } from 'react-native';
+import { useSwipeToClose } from '../hooks/useSwipeToClose';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MapPin, Check, X, Search as SearchIcon } from 'lucide-react-native';
 import { useTheme } from '../contexts/ThemeContext';
@@ -73,6 +75,7 @@ export default function LocationPickerSheet({
   };
   const insets = useSafeAreaInsets();
   const styles = getStyles(colors);
+  const swipe = useSwipeToClose(onClose, visible);
 
   const [areaQuery, setAreaQuery] = useState('');
   /** Swaps the list below from areas to countries. Closed by default. */
@@ -151,7 +154,8 @@ export default function LocationPickerSheet({
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <Pressable style={styles.backdrop} onPress={onClose} />
-        <View style={[styles.sheet, { paddingBottom: insets.bottom + 16 }]}>
+        <Animated.View style={[styles.sheet, swipe.sheetStyle, { paddingBottom: insets.bottom + 16 }]}>
+          <View {...swipe.panHandlers}>
           <View style={styles.handle} />
 
           <View style={styles.header}>
@@ -161,6 +165,7 @@ export default function LocationPickerSheet({
             <Touchable style={styles.closeBtn} onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel={t('common.close')}>
               <X size={20} color={colors.text} />
             </Touchable>
+          </View>
           </View>
 
           {/*
@@ -270,7 +275,7 @@ export default function LocationPickerSheet({
               </>
             )}
           </ScrollView>
-        </View>
+        </Animated.View>
       </KeyboardAvoidingView>
     </Modal>
   );

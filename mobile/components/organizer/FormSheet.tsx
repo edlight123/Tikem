@@ -10,7 +10,9 @@ import {
   TextInput,
   TextInputProps,
   View,
+  Animated,
 } from 'react-native';
+import { useSwipeToClose } from '../../hooks/useSwipeToClose';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X } from 'lucide-react-native';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -49,6 +51,7 @@ export default function FormSheet({
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const styles = getStyles(colors);
+  const swipe = useSwipeToClose(onClose, visible);
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={busy ? undefined : onClose}>
@@ -58,7 +61,9 @@ export default function FormSheet({
         style={styles.avoid}
         pointerEvents="box-none"
       >
-        <View style={[styles.sheet, { paddingBottom: insets.bottom + spacing.lg }]}>
+        <Animated.View style={[styles.sheet, swipe.sheetStyle, { paddingBottom: insets.bottom + spacing.lg }]}>
+          {/* Handle + title drag the sheet down, except while a write is in flight. */}
+          <View {...(busy ? {} : swipe.panHandlers)}>
           <View style={styles.handle} />
           <View style={styles.header}>
             {/* Sheet titles are editorial, like SectionHeader: serif, lowercase. */}
@@ -76,6 +81,7 @@ export default function FormSheet({
               <X size={18} color={colors.text} />
             </Touchable>
           </View>
+          </View>
 
           <ScrollView
             style={styles.scroll}
@@ -86,7 +92,7 @@ export default function FormSheet({
           </ScrollView>
 
           {footer ? <View style={styles.footer}>{footer}</View> : null}
-        </View>
+        </Animated.View>
       </KeyboardAvoidingView>
     </Modal>
   );

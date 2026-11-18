@@ -12,7 +12,9 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Animated,
 } from 'react-native';
+import { useSwipeToClose } from '../hooks/useSwipeToClose';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X } from 'lucide-react-native';
 import { useTheme } from '../contexts/ThemeContext';
@@ -51,6 +53,7 @@ export default function DeleteAccountSheet({ visible, onClose }: Props) {
   const [typed, setTyped] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
+  const swipe = useSwipeToClose(onClose, visible);
   const [error, setError] = useState<string | null>(null);
   const [obligations, setObligations] = useState<AccountObligation[]>([]);
 
@@ -152,7 +155,9 @@ export default function DeleteAccountSheet({ visible, onClose }: Props) {
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={busy ? undefined : onClose} />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.avoid} pointerEvents="box-none">
-        <View style={[styles.sheet, { paddingBottom: insets.bottom + 16 }]}>
+        <Animated.View style={[styles.sheet, swipe.sheetStyle, { paddingBottom: insets.bottom + 16 }]}>
+          {/* No swipe-to-close while a delete/re-auth is in flight. */}
+          <View {...(busy ? {} : swipe.panHandlers)}>
           <View style={styles.handle} />
           <View style={styles.header}>
             <Text style={styles.title}>{title}</Text>
@@ -166,6 +171,7 @@ export default function DeleteAccountSheet({ visible, onClose }: Props) {
             >
               <X size={20} color={colors.text} />
             </TouchableOpacity>
+          </View>
           </View>
 
           <ScrollView style={styles.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
@@ -263,7 +269,7 @@ export default function DeleteAccountSheet({ visible, onClose }: Props) {
               </TouchableOpacity>
             ) : null}
           </View>
-        </View>
+        </Animated.View>
       </KeyboardAvoidingView>
     </Modal>
   );

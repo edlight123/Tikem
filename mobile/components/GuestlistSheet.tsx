@@ -8,7 +8,9 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Animated,
 } from 'react-native';
+import { useSwipeToClose } from '../hooks/useSwipeToClose';
 import { Image } from 'expo-image';
 import { Camera, X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -20,6 +22,8 @@ import { fetchEventGuestlist } from '../lib/api/social';
 import { pickProfileImage, ProfileImageError, uploadProfileImage } from '../lib/profileImages';
 import { defaultAvatar, defaultAvatarAt, defaultAvatarIndex, DEFAULT_AVATAR_COUNT } from '../lib/defaultAvatar';
 import type { PublicUserSummary } from '../types/social';
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 /**
  * "View" on the guestlist card. Two faces of one sheet:
@@ -59,6 +63,7 @@ export default function GuestlistSheet({
 }: Props) {
   const { t } = useI18n();
   const insets = useSafeAreaInsets();
+  const swipe = useSwipeToClose(onClose, visible);
   const showAlert = useAppAlert();
   const { user, userProfile, updateUserProfile } = useAuth();
   const hasPhoto = !!userProfile?.photo_url;
@@ -137,15 +142,17 @@ export default function GuestlistSheet({
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel={t('common.close')}>
         {/* Swallow taps on the sheet itself so they do not close it. */}
-        <Pressable style={[styles.sheet, { paddingBottom: insets.bottom + 20 }, mode === 'list' && styles.sheetTall]} onPress={() => {}}>
-          <View style={styles.grabber} />
+        <AnimatedPressable style={[styles.sheet, swipe.sheetStyle, { paddingBottom: insets.bottom + 20 }, mode === 'list' && styles.sheetTall]} onPress={() => {}}>
+          {/* The grabber is tiny, so its slop widens the drag target; the stage
+              (gate) and the title (list) drag too. */}
+          <View style={styles.grabber} hitSlop={{ top: 12, bottom: 16, left: 80, right: 80 }} {...swipe.panHandlers} />
           <TouchableOpacity onPress={onClose} style={styles.close} hitSlop={10} accessibilityLabel={t('common.close')}>
             <X size={20} color={T.textSecondary ?? '#A3A3A3'} />
           </TouchableOpacity>
 
           {mode === 'gate' ? (
             <View style={styles.gate}>
-              <View style={styles.stage}>
+              <View style={styles.stage} {...swipe.panHandlers}>
                 {/* The crowd: two faces either side, blurred and stepped back. */}
                 {crowd.map((src, i) => {
                   const left = i < 2;
@@ -186,8 +193,10 @@ export default function GuestlistSheet({
             </View>
           ) : (
             <View style={{ flex: 1 }}>
-              <Text style={styles.listTitle}>{t('whosGoing.listTitle')}</Text>
-              {showCount && <Text style={styles.listSub}>{t('whosGoing.goingCount', { count: totalGoing })}</Text>}
+              <View {...swipe.panHandlers}>
+                <Text style={styles.listTitle}>{t('whosGoing.listTitle')}</Text>
+                {showCount && <Text style={styles.listSub}>{t('whosGoing.goingCount', { count: totalGoing })}</Text>}
+              </View>
 
               {loading || !list ? (
                 <ActivityIndicator style={{ marginTop: 40 }} color={T.textSecondary ?? '#A3A3A3'} />
@@ -245,7 +254,7 @@ export default function GuestlistSheet({
               )}
             </View>
           )}
-        </Pressable>
+        </AnimatedPressable>
       </Pressable>
     </Modal>
   );
