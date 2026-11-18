@@ -2947,6 +2947,10 @@ export default {
     noRatings: "Pas encore d'avis.",
     loadFailed: 'Impossible de charger le bilan. Tirez pour réessayer.',
   },
+  followers: {
+    title: "Abonnés",
+    empty: "Pas encore d'abonnés",
+  },
   transferTicket: {
     friends: "Vos amis sur Tikèm",
     orEmail: "Ou par e-mail",
@@ -2970,6 +2974,14 @@ export default {
     failed: "Transfert impossible. Réessayez.",
   },
   organizerMessages: {
+    preview: {
+      followupTitle: "Comment était {event} ?",
+      followupBody: "Dites-le à {org} en un geste.",
+      channelsAll: "Push, dans l'app, e-mail et WhatsApp",
+      channelsPush: "Push et dans l'app",
+      whoTicketHolders: "Tous les détenteurs de billets",
+      whoCheckedIn: "Tous ceux qui sont entrés",
+    },
     showAllSent: "Tout afficher ({count})",
     noEventsYet: "Pas encore d'événement",
     tabQuestions: "Questions",

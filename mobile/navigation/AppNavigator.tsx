@@ -35,6 +35,7 @@ import HomeScreen from '../screens/HomeScreen';
 import DiscoverScreen from '../screens/DiscoverScreen';
 import SearchScreen from '../screens/SearchScreen';
 import SubscriptionsScreen from '../screens/SubscriptionsScreen';
+import FollowersScreen from '../screens/FollowersScreen';
 import NotificationSettingsScreen from '../screens/NotificationSettingsScreen';
 import ContentPageScreen from '../screens/ContentPageScreen';
 import PhotoCreditsScreen from '../screens/PhotoCreditsScreen';
@@ -121,6 +122,7 @@ export type RootStackParamList = {
   InviteLink: { code: string; e?: string };
   Search: undefined;
   Subscriptions: undefined;
+  Followers: undefined;
   NotificationSettings: { organizer?: boolean } | undefined;
   ContentPage: { slug: string; title?: string };
   PhotoCredits: undefined;
@@ -1034,6 +1036,7 @@ export default function AppNavigator() {
             <Stack.Screen name="EventDetail" component={EventDetailScreen} />
             <Stack.Screen name="Search" component={SearchScreen} options={{ headerShown: false }} />
             <Stack.Screen name="Subscriptions" component={SubscriptionsScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="Followers" component={FollowersScreen} options={{ headerShown: false }} />
             <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} options={{ headerShown: false }} />
             <Stack.Screen name="ContentPage" component={ContentPageScreen} options={{ headerShown: false }} />
             <Stack.Screen name="PhotoCredits" component={PhotoCreditsScreen} options={{ headerShown: false }} />
