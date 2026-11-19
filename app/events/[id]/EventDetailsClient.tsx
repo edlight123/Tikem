@@ -30,7 +30,7 @@ import { eventZone } from '@/lib/home/feed'
 import Image from 'next/image'
 import PosterImage from '@/components/ui/PosterImage'
 import { getPosterTheme } from '@/lib/posterGradient'
-import { resolveEventPricing } from '@/lib/ticketPricing'
+import { freeClaimCap, resolveEventPricing } from '@/lib/ticketPricing'
 import { priceOrder } from '@/lib/checkout/buyer-pricing'
 import { dateLocaleFor, intlLocaleFor } from '@/lib/dateLocale'
 import { venueAddressLines } from '@/lib/events/venueLines'
@@ -364,6 +364,7 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                   isPasswordProtected={!!event.is_password_protected}
                   plusOnesAllowed={eventAllowedPlusOnes(event as any)}
                   heldFreeTickets={heldFreeTickets}
+                  maxFreePerPerson={freeClaimCap((event as any).ticket_tiers)}
                 />
               )
             )}
@@ -718,6 +719,7 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                       isPasswordProtected={!!event.is_password_protected}
                       plusOnesAllowed={eventAllowedPlusOnes(event as any)}
                       heldFreeTickets={heldFreeTickets}
+                      maxFreePerPerson={freeClaimCap((event as any).ticket_tiers)}
                     />
                   )}
                   {!user && (event as any).requires_approval !== true && (

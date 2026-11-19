@@ -89,9 +89,12 @@ interface BuyTicketButtonProps {
    * mixed event's selector closes its free tiers while paid ones still sell.
    */
   heldFreeTickets?: number
+  /** Most free tickets one person may claim here (freeClaimCap): the
+   *  organizer's per-person limit, at most MAX_FREE_TICKETS_PER_PERSON. */
+  maxFreePerPerson?: number
 }
 
-export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, eventTitle = 'Event', currency = 'HTG', country, feeIncidence = null, eventStartsAt, isPasswordProtected = false, plusOnesAllowed = 0, heldFreeTickets = 0 }: BuyTicketButtonProps) {
+export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, eventTitle = 'Event', currency = 'HTG', country, feeIncidence = null, eventStartsAt, isPasswordProtected = false, plusOnesAllowed = 0, heldFreeTickets = 0, maxFreePerPerson = MAX_FREE_TICKETS_PER_PERSON }: BuyTicketButtonProps) {
   const { t } = useTranslation('common')
   const router = useRouter()
   const { showToast } = useToast()
@@ -109,6 +112,10 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
   // Free claims pick a quantity in their own step, not on the page (owner,
   // 2026-11-18: "why choosing the quantity on the main screen?").
   const [showFreeStep, setShowFreeStep] = useState(false)
+  const freeCap = Math.max(1, Math.min(MAX_FREE_TICKETS_PER_PERSON, maxFreePerPerson))
+  // One ticket per person and no plus-ones: nothing to choose, so RSVP claims
+  // straight away instead of opening a step with a stuck "1".
+  const freeNeedsStep = freeCap > 1 || plusOnesAllowed > 0
   // Optional names for the extra free tickets (plus-ones). Index i names ticket i+2.
   const [plusOneNames, setPlusOneNames] = useState<Array<{ firstName: string; phone: string }>>([])
   const plusOneSlots = isFree && plusOnesAllowed > 0 ? Math.min(Math.max(0, quantity - 1), plusOnesAllowed) : 0
@@ -1245,7 +1252,13 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
       ) : isFree ? (
         <>
           <button
-            onClick={() => setShowFreeStep(true)}
+            onClick={() => {
+              if (freeNeedsStep) setShowFreeStep(true)
+              else {
+                setQuantity(1)
+                gateOrRun('free')
+              }
+            }}
             disabled={loading}
             className="block w-full bg-inverse hover:bg-inverse-hover text-on-inverse text-center text-body font-semibold py-2.5 px-5 rounded transition-colors disabled:opacity-50 min-h-12"
           >
@@ -1274,8 +1287,8 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
                   </button>
                   <span className="w-12 text-center font-semibold text-fg">{quantity}</span>
                   <button
-                    onClick={() => setQuantity(Math.min(MAX_FREE_TICKETS_PER_PERSON, quantity + 1))}
-                    disabled={quantity >= MAX_FREE_TICKETS_PER_PERSON || loading}
+                    onClick={() => setQuantity(Math.min(freeCap, quantity + 1))}
+                    disabled={quantity >= freeCap || loading}
                     aria-label={t('events.increase_quantity', { defaultValue: 'Increase quantity' })}
                     className="w-8 h-8 rounded bg-surface-raised flex items-center justify-center hover:bg-surface-high disabled:opacity-50 disabled:cursor-not-allowed"
                   >

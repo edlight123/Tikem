@@ -150,8 +150,11 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
       // `ticket_tiers` array (rich objects break client serialization), so we
       // rebuild a minimal `{ price }[]` from the authoritative `ticket_tiers`
       // collection we already fetched above. See lib/ticketPricing.ts.
+      // Plus the per-person limit, so the free-claim stepper stops where the
+      // server would refuse (freeClaimCap).
       const tierPriceShadow = tiersSnapshot.docs.map((doc: any) => ({
         price: Number(doc.data()?.price ?? 0) || 0,
+        ...(Number(doc.data()?.max_per_order) > 0 ? { max_per_order: Number(doc.data().max_per_order) } : {}),
       }))
 
       // Combine event and organizer data
