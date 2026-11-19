@@ -2521,6 +2521,8 @@ export default {
   },
 
   organizerEarnings: {
+    paidToStripe: "Paid to your Stripe account",
+    paidToStripeHint: "Card sales go straight to your Stripe account, so they are not part of Net or Available here.",
     freeEvent: {
       title: 'free event',
       body: "Free event, nothing to pay out.",

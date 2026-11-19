@@ -2073,6 +2073,8 @@ export default {
   },
 
   organizerEarnings: {
+    paidToStripe: "Peye sou kont Stripe ou",
+    paidToStripeHint: "Vant ak kat yo ale dirèk sou kont Stripe ou, se poutèt sa yo pa nan Nèt ni nan Disponib isit la.",
     freeEvent: {
       title: 'evènman gratis',
       body: "Evènman gratis, pa gen anyen pou peye.",

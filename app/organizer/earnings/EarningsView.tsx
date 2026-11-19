@@ -41,6 +41,7 @@ type CurrencyTotals = {
   totalWithdrawn: number
   totalPlatformFees: number
   totalProcessingFees: number
+  totalHeldByStripe?: number
 }
 
 /** Compact KPI card with a brand-tinted icon chip. Value is supplied as children
@@ -254,6 +255,21 @@ export default function EarningsView({ summary, organizerId, withdrawable, readO
         </StatCard>
       </div>
 
+      {/* Card sales paid straight into the organizer's own Stripe account:
+          outside Net/Available (Tikèm never holds them), shown so they don't
+          vanish. */}
+      {Number((summary as any).totalHeldByStripe || 0) > 0 && (
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 rounded bg-surface px-5 py-4">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-fg">{tx('event_earnings.paid_to_stripe')}</p>
+            <p className="mt-0.5 text-meta text-fg-subtle">{tx('event_earnings.paid_to_stripe_hint')}</p>
+          </div>
+          <span className="font-mono tabular-nums text-lead font-semibold text-fg">
+            {renderMoney((t) => t?.totalHeldByStripe ?? 0, Number((summary as any).totalHeldByStripe || 0))}
+          </span>
+        </div>
+      )}
+
       {/* Fee structure — compact disclosure to keep the page focused */}
       <details className="group overflow-hidden rounded-2xl bg-surface shadow-soft">
         <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4">
@@ -371,6 +387,11 @@ export default function EarningsView({ summary, organizerId, withdrawable, readO
                     <div className="font-mono tabular-nums font-medium">
                       {formatCurrency(event.netAmount, event.currency || undefined)}
                     </div>
+                    {Number((event as any).heldByStripeAmount || 0) > 0 && (
+                      <div className="text-caption text-fg-subtle">
+                        + {formatCurrency(Number((event as any).heldByStripeAmount), event.currency || undefined)} Stripe
+                      </div>
+                    )}
                   </div>
                   <div>
                     <div className="label-mono uppercase text-fg-subtle">{tx('earnings.available')}</div>
@@ -449,6 +470,11 @@ export default function EarningsView({ summary, organizerId, withdrawable, readO
                     </td>
                     <td className="px-6 py-4 text-right font-mono tabular-nums font-medium whitespace-nowrap">
                       {formatCurrency(event.netAmount, event.currency || undefined)}
+                      {Number((event as any).heldByStripeAmount || 0) > 0 && (
+                        <div className="text-caption font-normal text-fg-subtle">
+                          + {formatCurrency(Number((event as any).heldByStripeAmount), event.currency || undefined)} Stripe
+                        </div>
+                      )}
                     </td>
                     <td className="px-6 py-4 text-right font-mono tabular-nums font-semibold text-success-soft whitespace-nowrap">
                       {formatCurrency(event.availableToWithdraw, event.currency || undefined)}

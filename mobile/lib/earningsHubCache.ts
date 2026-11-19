@@ -23,6 +23,8 @@ export type EventMoney = {
   netMinor: number | null;
   grossMinor: number;
   withdrawnMinor: number;
+  /** Paid straight into the organizer's Stripe account (not in net/available). */
+  heldByStripeMinor: number;
   currency: string;
   /** Settlement state from the earnings row ('ready' | 'pending' | 'locked'). */
   settlementStatus: string | null;
@@ -93,6 +95,7 @@ function toMoney(row: EventEarningsRow): EventMoney {
     netMinor: net,
     grossMinor: Math.max(0, Number(row.grossSales || 0)),
     withdrawnMinor: Math.max(0, Number(row.withdrawnAmount || 0)),
+    heldByStripeMinor: Math.max(0, Number(row.heldByStripeAmount || 0)),
     currency: earningsCurrency(row),
     settlementStatus: row.settlementStatus ? String(row.settlementStatus) : null,
   };

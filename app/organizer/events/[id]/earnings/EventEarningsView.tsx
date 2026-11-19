@@ -529,6 +529,21 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
         />
       </div>
 
+      {/* Card sales through the organizer's own Stripe account: Tikèm never
+          holds them, so they sit outside Net/Available, but they must not
+          vanish (a card-only event read "Net 0, available 0"). */}
+      {Number((earnings as any).heldByStripeAmount || 0) > 0 && (
+        <div className="-mt-2 mb-6 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 rounded bg-surface px-5 py-4">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-fg">{t('event_earnings.paid_to_stripe')}</p>
+            <p className="mt-0.5 text-meta text-fg-subtle">{t('event_earnings.paid_to_stripe_hint')}</p>
+          </div>
+          <span className="font-mono tabular-nums text-lead font-semibold text-fg">
+            {formatCurrency(Number((earnings as any).heldByStripeAmount), earnings.currency)}
+          </span>
+        </div>
+      )}
+
       {/* Ticket Tier Breakdown */}
       <div className="rounded-2xl bg-surface p-6 mb-6">
         <div className="flex items-center justify-between mb-4">

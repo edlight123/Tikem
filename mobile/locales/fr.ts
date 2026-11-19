@@ -2104,6 +2104,8 @@ export default {
   },
 
   organizerEarnings: {
+    paidToStripe: "Versé sur votre compte Stripe",
+    paidToStripeHint: "Les ventes par carte vont directement sur votre compte Stripe : elles ne font pas partie du net ni du disponible ici.",
     freeEvent: {
       title: 'événement gratuit',
       body: "Événement gratuit, rien à verser.",
