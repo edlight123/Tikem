@@ -969,7 +969,9 @@
     "destination_on_hold": "Votre nouveau compte est enregistré et pourra recevoir des paiements à partir du {{date}}.",
     "balance_changed": "Votre solde a changé, veuillez réessayer.",
     "free_event_nothing": "Événement gratuit, rien à verser.",
-    "back_to_all": "← Retour à tous les revenus"
+    "back_to_all": "← Retour à tous les revenus",
+    "paid_to_stripe": "Versé sur votre compte Stripe",
+    "paid_to_stripe_hint": "Les ventes par carte vont directement sur votre compte Stripe : elles ne font pas partie du net ni du disponible ici."
   },
   "events_filters": {
     "alphabetical": "Alphabétique",

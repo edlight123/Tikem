@@ -935,6 +935,21 @@ export default function OrganizerEventEarningsScreen() {
           ]}
         />
 
+        {/* Card sales through the organizer's own Stripe account: Tikèm never
+            holds them, so they sit outside Net/Available, but they must not
+            vanish (a card-only event read "Net 0, available 0"). */}
+        {Number(earnings?.heldByStripeAmount || 0) > 0 ? (
+          <View style={[styles.card, { marginTop: 12 }]}>
+            <View style={styles.rowBetween}>
+              <Text style={styles.cardLabel}>{t('organizerEarnings.paidToStripe')}</Text>
+              <Text style={[styles.metaText, { color: colors.text, fontWeight: '700' }]}>
+                {formatCurrency(Number(earnings?.heldByStripeAmount), currency)}
+              </Text>
+            </View>
+            <Text style={styles.metaText}>{t('organizerEarnings.paidToStripeHint')}</Text>
+          </View>
+        ) : null}
+
         <View style={{ height: 12 }} />
 
         {/*

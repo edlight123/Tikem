@@ -138,6 +138,9 @@ export interface EarningsSummary {
   totalWithdrawn: number
   totalPlatformFees: number
   totalProcessingFees: number
+  /** Card sales paid straight into the organizer's own Stripe account (net of
+   *  the Tikèm fee). Not part of net/available: Tikèm never holds that money. */
+  totalHeldByStripe?: number
   // When an organizer has earnings in more than one currency, this is set to 'mixed'.
   currency: 'HTG' | 'USD' | 'mixed' | string
 
@@ -149,6 +152,7 @@ export interface EarningsSummary {
     totalWithdrawn: number
     totalPlatformFees: number
     totalProcessingFees: number
+    totalHeldByStripe?: number
   }>>
   
   // Breakdown by event
@@ -159,6 +163,8 @@ export interface EarningsSummary {
     grossSales: number
     netAmount: number
     availableToWithdraw: number
+    /** Paid straight into the organizer's Stripe account (see totalHeldByStripe). */
+    heldByStripeAmount?: number
     settlementStatus: SettlementStatus
     currency?: 'HTG' | 'USD' | 'CAD' | 'EUR'
   }>

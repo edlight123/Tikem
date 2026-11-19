@@ -33,6 +33,9 @@ export type EventEarningsRow = {
   dataSource?: string
   grossSales?: number
   netAmount?: number
+  /** Card sales paid straight into the organizer's own Stripe account (net of
+   *  the Tikèm fee). Outside net/available: Tikèm never holds that money. */
+  heldByStripeAmount?: number
   ticketsSold?: number
   totalEarned?: number
   withdrawnAmount?: number

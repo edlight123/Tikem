@@ -981,12 +981,14 @@ export function summaryFromAvailability(
         totalWithdrawn: 0,
         totalPlatformFees: 0,
         totalProcessingFees: 0,
+        totalHeldByStripe: 0,
       })
     t.totalGrossSales += row.grossSales
     t.totalNetAmount += row.netAmount
     t.totalAvailableToWithdraw += row.availableToWithdraw
     t.totalWithdrawn += row.withdrawnAmount
     t.totalPlatformFees += row.platformFee
+    t.totalHeldByStripe = (t.totalHeldByStripe || 0) + row.heldByStripeAmount
   }
   const currencies = Object.keys(totalsByCurrency) as Array<keyof typeof totalsByCurrency>
   const single = currencies.length <= 1 ? totalsByCurrency[currencies[0]] : undefined
@@ -997,6 +999,7 @@ export function summaryFromAvailability(
     totalWithdrawn: single?.totalWithdrawn ?? 0,
     totalPlatformFees: single?.totalPlatformFees ?? 0,
     totalProcessingFees: 0,
+    totalHeldByStripe: single?.totalHeldByStripe ?? 0,
     currency: currencies.length > 1 ? 'mixed' : (currencies[0] || 'HTG'),
     totalsByCurrency: currencies.length > 1 ? totalsByCurrency : undefined,
     events: relevant
@@ -1009,6 +1012,7 @@ export function summaryFromAvailability(
           grossSales: row.grossSales,
           netAmount: row.netAmount,
           availableToWithdraw: row.availableToWithdraw,
+          heldByStripeAmount: row.heldByStripeAmount,
           settlementStatus: row.settlementStatus as SettlementStatus,
           currency: e.currency,
         }

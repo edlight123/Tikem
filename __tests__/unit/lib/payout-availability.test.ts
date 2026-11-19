@@ -6,6 +6,7 @@
 import {
   computeEventAvailability,
   summarizeAvailability,
+  summaryFromAvailability,
   toDateOrNull,
   toEarningsRow,
   type EventAvailabilityInput,
@@ -226,6 +227,24 @@ describe('live statuses and refunds', () => {
     expect(a.heldByStripeMinor).toBe(9_000)
     expect(a.netMinor).toBe(9_000)
     expect(a.availableNowMinor).toBe(9_000)
+  })
+})
+
+describe('Stripe Connect sales are shown, not lost (Tikra review #8, 2026-11-18)', () => {
+  it('a card-only event: net and available stay 0 (Tikèm holds nothing) but the row says what reached Stripe', () => {
+    const a = run({ tickets: [ticket(100, { payment_method: 'stripe_connect' })] })
+    const row = toEarningsRow(a)
+    expect(row.netAmount).toBe(0)
+    expect(row.availableToWithdraw).toBe(0)
+    expect(row.heldByStripeAmount).toBe(9_000)
+  })
+
+  it('the earnings summary carries the Stripe amount per event and in the totals', () => {
+    const a = run({ tickets: [ticket(100, { payment_method: 'stripe_connect' }), ticket(100)] })
+    const summary = summaryFromAvailability([{ ...a, title: 'Card night', eventDate: '2026-12-01' }])
+    expect(summary.events[0].heldByStripeAmount).toBe(9_000)
+    expect(summary.totalHeldByStripe).toBe(9_000)
+    expect(summary.totalNetAmount).toBe(9_000)
   })
 })
 

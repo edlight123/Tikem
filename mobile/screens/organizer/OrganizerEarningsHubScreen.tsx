@@ -379,6 +379,11 @@ export default function OrganizerEarningsHubScreen() {
                           {net}
                         </Text>
                       ) : null}
+                      {m && m.heldByStripeMinor > 0 ? (
+                        <Text style={styles.rowMeta} numberOfLines={1}>
+                          + {formatCurrency(m.heldByStripeMinor, m.currency, { fromCents: true })} Stripe
+                        </Text>
+                      ) : null}
                       {chip ? (
                         <View style={styles.rowChip}>
                           <StatusChip status={chip.status} label={chip.label} />
