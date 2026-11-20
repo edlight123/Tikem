@@ -37,10 +37,22 @@ async function removeUserExpoPushToken(userId: string, token: string) {
     .set({ expo_push_tokens: FieldValue.arrayRemove(token) }, { merge: true })
 }
 
-export async function registerUserExpoPushToken(userId: string, token: string) {
+export type AppPlatform = 'ios' | 'android'
+
+export function parseAppPlatform(value: unknown): AppPlatform | null {
+  return value === 'ios' || value === 'android' ? value : null
+}
+
+export async function registerUserExpoPushToken(userId: string, token: string, platform: AppPlatform | null = null) {
   if (!isExpoPushToken(token)) {
     throw new Error('Invalid Expo push token')
   }
+
+  // Which app (iPhone or Android) this person uses, so installs can be counted
+  // per platform from our own data. Older app builds send no platform.
+  const platformFields = platform
+    ? { app_platforms: FieldValue.arrayUnion(platform), last_app_platform: platform }
+    : {}
 
   await adminDb
     .collection('users')
@@ -49,6 +61,7 @@ export async function registerUserExpoPushToken(userId: string, token: string) {
       {
         expo_push_tokens: FieldValue.arrayUnion(token),
         expo_push_tokens_updated_at: FieldValue.serverTimestamp(),
+        ...platformFields,
       },
       { merge: true }
     )

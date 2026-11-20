@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
-import { registerUserExpoPushToken } from '@/lib/push/expo'
+import { parseAppPlatform, registerUserExpoPushToken } from '@/lib/push/expo'
 import { rememberAudienceCity } from '@/lib/notifications/audience-city'
 
 export const runtime = 'nodejs'
@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
   if (!token) return NextResponse.json({ error: 'token required' }, { status: 400 })
 
   try {
-    await registerUserExpoPushToken(user.id, token)
+    await registerUserExpoPushToken(user.id, token, parseAppPlatform(body?.platform))
     // Piggyback the city on token registration: this is the one request every
     // notification-enabled user makes, from the device they will be notified on.
     // Best-effort — a geo failure must not fail the registration.

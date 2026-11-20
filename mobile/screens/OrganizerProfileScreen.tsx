@@ -617,8 +617,10 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
               Follow pill by HERO_IDENTITY_GAP at every safe-area inset. */}
           <View style={[styles.heroContent, { paddingTop: insets.top + HERO_IDENTITY_OFFSET }]}>
             <View style={styles.identityRow}>
-              {/* Avatar — 70 → 52; inline, so it costs no row of its own. */}
-              <View style={styles.avatar}>
+              {/* Avatar — 52 inline for an organizer. A person's profile is
+                  mostly their face, so it goes to 72 with no white ring
+                  (owner feedback 2026-11-19, "should it be bigger?"). */}
+              <View style={[styles.avatar, !isOrgProfile && styles.avatarPerson]}>
                 {(organizer.organization_logo || organizer.avatarUrl || organizer.photo_url) ? (
                   <Image
                     source={{ uri: organizer.organization_logo || organizer.avatarUrl || organizer.photo_url }}
@@ -988,10 +990,20 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     shadowRadius: 4,
     elevation: 5,
   },
+  avatarPerson: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    borderWidth: 0,
+    backgroundColor: colors.surface,
+    overflow: 'hidden',
+    shadowOpacity: 0,
+    elevation: 0,
+  },
   avatarImage: {
     width: '100%',
     height: '100%',
-    borderRadius: 24,
+    borderRadius: 999,
   },
   avatarText: {
     fontSize: 22,
