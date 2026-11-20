@@ -14,7 +14,9 @@ import { radius, spacing } from '../theme/tokens';
  * Premium rules (owner, 2026-10-01: "keep the premium and lux feel"):
  * - The art stays vivid. No wash over the whole image, only a short gradient at
  *   the foot, just deep enough to carry the label.
- * - Crisp type: a bold lowercase world name and one quiet line under it.
+ * - Crisp type: only the bold lowercase world name. The genre line under it
+ *   was removed (owner feedback 2026-11-19, "remove the subtext"); it stays
+ *   in the accessibility label so VoiceOver still says what the world holds.
  * - Small poster corners, no borders, no shadows, no badges.
  * - The image fades in and the tile gives way slightly under the finger.
  *
@@ -91,15 +93,12 @@ function WorldTile({
         {/* Only the lower third darkens; the art above it stays untouched. */}
         <LinearGradient
           colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.55)', 'rgba(0,0,0,0.88)']}
-          locations={[0.55, 0.8, 1]}
+          locations={[0.65, 0.85, 1]}
           style={StyleSheet.absoluteFill}
         />
         <View style={styles.caption}>
           <Text style={styles.name} numberOfLines={1}>
             {label}
-          </Text>
-          <Text style={styles.sub} numberOfLines={1}>
-            {sublabel}
           </Text>
         </View>
       </Animated.View>
@@ -138,12 +137,5 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
     letterSpacing: -0.4,
-  },
-  sub: {
-    marginTop: 2,
-    color: 'rgba(255,255,255,0.72)',
-    fontSize: 12,
-    fontWeight: '500',
-    letterSpacing: 0.2,
   },
 });

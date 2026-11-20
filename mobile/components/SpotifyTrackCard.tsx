@@ -352,14 +352,12 @@ export default function SpotifyTrackCard({ url }: { url?: string | null }) {
 const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
   StyleSheet.create({
     section: { paddingTop: 22, paddingBottom: 6 },
-    // A filled card one step off the canvas — no outline.
+    // A plain row on the canvas: no card behind it (owner feedback 2026-11-19,
+    // "remove the background"). The play tile keeps its fill as the button.
     card: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 14,
-      padding: 12,
-      borderRadius: radius.lg,
-      backgroundColor: colors.surface,
     },
     art: {
       width: 64,

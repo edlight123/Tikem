@@ -2,9 +2,13 @@ import * as Device from 'expo-device'
 import * as Notifications from 'expo-notifications'
 import Constants from 'expo-constants'
 import AsyncStorage from '@react-native-async-storage/async-storage'
+import { Platform } from 'react-native'
 import { backendJson } from './api/backend'
 
 const STORAGE_KEY = 'tikem:expo_push_token'
+// Set once the server has this device's platform. Devices registered before the
+// app sent it re-register one time so every install gets counted per platform.
+const PLATFORM_SENT_KEY = 'tikem:expo_push_platform_sent'
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -71,14 +75,16 @@ export async function registerForPushNotificationsIfPossible(): Promise<string |
   if (!token) return null
 
   const last = await AsyncStorage.getItem(STORAGE_KEY)
-  if (last === token) return token
+  const platformSent = await AsyncStorage.getItem(PLATFORM_SENT_KEY)
+  if (last === token && platformSent === '1') return token
 
   await backendJson('/api/push/register-expo', {
     method: 'POST',
-    body: JSON.stringify({ token }),
+    body: JSON.stringify({ token, platform: Platform.OS }),
   })
 
   await AsyncStorage.setItem(STORAGE_KEY, token)
+  await AsyncStorage.setItem(PLATFORM_SENT_KEY, '1')
   return token
 }
 
@@ -105,6 +111,7 @@ export async function unregisterPushTokenOnSignOut(timeoutMs = 3000): Promise<vo
     await Promise.race([call, new Promise<void>((resolve) => setTimeout(resolve, timeoutMs))])
   }
   await AsyncStorage.removeItem(STORAGE_KEY).catch(() => {})
+  await AsyncStorage.removeItem(PLATFORM_SENT_KEY).catch(() => {})
 }
 
 export function addPushNotificationListeners(onUrl?: (url: string) => void) {
