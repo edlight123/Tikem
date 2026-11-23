@@ -63,6 +63,8 @@
     "promos_desc": "Special offers, featured events, and platform updates",
     "discovery": "Events near you",
     "discovery_desc": "A pick of new events in your city",
+    "weekend_digest": "This weekend",
+    "weekend_digest_desc": "Thursday: what's on this weekend in your city",
     "filling_fast": "Selling fast",
     "filling_fast_desc": "When an event you saved is close to selling out",
     "national_day": "Haitian holidays",

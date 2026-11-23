@@ -25,6 +25,7 @@ export const USER_NOTIFY_FIELDS = [
   'notify_discovery',
   'notify_filling_fast',
   'notify_national_day',
+  'notify_weekend_digest',
 ] as const
 
 export type UserNotifyField = (typeof USER_NOTIFY_FIELDS)[number]
