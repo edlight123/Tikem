@@ -186,7 +186,6 @@ function checkReceiptsLater(userId: string, accepted: Array<{ id: string; token:
     // Required lazily: importing next/server at module load pulls in the Web
     // Request global, which plain Node scripts and the jest node environment
     // lack (it broke every module that imports push at load time).
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { after } = require('next/server') as typeof import('next/server')
     after(checkPendingReceipts)
   } catch {
