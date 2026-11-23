@@ -2986,6 +2986,33 @@ export default {
     emailRequired: "Mete imèl li.",
     failed: "Nou pa t ka transfere biyè a. Eseye ankò.",
   },
+  // Page views on the organizer's event screens (lib/eventViews.ts).
+  eventViews: {
+    views: "Vizit",
+    today: "{count} jodi a",
+  },
+  // Editing an event's automatic reminders (components/organizer/EventAnnouncements).
+  organizerReminders: {
+    reminder: "Rapèl",
+    add: "Ajoute yon rapèl",
+    off: "Etenn",
+    when: "Kilè",
+    messageLabel: "Mesaj ou (si ou vle)",
+    messagePlaceholder: "Kite l vid pou rapèl nòmal la",
+    save: "Anrejistre",
+    remove: "Retire",
+    saveFailed: "Pa t ka anrejistre. Eseye ankò.",
+    newTitle: "nouvo rapèl",
+    before: "{span} anvan",
+    weekOne: "1 semèn",
+    weekOther: "{count} semèn",
+    dayOne: "1 jou",
+    dayOther: "{count} jou",
+    hourOne: "1 è",
+    hourOther: "{count} è",
+    minOne: "1 min",
+    minOther: "{count} min",
+  },
   organizerMessages: {
     preview: {
       followupTitle: "Kijan {event} te ye?",
@@ -3642,6 +3669,8 @@ export default {
       sectionBody: 'Si ou vle. Si ou etenn yo, anyen anlè a pa chanje.',
       discovery: 'Evènman toupre ou',
       discoveryBody: 'Yon seleksyon nouvo evènman nan vil ou.',
+      weekend: "Wikenn sa a",
+      weekendBody: "Chak jedi: sa k ap fèt wikenn sa a nan vil ou.",
       fillingFast: 'Ap vann vit',
       fillingFastBody: 'Lè yon evènman w ap swiv prèske fin vann.',
       nationalDay: 'Fèt ayisyen yo',

@@ -1273,6 +1273,10 @@
     "new_password": "New Password",
     "password_min_length": "Password must be at least 8 characters long"
   },
+  "page_views": {
+    "label": "Page views",
+    "today": "{{count}} today"
+  },
   "command_center": {
     "add_a_flyer": "Add a flyer",
     "add_one": "Add one",

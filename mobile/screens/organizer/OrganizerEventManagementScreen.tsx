@@ -61,6 +61,7 @@ import { useOverlayHeaderInset } from '../../components/OverlayHeader';
 import ChromeBlur from '../../components/ChromeBlur';
 import StatusChip from '../../components/StatusChip';
 import StatTriplet from '../../components/StatTriplet';
+import { getEventViews, type EventViews } from '../../lib/eventViews';
 import SectionHeader from '../../components/SectionHeader';
 import { resolvePosterTheme } from '../../lib/posterGradient';
 import { colors as T, radius, font } from '../../theme/tokens';
@@ -122,6 +123,8 @@ export default function OrganizerEventManagementScreen() {
   // Only block on a full-screen skeleton when we have nothing to show yet.
   const [loading, setLoading] = useState(!seedEvent);
   const [refreshing, setRefreshing] = useState(false);
+  // Page views (lib/eventViews.ts): loaded on the side, never blocks the screen.
+  const [views, setViews] = useState<EventViews | null>(null);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -139,6 +142,9 @@ export default function OrganizerEventManagementScreen() {
   );
 
   const loadEventData = async () => {
+    getEventViews(eventId).then((v) => {
+      if (v) setViews(v);
+    });
     try {
       const [eventData, breakdown] = await Promise.all([
         getEventById(eventId),
@@ -420,6 +426,15 @@ export default function OrganizerEventManagementScreen() {
     ...(sellThrough !== null
       ? [{ label: t('organizerEventManagement.stats.sellThrough'), value: `${sellThrough}%` }]
       : []),
+    ...(views
+      ? [
+          {
+            label: t('eventViews.views'),
+            value: views.total.toLocaleString(),
+            caption: views.today > 0 ? t('eventViews.today', { count: views.today }) : undefined,
+          },
+        ]
+      : []),
   ];
 
   const canCancel = event?.status !== 'cancelled';
@@ -559,7 +574,7 @@ export default function OrganizerEventManagementScreen() {
 
         {/* Metrics sit directly on the canvas (no stat boxes). */}
         <View style={styles.statsWrap}>
-          <StatTriplet items={stats} />
+          <StatTriplet items={stats} columns={stats.length === 4 ? 2 : 3} />
         </View>
 
         {/* Ticket types */}

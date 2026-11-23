@@ -9,6 +9,8 @@ export type NotificationType =
   // quiet hours, per-category opt-outs and once-ever caps.
   | 'event_filling_fast'
   | 'city_discovery'
+  // Thursday: this weekend in your city (lib/notifications/weekly-digest).
+  | 'weekend_digest'
   | 'organizer_milestone'
   | 'organizer_nudge'
   // The one 09:00 note on a Haitian holiday (app/api/cron/national-day-push).

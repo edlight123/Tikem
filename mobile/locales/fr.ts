@@ -3018,6 +3018,33 @@ export default {
     emailRequired: "Saisissez son e-mail.",
     failed: "Transfert impossible. Réessayez.",
   },
+  // Page views on the organizer's event screens (lib/eventViews.ts).
+  eventViews: {
+    views: "Vues",
+    today: "{count} aujourd’hui",
+  },
+  // Editing an event's automatic reminders (components/organizer/EventAnnouncements).
+  organizerReminders: {
+    reminder: "Rappel",
+    add: "Ajouter un rappel",
+    off: "Désactivé",
+    when: "Quand",
+    messageLabel: "Votre message (facultatif)",
+    messagePlaceholder: "Laissez vide pour le rappel standard",
+    save: "Enregistrer",
+    remove: "Supprimer",
+    saveFailed: "Impossible d’enregistrer. Réessayez.",
+    newTitle: "nouveau rappel",
+    before: "{span} avant",
+    weekOne: "1 semaine",
+    weekOther: "{count} semaines",
+    dayOne: "1 jour",
+    dayOther: "{count} jours",
+    hourOne: "1 heure",
+    hourOther: "{count} heures",
+    minOne: "1 min",
+    minOther: "{count} min",
+  },
   organizerMessages: {
     preview: {
       followupTitle: "Comment était {event} ?",
@@ -3674,6 +3701,8 @@ export default {
       sectionBody: 'Facultatif. Les désactiver ne change rien à ce qui précède.',
       discovery: 'Événements près de chez vous',
       discoveryBody: 'Une sélection de nouveaux événements dans votre ville.',
+      weekend: "Ce week-end",
+      weekendBody: "Le jeudi : ce qui se passe ce week-end dans votre ville.",
       fillingFast: 'Bientôt complet',
       fillingFastBody: 'Quand un événement que vous suivez est presque complet.',
       nationalDay: 'Fêtes haïtiennes',

@@ -29,6 +29,7 @@ export type NotificationCategory =
   | 'friend_invite' // a connection invited you to an event / joined from your invite (lib/invites)
   | 'event_feedback' // the morning after: "how was it?" (checked-in attendees only)
   | 'organizer_recap' // the morning after: your event's recap
+  | 'weekend_digest' // Thursday evening: this weekend's events in your city (lib/notifications/weekly-digest)
 
 const TRANSACTIONAL: ReadonlySet<NotificationCategory> = new Set([
   'purchase',
@@ -64,6 +65,8 @@ const PREFERENCE_FIELD: Record<NotificationCategory, string | null> = {
   // "How was it?" is part of the event's own lifecycle: off with reminders.
   event_feedback: 'notify_reminders',
   organizer_recap: 'notify_organizer_milestones',
+  // Its own switch, beside "events near you" (notify_discovery).
+  weekend_digest: 'notify_weekend_digest',
 }
 
 export function isCategoryEnabled(

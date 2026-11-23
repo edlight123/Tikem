@@ -21,7 +21,7 @@ import { useTranslation } from 'react-i18next'
  * Use a real split (see AnalyticsView) when a whole view needs translating, and
  * this when the text is incidental to a page that is mostly data.
  */
-export function T({ k }: { k: string }) {
+export function T({ k, values }: { k: string; values?: Record<string, string | number> }) {
   const { t } = useTranslation('organizer')
-  return <>{t(k)}</>
+  return <>{values ? t(k, values) : t(k)}</>
 }
