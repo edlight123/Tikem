@@ -88,6 +88,8 @@ const USER_SCOPED_KEYS = [
   'tikem:staffEventIds',
 ];
 const USER_SCOPED_PREFIXES = [
+  // Create Event drafts saved on the phone, per account (CreateEventFlowRefactored).
+  'tikem_event_draft_',
   'tickets_cache_',
   'ticket_cache_',
   'event_tickets_cache_',

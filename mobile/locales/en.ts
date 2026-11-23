@@ -752,6 +752,12 @@ export default {
     loadError: 'Failed to load event data',
     createSuccessBody: 'Your event has been created successfully!',
     updateSuccessBody: 'Your event has been updated successfully!',
+    draftResume: {
+      title: 'Continue your draft?',
+      body: 'You have unsaved changes to this event.',
+      continue: 'Continue',
+      discard: 'Discard',
+    },
     photoUploadFailed: "The photo didn't upload. Add it again from Edit Event.",
     saveFailedCreate: 'Failed to create event. Please try again.',
     publishCheckFailed: {

@@ -12,6 +12,7 @@
  */
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   View,
   Animated,
@@ -102,6 +103,14 @@ export type FieldErrors = Record<string, string>;
 const UNLIMITED_SENTINEL = '1000000';
 
 // Event draft shape - single source of truth
+/** AsyncStorage prefix for Create Event drafts; cleared on sign-out (AuthContext). */
+export const EVENT_DRAFT_PREFIX = 'tikem_event_draft_';
+
+/** A draft as it is written to the phone: never the plaintext access code. */
+function stripDraftSecrets<T extends { access_code?: string }>(draft: T): T {
+  return { ...draft, access_code: '' };
+}
+
 export interface EventDraft {
   // Basics
   title: string;
@@ -784,6 +793,77 @@ export default function CreateEventFlowRefactored() {
   // Generic update function - any field can be updated
   const updateDraft = (updates: Partial<EventDraft>) => {
     setEventDraft(prev => ({ ...prev, ...updates }));
+  };
+
+  // ── Draft autosave (port of Tikra 11b9efe1 + 0e27270f). The form saves
+  // itself on the phone as you go, one slot per signed-in account for a new
+  // event and one per edited event; reopening offers to continue. Cleared once
+  // the event is saved, and on sign-out (AuthContext USER_SCOPED_PREFIXES).
+  // The access code is never written to the phone.
+  const draftOwner = user?.uid || '';
+  const DRAFT_KEY = `${EVENT_DRAFT_PREFIX}${draftOwner || 'anon'}_${isEditMode ? eventId : 'new'}`;
+  const [draftReady, setDraftReady] = useState(false);
+  const draftBaseline = useRef<string>('');
+  useEffect(() => {
+    // Once only; edit mode waits until the event has loaded (it has a title),
+    // so the load can't overwrite a draft someone chose to continue.
+    if (draftReady || !draftOwner) return;
+    if (isEditMode && (loadingEvent || !eventDraft.title)) return;
+    let live = true;
+    (async () => {
+      draftBaseline.current = JSON.stringify(eventDraft);
+      const raw = await AsyncStorage.getItem(DRAFT_KEY).catch(() => null);
+      let saved: any = null;
+      try {
+        saved = raw ? JSON.parse(raw) : null;
+      } catch {
+        saved = null;
+      }
+      const draft = saved?.owner === draftOwner ? saved?.draft : null;
+      if (live && draft && JSON.stringify(draft) !== JSON.stringify(stripDraftSecrets(eventDraft)) && (draft.title || draft.description)) {
+        showAlert(
+          t('organizerCreateEventFlow.draftResume.title'),
+          t('organizerCreateEventFlow.draftResume.body'),
+          [
+            {
+              text: t('organizerCreateEventFlow.draftResume.discard'),
+              style: 'destructive',
+              onPress: () => {
+                AsyncStorage.removeItem(DRAFT_KEY).catch(() => {});
+              },
+            },
+            {
+              text: t('organizerCreateEventFlow.draftResume.continue'),
+              onPress: () => {
+                setEventDraft((prev) => ({ ...prev, ...draft }));
+                setEntryChosen(true);
+              },
+            },
+          ] as any
+        );
+      }
+      if (live) setDraftReady(true);
+    })();
+    return () => {
+      live = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadingEvent, !!eventDraft.title, draftOwner]);
+  useEffect(() => {
+    if (!draftReady || !draftOwner) return;
+    const json = JSON.stringify(eventDraft);
+    if (json === draftBaseline.current) return;
+    const id = setTimeout(() => {
+      AsyncStorage.setItem(
+        DRAFT_KEY,
+        JSON.stringify({ owner: draftOwner, draft: stripDraftSecrets(eventDraft), updatedAt: Date.now() })
+      ).catch(() => {});
+    }, 600);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eventDraft, draftReady, draftOwner]);
+  const clearSavedDraft = () => {
+    AsyncStorage.removeItem(DRAFT_KEY).catch(() => {});
   };
 
   // Coming-soon markets (e.g. Dominican Republic) allow FREE/RSVP events only:
@@ -1652,6 +1732,7 @@ export default function CreateEventFlowRefactored() {
         // Update existing event
         // organizer_id never changes on edit; the id here only names uploads.
         await updateEvent(eventId, eventOrgId || userProfile.id, eventData, saveOptions);
+        clearSavedDraft();
         console.log('Event updated with ID:', eventId);
 
         setConfirmVisible(false);
@@ -1663,6 +1744,7 @@ export default function CreateEventFlowRefactored() {
       } else {
         // Create new event
         const newEventId = await createEvent(eventOrgId || userProfile.id, eventData, saveOptions);
+        clearSavedDraft();
         console.log('Event created with ID:', newEventId);
 
         // Publish-first: the first event someone saves for THEMSELVES makes
@@ -1887,7 +1969,16 @@ export default function CreateEventFlowRefactored() {
   const confirmExit = () => {
     showAlert(t('organizerCreateEventFlow.discardTitle'), t('organizerCreateEventFlow.discardBody'), [
       { text: t('common.cancel'), style: 'cancel' },
-      { text: t('organizerCreateEventFlow.leave'), style: 'destructive', onPress: () => navigation.goBack() },
+      {
+        text: t('organizerCreateEventFlow.leave'),
+        style: 'destructive',
+        // "Your changes will be lost": a deliberate leave drops the saved draft
+        // too. The autosave is for the app closing, not for this.
+        onPress: () => {
+          clearSavedDraft();
+          navigation.goBack();
+        },
+      },
     ]);
   };
 
