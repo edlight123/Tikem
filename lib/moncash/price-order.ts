@@ -27,6 +27,7 @@ import {
   parseTicketQuantity,
   pickTierWhenUnspecified,
   tierOrderLimitRefusal,
+  doorTierInPaidOrderRefusal,
 } from '@/lib/tickets/purchasable'
 import { priceOrderCents } from '@/lib/checkout/buyer-pricing'
 import { fromCents } from '@/lib/ticketPricing'
@@ -181,6 +182,10 @@ export function priceFaceSelections(input: {
       const limitRefusal = tierOrderLimitRefusal(tier, selection.quantity)
       if (limitRefusal) return { ok: false, status: limitRefusal.status, error: limitRefusal.error, code: limitRefusal.code }
 
+      // Pay-at-the-door tiers are reserved free, never bought with MonCash.
+      const doorRefusal = doorTierInPaidOrderRefusal(tier)
+      if (doorRefusal) return { ok: false, status: doorRefusal.status, error: doorRefusal.error, code: doorRefusal.code }
+
       const sold = Number(tier.sold_quantity || 0)
       const total = Number(tier.total_quantity || 0)
       const remaining = Math.max(0, total - sold)
@@ -232,6 +237,9 @@ export function priceFaceSelections(input: {
 
       const limitRefusal = tierOrderLimitRefusal(tier, quantity)
       if (limitRefusal) return { ok: false, status: limitRefusal.status, error: limitRefusal.error, code: limitRefusal.code }
+
+      const doorRefusal = doorTierInPaidOrderRefusal(tier)
+      if (doorRefusal) return { ok: false, status: doorRefusal.status, error: doorRefusal.error, code: doorRefusal.code }
 
       const sold = Number(tier.sold_quantity || 0)
       const total = Number(tier.total_quantity || 0)

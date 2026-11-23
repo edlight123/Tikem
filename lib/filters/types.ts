@@ -60,6 +60,9 @@ export interface EventFilters {
   
   // Event type
   eventType: EventTypeFilter
+
+  /** Only events whose venue the organizer marked step-free (lib/events/venue-details). */
+  stepFree?: boolean
   
   // Sort
   sortBy: SortOption

@@ -4,6 +4,7 @@ import { DiscoverEventCard } from '@/components/discover/DiscoverEventCard'
 import { useTranslation } from 'react-i18next'
 import BuyTicketButton from './BuyTicketButton'
 import RequestToJoin from './RequestToJoin'
+import ExternalTicketsLink, { externalTicketsUrl } from './ExternalTicketsLink'
 import JoinWaitlistButton from '@/components/events/JoinWaitlistButton'
 import { eventAllowedPlusOnes } from '@/lib/events/approval'
 import FavoriteButton from '@/components/FavoriteButton'
@@ -31,9 +32,13 @@ import Image from 'next/image'
 import PosterImage from '@/components/ui/PosterImage'
 import { getPosterTheme } from '@/lib/posterGradient'
 import { freeClaimCap, resolveEventPricing } from '@/lib/ticketPricing'
+import { doorPriceLabel, isDoorEvent, isDoorTier, lowestDoorPrice } from '@/lib/tickets/pay-at-door'
+import { familyMax, freeClaimCapFor } from '@/lib/events/family'
 import { priceOrder } from '@/lib/checkout/buyer-pricing'
 import { dateLocaleFor, intlLocaleFor } from '@/lib/dateLocale'
 import { venueAddressLines } from '@/lib/events/venueLines'
+import VenueDetailsList from '@/components/events/VenueDetailsList'
+import { hasVenueDetails, venueDetailsOf } from '@/lib/events/venue-details'
 
 interface EventDetailsClientProps {
   event: any
@@ -59,12 +64,31 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
   const isSoldOut = (event.total_tickets && event.tickets_sold >= event.total_tickets) || false
   // The organizer turned the waitlist on (lib/waitlist.ts emails it when seats free up).
   const waitlistOpen = isSoldOut && (event as any).enable_waitlist === true
+  // Kept in sync from Eventbrite: tickets are sold there, so the page links out.
+  const externalTickets = externalTicketsUrl(event as any)
   const ticketsRemaining = event.total_tickets ? event.total_tickets - (event.tickets_sold || 0) : null
   // Freeness comes from the TIER SET, never from `event.ticket_price` (which is the
   // lowest tier price, hence 0 whenever a free tier sits next to a paid one — that
   // old test hid tier selection and made the paid tiers unsellable).
   const pricing = resolveEventPricing(event)
-  const isFree = pricing.isFreeOnly
+  const eventTiers: any[] = Array.isArray((event as any).ticket_tiers) ? (event as any).ticket_tiers : []
+  // Pay at the door (lib/tickets/pay-at-door): nothing is charged online, the
+  // tiers cost 0 and carry what is owed on arrival. Reserved through the tier
+  // selector, so the button says "Reserve a spot", never "Free".
+  const payAtDoor = isDoorEvent(event as any, eventTiers)
+  const doorFrom = payAtDoor ? lowestDoorPrice(eventTiers) ?? (Number((event as any).door_price_from) || null) : null
+  const doorLabel = doorFrom ? doorPriceLabel(doorFrom, event.currency || 'HTG', i18n.language) : undefined
+  const isFree = pricing.isFreeOnly && !payAtDoor
+  // A free event with several ticket types (Adults, Children...) lets the guest
+  // pick types in the tier selector; one free type keeps the quick RSVP step.
+  const freeTypes =
+    isFree && eventTiers.filter((tier) => Number(tier?.price ?? 0) === 0 && !isDoorTier(tier) && tier?.is_active !== false).length > 1
+  // Family registration (lib/events/family): one person registers up to N people.
+  const familySize = familyMax(event as any)
+  const familyNote =
+    familySize > 0
+      ? t('events.family_badge', { count: familySize, defaultValue: 'Families welcome, up to {{count}} per registration' })
+      : undefined
   // What to show as the headline price. For a 'mixed' event we advertise the
   // cheapest PAID tier (rendered as a "Free – X" range), never "from 0".
   const headlinePrice = pricing.lowestPaidPrice ?? (Number(event.ticket_price) || 0)
@@ -305,7 +329,9 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                         ? t('ticket.sold_out')
                         : isFree
                           ? t('common.free')
-                          : t('ticket.available')}
+                          : payAtDoor && doorLabel
+                            ? doorLabel
+                            : t('ticket.available')}
                   </p>
                 </div>
               </div>
@@ -342,6 +368,8 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                   {t('ticket.sold_out_caps')}
                 </div>
               )
+            ) : externalTickets ? (
+              <ExternalTicketsLink url={externalTickets} compact />
             ) : (
               (event as any).requires_approval === true ? (
                 <RequestToJoin
@@ -349,12 +377,16 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                   userId={user?.id ?? null}
                   isPasswordProtected={!!event.is_password_protected}
                   compact
+                  family={familySize > 0}
                 />
               ) : (
                 <BuyTicketButton
                   eventId={event.id}
                   userId={user?.id ?? null}
-                  isFree={isFree}
+                  isFree={isFree && !freeTypes}
+                  payAtDoor={payAtDoor}
+                  freeTypes={freeTypes}
+                  familyMax={familySize}
                   ticketPrice={headlinePrice}
                   eventTitle={event.title}
                   currency={event.currency || 'HTG'}
@@ -364,7 +396,7 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                   isPasswordProtected={!!event.is_password_protected}
                   plusOnesAllowed={eventAllowedPlusOnes(event as any)}
                   heldFreeTickets={heldFreeTickets}
-                  maxFreePerPerson={freeClaimCap((event as any).ticket_tiers)}
+                  maxFreePerPerson={freeClaimCap((event as any).ticket_tiers, null, freeClaimCapFor(event as any))}
                 />
               )
             )}
@@ -389,6 +421,8 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
         remainingTickets={ticketsRemaining || 0}
         isSoldOut={isSoldOut}
         scarcity={scarcity}
+        doorLabel={doorLabel}
+        note={familyNote}
       />
 
       <div className="mx-auto max-w-7xl md:px-6 md:pt-6 lg:px-8">
@@ -435,6 +469,7 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
         address={event.address || ''}
         commune={event.commune || ''}
         city={event.city}
+        goodToKnow={hasVenueDetails(venueDetailsOf(event)) ? <VenueDetailsList event={event} /> : null}
         venueMap={
           <VenueMap
             event={event}
@@ -548,6 +583,16 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
             </div>
             )}
 
+            {/* Good to know - Desktop: the venue details the organizer ticked. */}
+            {hasVenueDetails(venueDetailsOf(event)) && (
+              <div className="hidden md:block border-b border-line py-8">
+                <h2 className="mb-3 font-display lowercase italic !text-section !leading-snug text-fg">
+                  {t('venue_details.title')}
+                </h2>
+                <VenueDetailsList event={event} />
+              </div>
+            )}
+
             {/* Date & Time Details - Desktop */}
             <div className="hidden md:block border-b border-line py-8">
               <h2 className="mb-3 font-display lowercase italic !text-section !leading-snug text-fg">
@@ -631,11 +676,32 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                 an outline, and the one 4px radius. */}
             <div className="hidden md:block sticky top-24 max-h-[calc(100dvh-7.5rem)] overflow-y-auto overscroll-contain rounded bg-surface p-5 lg:p-6 [scrollbar-width:thin]">
               <div className="mb-6">
-                {isFree ? (
+                {payAtDoor ? (
+                  // Pay at the door: reserve online for nothing, pay on arrival.
+                  <div>
+                    {/* Same shape as a paid price: small currency, the amount, then
+                        what it means on one quiet line. */}
+                    {doorFrom ? (
+                      <p className="font-grotesk text-3xl font-bold text-fg">
+                        <span className="text-base font-medium text-fg-subtle">{event.currency || 'HTG'}</span>{' '}
+                        {doorFrom.toLocaleString(numLocale)}
+                      </p>
+                    ) : (
+                      <p className="font-grotesk text-3xl font-bold text-fg">
+                        {t('events.pay_at_door', { defaultValue: 'Pay at the door' })}
+                      </p>
+                    )}
+                    <p className="mt-1.5 text-meta text-fg-subtle">
+                      {doorFrom ? `${t('events.pay_at_door', { defaultValue: 'Pay at the door' })} · ` : ''}
+                      {t('events.door_note', { defaultValue: 'Reserve now, pay on arrival.' })}
+                    </p>
+                  </div>
+                ) : isFree ? (
                   <div>
                     {/* "No ticket required" used to sit under this, above a
                         button that claims a free ticket. */}
                     <p className="font-grotesk text-3xl font-bold text-fg">{t('common.free')}</p>
+                    {familyNote && <p className="mt-1.5 text-meta text-fg-subtle">{familyNote}</p>}
                   </div>
                 ) : pricing.kind === 'mixed' ? (
                   // Free AND paid tiers coexist. Showing the denormalized
@@ -697,6 +763,8 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                     </div>
                   )}
                 </div>
+              ) : externalTickets ? (
+                <ExternalTicketsLink url={externalTickets} />
               ) : (
                 <>
                   {(event as any).requires_approval === true ? (
@@ -704,12 +772,16 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                       eventId={event.id}
                       userId={user?.id ?? null}
                       isPasswordProtected={!!event.is_password_protected}
+                      family={familySize > 0}
                     />
                   ) : (
                     <BuyTicketButton
                       eventId={event.id}
                       userId={user?.id ?? null}
-                      isFree={isFree}
+                      isFree={isFree && !freeTypes}
+                      payAtDoor={payAtDoor}
+                      freeTypes={freeTypes}
+                      familyMax={familySize}
                       ticketPrice={headlinePrice}
                       eventTitle={event.title}
                       currency={event.currency || 'HTG'}
@@ -719,7 +791,7 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                       isPasswordProtected={!!event.is_password_protected}
                       plusOnesAllowed={eventAllowedPlusOnes(event as any)}
                       heldFreeTickets={heldFreeTickets}
-                      maxFreePerPerson={freeClaimCap((event as any).ticket_tiers)}
+                      maxFreePerPerson={freeClaimCap((event as any).ticket_tiers, null, freeClaimCapFor(event as any))}
                     />
                   )}
                   {!user && (event as any).requires_approval !== true && (

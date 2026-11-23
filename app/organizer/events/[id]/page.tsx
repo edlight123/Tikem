@@ -5,6 +5,7 @@ import { EventCommandCenter } from './EventCommandCenter'
 import { normalizeCurrency } from '@/lib/money'
 import { loadTicketDocsForEvent } from '@/lib/tickets/loadTicketsForEvent'
 import { summarizeEventTickets, ticketCountsAsSold } from '@/lib/organizer/salesSummary'
+import { readEventViewStats } from '@/lib/events/views-server'
 
 export const revalidate = 0
 
@@ -13,8 +14,9 @@ export default async function EventCommandCenterPage({ params }: { params: Promi
   // Owner, org admin/manager, or platform admin (layout already 404s others).
   const { event: eventData } = await requireEventPage(id, 'view')
 
-  // Fetch tickets for this event (supports legacy `eventId` field too)
-  const ticketDocs = await loadTicketDocsForEvent(id)
+  // Fetch tickets for this event (supports legacy `eventId` field too).
+  // Page views (lib/events/views.ts) load alongside; zeros on any failure.
+  const [ticketDocs, views] = await Promise.all([loadTicketDocsForEvent(id), readEventViewStats(id, eventData)])
   const ticketDatas = ticketDocs.map((doc: any) => doc.data() || {})
 
   const tickets = ticketDocs.map((doc: any) => {
@@ -98,6 +100,8 @@ export default async function EventCommandCenterPage({ params }: { params: Promi
     revenueByCurrencyCents,
     currency: eventCurrency,
     checkedIn,
+    views: views.total,
+    viewsToday: views.today,
   }
 
   return (

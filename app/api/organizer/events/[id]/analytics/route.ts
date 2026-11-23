@@ -2,12 +2,14 @@ import { NextResponse } from 'next/server'
 import { normalizeCurrency } from '@/lib/money'
 import { computeEventAnalytics } from '@/lib/organizer/eventOrders'
 import { authorizeEventOwner, loadEventTicketRows } from '@/lib/organizer/eventOrdersLoader'
+import { readEventViewStats } from '@/lib/events/views-server'
 
 export const dynamic = 'force-dynamic'
 
 /**
  * Per-event analytics. JSON twin of app/organizer/events/[id]/analytics for the
- * mobile app, plus buyers by city (from each buyer's profile city).
+ * mobile app, plus buyers by city (from each buyer's profile city) and the
+ * page views (lib/events/views.ts; older app builds ignore the field).
  */
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -15,7 +17,10 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     const access = await authorizeEventOwner(eventId)
     if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status })
 
-    const rows = await loadEventTicketRows(access.event)
+    const [rows, views] = await Promise.all([
+      loadEventTicketRows(access.event),
+      readEventViewStats(eventId, access.event),
+    ])
     const capacity = Number(access.event.total_tickets ?? access.event.max_tickets ?? access.event.capacity ?? 0)
     return NextResponse.json({
       event: {
@@ -24,6 +29,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
         currency: normalizeCurrency(access.event.currency, 'HTG'),
       },
       analytics: computeEventAnalytics(rows, capacity),
+      views,
     })
   } catch (error) {
     console.error('[organizer/events/analytics] failed', error)

@@ -10,6 +10,7 @@ import {
   TextInput,
   ActivityIndicator,
 } from 'react-native';
+import { useAndroidBottomInset } from '../hooks/useAndroidBottomInset';
 import { X, Minus, Plus, Tag, ChevronDown, ChevronUp } from 'lucide-react-native';
 import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
 import { db } from '../config/firebase';
@@ -18,6 +19,7 @@ import { normalizePromoValidationResponse } from '../lib/promoCodes';
 import { useTheme } from '../contexts/ThemeContext';
 import { formatCurrency } from '../lib/currency';
 import { computeSelectionTotal, isFreeTier, MAX_FREE_TICKETS_PER_PERSON, tierMaxPerOrder } from '../lib/ticketPricing';
+import { MAX_DOOR_TICKETS_PER_PERSON, doorPriceLabel, doorPriceOf, isDoorTier } from '../lib/payAtDoor';
 import { priceOrder } from '../lib/buyerPricing';
 import WhitePillCTA from './WhitePillCTA';
 import MoneyText from './MoneyText';
@@ -28,6 +30,8 @@ interface TicketTier {
   name: string;
   description: string | null;
   price: number;
+  /** Pay at the door: owed on arrival (price is then 0). */
+  door_price?: number | null;
   total_quantity: number;
   sold_quantity: number;
   sales_start: string | null;
@@ -97,6 +101,8 @@ interface TieredTicketSelectorProps {
    * server refuses a second free claim regardless; this keeps the picker honest.
    */
   freeClaimHeld?: boolean;
+  /** Free tickets one person may claim here: 2, or the family size (lib/family). */
+  freeCap?: number;
 }
 
 interface TierQuantity {
@@ -124,9 +130,12 @@ export default function TieredTicketSelector({
   country,
   feeIncidence,
   freeClaimHeld = false,
+  freeCap = MAX_FREE_TICKETS_PER_PERSON,
 }: TieredTicketSelectorProps) {
   const { colors } = useTheme();
   const styles = getStyles(colors);
+  // Clear of Android's system bar (edge to edge).
+  const bottomInset = useAndroidBottomInset(0, 0);
   const { t, language } = useI18n();
   const locale = language === 'fr' ? 'fr-FR' : language === 'ht' ? 'fr-HT' : 'en-US';
   const displayCurrency = String(currency || 'HTG').toUpperCase();
@@ -318,7 +327,10 @@ export default function TieredTicketSelector({
     
     const currentQty = tierQuantities[tierId] || 0;
     const available = getAvailableQuantity(tier);
-    const cap = Math.min(isFreeTier(tier) ? MAX_FREE_TICKETS_PER_PERSON : 10, tierMaxPerOrder(tier as any) ?? Infinity);
+    // Pay at the door (lib/payAtDoor) reserves up to 6; family registration
+    // (lib/family) lifts the free limit to the family size.
+    const kindCap = isDoorTier(tier as any) ? MAX_DOOR_TICKETS_PER_PERSON : isFreeTier(tier) ? freeCap : 10;
+    const cap = Math.min(kindCap, tierMaxPerOrder(tier as any) ?? Infinity);
     const newQty = Math.max(0, Math.min(currentQty + delta, available, cap));
 
     // Buyers can mix paid ticket types (2 VIP + 1 General Admission): every
@@ -397,7 +409,7 @@ export default function TieredTicketSelector({
       presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
-      <View style={styles.container}>
+      <View style={[styles.container, bottomInset]}>
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>{t('ticketSelector.title')}</Text>
@@ -464,7 +476,8 @@ export default function TieredTicketSelector({
               {tiers.map((tier, index) => {
                 const available = getAvailableQuantity(tier);
                 // A held free claim closes every free tier (one claim per event).
-                const freeClaimClosed = freeClaimHeld && isFreeTier(tier);
+                // A held free ticket never closes a pay-at-the-door spot (counted apart).
+                const freeClaimClosed = freeClaimHeld && isFreeTier(tier) && !isDoorTier(tier as any);
                 const isAvailable = isTierAvailable(tier) && !freeClaimClosed;
                 const quantity = tierQuantities[tier.id] || 0;
                 // On-sale gate (mirrors the web): empty bound = open. When not on
@@ -515,7 +528,9 @@ export default function TieredTicketSelector({
                         {/* A zero-price tier reads as "Free", never "0.00 HTG" —
                             an amount implies a charge that will never happen. */}
                         <Text style={styles.tierPrice} numberOfLines={1}>
-                          {isFreeTier(tier)
+                          {isDoorTier(tier as any)
+                            ? doorPriceLabel(doorPriceOf(tier as any), displayCurrency, language)
+                            : isFreeTier(tier)
                             ? t('common.free')
                             : formatCurrency(tier.price, displayCurrency)}
                         </Text>
@@ -685,6 +700,8 @@ export default function TieredTicketSelector({
             { quantity: paidQuantity }
           );
           const showFeeLine = orderPricing.feeOnTop && orderPricing.buyerFee > 0;
+          // Pay at the door: nothing is charged online; this is owed on arrival.
+          const doorDue = tiers.reduce((sum, tier) => sum + doorPriceOf(tier) * (tierQuantities[tier.id] || 0), 0);
           return (
           <View style={styles.footer}>
             <View style={styles.totalContainer}>
@@ -699,7 +716,9 @@ export default function TieredTicketSelector({
                 )}
               </View>
               <View style={styles.priceContainer}>
-                {isFreeOrder ? (
+                {isFreeOrder && doorDue > 0 ? (
+                  <Text style={styles.totalPrice}>{doorPriceLabel(doorDue, displayCurrency, language)}</Text>
+                ) : isFreeOrder ? (
                   <Text style={styles.totalPrice}>{t('common.free')}</Text>
                 ) : (
                   <MoneyText amount={orderPricing.total} currency={displayCurrency as any} style={styles.totalPrice} splitCode />
@@ -718,7 +737,9 @@ export default function TieredTicketSelector({
             <WhitePillCTA
               variant={isFreeOrder ? 'rsvp' : 'paid'}
               label={
-                isFreeOrder
+                isFreeOrder && doorDue > 0
+                  ? t(`freeTicket.reserveButton.${totalQuantity === 1 ? 'one' : 'other'}`).replace('{count}', String(totalQuantity))
+                  : isFreeOrder
                   ? t(`freeTicket.claimButton.${totalQuantity === 1 ? 'one' : 'other'}`).replace(
                       '{count}',
                       String(totalQuantity)

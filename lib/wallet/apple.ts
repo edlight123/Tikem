@@ -17,6 +17,7 @@ import type { AppleWalletConfig } from './config'
 import type { WalletTicket } from './ticket-access'
 import { appleAuthTokenFor, appleSerialFor, appleWebServiceUrl } from './apple-web-service'
 import { PASS_ICON, PASS_LOGO } from './brandArt'
+import { fetchOwnPoster } from '@/lib/posters/hosts'
 
 export interface ApplePassOptions {
   /**
@@ -47,28 +48,18 @@ function passDateValue(iso: string | null): string | null {
  * @2x 360×440) — iOS applies the blur itself. Returns {} when there is no
  * banner or anything goes wrong, which yields the plain near-black pass.
  */
-// banner_image_url is ORGANIZER-writable, and this fetch runs on our server —
-// an arbitrary URL here is SSRF. Only the storage hosts posters actually live
-// on (the same set next.config.js whitelists for next/image) are fetched, and
-// redirects are refused so an allowed host can't bounce us elsewhere.
-// images.unsplash.com is where the flyer library's posters live (lib/flyerLibrary):
-// an event made from a library flyer used to get a plain black pass.
-const PASS_IMAGE_HOSTS = new Set(['firebasestorage.googleapis.com', 'storage.googleapis.com', 'images.unsplash.com'])
-
+// banner_image_url is ORGANIZER-writable, and this fetch runs on our server:
+// an arbitrary URL here is SSRF. Only OUR posters are fetched (our storage
+// bucket, or an Unsplash photo from the flyer library; lib/posters/hosts
+// isOwnPoster), redirects refused, image content type only, and the body read
+// as a stream capped at 15MB (never buffered whole before the size check).
 async function buildPassBackground(
   bannerImageUrl: string | null
 ): Promise<Record<string, Buffer>> {
   if (!bannerImageUrl) return {}
   try {
-    const url = new URL(bannerImageUrl)
-    const hostname = url.hostname.toLowerCase().replace(/\.$/, '')
-    if (url.protocol !== 'https:' || !PASS_IMAGE_HOSTS.has(hostname)) return {}
-
-    const response = await fetch(url, { signal: AbortSignal.timeout(8000), redirect: 'error' })
-    if (!response.ok) return {}
-    const source = Buffer.from(await response.arrayBuffer())
-    // A poster over ~15MB is not artwork we should be pulling into a pass.
-    if (source.length > 15 * 1024 * 1024) return {}
+    const source = await fetchOwnPoster(bannerImageUrl, { timeoutMs: 8000 })
+    if (!source) return {}
 
     const { default: sharp } = await import('sharp')
     // Darkened HARD before iOS blurs it, so the near-black pass dominates and
@@ -76,7 +67,7 @@ async function buildPassBackground(
     // asked for (2026-10-26). It also keeps white text + the QR panel legible
     // on ANY poster (a light flyer used to make the field text vanish).
     const resize = (w: number, h: number) =>
-      sharp(source)
+      sharp(source, { limitInputPixels: 50_000_000 })
         .resize(w, h, { fit: 'cover', position: 'attention' })
         .modulate({ brightness: 0.15, saturation: 0.7 })
         .png()

@@ -78,6 +78,7 @@ function markFor(type: string): { Icon: LucideIcon; tone: Tone; family: Family }
       // A nudge, not an alarm: neutral, and the poster carries the row.
       return { Icon: Clock, tone: 'neutral', family: 'events' }
     case 'city_discovery':
+    case 'weekend_digest':
       return { Icon: Compass, tone: 'neutral', family: 'events' }
     case 'national_day':
       return { Icon: Flag, tone: 'neutral', family: 'events' }

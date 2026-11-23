@@ -18,6 +18,7 @@
  */
 
 import { tierMaxPerOrder } from '@/lib/ticketPricing'
+import { isDoorTier } from '@/lib/tickets/pay-at-door'
 
 /**
  * Most tickets one order may carry, across all of its tiers.
@@ -132,6 +133,23 @@ export function checkTierForEvent(tier: any, eventId: string): { ok: true } | Ga
  * checkout read it, so a tier set to "1 per person" still sold 2+. Every sale and
  * free-claim path now calls tierOrderLimitRefusal with the line quantity.
  */
+/**
+ * Pay-at-the-door tiers (lib/tickets/pay-at-door) are reserved through
+ * /api/tickets/claim-free, which stamps what is owed at the door. They never
+ * ride in a PAID order (card, MonCash, NatCash, SogePay): as a 0-priced line
+ * there the ticket would be issued as a plain free ticket that owes nothing.
+ */
+export const DOOR_TIER_REFUSAL: GateRefusal = refuse(
+  'Pay-at-the-door spots are reserved on their own, not in a paid order.',
+  'door_tier_not_in_paid_order',
+  400
+)
+
+/** The refusal for a pay-at-the-door tier in a paid order, or null. */
+export function doorTierInPaidOrderRefusal(tier: any): GateRefusal | null {
+  return isDoorTier(tier) ? DOOR_TIER_REFUSAL : null
+}
+
 /** Refuses a line that asks for more of a tier than its `max_per_order`. */
 export function tierOrderLimitRefusal(tier: any, quantity: number): GateRefusal | null {
   const max = tierMaxPerOrder(tier)

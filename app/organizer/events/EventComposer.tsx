@@ -1,5 +1,6 @@
 'use client'
 
+import { familyMax } from '@/lib/events/family'
 import { useEffect, useId, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
@@ -104,11 +105,24 @@ import { fromCents, MAX_FREE_TICKETS_PER_PERSON } from '@/lib/ticketPricing'
 import { allowedPlusOnes, PLUS_ONES_SETTING_MAX } from '@/lib/events/approval'
 import { nationalDayForEventDate, nationalDayName } from '@/lib/nationalDays'
 import { isBelowMinPaidPrice, MIN_PAID_PRICE_ERROR_CODE, minPaidPriceFor } from '@/lib/min-paid-price'
+import { canLeaveDoorMode, composerModeOf, doorTierSaveFields, lowestDoorPrice, tierEditorPrice, type ComposerMode } from '@/lib/events/door-mode'
+import { TIER_SETS, isUntouchedDraft, tierNameFor, tierSetLabel, type TierSet } from '@/lib/ticketTypes'
 // The sanctioned editorial section heading (font-display, lowercase, italic).
 // Hand-rolled bold sans headings read as off-brand — see EditorialRails.
 import { SectionHeader } from '@/components/ui/EditorialRails'
+import {
+  AGE_POLICIES,
+  DRESS_CODE_MAX,
+  VENUE_AMENITIES,
+  VENUE_SETTINGS,
+  venueDetailsFields,
+  venueDetailsOf,
+  type VenueDetails,
+} from '@/lib/events/venue-details'
+import type { FlyerRead } from '@/lib/flyer/parse'
 import { useOrgRole } from '@/components/organizer/OrgRoleProvider'
 import {
+  Accessibility,
   CalendarDays,
   ChevronDown,
   ChevronUp,
@@ -125,6 +139,7 @@ import {
   Pencil,
   Plus,
   Repeat,
+  ScanText,
   Settings,
   SlidersHorizontal,
   Tag,
@@ -572,11 +587,14 @@ export default function EventComposer({
   const end0 = splitISO(event?.end_datetime)
 
   // Core
-  const [sellMode, setSellMode] = useState<'tickets' | 'rsvp'>(
-    // `is_rsvp` when the event carries it (both composers write it now), else
-    // the web's older marker, `ticket_name: 'RSVP'`.
-    isEdit && isRsvpEvent(event) ? 'rsvp' : 'tickets'
+  const [sellMode, setSellMode] = useState<ComposerMode>(
+    // Pay at the door (`pay_at_door` or door-priced tiers), else RSVP (`is_rsvp`,
+    // or the web's older marker `ticket_name: 'RSVP'`), else tickets.
+    isEdit ? (isRsvpEvent(event) && !event?.pay_at_door ? 'rsvp' : composerModeOf(event)) : 'tickets'
   )
+  const [doorLockNotice, setDoorLockNotice] = useState(false)
+  /** Tickets and pay-at-the-door both edit tier rows; RSVP has none. */
+  const hasTierRows = sellMode === 'tickets' || sellMode === 'door'
   const [title, setTitle] = useState(event?.title || '')
   const [summary, setSummary] = useState(event?.summary || '')
   const [showSummary, setShowSummary] = useState(!!event?.summary)
@@ -618,6 +636,10 @@ export default function EventComposer({
   const [description, setDescription] = useState(event?.description || '')
   const [address, setAddress] = useState(event?.address || '')
   const [venueName, setVenueName] = useState(event?.venue_name || '')
+  // Venue details (parking, step-free…, age, dress code): all optional, shown
+  // on the event page under "good to know" (lib/events/venue-details).
+  const [venueDetails, setVenueDetails] = useState<VenueDetails>(() => venueDetailsOf(event))
+  const patchVenueDetails = (patch: Partial<VenueDetails>) => setVenueDetails((d) => ({ ...d, ...patch }))
   // Saved event defaults, for a NEW event in its starting country only.
   // Computed once: the defaults seed the first render and never re-apply.
   const [seed] = useState<ComposerSeed>(() =>
@@ -700,6 +722,30 @@ export default function EventComposer({
     const id = makeId()
     setTiers((prev) => [...prev, { id, name: '', price: '', qty: '100', free: false }])
     setOpenTierId(id)
+  }
+  // A ready-made set (lib/ticketTypes): fills a fresh draft, otherwise adds
+  // after what is there. New rows copy the first tier's price, quantity and
+  // free flag; every name stays editable.
+  const applyTierSet = (set: TierSet) =>
+    setTiers((prev) => {
+      const base = prev[0]
+      const fresh: TicketTier[] = set.names.map((n) => ({
+        id: makeId(),
+        name: tierNameFor(n, i18n.language),
+        price: base?.price ?? '',
+        qty: base?.qty ?? '100',
+        free: !!base?.free,
+        unlimited: !!base?.unlimited,
+      }))
+      return isUntouchedDraft(prev) ? fresh : [...prev, ...fresh]
+    })
+  // A free event with several kinds of guests: the tickets canvas, every tier
+  // at 0 (the event stays free; guests pick a type when they RSVP).
+  const switchRsvpToTypes = () => {
+    setSellMode('tickets')
+    setTiers((prev) =>
+      isUntouchedDraft(prev) ? [{ ...prev[0], name: prev[0]?.name || '', price: '0', free: true }] : prev
+    )
   }
   const updateTier = (id: string, patch: Partial<TicketTier>) =>
     setTiers((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch } : t)))
@@ -842,6 +888,10 @@ export default function EventComposer({
   // and the organizer approves. FREE events only in v1, so it is forced off
   // (and the toggle disabled) whenever any tier costs money.
   const [requiresApproval, setRequiresApproval] = useState(!!(event as any)?.requires_approval)
+  // Family registration (lib/events/family): one person registers up to N
+  // people (themselves included), each with their own ticket. Free events only.
+  const [familyOn, setFamilyOn] = useState<boolean>((event as any)?.family_registration === true)
+  const [familySize, setFamilySize] = useState<number>(() => familyMax({ family_registration: true, family_max: (event as any)?.family_max }))
   // Named plus-ones a guest may bring: 0 (off) to 3. The effective number is
   // capped by the per-person free-ticket limit (allowedPlusOnes).
   const [plusOnesMax, setPlusOnesMax] = useState<number>(() => {
@@ -942,7 +992,8 @@ export default function EventComposer({
     }
     const s0 = splitISO(d.start_datetime)
     const e0 = splitISO(d.end_datetime)
-    if (isRsvpEvent(d)) setSellMode('rsvp')
+    if (d.pay_at_door === true) setSellMode('door')
+    else if (isRsvpEvent(d)) setSellMode('rsvp')
     setTitle(d.title || '')
     if (d.summary) {
       setSummary(d.summary)
@@ -980,14 +1031,14 @@ export default function EventComposer({
           return {
             id: makeId(),
             name: t.name || '',
-            price: String(t.price ?? 0),
+            price: tierEditorPrice(t),
             qty: unlimited ? '' : String(t.quantity ?? 100),
             salesStart: isoToLocalInput(t.sales_start),
             salesEnd: isoToLocalInput(t.sales_end),
             validFrom: isoToLocalInput(t.valid_from),
             validUntil: isoToLocalInput(t.valid_until),
             description: String(t.description ?? '') || '',
-            free: Number(t.price ?? 0) === 0,
+            free: Number(tierEditorPrice(t)) === 0,
             unlimited,
             maxPerOrder: Number(t.max_per_order ?? 0) > 0 ? String(t.max_per_order) : '',
             hidden: t.is_active === false,
@@ -1013,6 +1064,7 @@ export default function EventComposer({
     if (d.requires_approval) setRequiresApproval(true)
     if (Number(d.plus_ones_max) > 0) setPlusOnesMax(Math.min(Math.floor(Number(d.plus_ones_max)), PLUS_ONES_SETTING_MAX))
     if (d.national_day) setNationalDayOn(true)
+    setVenueDetails(venueDetailsOf(d))
     if (d.fee_incidence) setPassFeesToBuyer(d.fee_incidence === 'buyer')
     // `enable_waitlist` is now per tier; the event-level value in an older
     // draft is picked up as each tier's fallback in the tier mapping above.
@@ -1041,6 +1093,98 @@ export default function EventComposer({
     // Restore is a one-time mount concern by design.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // ── Fill from flyer ──────────────────────────────────────────────────
+  // Reads the uploaded flyer on the server (POST /api/flyers/read: Tesseract
+  // + rules for English, French and Kreyòl, no AI) and fills what is still
+  // empty. Nothing is saved or published from a read; the note under the
+  // flyer says what was filled and what to double-check.
+  const [flyerReading, setFlyerReading] = useState(false)
+  const [flyerNote, setFlyerNote] = useState<
+    { filled: string[]; check: string[]; personal: string[]; currency?: string } | { error: string } | null
+  >(null)
+  const readFlyer = async () => {
+    if (!bannerUrl || flyerReading) return
+    setFlyerReading(true)
+    setFlyerNote(null)
+    try {
+      const res = await fetch('/api/flyers/read', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: bannerUrl }),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok || !body?.read) {
+        setFlyerNote({ error: res.status === 429 ? 'limited' : 'error' })
+        return
+      }
+      const r = body.read as FlyerRead
+      const filled: string[] = []
+      const fill = (field: string, empty: boolean, apply: () => void) => {
+        if (!empty) return
+        apply()
+        filled.push(field)
+      }
+      if (r.title) fill('title', !title.trim(), () => setTitle(r.title!))
+      if (r.description)
+        fill('description', !description.trim() && !summary.trim(), () => {
+          setDescription(r.description!)
+          setShowDescription(true)
+        })
+      if (r.date)
+        fill('date', !startDate, () => {
+          setStartDate(r.date!)
+          if (!endDate) setEndDate(r.date!)
+        })
+      if (r.start_time) fill('start_time', !startTime, () => setStartTime(r.start_time!))
+      if (r.end_time)
+        fill('end_time', !endTime, () => {
+          setEndTime(r.end_time!)
+          // "9PM - 3AM": the end is the next morning.
+          const day = r.date || startDate
+          if (day && r.start_time && r.end_time! <= r.start_time) {
+            const d = new Date(`${day}T12:00:00`)
+            d.setDate(d.getDate() + 1)
+            setEndDate(`${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`)
+          } else if (day) setEndDate(day)
+        })
+      if (r.venue_name || r.address || r.city) {
+        if (isOnline && !venueName.trim() && !address.trim()) setIsOnline(false)
+        if (r.venue_name) fill('venue_name', !venueName.trim(), () => setVenueName(r.venue_name!))
+        if (r.address) fill('address', !address.trim(), () => setAddress(r.address!))
+        if (r.city) fill('city', !city.trim() || isDefaultCity(city), () => setCity(r.city!))
+      }
+      // The price goes on the one ticket type, while it is still the untouched
+      // default, and only in a currency this event can sell in.
+      let currencyNote: string | undefined
+      const single = tiers.length === 1 ? tiers[0] : null
+      const untouched = !!single && !single.docId && (single.name === 'General Admission' || !single.name.trim())
+      if (r.price_type === 'free' && untouched && sellMode === 'tickets') {
+        fill('price', true, () => updateTier(single!.id, { free: true, price: '0' }))
+      } else if (r.price_type === 'paid' && r.price && untouched && sellMode === 'tickets') {
+        if (r.currency && (allowedCurrencies as string[]).includes(r.currency)) {
+          fill('price', true, () => {
+            setCurrency(r.currency as EventCurrency)
+            updateTier(single!.id, { free: false, price: String(r.price) })
+          })
+        } else if (r.currency) currencyNote = r.currency
+      }
+      if (r.age_policy) fill('age_policy', !venueDetails.age_policy, () => patchVenueDetails({ age_policy: r.age_policy }))
+      if (r.dress_code) fill('dress_code', !venueDetails.dress_code, () => patchVenueDetails({ dress_code: r.dress_code }))
+      setFlyerNote({
+        filled,
+        check: r.uncertain.filter((f) => filled.includes(f)),
+        personal: r.personal_details,
+        currency: currencyNote,
+      })
+    } catch {
+      setFlyerNote({ error: 'error' })
+    } finally {
+      setFlyerReading(false)
+    }
+  }
+  const flyerFieldList = (fields: string[]) =>
+    fields.map((f) => t(`composer.flyerRead.fields.${f}`, { defaultValue: f })).join(', ')
 
   // ── Region payout-profile nudge (tester feedback, 2026-08-12/29) ──
   // An event's country decides WHICH payout profile pays out: Haiti profile
@@ -1130,7 +1274,7 @@ export default function EventComposer({
     const e = new Date(t.salesEnd).getTime()
     return Number.isFinite(s) && Number.isFinite(e) && e <= s
   }
-  const anySaleWindowInvalid = sellMode === 'tickets' && tiers.some(saleWindowInvalid)
+  const anySaleWindowInvalid = hasTierRows && tiers.some(saleWindowInvalid)
 
   // "Free" and "not filled in" must never be the same thing: `Number('') || 0`
   // is 0, so a blank price field would silently save the tier as a FREE tier and
@@ -1142,7 +1286,7 @@ export default function EventComposer({
     const n = Number(raw)
     return !Number.isFinite(n) || n < 0
   }
-  const anyTierPriceUnset = sellMode === 'tickets' && tiers.some(tierPriceUnset)
+  const anyTierPriceUnset = hasTierRows && tiers.some(tierPriceUnset)
 
   // US/CA: a paid tier costs at least 2.00; FR: at least 1.00 EUR — so an
   // absorbed fixed fee can never exceed the price (lib/min-paid-price.ts).
@@ -1159,14 +1303,14 @@ export default function EventComposer({
     const e = new Date(t.validUntil).getTime()
     return Number.isFinite(s) && Number.isFinite(e) && e <= s
   }
-  const anyValidityWindowInvalid = sellMode === 'tickets' && tiers.some(validityWindowInvalid)
+  const anyValidityWindowInvalid = hasTierRows && tiers.some(validityWindowInvalid)
 
   // A tier can't hold fewer tickets than it has already sold — checkout reads
   // `total_quantity - sold_quantity`, so a lower cap would just mean "sold out"
   // with tickets out in the world beyond it.
   const qtyBelowSold = (t: TicketTier): boolean =>
     isQuantityBelowSold(Number(t.qty) || 0, t.soldQuantity || 0, !!t.unlimited)
-  const anyQtyBelowSold = sellMode === 'tickets' && tiers.some(qtyBelowSold)
+  const anyQtyBelowSold = hasTierRows && tiers.some(qtyBelowSold)
 
   // Access code: required (min 6) when enabling protection on CREATE; on edit a
   // blank code keeps the existing hash, but a typed code must still be >= 6.
@@ -1201,6 +1345,8 @@ export default function EventComposer({
     if (isPaid && requiresApproval) setRequiresApproval(false)
   }, [isPaid, requiresApproval])
   const effectivePlusOnes = allowedPlusOnes(plusOnesMax)
+  // Family registration replaces plus-ones while it is on (free events only).
+  const familyActive = familyOn && !isPaid && sellMode !== 'door'
 
   // A worked example on the organizer's own cheapest paid ticket, so the toggle
   // is a number rather than a policy statement. Uses the same pricing function
@@ -1274,9 +1420,12 @@ export default function EventComposer({
   // Build the shared event payload from the current form state.
   const buildEventData = () => {
     const isRsvp = sellMode === 'rsvp'
+    const isDoor = sellMode === 'door'
     const cleanTiers = tiers.map((t) => ({
       name: t.name.trim() || 'General Admission',
-      price: Number(t.price) || 0,
+      // Pay at the door: the typed amount is the door price and the tier costs
+      // 0 online, so no paid gate or checkout ever treats it as paid.
+      ...doorTierSaveFields(sellMode, Number(t.price) || 0),
       // An unlimited tier stores the sentinel quantity so every existing
       // "stock left?" reader keeps working untouched (see UNLIMITED_QTY).
       quantity: t.unlimited ? UNLIMITED_QTY : Number(t.qty) || 0,
@@ -1346,6 +1495,10 @@ export default function EventComposer({
       ticket_name: isRsvp ? 'RSVP' : firstTier.name,
       // The flag mobile reads (and lib/ticketPricing's free-event check).
       is_rsvp: isRsvp,
+      // Pay at the door (lib/tickets/pay-at-door): reserve free, pay on arrival.
+      pay_at_door: isDoor,
+      // The lowest door price, so cards can say "HTG 500 at the door" without the tiers.
+      door_price_from: isDoor ? lowestDoorPrice(cleanTiers) : null,
       guestlist: cleanGuests,
       currency: normalizeEventCurrencyForCountry(country, currency),
       banner_image_url: bannerUrl || null,
@@ -1370,6 +1523,11 @@ export default function EventComposer({
       requires_approval:
         requiresApproval && !(!isRsvp && cleanTiers.some((t) => Number(t.price || 0) > 0)),
       plus_ones_max: plusOnesMax,
+      ...venueDetailsFields(venueDetails, isOnline),
+      // Family registration (lib/events/family): free events only (not paid,
+      // not pay at the door). One person registers up to family_max people.
+      family_registration: familyOn && !isDoor && !cleanTiers.some((t) => Number(t.price || 0) > 0),
+      family_max: familySize,
       // The national day it is tagged for, or null when the toggle is off or
       // the date moved out of every window.
       national_day: nationalDayOn && eligibleNationalDay ? eligibleNationalDay.eventTag : null,
@@ -1466,6 +1624,7 @@ export default function EventComposer({
     cleanTiers: Array<{
       name: string
       price: number
+      door_price?: number | null
       quantity: number
       unlimited: boolean
       description: string | null
@@ -1512,6 +1671,7 @@ export default function EventComposer({
     const editable = (t: (typeof cleanTiers)[number]) => ({
       name: t.name,
       price: t.price,
+      door_price: t.door_price ?? null,
       unlimited: t.unlimited,
       description: t.description,
       is_active: t.is_active,
@@ -1795,7 +1955,14 @@ export default function EventComposer({
         // the currency of an event that has sold: firestore.rules refuses both
         // once tickets_sold > 0, and payouts value each sale in the currency it
         // was sold in. A field missing on the stored doc stays missing.
-        const editData = withStoredMoneyFields(data, event)
+        const editData: Record<string, any> = withStoredMoneyFields(data, event)
+        // A copy kept in sync from Eventbrite (lib/import/eventbrite-sync): once
+        // edited here, the sync only refreshes its time, link and publication.
+        // firestore.rules lets a client set just this one flag.
+        const imported = (event as any)?.imported
+        if (imported?.source === 'eventbrite' && imported.locally_edited !== true) {
+          editData.imported = { ...imported, locally_edited: true }
+        }
         const { error } = await (await getShim()).from('events').update(editData).eq('id', event.id)
         if (error) throw error
         const tierDocIds = tiers.map((tr) => tr.docId)
@@ -2242,13 +2409,21 @@ export default function EventComposer({
             </div>
           )}
 
-          {/* Sell Tickets / RSVP */}
-          <div className="mx-auto mb-8 grid max-w-md grid-cols-2 rounded bg-surface p-1">
-            {(['tickets', 'rsvp'] as const).map((m) => (
+          {/* Sell Tickets / RSVP / Pay at the door */}
+          <div className={`mx-auto grid max-w-lg grid-cols-3 rounded bg-surface p-1 ${sellMode === 'tickets' && !doorLockNotice ? 'mb-8' : 'mb-2'}`}>
+            {(['tickets', 'rsvp', 'door'] as const).map((m) => (
               <button
                 key={m}
                 type="button"
-                onClick={() => setSellMode(m)}
+                onClick={() => {
+                  // Once anyone has reserved at the door, the event stays pay-at-the-door.
+                  if (sellMode === 'door' && m !== 'door' && !canLeaveDoorMode(tiers)) {
+                    setDoorLockNotice(true)
+                    return
+                  }
+                  setDoorLockNotice(false)
+                  setSellMode(m)
+                }}
                 aria-pressed={sellMode === m}
                 className={`rounded py-2.5 text-sm font-semibold transition-all ${
                   sellMode === m ? 'bg-inverse text-on-inverse' : 'text-fg-muted hover:text-fg'
@@ -2256,10 +2431,36 @@ export default function EventComposer({
               >
                 {m === 'tickets'
                   ? t('composer.sellTickets', { defaultValue: 'Sell Tickets' })
-                  : t('composer.rsvp', { defaultValue: 'RSVP' })}
+                  : m === 'rsvp'
+                    ? t('composer.rsvp', { defaultValue: 'RSVP' })
+                    : t('composer.payAtDoor', { defaultValue: 'Pay at the door' })}
               </button>
             ))}
           </div>
+          {(sellMode === 'door' || doorLockNotice) && (
+          <p className="mx-auto mb-8 max-w-lg text-center text-xs text-fg-muted">
+            {doorLockNotice
+              ? t('composer.doorLocked', {
+                  defaultValue: 'People have reserved at the door. Keep pay at the door or cancel their spots first.',
+                })
+              : sellMode === 'door'
+                ? t('composer.doorHint', {
+                    defaultValue: 'People reserve for free and pay you on arrival. Tikem takes no fee.',
+                  })
+                : ''}
+          </p>
+          )}
+          {sellMode === 'rsvp' && !doorLockNotice && (
+            <p className="mx-auto mb-8 max-w-lg text-center">
+              <button
+                type="button"
+                onClick={switchRsvpToTypes}
+                className="text-xs font-semibold text-fg-muted underline-offset-2 hover:text-fg hover:underline"
+              >
+                {t('composer.addTicketTypes', { defaultValue: 'Different kinds of guests? Add ticket types' })}
+              </button>
+            </p>
+          )}
 
           {/* Title */}
           <input
@@ -2587,6 +2788,80 @@ export default function EventComposer({
                 </>
               )}
 
+              {/* Venue details: optional facts people ask before they come.
+                  Chips, not switches, so seven answers fit in one quiet card.
+                  Access and setting describe a place, so an online event
+                  only keeps the age and the dress code. */}
+              <div className="space-y-3 rounded-xl bg-surface-low px-4 py-3.5">
+                <div className="flex items-center gap-2 text-meta font-medium text-fg-subtle">
+                  <Accessibility className="h-4 w-4" />{' '}
+                  {t('composer.venueDetails.title', { defaultValue: 'Venue details' })}
+                  <span className="font-normal">· {t('composer.venueDetails.hint')}</span>
+                </div>
+                {!isOnline && (
+                  <>
+                    <div className="flex flex-wrap gap-2" role="group" aria-label={t('composer.venueDetails.access')}>
+                      {VENUE_AMENITIES.map((k) => {
+                        const on = venueDetails.amenities.includes(k)
+                        return (
+                          <button
+                            key={k}
+                            type="button"
+                            aria-pressed={on}
+                            onClick={() =>
+                              patchVenueDetails({
+                                amenities: on ? venueDetails.amenities.filter((a) => a !== k) : [...venueDetails.amenities, k],
+                              })
+                            }
+                            className={chipCls(on)}
+                          >
+                            {t(`composer.venueDetails.amenities.${k}`)}
+                          </button>
+                        )
+                      })}
+                    </div>
+                    <div className="flex flex-wrap gap-2" role="group" aria-label={t('composer.venueDetails.setting')}>
+                      {VENUE_SETTINGS.map((k) => {
+                        const on = venueDetails.venue_setting === k
+                        return (
+                          <button
+                            key={k}
+                            type="button"
+                            aria-pressed={on}
+                            onClick={() => patchVenueDetails({ venue_setting: on ? null : k })}
+                            className={chipCls(on)}
+                          >
+                            {t(`composer.venueDetails.settings.${k}`)}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </>
+                )}
+                <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={t('composer.venueDetails.age')}>
+                  {([null, ...AGE_POLICIES] as const).map((k) => (
+                    <button
+                      key={k ?? 'all'}
+                      type="button"
+                      role="radio"
+                      aria-checked={venueDetails.age_policy === k}
+                      onClick={() => patchVenueDetails({ age_policy: k })}
+                      className={chipCls(venueDetails.age_policy === k)}
+                    >
+                      {t(`composer.venueDetails.ages.${k ? k.slice(0, 2) : 'all'}`)}
+                    </button>
+                  ))}
+                </div>
+                <input
+                  value={venueDetails.dress_code || ''}
+                  onChange={(e) => patchVenueDetails({ dress_code: e.target.value.slice(0, DRESS_CODE_MAX) || null })}
+                  maxLength={DRESS_CODE_MAX}
+                  placeholder={t('composer.venueDetails.dressCode')}
+                  aria-label={t('composer.venueDetails.dressCode')}
+                  className="w-full rounded bg-surface px-3 py-2.5 text-body text-fg placeholder:text-fg-subtle focus:bg-surface-raised focus:outline-none focus:ring-2 focus:ring-brand-400/50"
+                />
+              </div>
+
               {/* Category as a Posh-style row of chips */}
               <div className="rounded-xl bg-surface-low px-4 py-3.5">
                 <div className="mb-2.5 flex items-center gap-2 text-meta font-medium text-fg-subtle">
@@ -2611,7 +2886,7 @@ export default function EventComposer({
           </div>
 
           {/* Tickets */}
-          {sellMode === 'tickets' && (
+          {hasTierRows && (
             <div className="mt-8 border-t border-line pt-6">
               <SectionTitle
                 icon={Ticket}
@@ -2649,6 +2924,21 @@ export default function EventComposer({
                     </button>
                   ))}
                 </div>
+              </div>
+
+              {/* Ready-made types (lib/ticketTypes): one quiet row of chips. */}
+              <div className="mb-3 flex items-center gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <span className="shrink-0 text-xs text-fg-subtle">{t('composer.ticketTypes', { defaultValue: 'Ready-made types' })}</span>
+                {TIER_SETS.map((set) => (
+                  <button
+                    key={set.key}
+                    type="button"
+                    onClick={() => applyTierSet(set)}
+                    className="h-8 shrink-0 rounded bg-surface px-3 text-xs font-semibold text-fg-muted transition-colors hover:bg-surface-raised hover:text-fg"
+                  >
+                    {tierSetLabel(set, i18n.language)}
+                  </button>
+                ))}
               </div>
 
               {/* Each tier is ONE SUMMARY ROW — name · price · qty — with its
@@ -2718,7 +3008,9 @@ export default function EventComposer({
                                   className="w-[5.5rem] rounded-lg bg-surface px-2 py-2 text-right text-base text-fg [color-scheme:dark] placeholder:text-fg-faint transition-colors focus:bg-surface-raised focus:outline-none focus:ring-2 focus:ring-brand-400/50"
                                 />
                                 <span className="label-mono mt-1 block text-right text-eyebrow uppercase tracking-wider text-fg-faint">
-                                  {t('composer.tierPriceLabel', { defaultValue: 'Price' })}
+                                  {sellMode === 'door'
+                                    ? t('composer.tierDoorPriceLabel', { defaultValue: 'At the door' })
+                                    : t('composer.tierPriceLabel', { defaultValue: 'Price' })}
                                 </span>
                               </label>
                             )}
@@ -3384,6 +3676,46 @@ export default function EventComposer({
                 </p>
               </div>
               <div className="rounded-xl bg-surface-low px-4 py-3.5">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="flex items-center gap-2 text-body text-fg-soft">
+                    <Users className="h-4 w-4 text-fg-subtle" /> {t('composer.family', { defaultValue: 'Family registration' })}
+                  </span>
+                  <Toggle
+                    on={familyActive}
+                    onChange={setFamilyOn}
+                    disabled={isPaid || sellMode === 'door'}
+                    label={t('composer.family', { defaultValue: 'Family registration' })}
+                  />
+                </div>
+                <p className="mt-1.5 text-xs text-fg-subtle">
+                  {isPaid || sellMode === 'door'
+                    ? t('composer.familyFreeOnly', { defaultValue: 'For free events.' })
+                    : t('composer.familyHint', { defaultValue: 'One person registers their family; everyone gets their own ticket.' })}
+                </p>
+                {familyActive && (
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <span className="text-xs text-fg-muted">{t('composer.familyUpTo', { defaultValue: 'People per registration' })}</span>
+                    <div role="radiogroup" aria-label={t('composer.familyUpTo', { defaultValue: 'People per registration' })} className="flex flex-wrap gap-1.5">
+                      {[2, 3, 4, 5, 6, 7, 8].map((n) => (
+                        <button
+                          key={n}
+                          type="button"
+                          role="radio"
+                          aria-checked={familySize === n}
+                          onClick={() => setFamilySize(n)}
+                          className={`min-w-[40px] rounded px-2.5 py-1.5 text-sm font-semibold transition-colors ${
+                            familySize === n ? 'bg-inverse text-on-inverse' : 'bg-surface-raised text-fg-muted hover:bg-surface-high'
+                          }`}
+                        >
+                          {n}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+              {!familyActive && (
+              <div className="rounded-xl bg-surface-low px-4 py-3.5">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <span className="flex items-center gap-2 text-body text-fg-soft">
                     <UserPlus className="h-4 w-4 text-fg-subtle" /> {t('attend_requests.composer.plus_ones')}
@@ -3411,6 +3743,7 @@ export default function EventComposer({
                     : t('attend_requests.composer.plus_ones_hint')}
                 </p>
               </div>
+              )}
             </div>
           </div>
             </>
@@ -3447,6 +3780,48 @@ export default function EventComposer({
                 onClose={() => setPosterOpen(false)}
               />
             )}
+            {/* Fill from flyer: read the uploaded flyer into the empty fields. */}
+            {bannerUrl && !bannerUrl.includes('/posters/') && (
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={readFlyer}
+                  disabled={flyerReading}
+                  className="inline-flex h-10 w-full items-center justify-center gap-2 rounded bg-surface-raised px-4 text-meta font-semibold text-fg transition-colors hover:bg-surface-high disabled:opacity-60"
+                >
+                  <ScanText className="h-4 w-4" strokeWidth={1.75} aria-hidden="true" />
+                  {flyerReading
+                    ? t('composer.flyerRead.reading', { defaultValue: 'Reading the flyer…' })
+                    : t('composer.flyerRead.button', { defaultValue: 'Fill from flyer' })}
+                </button>
+                {flyerNote && (
+                  <div className="space-y-1 text-xs leading-relaxed text-fg-muted" role="status" aria-live="polite">
+                    {'error' in flyerNote ? (
+                      <p className="text-danger-soft">{t(`composer.flyerRead.${flyerNote.error}`)}</p>
+                    ) : (
+                      <>
+                        <p>
+                          {flyerNote.filled.length
+                            ? t('composer.flyerRead.filled', { fields: flyerFieldList(flyerNote.filled) })
+                            : t('composer.flyerRead.nothing')}
+                        </p>
+                        {flyerNote.check.length > 0 && (
+                          <p className="flex items-center gap-1.5 text-fg">
+                            <span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 rounded-full bg-warning" />
+                            {t('composer.flyerRead.check', { fields: flyerFieldList(flyerNote.check) })}
+                          </p>
+                        )}
+                        {flyerNote.currency && <p>{t('composer.flyerRead.currency', { currency: flyerNote.currency })}</p>}
+                        {flyerNote.personal.length > 0 && (
+                          <p>{t('composer.flyerRead.personal', { items: flyerNote.personal.join(', ') })}</p>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
             {guest && (
               <p className="-mt-1 text-center text-eyebrow text-fg-subtle">
                 {/* Short enough to hold one line at 11px in the 360px poster

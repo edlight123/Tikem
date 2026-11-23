@@ -1,3 +1,4 @@
+import { venueDetailsFields, venueDetailsOf } from '../venueDetails';
 import { auth, db, storage } from '../../config/firebase';
 import {
   collection,
@@ -20,6 +21,7 @@ import { isDeviceOnlyImageUri } from '../localImageUri';
 import { profileImageContentType } from '../profileImagePath';
 import { hasPaidTier } from '../ticketPricing';
 import { plusOnesSetting } from '../attendRequests';
+import { familyMax } from '../family';
 import { backendJson } from './backend';
 import { guestlistVisibilityFrom, showGuestlistFor, type GuestlistVisibility } from '../guestlistVisibility';
 import type { LineupRecord } from '../lineup';
@@ -29,6 +31,13 @@ import {
   resolveOrphan,
   type ExistingTier,
 } from '../tierReconcile';
+
+/** The lowest door price on a pay-at-the-door event, for cards (null otherwise). */
+function doorPriceFrom(eventData: { pay_at_door?: boolean; ticket_tiers?: Array<{ door_price?: string }> }): number | null {
+  if (eventData.pay_at_door !== true) return null;
+  const prices = (eventData.ticket_tiers || []).map((t) => parseFloat(t.door_price || '')).filter((n) => n > 0);
+  return prices.length ? Math.min(...prices) : null;
+}
 
 /**
  * SHA-256 hex of the trimmed raw access code (trim only; case-sensitive).
@@ -84,6 +93,8 @@ export interface CreateEventData {
     sold_quantity?: number;
     name: string;
     price: string;
+    /** Pay at the door: the amount owed on arrival (price is then '0'). */
+    door_price?: string;
     quantity: string;
     /** Optional per-tier blurb shown on the event detail page. */
     description?: string;
@@ -122,6 +133,8 @@ export interface CreateEventData {
   guestlist?: LineupRecord[];
   /** Free RSVP event — no paid tiers; a single free tier caps attendance. */
   is_rsvp?: boolean;
+  /** Reserve free, pay the organizer on arrival. */
+  pay_at_door?: boolean;
   /** When false the event is hidden from Discover/Explore (share-by-link only). */
   show_on_explore?: boolean;
   /**
@@ -183,6 +196,14 @@ export interface CreateEventData {
   requires_approval?: boolean;
   /** Named plus-ones a guest may bring, 0..3 (capped again by the free limit). */
   plus_ones_max?: number;
+  /** Venue details (lib/venueDetails): access, setting, age policy, dress code. */
+  amenities?: string[];
+  venue_setting?: string | null;
+  age_policy?: string | null;
+  dress_code?: string | null;
+  /** Family registration (lib/family): free events only. */
+  family_registration?: boolean;
+  family_max?: number;
 }
 
 /** Hard cap on how many occurrences a single recurring series may generate. */
@@ -226,6 +247,34 @@ export interface SaveEventOptions {
    * when the event has no series_id. Defaults to false (edit only this event).
    */
   applyToSeries?: boolean;
+  /**
+   * Called when the chosen photo could not be uploaded. The event is still
+   * saved (without the new photo) so a storage hiccup never blocks it; the
+   * caller tells the organizer to add the photo again.
+   */
+  onPhotoUploadFailed?: () => void;
+}
+
+/**
+ * Upload a device photo, or null when the upload fails (the failure is
+ * reported through options.onPhotoUploadFailed, never thrown).
+ */
+async function uploadEventImageOrNull(
+  organizerId: string,
+  uri: string,
+  options: SaveEventOptions
+): Promise<string | null> {
+  try {
+    return await uploadEventImage(organizerId, uri);
+  } catch (e: any) {
+    console.warn('Event photo upload failed; saving without it:', e?.message || e);
+    try {
+      options.onPhotoUploadFailed?.();
+    } catch {
+      // A caller's callback never breaks the save.
+    }
+    return null;
+  }
 }
 
 /**
@@ -260,6 +309,8 @@ function tierEditableFields(
   return {
     name: tier.name,
     price: parseFloat(tier.price) || 0,
+    // Pay at the door (lib/payAtDoor): price stays 0, the amount lives here.
+    door_price: parseFloat(tier.door_price || '') > 0 ? parseFloat(tier.door_price as string) : null,
     quantity: totalQuantity,
     total_quantity: totalQuantity,
     available,
@@ -397,6 +448,8 @@ function buildTierEmbedded(
     ...(live ? { id: live.id } : {}),
     name: tier.name,
     price: parseFloat(tier.price) || 0,
+    // Pay at the door: readers of the embedded array see what is owed on arrival.
+    ...(parseFloat(tier.door_price || '') > 0 ? { door_price: parseFloat(tier.door_price as string) } : {}),
     quantity: live ? live.quantity : parseInt(tier.quantity) || 0,
     available: live ? live.available : parseInt(tier.quantity) || 0,
     description: tier.description || '',
@@ -430,11 +483,22 @@ function webParityFields(eventData: CreateEventData) {
     // Approval lists are for free events only; the rule refuses approval + paid.
     requires_approval: !paid && !!eventData.requires_approval,
     plus_ones_max: plusOnesSetting({ plus_ones_max: eventData.plus_ones_max }),
+    // Family registration: free events only (not paid, not pay at the door).
+    family_registration: !paid && eventData.pay_at_door !== true && !!eventData.family_registration,
+    family_max: familyMax({ family_registration: true, family_max: eventData.family_max }),
     is_online: !!eventData.is_online,
     national_day: eventData.national_day || null,
     enable_waitlist: eventData.ticket_tiers.some((t) => !!t.waitlist),
     ...(eventData.fee_incidence ? { fee_incidence: eventData.fee_incidence } : {}),
     ...(eventData.guestlist ? { guestlist: eventData.guestlist } : {}),
+    // Venue details, cleaned to the shapes firestore.rules accepts; only when
+    // the caller set them, so a caller that never did leaves them alone.
+    ...(eventData.amenities !== undefined ||
+    eventData.venue_setting !== undefined ||
+    eventData.age_policy !== undefined ||
+    eventData.dress_code !== undefined
+      ? venueDetailsFields(venueDetailsOf(eventData), !!eventData.is_online)
+      : {}),
   };
 }
 
@@ -532,10 +596,12 @@ export async function createEvent(
       console.error('Error loading organizer profile for organizer_name stamp:', profileError);
     }
 
-    // Upload image to Firebase Storage if it's a local URI
-    let coverImageUrl = eventData.banner_image_url;
+    // Upload image to Firebase Storage if it's a local URI. A photo that can't
+    // upload never blocks the event: it is created without it (never with the
+    // phone-only file path) and the caller says so.
+    let coverImageUrl: string | null | undefined = eventData.banner_image_url;
     if (isDeviceOnlyImageUri(eventData.banner_image_url)) {
-      coverImageUrl = await uploadEventImage(organizerId, eventData.banner_image_url);
+      coverImageUrl = await uploadEventImageOrNull(organizerId, eventData.banner_image_url, options);
     }
 
     // Parse the base dates/times. Recurring occurrences are shifted from these.
@@ -654,6 +720,8 @@ export async function createEvent(
         // Denormalized organizer display name (org brand preferred). See above.
         organizer_name: organizerName,
         is_rsvp: eventData.is_rsvp || false,
+        pay_at_door: eventData.pay_at_door === true,
+        door_price_from: doorPriceFrom(eventData),
         // Advanced settings — default visible/on when the caller omits them.
         show_on_explore: eventData.show_on_explore !== false,
         video_url: eventData.video_url || '',
@@ -766,10 +834,13 @@ export async function updateEvent(
   options: SaveEventOptions = {}
 ): Promise<void> {
   try {
-    // Upload image to Firebase Storage if it's a new local URI
-    let coverImageUrl = eventData.banner_image_url;
+    // Upload image to Firebase Storage if it's a new local URI. If it fails the
+    // rest of the edit is still saved and the stored photo is left as it was.
+    let coverImageUrl: string | null | undefined = eventData.banner_image_url;
+    let keepStoredPhoto = false;
     if (isDeviceOnlyImageUri(eventData.banner_image_url)) {
-      coverImageUrl = await uploadEventImage(organizerId, eventData.banner_image_url);
+      coverImageUrl = await uploadEventImageOrNull(organizerId, eventData.banner_image_url, options);
+      keepStoredPhoto = coverImageUrl === null;
     }
 
     // Parse dates and times into proper datetime
@@ -831,6 +902,8 @@ export async function updateEvent(
       total_tickets: totalCapacity,
       capacity: totalCapacity,
       is_rsvp: eventData.is_rsvp || false,
+      pay_at_door: eventData.pay_at_door === true,
+      door_price_from: doorPriceFrom(eventData),
       // Advanced settings — default visible/on when the caller omits them.
       show_on_explore: eventData.show_on_explore !== false,
       video_url: eventData.video_url || '',
@@ -853,11 +926,26 @@ export async function updateEvent(
       // — it goes through the server route below instead.
     };
 
+    if (keepStoredPhoto) {
+      delete (updateData as any).banner_image_url;
+      delete (updateData as any).cover_image_url;
+      delete (updateData as any).image_url;
+    }
+
     // Update the event document — with the money-defining fields taken from
     // the STORED doc once it has sold (see withStoredMoneyFields).
     const eventRef = doc(db, 'events', eventId);
     const storedSnap = await getDoc(eventRef);
-    await updateDoc(eventRef, withStoredMoneyFields(updateData, storedSnap.exists() ? storedSnap.data() : null));
+    const stored = storedSnap.exists() ? storedSnap.data() : null;
+    const writeData: Record<string, any> = withStoredMoneyFields(updateData, stored);
+    // A copy kept in sync from Eventbrite (web lib/import/eventbrite-sync): once
+    // edited here, the sync only refreshes its time, link and publication.
+    // firestore.rules lets a client set just this one flag.
+    const imported = (stored as any)?.imported;
+    if (imported?.source === 'eventbrite' && imported.locally_edited !== true) {
+      writeData.imported = { ...imported, locally_edited: true };
+    }
+    await updateDoc(eventRef, writeData);
 
     // ── Apply edits to the whole series ────────────────────────────────────
     // When the caller opts in AND this event belongs to a series, propagate the
@@ -942,6 +1030,15 @@ export async function updateEvent(
  * record carries a public https URL by the time the entry is saved.
  */
 export async function uploadLineupPhoto(ownerUid: string, localUri: string): Promise<string> {
+  return uploadEventImage(ownerUid, localUri);
+}
+
+/**
+ * Upload a flyer picked on the device ahead of saving, so "Fill from flyer"
+ * can hand the website a URL to read. The draft then keeps the https URL and
+ * the save does not upload it again.
+ */
+export async function uploadEventFlyer(ownerUid: string, localUri: string): Promise<string> {
   return uploadEventImage(ownerUid, localUri);
 }
 

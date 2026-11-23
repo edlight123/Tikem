@@ -943,9 +943,29 @@
           "order": "ASCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "events",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "organizer_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "imported.source",
+          "order": "ASCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": [
+    {
+      "collectionGroup": "event_view_seen",
+      "fieldPath": "expires_at",
+      "ttl": true,
+      "indexes": []
+    },
     {
       "collectionGroup": "inventory_shards",
       "fieldPath": "h",

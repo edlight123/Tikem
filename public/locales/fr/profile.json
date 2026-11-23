@@ -63,6 +63,8 @@
     "promos_desc": "Offres spéciales, événements vedettes et mises à jour de la plateforme",
     "discovery": "Événements près de chez vous",
     "discovery_desc": "Une sélection de nouveaux événements dans votre ville",
+    "weekend_digest": "Ce week-end",
+    "weekend_digest_desc": "Le jeudi : ce qui se passe ce week-end dans votre ville",
     "filling_fast": "Bientôt complet",
     "filling_fast_desc": "Quand un événement que vous avez enregistré est presque complet",
     "national_day": "Fêtes haïtiennes",
@@ -210,7 +212,13 @@
       "retry": "Réessayer",
       "empty_title": "Aucun message pour l'instant",
       "empty_body": "Les questions que vous posez à un organisateur depuis la page d'un événement, et ses réponses, apparaissent ici.",
-      "unread": "Nouvelle réponse"
+      "unread": "Nouvelle réponse",
+      "react": "Ajouter une réaction",
+      "react_with": "Réagir avec {{emoji}}",
+      "reaction_count": "{{emoji}}, {{count}}",
+      "reaction_failed": "Impossible d'enregistrer votre réaction.",
+      "blocked": "Vous ne pouvez pas écrire à cette personne.",
+      "you_blocked": "Vous avez bloqué cette personne. Débloquez-la pour lui écrire."
     }
   },
   "privacy": {

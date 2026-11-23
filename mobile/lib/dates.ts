@@ -63,3 +63,65 @@ export function safeFormatForLanguage(value: any, pattern: string, language: Lan
   if (!isValidDate(date)) return ''
   return format(date, localizePattern(pattern, language), { locale: getDateFnsLocale(language) })
 }
+
+/**
+ * The event's own IANA zone when it carries a usable one, else undefined
+ * (meaning: the phone's zone). No country guess: an event without a stored
+ * zone reads on the phone's clock, as it always did.
+ */
+export function eventTimeZone(event: { timezone?: unknown } | null | undefined): string | undefined {
+  const tz = typeof event?.timezone === 'string' ? event.timezone.trim() : ''
+  if (!tz) return undefined
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: tz })
+    return tz
+  } catch {
+    return undefined
+  }
+}
+
+/**
+ * An instant's wall-clock reading in `zone`, as a Date whose LOCAL fields carry
+ * it, so date-fns (which only formats in the phone's zone) prints the zone's
+ * time. Display only: never compare it with a real instant. Mirrors the web's
+ * lib/home/format wallClock.
+ */
+export function wallClockIn(at: Date, zone: string): Date {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: zone,
+    hourCycle: 'h23',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  }).formatToParts(at)
+  const get = (type: Intl.DateTimeFormatPartTypes) => Number(parts.find((p) => p.type === type)?.value ?? 0)
+  // Some engines print midnight as "24" even with h23.
+  return new Date(get('year'), get('month') - 1, get('day'), get('hour') % 24, get('minute'), get('second'))
+}
+
+/**
+ * safeFormatForLanguage on the EVENT's clock: a 9 pm show in Port-au-Prince
+ * reads 9 pm on a phone set to Paris. Falls back to the phone's zone when the
+ * event has no zone or the engine cannot use it.
+ */
+export function formatEventTime(
+  value: any,
+  event: { timezone?: unknown } | null | undefined,
+  pattern: string,
+  language: Language,
+): string {
+  const date = value instanceof Date ? value : value?.toDate ? value.toDate() : value ? new Date(value) : null
+  if (!isValidDate(date)) return ''
+  const zone = eventTimeZone(event)
+  if (zone) {
+    try {
+      return safeFormatForLanguage(wallClockIn(date, zone), pattern, language)
+    } catch {
+      // Fall through to the phone's clock.
+    }
+  }
+  return safeFormatForLanguage(date, pattern, language)
+}

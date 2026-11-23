@@ -206,7 +206,8 @@
     "loading": "Loading…",
     "load_more": "Load more events",
     "clear_filters": "Clear filters",
-    "search_scope_note": "Search covers the {{count}} events loaded so far. Load more to search further."
+    "search_scope_note": "Search covers the {{count}} events loaded so far. Load more to search further.",
+    "import_events": "Import events"
   },
   "event_card_detail": {
     "sold_out": "SOLD OUT",
@@ -636,7 +637,14 @@
     "entry_main_entrance": "Main Entrance",
     "entry_vip_entrance": "VIP Entrance",
     "entry_side_door": "Side Door",
-    "entry_back_entrance": "Back Entrance"
+    "entry_back_entrance": "Back Entrance",
+    "pay_at_door": "Pay at the door",
+    "paid_at_door": "Paid at the door",
+    "collect_amount": "Collect {{amount}}",
+    "mark_paid": "Mark paid",
+    "undo_payment": "Undo",
+    "payment_needs_connection": "Needs a connection to record the payment.",
+    "child": "Child"
   },
   "markets": {
     "title": "Where you run events",
@@ -970,6 +978,8 @@
     "balance_changed": "Your balance changed, please try again.",
     "free_event_nothing": "Free event, nothing to pay out.",
     "back_to_all": "← Back to all earnings",
+    "withdrawn_amount": "{{amount}} withdrawn",
+    "not_withdrawn_yet": "Not withdrawn yet",
     "paid_to_stripe": "Paid to your Stripe account",
     "paid_to_stripe_hint": "Card sales go straight to your Stripe account, so they are not part of Net or Available here."
   },
@@ -1034,7 +1044,11 @@
     "attendee_information": "Attendee Information",
     "process_refund": "Process Refund",
     "resend_ticket_email": "Resend Ticket Email",
-    "ticket_information": "Ticket Information"
+    "ticket_information": "Ticket Information",
+    "pay_at_door": "Pay at the door",
+    "door_paid": "Paid {{amount}} at the door",
+    "door_owes": "Owes {{amount}} at the door",
+    "with": "with"
   },
   "event_staff": {
     "actions": "Actions",
@@ -1270,6 +1284,10 @@
     "monitor_logins": "Monitor recent logins to your account",
     "new_password": "New Password",
     "password_min_length": "Password must be at least 8 characters long"
+  },
+  "page_views": {
+    "label": "Page views",
+    "today": "{{count}} today"
   },
   "command_center": {
     "add_a_flyer": "Add a flyer",
@@ -1569,7 +1587,13 @@
     "send": "Send reply",
     "sending": "Sending…",
     "error_generic": "Could not send your reply. Try again.",
-    "error_limit": "This conversation has reached its message limit."
+    "error_limit": "This conversation has reached its message limit.",
+    "react": "Add a reaction",
+    "react_with": "React with {{emoji}}",
+    "reaction_count": "{{emoji}}, {{count}}",
+    "reaction_failed": "Couldn't save your reaction.",
+    "blocked": "You can't message this person.",
+    "you_blocked": "You blocked this person. Unblock them to send a message."
   },
   "qr_scanner": {
     "camera_not_available": "Camera Not Available",
@@ -1703,7 +1727,11 @@
     "remove_access_if_lost": "Remove access immediately if a device is lost",
     "need_help": "Need help?",
     "support_can_help": "Our support team can help onboard large teams and set up access.",
-    "back_to_settings": "Back to Settings"
+    "back_to_settings": "Back to Settings",
+    "at_the_door": "at the door",
+    "door_collected": "Collected",
+    "door_outstanding": "Still owed",
+    "door_note": "Paid to you in person. Tikem takes no fee on it and it is not part of your payouts."
   },
   "verify_to_withdraw": {
     "title": "Verify your identity to withdraw",
@@ -1779,5 +1807,65 @@
     "error_generic_title": "something went wrong",
     "error_generic_body": "We couldn't accept the invite. Check your connection and try again.",
     "go_home": "Go to Tikèm"
+  },
+  "import_page": {
+    "eyebrow": "Organizer",
+    "title": "Import events",
+    "intro": "Bring your events over from Eventbrite, Luma, Meetup or your own site. They arrive as drafts for you to check, then publish.",
+    "link_title": "from a link",
+    "link_body": "Paste the link to an event, or to an organizer page that lists several.",
+    "link_label": "Event or organizer page link",
+    "find": "Find",
+    "finding": "Looking…",
+    "error_generic": "Something went wrong. Try again.",
+    "errors": {
+      "bad_url": "Paste a public https link to an event or organizer page.",
+      "unreachable": "We couldn’t open that page. Check the link, or try the event’s own page.",
+      "none_found": "No upcoming events found on that page. Try the link to one event.",
+      "rate_limited": "Too many imports for now. Try again in a little while.",
+      "none_picked": "Pick at least one event.",
+      "not_connected": "Connect Eventbrite first.",
+      "expired": "Eventbrite didn’t answer. Reconnect and try again.",
+      "unavailable": "Eventbrite import isn’t available yet."
+    },
+    "found_one": "{{count}} event found",
+    "found_other": "{{count}} events found",
+    "select_all": "Select all",
+    "select_none": "Select none",
+    "free": "Free",
+    "free_lower": "free",
+    "online": "Online",
+    "importing": "Importing…",
+    "import_drafts_one": "Import {{count}} event as a draft",
+    "import_drafts_other": "Import {{count}} events as drafts",
+    "drafts_ready_one": "{{count}} draft ready. Check it, then publish.",
+    "drafts_ready_other": "{{count}} drafts ready. Check each one, then publish.",
+    "skipped": "Already on Tikèm, left as it is",
+    "draft": "Draft",
+    "flag_currency": "Prices were in {{currency}}. Check them before you publish.",
+    "flag_country": "This venue is outside our markets. Check the place before you publish.",
+    "flag_price": "A price is below the minimum. Check it before you publish.",
+    "review": "Review",
+    "eb_title": "eventbrite",
+    "eb_connect_body": "Connect your Eventbrite account to bring your events over with their ticket types.",
+    "eb_connected_body": "Connected. Pick events to bring over as drafts, or keep your live ones in sync.",
+    "eb_connect": "Connect Eventbrite",
+    "eb_disconnect": "Disconnect",
+    "eb_just_connected": "Eventbrite is connected.",
+    "eb_error": "We couldn’t connect Eventbrite. Try again.",
+    "eb_cancelled": "Eventbrite wasn’t connected.",
+    "eb_expired": "Your Eventbrite connection expired. Connect it again.",
+    "eb_sync_title": "Keep my Eventbrite events on Tikèm",
+    "eb_sync_hint": "Live events are listed here and updated daily. Tickets stay on Eventbrite.",
+    "eb_last_synced": "Last synced {{when}}",
+    "eb_never_synced": "Not synced yet",
+    "eb_sync_now": "Sync now",
+    "eb_syncing": "Syncing…",
+    "eb_sync_failed": "The sync didn’t finish. Try again later.",
+    "eb_sync_limited": "Eventbrite asked us to slow down. The rest comes with the next sync.",
+    "eb_sync_done_one": "Synced. {{count}} event up to date.",
+    "eb_sync_done_other": "Synced. {{count}} events up to date.",
+    "eb_none": "No upcoming Eventbrite events to bring over.",
+    "eb_drafts_body": "Or bring events over as drafts, with their ticket types, to sell on Tikèm."
   }
 }

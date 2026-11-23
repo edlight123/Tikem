@@ -81,6 +81,8 @@ export function FilterChipsRow({ filters, onRemoveFilter, onClearAll, userCountr
     chips.push({ key: 'eventType', label: typeLabel })
   }
 
+  if (filters.stepFree) chips.push({ key: 'stepFree', label: t('filters.step_free') })
+
   if (chips.length === 0) return null
 
   return (

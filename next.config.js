@@ -49,7 +49,10 @@ const nextConfig = {
   // jsPDF renders the Digicel prefunding letter server-side. Load its own node
   // build at runtime instead of bundling it (its optional browser deps,
   // html2canvas/canvg/dompurify, are never needed on the server).
-  serverExternalPackages: ['jspdf', 'exceljs'],
+  // tesseract.js (the free flyer reader, /api/flyers/read) starts its own
+  // worker thread from a file path at runtime, so it must run from
+  // node_modules as published, not bundled.
+  serverExternalPackages: ['jspdf', 'exceljs', 'tesseract.js', 'tesseract.js-core'],
 
   // Performance optimizations
   experimental: {
@@ -65,6 +68,27 @@ const nextConfig = {
     // Poster templates are drawn server-side with these typefaces.
     '/api/posters/preview': ['./assets/fonts/**'],
     '/api/posters/create': ['./assets/fonts/**'],
+    // The flyer reader's worker script, its WebAssembly engine (the LSTM
+    // builds only) and the English/French models are all opened by path at
+    // runtime, which tracing cannot follow.
+    '/api/flyers/read': [
+      './node_modules/tesseract.js/src/**',
+      './node_modules/tesseract.js/package.json',
+      './node_modules/tesseract.js-core/package.json',
+      // Every core build: tesseract.js picks lstm / non-lstm and simd /
+      // relaxed-simd at runtime from the CPU, so tracing one set is not enough
+      // (a missing relaxedsimd.wasm hung the route until the 60 s limit).
+      './node_modules/tesseract.js-core/tesseract-core*.js',
+      './node_modules/tesseract.js-core/tesseract-core*.wasm',
+      './node_modules/wasm-feature-detect/**',
+      './node_modules/bmp-js/**',
+      './node_modules/zlibjs/**',
+      './node_modules/is-url/**',
+      './node_modules/regenerator-runtime/**',
+      './node_modules/node-fetch/**',
+      './node_modules/@tesseract.js-data/eng/4.0.0_best_int/**',
+      './node_modules/@tesseract.js-data/fra/4.0.0_best_int/**',
+    ],
   },
   
   // Add headers for better caching, performance, and security

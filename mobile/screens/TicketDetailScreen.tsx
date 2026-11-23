@@ -24,6 +24,7 @@ import { goBackOrHome } from '../lib/goBackOrHome';
 import { isActiveTicketStatus } from '../lib/orderDisplay';
 import SectionHeader from '../components/SectionHeader';
 import { Touchable } from '../components/ui/Touchable';
+import { doorBalance, doorMoney } from '../lib/payAtDoor';
 import { Text as UIText } from '../components/ui/Text';
 
 export default function TicketDetailScreen({ route }: any) {
@@ -373,6 +374,21 @@ export default function TicketDetailScreen({ route }: any) {
               <Text style={styles.detailLabel}>{t('ticketDetail.details.type')}</Text>
               <Text style={styles.detailValue}>{ticket.ticket_type}</Text>
             </View>
+            {(() => {
+              // Pay at the door: what to bring, or that it is settled.
+              const door = doorBalance(ticket);
+              if (!door) return null;
+              return (
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>{t('ticketDetail.details.payAtDoor')}</Text>
+                  <Text style={styles.detailValue}>
+                    {door.paid
+                      ? t('ticketDetail.details.paidAtDoor')
+                      : doorMoney(door.owes, door.currency, language)}
+                  </Text>
+                </View>
+              );
+            })()}
             {tierValidity?.from && (
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>{t('organizerCreateEventFlow.canvas.ticketValidFromLabel')}</Text>

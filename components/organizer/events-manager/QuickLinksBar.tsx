@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { BarChart3, Tag, QrCode } from 'lucide-react'
+import { BarChart3, Tag, QrCode, Download } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 export default function QuickLinksBar() {
@@ -11,6 +11,8 @@ export default function QuickLinksBar() {
     { href: '/organizer/analytics', label: t('events_page.analytics'), icon: BarChart3 },
     { href: '/organizer/promo-codes', label: t('events_page.promo_codes'), icon: Tag },
     { href: '/organizer/scan', label: t('events_page.scan_tickets'), icon: QrCode },
+    // Bring events over from Eventbrite, Luma, Meetup or any event page.
+    { href: '/organizer/import', label: t('events_page.import_events'), icon: Download },
   ]
 
   return (

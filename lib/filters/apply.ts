@@ -2,6 +2,7 @@
  * Apply filters to event list
  */
 
+import { isStepFree } from '@/lib/events/venue-details'
 import { EventFilters } from './types'
 import { getDateRange, getPriceRange, parsePriceRange } from './utils'
 import { normalizeEventCategory, getCityMatchGroup } from './config'
@@ -137,6 +138,11 @@ export function filterEvents(events: Event[], filters: EventFilters): Event[] {
     }
   }
   
+  // Step-free: an organizer-ticked venue detail, so events that say nothing are left out.
+  if (filters.stepFree) {
+    filtered = filtered.filter((event) => isStepFree(event))
+  }
+
   // Event type filter: the composers (web + mobile) save `is_online`.
   if (filters.eventType !== 'all') {
     filtered = filtered.filter(event => {

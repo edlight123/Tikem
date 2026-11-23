@@ -122,7 +122,9 @@
     "price_and_up": "{{price}} et plus",
     "free_only": "Gratuit uniquement",
     "price_min": "Prix minimum",
-    "price_max": "Prix maximum"
+    "price_max": "Prix maximum",
+    "access": "Accès",
+    "step_free": "Sans marches"
   },
   "time": {
     "today": "Aujourd'hui",
@@ -364,7 +366,20 @@
     "free_tier_already_claimed": "Vous avez déjà votre billet gratuit",
     "more_dates_one": "+{{count}} autre date",
     "more_dates_other": "+{{count}} autres dates",
-    "rsvp_cta": "Réserver"
+    "rsvp_cta": "Réserver",
+    "tickets_on_eventbrite": "Billets sur Eventbrite",
+    "tickets_on_eventbrite_note": "Les billets de cet événement sont vendus sur Eventbrite.",
+    "reserve_spot": "Réserver une place",
+    "reserve_spots": "Réserver {{count}} places",
+    "due_at_door": "À payer à l’entrée",
+    "pay_at_door": "Paiement à l’entrée",
+    "door_note": "Réservez maintenant, payez à l’arrivée.",
+    "family_people": "Personnes, vous compris",
+    "family_title": "Qui vient avec vous ?",
+    "family_child": "Enfant",
+    "family_hint": "Chaque personne reçoit son billet dans votre compte.",
+    "family_badge": "Familles bienvenues, jusqu’à {{count}} par inscription",
+    "card_door_price": "{{price}} à l’entrée"
   },
   "favorites": {
     "title": "Mes favoris",
@@ -1516,7 +1531,65 @@
       "use": "Utiliser cette affiche",
       "failed": "Impossible de créer l’affiche. Réessayez.",
       "sampleTitle": "Votre événement"
-    }
+    },
+    "flyerRead": {
+      "button": "Remplir depuis le flyer",
+      "reading": "Lecture du flyer…",
+      "filled": "Rempli depuis le flyer : {{fields}}. Vérifiez avant de publier.",
+      "nothing": "Aucun détail trouvé sur ce flyer. Remplissez-les ci-dessous.",
+      "check": "À vérifier : {{fields}}",
+      "personal": "Le flyer affiche des coordonnées ({{items}}). Elles n’ont pas été ajoutées.",
+      "currency": "Le prix du flyer est en {{currency}}, le prix du billet n’a pas été changé.",
+      "error": "Impossible de lire le flyer. Réessayez.",
+      "limited": "Assez de lectures pour aujourd’hui. Réessayez demain.",
+      "fields": {
+        "title": "titre",
+        "description": "description",
+        "date": "date",
+        "start_time": "heure de début",
+        "end_time": "heure de fin",
+        "venue_name": "lieu",
+        "address": "adresse",
+        "city": "ville",
+        "price": "prix",
+        "age_policy": "âge",
+        "dress_code": "tenue"
+      }
+    },
+    "venueDetails": {
+      "title": "Infos pratiques",
+      "hint": "Facultatif. Affiché sur la page de l’événement.",
+      "access": "Accès",
+      "setting": "Lieu",
+      "age": "Âge",
+      "dressCode": "Tenue, ex. Tout en blanc",
+      "amenities": {
+        "parking": "Parking",
+        "step_free": "Sans marches",
+        "accessible_washrooms": "Toilettes accessibles",
+        "coat_check": "Vestiaire"
+      },
+      "settings": {
+        "indoor": "Intérieur",
+        "outdoor": "Extérieur",
+        "mixed": "Les deux"
+      },
+      "ages": {
+        "all": "Tous âges",
+        "18": "18+",
+        "21": "21+"
+      }
+    },
+    "payAtDoor": "Payer à l’entrée",
+    "doorHint": "Les gens réservent gratuitement et vous paient à l’arrivée. Tikem ne prend aucuns frais.",
+    "doorLocked": "Des personnes ont réservé avec paiement à l’entrée. Gardez ce mode ou annulez d’abord leurs places.",
+    "tierDoorPriceLabel": "À l’entrée",
+    "family": "Inscription familiale",
+    "familyFreeOnly": "Pour les événements gratuits.",
+    "familyHint": "Une personne inscrit sa famille ; chacun reçoit son billet.",
+    "familyUpTo": "Personnes par inscription",
+    "ticketTypes": "Types prêts",
+    "addTicketTypes": "Plusieurs types d’invités ? Ajoutez des types de billets"
   },
   "promoter": {
     "portal_eyebrow": "Portail promoteur",
@@ -2028,7 +2101,7 @@
       "decrease": "Un accompagnant de moins",
       "increase": "Un accompagnant de plus",
       "first_name": "Prénom",
-      "first_name_placeholder": "Prénom de l'accompagnant",
+      "first_name_placeholder": "Prénom de l’accompagnant (facultatif)",
       "phone": "Téléphone (facultatif)",
       "note": "Un mot pour l'organisateur",
       "note_placeholder": "Ami du DJ, je viens de Jacmel",
@@ -2147,5 +2220,18 @@
     "get_the_app": "Téléchargez l’app",
     "after_purchase": "Gardez votre billet sur votre téléphone, même hors ligne.",
     "event_hint": "Paiement plus rapide et billets hors ligne dans l’app."
+  },
+  "venue_details": {
+    "title": "bon à savoir",
+    "step_free": "Accès sans marches",
+    "accessible_washrooms": "Toilettes accessibles",
+    "parking": "Parking",
+    "coat_check": "Vestiaire",
+    "indoor": "En intérieur",
+    "outdoor": "En extérieur",
+    "mixed": "Intérieur et extérieur",
+    "age_18": "18 ans et plus",
+    "age_21": "21 ans et plus",
+    "dress_code": "Tenue : {{value}}"
   }
 }

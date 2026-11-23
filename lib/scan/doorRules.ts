@@ -14,6 +14,7 @@
  */
 
 import { createHash } from 'crypto'
+import { doorBalance } from '@/lib/tickets/pay-at-door'
 
 // ---------------------------------------------------------------------------
 // Authorization
@@ -189,6 +190,10 @@ export type DoorRow = {
    * exact signed `code` admits, so an offline door refuses a pre-transfer code.
    */
   qrVersion: number
+  /** Pay at the door (lib/tickets/pay-at-door): still owed on arrival; null for any other ticket. */
+  doorOwes: number | null
+  doorCurrency: string | null
+  doorPaid: boolean
 }
 
 export function toDoorRow(
@@ -215,6 +220,10 @@ export function toDoorRow(
     validFrom: toIso(tier?.valid_from),
     validUntil: toIso(tier?.valid_until),
     qrVersion: ticketQrVersionOf(ticket),
+    ...(() => {
+      const b = doorBalance(ticket)
+      return b ? { doorOwes: b.owes, doorCurrency: b.currency, doorPaid: b.paid } : { doorOwes: null, doorCurrency: null, doorPaid: false }
+    })(),
   }
 }
 

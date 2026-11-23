@@ -11,7 +11,6 @@ import React from 'react';
 import {
   KeyboardAvoidingView,
   Modal,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -335,7 +334,7 @@ export default function PayoutMethodFlow(props: PayoutMethodFlowProps) {
           </View>
         </View>
 
-        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
           <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
             <Text style={styles.title}>{title}</Text>
             {step === 1 ? (

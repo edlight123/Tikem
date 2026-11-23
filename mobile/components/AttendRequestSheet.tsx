@@ -8,7 +8,6 @@ import React, { useEffect, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Modal,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -17,6 +16,7 @@ import {
   TouchableOpacity,
   View,
   Animated,
+  Switch,
 } from 'react-native';
 import { useSwipeToClose } from '../hooks/useSwipeToClose';
 import { Minus, Plus, X } from 'lucide-react-native';
@@ -36,6 +36,8 @@ import {
 export interface PlusOneDraft {
   firstName: string;
   phone: string;
+  /** Family registration: this member is a child. */
+  child?: boolean;
 }
 
 export const emptyPlusOne = (): PlusOneDraft => ({ firstName: '', phone: '' });
@@ -52,18 +54,24 @@ export function plusOnesPayload(list: PlusOneDraft[]): PlusOneInput[] {
   return list.map((p) => ({
     firstName: p.firstName.trim(),
     ...(p.phone.trim() ? { phone: p.phone.trim() } : {}),
+    ...(p.child ? { child: true } : {}),
   }));
 }
 
-/** First name (required) + phone (optional) for each plus-one. */
+/**
+ * First name and phone, both optional, for each plus-one. For family
+ * registration (`family`), a Child switch replaces the phone.
+ */
 export function PlusOneFields({
   value,
   onChange,
   editable = true,
+  family = false,
 }: {
   value: PlusOneDraft[];
   onChange: (next: PlusOneDraft[]) => void;
   editable?: boolean;
+  family?: boolean;
 }) {
   const { t } = useI18n();
   const set = (i: number, patch: Partial<PlusOneDraft>) =>
@@ -87,19 +95,34 @@ export function PlusOneFields({
             editable={editable}
             textContentType="givenName"
           />
-          <Text style={[styles.fieldLabel, { marginTop: spacing.md }]}>{t('attendRequests.sheet.phone')}</Text>
-          <TextInput
-            style={styles.input}
-            value={p.phone}
-            onChangeText={(text) => set(i, { phone: text })}
-            placeholder={t('attendRequests.sheet.phonePlaceholder')}
-            placeholderTextColor={T.textTertiary}
-            selectionColor={T.teal}
-            keyboardType="phone-pad"
-            maxLength={24}
-            editable={editable}
-            textContentType="none"
-          />
+          {family ? (
+            <View style={styles.childRow}>
+              <Text style={styles.fieldLabel}>{t('attendRequests.sheet.child')}</Text>
+              <Switch
+                value={!!p.child}
+                onValueChange={(v) => set(i, { child: v })}
+                disabled={!editable}
+                trackColor={{ true: T.teal, false: T.border }}
+                accessibilityLabel={t('attendRequests.sheet.child')}
+              />
+            </View>
+          ) : (
+            <>
+            <Text style={[styles.fieldLabel, { marginTop: spacing.md }]}>{t('attendRequests.sheet.phone')}</Text>
+            <TextInput
+              style={styles.input}
+              value={p.phone}
+              onChangeText={(text) => set(i, { phone: text })}
+              placeholder={t('attendRequests.sheet.phonePlaceholder')}
+              placeholderTextColor={T.textTertiary}
+              selectionColor={T.teal}
+              keyboardType="phone-pad"
+              maxLength={24}
+              editable={editable}
+              textContentType="none"
+            />
+            </>
+          )}
         </View>
       ))}
     </View>
@@ -157,9 +180,11 @@ interface Props {
   allowedPlusOnes: number;
   /** The request landed: the parent shows the pending state. */
   onSent: (request: OwnAttendRequest) => void;
+  /** Family registration (lib/family): a Child switch replaces the phone. */
+  family?: boolean;
 }
 
-export default function AttendRequestSheet({ visible, onClose, eventId, allowedPlusOnes, onSent }: Props) {
+export default function AttendRequestSheet({ visible, onClose, eventId, allowedPlusOnes, onSent, family = false }: Props) {
   const { t } = useI18n();
   const insets = useSafeAreaInsets();
   const [plusOnes, setPlusOnes] = useState<PlusOneDraft[]>([]);
@@ -183,10 +208,6 @@ export default function AttendRequestSheet({ visible, onClose, eventId, allowedP
 
   const submit = async () => {
     if (sending) return;
-    if (plusOnes.some((p) => !p.firstName.trim())) {
-      setError(t('attendRequests.sheet.nameRequired'));
-      return;
-    }
     setError(null);
     setSending(true);
     try {
@@ -203,7 +224,7 @@ export default function AttendRequestSheet({ visible, onClose, eventId, allowedP
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={close}>
-      <KeyboardAvoidingView style={styles.overlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={styles.overlay} behavior="padding">
         <Pressable style={StyleSheet.absoluteFill} onPress={close} accessibilityRole="button" accessibilityLabel={t('attendRequests.sheet.close')} />
         <Animated.View style={[styles.sheet, swipe.sheetStyle, { paddingBottom: Math.max(insets.bottom, spacing.lg) + spacing.sm }]}>
           {/* Paints below the sheet edge so the event page never shows through. */}
@@ -231,7 +252,7 @@ export default function AttendRequestSheet({ visible, onClose, eventId, allowedP
                     disabled={sending}
                   />
                 </View>
-                <PlusOneFields value={plusOnes} onChange={setPlusOnes} editable={!sending} />
+                <PlusOneFields value={plusOnes} onChange={setPlusOnes} editable={!sending} family={family} />
               </>
             )}
 
@@ -354,6 +375,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: T.textPrimary,
   },
+  childRow: { marginTop: spacing.md, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   guestGroup: {
     marginBottom: spacing.md,
   },

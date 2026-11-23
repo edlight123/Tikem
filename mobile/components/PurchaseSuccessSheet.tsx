@@ -8,6 +8,7 @@ import {
   ScrollView,
   Animated,
 } from 'react-native';
+import { useAndroidBottomInset } from '../hooks/useAndroidBottomInset';
 import { useSwipeToClose } from '../hooks/useSwipeToClose';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { X, Ticket, Share2 } from 'lucide-react-native';
@@ -50,6 +51,8 @@ export default function PurchaseSuccessSheet({
   const { colors } = useTheme();
   const { t, language } = useI18n();
   const styles = getStyles(colors);
+  // Clear of Android's system bar (edge to edge).
+  const bottomInset = useAndroidBottomInset(spacing.xxl);
   const swipe = useSwipeToClose(onClose, visible);
 
   const start = event?.start_datetime ? new Date(event.start_datetime) : null;
@@ -69,7 +72,7 @@ export default function PurchaseSuccessSheet({
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.backdrop}>
-        <Animated.View style={[styles.sheet, swipe.sheetStyle]}>
+        <Animated.View style={[styles.sheet, bottomInset, swipe.sheetStyle]}>
           {/* Paints below the sheet's edge, so the event page's sticky bar can never
               show through a gap under the sheet (see ContactOrganizerModal). */}
           <View pointerEvents="none" style={styles.bottomFill} />

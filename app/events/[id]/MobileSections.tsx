@@ -48,6 +48,8 @@ interface MobileSectionsProps {
    * constructed once, next to the desktop one it must match.
    */
   venueMap?: React.ReactNode
+  /** Venue details (parking, step-free…), already built; null when the event has none. */
+  goodToKnow?: React.ReactNode
 }
 
 export default function MobileSections({
@@ -58,7 +60,8 @@ export default function MobileSections({
   address,
   commune,
   city,
-  venueMap
+  venueMap,
+  goodToKnow
 }: MobileSectionsProps) {
   const { t } = useTranslation('common')
 
@@ -127,6 +130,9 @@ export default function MobileSections({
         </p>
       </Section>
       )}
+
+      {/* Good to know: access, setting, age, dress code. */}
+      {goodToKnow && <Section title={t('venue_details.title')}>{goodToKnow}</Section>}
 
       {/* The organizer and the date already lead the page (hero, key facts)
           and share sits beside the title, so their sections are gone: only

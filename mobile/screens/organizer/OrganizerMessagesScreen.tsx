@@ -20,7 +20,13 @@ import { defaultAvatar } from '../../lib/defaultAvatar';
 import { inboxTime } from '../../lib/messageTime';
 import { select as hapticSelect } from '../../lib/haptics';
 import { useTabBarSpace } from '../../hooks/useTabBarSpace';
+import { useTabTaps } from '../../hooks/useTabTaps';
 import EventAnnouncements, { OrgAnnouncements } from '../../components/organizer/EventAnnouncements';
+import SwipeToDismiss from '../../components/ui/SwipeToDismiss';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+/** Conversations swiped away, per account (cleared on sign-out: AuthContext USER_SCOPED_PREFIXES). */
+const HIDDEN_PREFIX = 'tikem_inbox_hidden_';
 
 type RouteParams = {
   OrganizerMessages:
@@ -79,10 +85,12 @@ const POSTER_H = 28;
  *
  * Laid out like a messaging app rather than a card stack: the person's photo
  * (or the house silhouette) with the event's poster tucked into its corner,
- * name and time on one line, the last message under it. "Needs reply" is the
- * default view whenever anything is waiting, because somebody asking "is this
- * legit?" is a sale waiting on an answer. Opening a row pushes the shared
- * conversation screen (MessageThread), which both sides use.
+ * name and time on one line, the last message under it. "Unread" is the
+ * default view whenever anything is unread (TestFlight 2026-11-22, Tikra
+ * 9e553cdb); "Needs a reply" stays as a dot + label on the row. Swipe a row
+ * away to hide it; it comes back by itself when either side writes again.
+ * Opening a row pushes the shared conversation screen (MessageThread), which
+ * both sides use.
  *
  * Reads go through our API, never Firestore: replies are server-only.
  */
@@ -104,8 +112,35 @@ export default function OrganizerMessagesScreen({ asTab = false }: { asTab?: boo
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [segment, setSegment] = useState<'waiting' | 'all' | null>(null);
+  const [segment, setSegment] = useState<'unread' | 'all' | null>(null);
   const [eventFilter, setEventFilter] = useState<string | null>(null);
+  // Swiped-away threads: id -> the thread's last activity when it was hidden.
+  const hiddenKey = `${HIDDEN_PREFIX}${user?.uid || 'anon'}`;
+  const [hidden, setHidden] = useState<Record<string, string>>({});
+  useEffect(() => {
+    let alive = true;
+    AsyncStorage.getItem(hiddenKey)
+      .then((v) => {
+        if (!alive) return;
+        try {
+          const parsed = v ? JSON.parse(v) : {};
+          setHidden(parsed && typeof parsed === 'object' ? parsed : {});
+        } catch {
+          setHidden({});
+        }
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [hiddenKey]);
+  const hide = (thread: Thread) => {
+    setHidden((prev) => {
+      const next = { ...prev, [thread.id]: String(thread.last_activity_at || new Date().toISOString()) };
+      AsyncStorage.setItem(hiddenKey, JSON.stringify(next)).catch(() => {});
+      return next;
+    });
+  };
   // Event page only: one-to-one questions vs one-to-many announcements.
   const [pane, setPane] = useState<'questions' | 'announcements'>('questions');
 
@@ -153,10 +188,15 @@ export default function OrganizerMessagesScreen({ asTab = false }: { asTab?: boo
     () => (eventFilter ? threads.filter((th) => th.event_id === eventFilter) : threads),
     [threads, eventFilter],
   );
-  const waiting = useMemo(() => scoped.filter(needsReply), [scoped]);
-  // Until the organizer picks, open on "Needs reply" whenever something waits.
-  const activeSegment = segment ?? (waiting.length > 0 ? 'waiting' : 'all');
-  const shown = activeSegment === 'waiting' ? waiting : scoped;
+  // A swiped-away thread stays hidden until someone writes again (newer activity).
+  const visible = useMemo(
+    () => scoped.filter((th) => !(hidden[th.id] && hidden[th.id] >= String(th.last_activity_at || ''))),
+    [scoped, hidden],
+  );
+  const unreadList = useMemo(() => visible.filter((th) => th.unread), [visible]);
+  // Until the organizer picks, open on "Unread" whenever something is unread.
+  const activeSegment = segment ?? (unreadList.length > 0 ? 'unread' : 'all');
+  const shown = activeSegment === 'unread' ? unreadList : visible;
 
   const open = (thread: Thread) => {
     setThreads((prev) => prev.map((th) => (th.id === thread.id ? { ...th, unread: false } : th)));
@@ -167,6 +207,9 @@ export default function OrganizerMessagesScreen({ asTab = false }: { asTab?: boo
     setRefreshing(true);
     load();
   };
+  // Tab only: tap the active Inbox tab to scroll up, double tap to refresh.
+  const tabScroll = useRef<ScrollView>(null);
+  useTabTaps(tabScroll, onRefresh);
 
   const timeLabels = { yesterday: t('attendeeMessages.yesterday') };
 
@@ -175,8 +218,8 @@ export default function OrganizerMessagesScreen({ asTab = false }: { asTab?: boo
     <View style={styles.segmentTrack} accessibilityRole="tablist">
       {(
         [
-          { key: 'waiting', label: t('organizerMessages.segmentWaiting'), count: waiting.length },
-          { key: 'all', label: t('organizerMessages.segmentAll'), count: scoped.length },
+          { key: 'unread', label: t('organizerMessages.segmentUnread'), count: unreadList.length },
+          { key: 'all', label: t('organizerMessages.segmentAll'), count: visible.length },
         ] as const
       ).map((s) => {
         const active = activeSegment === s.key;
@@ -196,7 +239,7 @@ export default function OrganizerMessagesScreen({ asTab = false }: { asTab?: boo
             <Text style={[styles.segmentLabel, active ? styles.segmentLabelActive : styles.segmentLabelInactive]}>
               {s.label}
               {'  '}
-              <Text style={[styles.segmentCount, s.key === 'waiting' && s.count > 0 && styles.segmentCountHot]}>
+              <Text style={[styles.segmentCount, s.key === 'unread' && s.count > 0 && styles.segmentCountHot]}>
                 {s.count}
               </Text>
             </Text>
@@ -252,13 +295,18 @@ export default function OrganizerMessagesScreen({ asTab = false }: { asTab?: boo
     const waitingOnMe = needsReply(thread);
     const unread = thread.unread;
     return (
+      <SwipeToDismiss key={thread.id} onDismiss={() => hide(thread)}>
       <Touchable
-        key={thread.id}
         scale={0.985}
         style={styles.row}
         onPress={() => open(thread)}
         accessibilityRole="button"
         accessibilityLabel={`${thread.sender_name}, ${thread.event_title}. ${lastText}`}
+        // The swipe, for screen readers.
+        accessibilityActions={[{ name: 'hide', label: t('organizerMessages.hideConversation') }]}
+        onAccessibilityAction={(e) => {
+          if (e.nativeEvent.actionName === 'hide') hide(thread);
+        }}
       >
         <View style={styles.avatarWrap}>
           <Image
@@ -304,9 +352,8 @@ export default function OrganizerMessagesScreen({ asTab = false }: { asTab?: boo
           </View>
 
           <View style={styles.metaRow}>
-            {waitingOnMe && activeSegment === 'all' ? (
-              // Dot + label, never a filled pill (house rule). Only in "All":
-              // inside "Needs reply" every row would say it.
+            {waitingOnMe ? (
+              // Dot + label, never a filled pill (house rule).
               <View style={styles.needsReply}>
                 <View style={styles.needsReplyDot} />
                 <Text style={styles.needsReplyText}>{t('organizerMessages.needsReply')}</Text>
@@ -314,13 +361,14 @@ export default function OrganizerMessagesScreen({ asTab = false }: { asTab?: boo
             ) : null}
             {!eventId ? (
               <Text style={styles.meta} numberOfLines={1}>
-                {waitingOnMe && activeSegment === 'all' ? '·  ' : ''}
+                {waitingOnMe ? '·  ' : ''}
                 {thread.event_title}
               </Text>
             ) : null}
           </View>
         </View>
       </Touchable>
+      </SwipeToDismiss>
     );
   };
 
@@ -362,7 +410,6 @@ export default function OrganizerMessagesScreen({ asTab = false }: { asTab?: boo
       <EmptyState
         icon={MessageSquare}
         title={t('organizerMessages.caughtUpTitle')}
-        subtitle={t('organizerMessages.caughtUpBody')}
         compact
       />
     </View>
@@ -409,6 +456,7 @@ export default function OrganizerMessagesScreen({ asTab = false }: { asTab?: boo
           {paneTabs}
         </View>
         <ScrollView
+          ref={tabScroll}
           style={styles.flex}
           contentContainerStyle={{ paddingBottom: tabBarSpace + 24 }}
           showsVerticalScrollIndicator={false}

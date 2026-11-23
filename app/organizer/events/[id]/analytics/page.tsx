@@ -6,7 +6,8 @@ import { loadTicketDocsForEvent } from '@/lib/tickets/loadTicketsForEvent'
 import { summarizeEventTickets, ticketCountsAsSold } from '@/lib/organizer/salesSummary'
 import { normalizeCurrency } from '@/lib/money'
 import { formatPrimaryMoneyFromCentsByCurrency } from '@/lib/money'
-import { BarChart2, Ticket, Users, CheckCircle, TrendingUp } from 'lucide-react'
+import { BarChart2, Ticket, Users, CheckCircle, TrendingUp, Eye } from 'lucide-react'
+import { readEventViewStats } from '@/lib/events/views-server'
 import { MetricCard } from '@/components/organizer/ui'
 import { OrgEmptyState } from '@/components/organizer/ui'
 import { EMPTY_VALUE } from '@/lib/format'
@@ -32,8 +33,11 @@ export default async function EventAnalyticsPage({
   const eventCurrency = normalizeCurrency(eventData.currency, 'HTG')
   const capacity = Number(eventData.total_tickets || 0)
 
-  // Fetch all tickets
-  const ticketDocs = await loadTicketDocsForEvent(eventId)
+  // Fetch all tickets, and the page views (lib/events/views.ts) alongside.
+  const [ticketDocs, views] = await Promise.all([
+    loadTicketDocsForEvent(eventId),
+    readEventViewStats(eventId, eventData),
+  ])
 
   const ticketDatas = ticketDocs.map((doc) => doc.data() || {})
   const tickets = ticketDatas.map((d) => {
@@ -66,6 +70,16 @@ export default async function EventAnalyticsPage({
         })
       : EMPTY_VALUE
 
+  // Pay at the door: cash recorded at the door, kept apart from revenue (Tikem
+  // takes no fee on it and pays none of it out).
+  const doorCollected = sales.doorCollectedByCurrencyCents
+  const doorOutstanding = sales.doorOutstandingByCurrencyCents
+  const hasDoor = Object.keys(doorCollected).length > 0 || Object.keys(doorOutstanding).length > 0
+  const money = (m: Record<string, number>) =>
+    Object.keys(m).length > 0
+      ? formatPrimaryMoneyFromCentsByCurrency(m, eventCurrency, 'en-US', { currencyDisplay: 'code' })
+      : formatPrimaryMoneyFromCentsByCurrency({ [eventCurrency]: 0 }, eventCurrency, 'en-US', { currencyDisplay: 'code' })
+
   // Sales by day (last 30 days of purchases)
   type DayStat = { date: string; count: number }
   const byDay: Record<string, number> = {}
@@ -89,14 +103,28 @@ export default async function EventAnalyticsPage({
   }
   const tierBreakdown = Object.values(tierMap).sort((a, b) => b.sold - a.sold)
 
+  // One per visitor per day; the organizer's and the team's own visits never count.
+  const viewsCard = (
+    <MetricCard
+      icon={Eye}
+      label={<T k="page_views.label" />}
+      value={views.total.toLocaleString()}
+      sublabel={views.today > 0 ? <T k="page_views.today" values={{ count: views.today }} /> : undefined}
+    />
+  )
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       {ticketsSold === 0 ? (
-        <OrgEmptyState variant="quiet" icon={BarChart2} title={<T k="event_analytics.no_sales_data_yet" />} />
+        <div className="space-y-8">
+          {/* Before the first sale, views are the only sign the page is seen. */}
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">{viewsCard}</div>
+          <OrgEmptyState variant="quiet" icon={BarChart2} title={<T k="event_analytics.no_sales_data_yet" />} />
+        </div>
       ) : (
         <div className="space-y-8">
           {/* KPI row */}
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
             <MetricCard
               icon={Ticket}
               label={<T k="event_analytics.tickets_sold" />}
@@ -120,7 +148,33 @@ export default async function EventAnalyticsPage({
               value={checkedIn}
               sublabel={ticketsSold > 0 ? `${checkInRate.toFixed(0)}% rate` : undefined}
             />
+            {viewsCard}
           </div>
+
+          {hasDoor && (
+            <div className="rounded p-5 bg-surface">
+              <h2 className="font-display lowercase italic !text-section !leading-snug text-fg">
+                <T k="event_analytics.at_the_door" />
+              </h2>
+              <div className="mt-3 grid grid-cols-2 gap-4">
+                <div>
+                  <p className="eyebrow text-eyebrow text-fg-subtle">
+                    <T k="event_analytics.door_collected" />
+                  </p>
+                  <p className="mt-1 text-lg font-semibold tabular-nums text-fg">{money(doorCollected)}</p>
+                </div>
+                <div>
+                  <p className="eyebrow text-eyebrow text-fg-subtle">
+                    <T k="event_analytics.door_outstanding" />
+                  </p>
+                  <p className="mt-1 text-lg font-semibold tabular-nums text-fg">{money(doorOutstanding)}</p>
+                </div>
+              </div>
+              <p className="mt-3 text-xs text-fg-subtle">
+                <T k="event_analytics.door_note" />
+              </p>
+            </div>
+          )}
 
           {/* Ticket tier breakdown */}
           {tierBreakdown.length > 0 && (

@@ -143,8 +143,76 @@ export const DEMO_EVENTS = [
     is_published: true,
     created_at: '2025-10-15T10:00:00',
     updated_at: '2025-10-15T10:00:00'
+  },
+  // Pay at the door (lib/tickets/pay-at-door): reserve free, pay on arrival.
+  // Dated from today so the demo always shows it on sale.
+  {
+    id: 'demo-event-door',
+    organizer_id: 'demo-organizer-id',
+    title: 'Kanaval Kominote',
+    description: 'A neighbourhood carnival night. Reserve your spot online and pay at the door.',
+    category: 'Party',
+    venue_name: 'Place Boyer',
+    city: 'Pétion-Ville',
+    commune: 'Pétion-Ville',
+    address: 'Place Boyer, Pétion-Ville',
+    ...demoDates(14, 19, 5),
+    banner_image_url: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800',
+    ticket_price: 0,
+    currency: 'HTG',
+    pay_at_door: true,
+    door_price_from: 500,
+    amenities: ['parking', 'step_free'],
+    venue_setting: 'outdoor',
+    age_policy: '18+',
+    dress_code: 'All white',
+    ticket_tiers: [
+      { name: 'General', price: 0, door_price: 500 },
+      { name: 'VIP', price: 0, door_price: 1500 },
+    ],
+    total_tickets: 300,
+    tickets_sold: 42,
+    is_published: true,
+    created_at: '2026-11-01T10:00:00',
+    updated_at: '2026-11-01T10:00:00'
+  },
+  // Family registration (lib/events/family) on a free event with two types.
+  {
+    id: 'demo-event-family',
+    organizer_id: 'demo-organizer-id',
+    title: 'Jou Fanmi nan Pak la',
+    description: 'A free family day in the park. One person registers the whole family.',
+    category: 'Community',
+    venue_name: 'Parc Historique de la Canne à Sucre',
+    city: 'Port-au-Prince',
+    commune: 'Tabarre',
+    address: 'Route de Tabarre',
+    ...demoDates(21, 10, 6),
+    banner_image_url: 'https://images.unsplash.com/photo-1511895426328-dc8714191300?w=800',
+    ticket_price: 0,
+    currency: 'HTG',
+    family_registration: true,
+    family_max: 6,
+    ticket_tiers: [
+      { name: 'Adults', price: 0 },
+      { name: 'Children', price: 0 },
+    ],
+    total_tickets: 400,
+    tickets_sold: 120,
+    is_published: true,
+    created_at: '2026-11-01T10:00:00',
+    updated_at: '2026-11-01T10:00:00'
   }
 ]
+
+/** Start/end ISO strings `days` from now at `hour` local, lasting `hours`. */
+function demoDates(days: number, hour: number, hours: number) {
+  const start = new Date()
+  start.setDate(start.getDate() + days)
+  start.setHours(hour, 0, 0, 0)
+  const end = new Date(start.getTime() + hours * 3_600_000)
+  return { start_datetime: start.toISOString(), end_datetime: end.toISOString() }
+}
 
 // Demo tickets for the demo attendee
 export const DEMO_TICKETS = [

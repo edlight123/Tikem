@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useTabTaps } from '../../hooks/useTabTaps';
 import {
   View,
   Text,
@@ -64,7 +65,7 @@ export default function OrganizerEventsScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   // The acting org's events (lib/activeOrg.ts), not the signed-in uid's.
-  const { orgId } = useActiveOrg();
+  const { orgId, can } = useActiveOrg();
 
   useEffect(() => {
     setLoading(true);
@@ -100,6 +101,9 @@ export default function OrganizerEventsScreen() {
     setRefreshing(true);
     loadEvents();
   }, [loadEvents]);
+  // Tap the tab again to scroll up; tap twice to refresh.
+  const eventsScroll = useRef<any>(null);
+  useTabTaps(eventsScroll, onRefresh);
 
   const now = new Date();
 
@@ -188,6 +192,18 @@ export default function OrganizerEventsScreen() {
         <Text style={styles.title} numberOfLines={1} accessibilityRole="header">
           {t('organizerEvents.title').toLowerCase()}
         </Text>
+        {/* Bring events over from Eventbrite, Luma, Meetup or any event page. */}
+        {can('manage_events') ? (
+          <Touchable
+            style={styles.createButton}
+            hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+            onPress={() => navigation.navigate('ImportEvents')}
+            accessibilityRole="button"
+            accessibilityLabel={t('organizerImport.title')}
+          >
+            <Ionicons name="download-outline" size={20} color={colors.text} />
+          </Touchable>
+        ) : null}
         <Touchable
           style={styles.createButton}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -267,6 +283,7 @@ export default function OrganizerEventsScreen() {
 
       {/* Events List */}
       <ScrollView
+        ref={eventsScroll}
         style={styles.scrollView}
         contentContainerStyle={[styles.list, { paddingBottom: tabBarSpace + 24 }]}
         refreshControl={

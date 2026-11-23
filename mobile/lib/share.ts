@@ -1,7 +1,7 @@
-import { Share } from 'react-native';
+import { Platform, Share } from 'react-native';
 
 import type { Language } from '../contexts/I18nContext';
-import { safeFormatForLanguage } from './dates';
+import { formatEventTime } from './dates';
 
 /**
  * The single event-share helper used across Discover / Home / Favorites so the
@@ -11,7 +11,8 @@ import { safeFormatForLanguage } from './dates';
  * preview card is the poster and the owner wants the text kept minimal),
  * gracefully omitting whatever the event doesn't carry — most cards won't have
  * every field. No locale keys are added: the only localized bit is the date,
- * formatted via `safeFormatForLanguage` using the caller's current `language`.
+ * formatted on the event's own clock via `formatEventTime` using the caller's
+ * current `language`.
  */
 export async function shareEvent(event: any, language: Language = 'en'): Promise<void> {
   if (!event) return;
@@ -24,7 +25,7 @@ export async function shareEvent(event: any, language: Language = 'en'): Promise
 
   // Date · venue — each part optional, joined only when present.
   const when = event.start_datetime
-    ? safeFormatForLanguage(event.start_datetime, 'EEE, MMM d · h:mm a', language)
+    ? formatEventTime(event.start_datetime, event, 'EEE, MMM d · h:mm a', language)
     : '';
   const where = [event.venue_name, event.city, event.location]
     .find((v) => typeof v === 'string' && v.trim().length > 0);
@@ -33,17 +34,30 @@ export async function shareEvent(event: any, language: Language = 'en'): Promise
     .join(' · ');
   if (meta) lines.push(meta);
 
-  // The canonical tikem.co event URL (unchanged from the original helper),
-  // set off by a blank line so it reads as the call-to-action.
+  // The canonical tikem.co event URL (unchanged from the original helper).
   const url = `https://www.tikem.co/events/${event.id}`;
-  const message = lines.length ? `${lines.join('\n')}\n\n${url}` : url;
 
   try {
-    await Share.share({
-      title: title || undefined,
-      message,
-    });
+    await shareLink({ title: title || undefined, text: lines.join('\n'), url });
   } catch (e) {
     console.warn('[share] Share failed:', e);
+  }
+}
+
+/**
+ * Share a web link so it unfurls into its preview card (the event poster).
+ *
+ * iOS gets it as Share's `url`, which iMessage turns into the rich preview
+ * bubble (inside `message` as well, the link showed twice and the card could
+ * be suppressed); Android ignores `url`, so there the link goes at the end of
+ * the message, set off by a blank line, where WhatsApp and Messages pick it
+ * up. Rejects like Share.share does. Port of Tikra c1562627.
+ */
+export async function shareLink({ title, text, url }: { title?: string; text?: string; url: string }): Promise<void> {
+  const body = (text || '').trim();
+  if (Platform.OS === 'ios') {
+    await Share.share(body ? { title, message: body, url } : { title, url });
+  } else {
+    await Share.share({ title, message: body ? `${body}\n\n${url}` : url });
   }
 }

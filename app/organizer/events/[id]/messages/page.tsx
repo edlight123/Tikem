@@ -25,10 +25,11 @@ export default async function EventMessagesPage({
   // ?thread= comes from the "new message" email and push: open that thread.
   const rawThread = (await searchParams)?.thread
   const initialThreadId = (Array.isArray(rawThread) ? rawThread[0] : rawThread) || null
-  const { event: __event, orgId } = await requireEventPage(eventId, 'view', `/organizer/events/${eventId}/messages`)
+  const { event: __event, orgId, user } = await requireEventPage(eventId, 'view', `/organizer/events/${eventId}/messages`)
   const eventData = __event as { organizer_id?: string; title?: string }
 
-  const threads = await listThreadsForOrganizer({ organizerId: orgId, eventId })
+  // viewerId marks which reactions are this team member's own.
+  const threads = await listThreadsForOrganizer({ organizerId: orgId, eventId, viewerId: user.id })
 
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { familyMax, freeClaimCapFor } from '../lib/family';
 import {
   Modal,
   View,
@@ -7,6 +8,7 @@ import {
   TouchableOpacity,
   Animated,
 } from 'react-native';
+import { useAndroidBottomInset } from '../hooks/useAndroidBottomInset';
 import { useSwipeToClose } from '../hooks/useSwipeToClose';
 import { X, Plus, Minus } from 'lucide-react-native';
 import { useTheme } from '../contexts/ThemeContext';
@@ -17,6 +19,7 @@ import { colors as T, radius, spacing, font } from '../theme/tokens';
 import WhitePillCTA from './WhitePillCTA';
 import type { Attribution } from '../lib/attribution';
 import { displayCapacity, freeClaimCap } from '../lib/ticketPricing';
+import { MAX_DOOR_TICKETS_PER_PERSON, doorMoney, doorPriceOf, isDoorEvent, lowestDoorPrice } from '../lib/payAtDoor';
 import { PlusOneFields, plusOnesPayload, resizePlusOnes, type PlusOneDraft } from './AttendRequestSheet';
 
 /**
@@ -125,8 +128,10 @@ export default function FreeTicketModal({
 }: FreeTicketModalProps) {
   const { colors } = useTheme();
   const showAlert = useAppAlert();
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const styles = getStyles(colors);
+  // Clear of Android's system bar (edge to edge).
+  const bottomInset = useAndroidBottomInset(spacing.xxl);
   const [quantity, setQuantity] = useState(1);
   const [loading, setLoading] = useState(false);
   const swipe = useSwipeToClose(onClose, visible);
@@ -148,7 +153,20 @@ export default function FreeTicketModal({
     ? Infinity
     : totalCap - (Number(event.tickets_sold) || 0);
   // Per-person cap, tightened by the organizer's per-order limit on the free tier.
-  const maxQuantity = Math.min(freeClaimCap((event as any)?.ticket_tiers, tierId), remainingTickets);
+  // Pay at the door (lib/payAtDoor): reserve up to 6 (families); what is owed
+  // on arrival is shown below. The chosen tier's door price when known, else
+  // the event's lowest.
+  const eventTiers: any[] = Array.isArray((event as any)?.ticket_tiers) ? (event as any).ticket_tiers : [];
+  const isDoor = isDoorEvent(event as any, eventTiers);
+  // Family registration (lib/family): the limit is the family size, and each member can be marked as a child.
+  const isFamily = !isDoor && familyMax(event as any) > 0;
+  const chosenTier = tierId ? eventTiers.find((tier) => String(tier?.id) === String(tierId)) : null;
+  const doorUnit =
+    doorPriceOf(chosenTier) || lowestDoorPrice(eventTiers) || Number((event as any)?.door_price_from) || 0;
+  const maxQuantity = Math.min(
+    isDoor ? MAX_DOOR_TICKETS_PER_PERSON : freeClaimCap((event as any)?.ticket_tiers, tierId, freeClaimCapFor(event as any)),
+    remainingTickets
+  );
   // The quantity actually claimed: the upstream selection when locked, else the
   // stepper value.
   const claimQuantity = isLocked ? (lockedQuantity as number) : quantity;
@@ -159,7 +177,7 @@ export default function FreeTicketModal({
     setPlusOnes((prev) => resizePlusOnes(prev, namedSlots));
   }, [namedSlots]);
   const namedPlusOnes =
-    namedSlots > 0 && namedSlots === claimQuantity - 1 && plusOnes.length === namedSlots && plusOnes.every((p) => p.firstName.trim())
+    namedSlots > 0 && namedSlots === claimQuantity - 1 && plusOnes.length === namedSlots && plusOnes.some((p) => p.firstName.trim() || (isFamily && p.child))
       ? plusOnesPayload(plusOnes)
       : null;
 
@@ -379,7 +397,7 @@ export default function FreeTicketModal({
           onPress={() => !loading && onClose()}
           accessibilityLabel={t('common.cancel')}
         />
-        <Animated.View style={[styles.modalContainer, swipe.sheetStyle]}>
+        <Animated.View style={[styles.modalContainer, bottomInset, swipe.sheetStyle]}>
           {/* Paints below the sheet's edge, so the event page's sticky bar can never
               show through a gap under the sheet (see ContactOrganizerModal). */}
           <View pointerEvents="none" style={styles.bottomFill} />
@@ -396,6 +414,15 @@ export default function FreeTicketModal({
               {tierName ? (
                 <Text style={styles.eventLine} numberOfLines={1}>{tierName}</Text>
               ) : null}
+              {isDoor && (
+                <Text style={styles.eventLine} numberOfLines={2}>
+                  {doorUnit > 0
+                    ? t('freeTicket.doorDue', {
+                        amount: doorMoney(doorUnit * claimQuantity, (event as any)?.currency || 'HTG', language),
+                      })
+                    : t('freeTicket.doorOnly')}
+                </Text>
+              )}
             </View>
             <TouchableOpacity
               onPress={onClose}
@@ -456,8 +483,10 @@ export default function FreeTicketModal({
 
           {namedSlots > 0 && (
             <View style={styles.plusOneSection}>
-              <Text style={styles.plusOneTitle}>{t('attendRequests.claimPlusOne.title')}</Text>
-              <PlusOneFields value={plusOnes} onChange={setPlusOnes} editable={!loading} />
+              <Text style={styles.plusOneTitle}>
+                {isFamily ? t('freeTicket.familyTitle') : t('attendRequests.claimPlusOne.title')}
+              </Text>
+              <PlusOneFields value={plusOnes} onChange={setPlusOnes} editable={!loading} family={isFamily} />
             </View>
           )}
 
@@ -465,7 +494,7 @@ export default function FreeTicketModal({
               second Cancel next to the close button. */}
           <WhitePillCTA
             variant="rsvp"
-            label={pc('freeTicket.claimButton', claimQuantity)}
+            label={isDoor ? pc('freeTicket.reserveButton', claimQuantity) : pc('freeTicket.claimButton', claimQuantity)}
             onPress={handleClaimTickets}
             loading={loading}
             disabled={remainingTickets <= 0}

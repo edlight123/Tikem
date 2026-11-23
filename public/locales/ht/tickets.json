@@ -134,7 +134,9 @@
     "no_active_tickets": "Pa gen tikè aktif pou evènman sa a.",
     "tickets_count_one": "{{count}} Tikè",
     "tickets_count_other": "{{count}} Tikè",
-    "tickets_count_plural": "{{count}} Tikè"
+    "tickets_count_plural": "{{count}} Tikè",
+    "pay_at_door": "Peye {{amount}} nan pòt la",
+    "paid_at_door": "Peye nan pòt la deja"
   },
   "purchase_success": {
     "title": "Acha a reyisi!",

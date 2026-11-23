@@ -164,6 +164,7 @@ export default function EventAnalyticsScreen() {
     null
   );
   const maxCity = Math.max(1, ...a.cities.map((c) => c.buyers));
+  const views = data!.views ?? null;
 
   return (
     <View style={styles.container}>
@@ -202,7 +203,18 @@ export default function EventAnalyticsScreen() {
                 value: a.ticketsSold > 0 ? pct(a.checkInRate) : '0%',
                 caption: t('organizerEventAnalytics.checkedInCaption', { n: a.checkedIn }),
               },
+              // Page views (server lib/events/views.ts), when the server sends them.
+              ...(views
+                ? [
+                    {
+                      label: t('eventViews.views'),
+                      value: views.total.toLocaleString(),
+                      caption: views.today > 0 ? t('eventViews.today', { count: views.today }) : undefined,
+                    },
+                  ]
+                : []),
             ]}
+            columns={(hideRevenue ? 2 : 3) + (views ? 1 : 0) === 4 ? 2 : 3}
           />
         </View>
 

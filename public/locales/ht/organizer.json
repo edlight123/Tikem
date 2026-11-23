@@ -206,7 +206,8 @@
     "loading": "Chajman…",
     "load_more": "Chaje plis evènman",
     "clear_filters": "Efase filt yo",
-    "search_scope_note": "Rechèch la kouvri {{count}} evènman ki chaje jiskaprezan. Chaje plis pou chèche pi lwen."
+    "search_scope_note": "Rechèch la kouvri {{count}} evènman ki chaje jiskaprezan. Chaje plis pou chèche pi lwen.",
+    "import_events": "Enpòte evènman"
   },
   "event_card_detail": {
     "sold_out": "VANN FINI",
@@ -636,7 +637,14 @@
     "entry_main_entrance": "Gran pòt la",
     "entry_vip_entrance": "Pòt VIP",
     "entry_side_door": "Pòt akote",
-    "entry_back_entrance": "Pòt dèyè"
+    "entry_back_entrance": "Pòt dèyè",
+    "pay_at_door": "Peye nan pòt la",
+    "paid_at_door": "Peye nan pòt la deja",
+    "collect_amount": "Resevwa {{amount}}",
+    "mark_paid": "Make peye",
+    "undo_payment": "Anile",
+    "payment_needs_connection": "Ou bezwen koneksyon pou anrejistre peman an.",
+    "child": "Timoun"
   },
   "markets": {
     "title": "Kote w fè evènman",
@@ -970,6 +978,8 @@
     "balance_changed": "Balans ou chanje, tanpri eseye ankò.",
     "free_event_nothing": "Evènman gratis, pa gen anyen pou peye.",
     "back_to_all": "← Retounen nan tout revni yo",
+    "withdrawn_amount": "{{amount}} retire",
+    "not_withdrawn_yet": "Poko retire",
     "paid_to_stripe": "Peye sou kont Stripe ou",
     "paid_to_stripe_hint": "Vant ak kat yo ale dirèk sou kont Stripe ou, se poutèt sa yo pa nan Nèt ni nan Disponib isit la."
   },
@@ -1034,7 +1044,11 @@
     "attendee_information": "Enfòmasyon sou patisipan an",
     "process_refund": "Fè ranbousman an",
     "resend_ticket_email": "Voye tikè a pa imel ankò",
-    "ticket_information": "Enfòmasyon sou tikè a"
+    "ticket_information": "Enfòmasyon sou tikè a",
+    "pay_at_door": "Peye nan pòt la",
+    "door_paid": "Peye {{amount}} nan pòt la",
+    "door_owes": "Dwe {{amount}} nan pòt la",
+    "with": "avèk"
   },
   "event_staff": {
     "actions": "Aksyon",
@@ -1270,6 +1284,10 @@
     "monitor_logins": "Siveye koneksyon resan sou kont ou",
     "new_password": "Nouvo modpas",
     "password_min_length": "Modpas la dwe gen omwen 8 karaktè"
+  },
+  "page_views": {
+    "label": "Vizit paj la",
+    "today": "{{count}} jodi a"
   },
   "command_center": {
     "add_a_flyer": "Ajoute yon flyer",
@@ -1569,7 +1587,13 @@
     "send": "Voye repons lan",
     "sending": "N ap voye…",
     "error_generic": "Nou pa t ka voye repons ou. Eseye ankò.",
-    "error_limit": "Konvèsasyon sa a rive nan limit mesaj li."
+    "error_limit": "Konvèsasyon sa a rive nan limit mesaj li.",
+    "react": "Ajoute yon reyaksyon",
+    "react_with": "Reyaji ak {{emoji}}",
+    "reaction_count": "{{emoji}}, {{count}}",
+    "reaction_failed": "Nou pa t ka anrejistre reyaksyon ou.",
+    "blocked": "Ou pa ka ekri moun sa a.",
+    "you_blocked": "Ou bloke moun sa a. Debloke l pou w ka ekri l."
   },
   "qr_scanner": {
     "camera_not_available": "Kamera a pa disponib",
@@ -1703,7 +1727,11 @@
     "remove_access_if_lost": "Retire aksè a touswit si yon aparèy pèdi",
     "need_help": "Bezwen èd?",
     "support_can_help": "Ekip sipò nou an ka ede w entegre gwo ekip epi konfigire aksè yo.",
-    "back_to_settings": "Retounen nan paramèt yo"
+    "back_to_settings": "Retounen nan paramèt yo",
+    "at_the_door": "nan pòt la",
+    "door_collected": "Resevwa",
+    "door_outstanding": "Rès pou peye",
+    "door_note": "Yo peye w an pèsòn. Tikem pa pran okenn frè sou li, e li pa fè pati vèsman ou yo."
   },
   "verify_to_withdraw": {
     "title": "Verifye idantite w pou w retire lajan",
@@ -1779,5 +1807,65 @@
     "error_generic_title": "gen yon bagay ki pa mache",
     "error_generic_body": "Nou pa t ka aksepte envitasyon an. Verifye koneksyon ou epi eseye ankò.",
     "go_home": "Ale sou Tikèm"
+  },
+  "import_page": {
+    "eyebrow": "Òganizatè",
+    "title": "Enpòte evènman",
+    "intro": "Pote evènman ou yo soti sou Eventbrite, Luma, Meetup oswa pwòp sit ou. Yo rive kòm bouyon pou w tcheke, epi pibliye.",
+    "link_title": "ak yon lyen",
+    "link_body": "Kole lyen yon evènman, oswa yon paj òganizatè ki gen plizyè.",
+    "link_label": "Lyen yon evènman oswa yon paj òganizatè",
+    "find": "Chèche",
+    "finding": "N ap chèche…",
+    "error_generic": "Gen yon pwoblèm. Eseye ankò.",
+    "errors": {
+      "bad_url": "Kole yon lyen https piblik pou yon evènman oswa yon paj òganizatè.",
+      "unreachable": "Nou pa t ka louvri paj sa a. Tcheke lyen an, oswa eseye paj evènman an li menm.",
+      "none_found": "Pa gen evènman k ap vini sou paj sa a. Eseye lyen yon sèl evènman.",
+      "rate_limited": "Twòp enpòtasyon kounye a. Eseye ankò nan yon ti moman.",
+      "none_picked": "Chwazi omwen yon evènman.",
+      "not_connected": "Konekte Eventbrite anvan.",
+      "expired": "Eventbrite pa t reponn. Rekonekte l epi eseye ankò.",
+      "unavailable": "Enpòtasyon Eventbrite pa disponib ankò."
+    },
+    "found_one": "{{count}} evènman jwenn",
+    "found_other": "{{count}} evènman jwenn",
+    "select_all": "Chwazi tout",
+    "select_none": "Pa chwazi okenn",
+    "free": "Gratis",
+    "free_lower": "gratis",
+    "online": "Sou entènèt",
+    "importing": "N ap enpòte…",
+    "import_drafts_one": "Enpòte {{count}} evènman kòm bouyon",
+    "import_drafts_other": "Enpòte {{count}} evènman kòm bouyon",
+    "drafts_ready_one": "{{count}} bouyon pare. Tcheke l, epi pibliye.",
+    "drafts_ready_other": "{{count}} bouyon pare. Tcheke chak, epi pibliye.",
+    "skipped": "Deja sou Tikèm, nou kite l jan l ye",
+    "draft": "Bouyon",
+    "flag_currency": "Pri yo te an {{currency}}. Tcheke yo anvan ou pibliye.",
+    "flag_country": "Kote sa a pa nan mache nou yo. Tcheke kote a anvan ou pibliye.",
+    "flag_price": "Gen yon pri ki anba minimòm nan. Tcheke l anvan ou pibliye.",
+    "review": "Tcheke",
+    "eb_title": "eventbrite",
+    "eb_connect_body": "Konekte kont Eventbrite ou pou pote evènman ou yo vini ak kalite tikè yo.",
+    "eb_connected_body": "Konekte. Chwazi evènman pou pote kòm bouyon, oswa kenbe sa ki an liy yo ajou.",
+    "eb_connect": "Konekte Eventbrite",
+    "eb_disconnect": "Dekonekte",
+    "eb_just_connected": "Eventbrite konekte.",
+    "eb_error": "Nou pa t ka konekte Eventbrite. Eseye ankò.",
+    "eb_cancelled": "Eventbrite pa t konekte.",
+    "eb_expired": "Koneksyon Eventbrite ou a ekspire. Konekte l ankò.",
+    "eb_sync_title": "Kenbe evènman Eventbrite mwen yo sou Tikèm",
+    "eb_sync_hint": "Evènman ki an liy yo parèt isit la epi yo mete ajou chak jou. Tikè yo rete sou Eventbrite.",
+    "eb_last_synced": "Dènye senkwonizasyon {{when}}",
+    "eb_never_synced": "Poko senkwonize",
+    "eb_sync_now": "Senkwonize kounye a",
+    "eb_syncing": "N ap senkwonize…",
+    "eb_sync_failed": "Senkwonizasyon an pa t fini. Eseye ankò pita.",
+    "eb_sync_limited": "Eventbrite mande nou ralanti. Rès la ap vini nan pwochen senkwonizasyon an.",
+    "eb_sync_done_one": "Senkwonize. {{count}} evènman ajou.",
+    "eb_sync_done_other": "Senkwonize. {{count}} evènman ajou.",
+    "eb_none": "Pa gen evènman Eventbrite k ap vini pou pote.",
+    "eb_drafts_body": "Oswa pote evènman kòm bouyon, ak kalite tikè yo, pou vann sou Tikèm."
   }
 }

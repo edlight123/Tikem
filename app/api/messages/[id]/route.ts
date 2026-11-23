@@ -43,7 +43,7 @@ export async function GET(
       )
     }
 
-    const thread = await buildConversationView(record)
+    const thread = await buildConversationView(record, user.id)
     return NextResponse.json({ thread })
   } catch (error) {
     console.error('messages thread failed', error)

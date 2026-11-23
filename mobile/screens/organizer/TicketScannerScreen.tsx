@@ -54,6 +54,7 @@ import {
   loadCachedDoorList,
   pendingCount,
   postCheckIn,
+  postDoorPayment,
   queueCheckIn,
   readCheckInQueue,
   saveDoorList,
@@ -61,6 +62,7 @@ import {
 import { Camera, DoorOpen, Search, Vibrate, VibrateOff, X } from 'lucide-react-native';
 
 import { Touchable } from '../../components/ui/Touchable';
+import { doorBalance, doorMoney } from '../../lib/payAtDoor';
 type RouteParams = {
   TicketScanner: {
     eventId: string;
@@ -90,6 +92,8 @@ type ScanResult = {
   tierName?: string;
   message?: string;
   checkedInTime?: Date;
+  /** Pay at the door: what this ticket owes on arrival (lib/payAtDoor). */
+  door?: { owes: number; currency: string; paid: boolean } | null;
   ticketId?: string;
   // HARD validity block derived from the resolved tier's valid_from /
   // valid_until ENTRY window. When set on a VALID ticket, the default green
@@ -209,6 +213,8 @@ export default function TicketScannerScreen() {
   const processingRef = useRef(false);
   const lastScanRef = useRef<{ id: string | null; at: number }>({ id: null, at: 0 });
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
+  const [doorBusy, setDoorBusy] = useState(false);
+  const [doorError, setDoorError] = useState('');
   // Offline support. `offlineReady` is how many guests we pre-loaded into the
   // cache; `isOffline` flips true the moment a read/write is served from cache
   // (i.e. no connectivity) so staff get a clear "scans will sync" signal.
@@ -328,7 +334,7 @@ export default function TicketScannerScreen() {
           // scanner needs to validate/display). Fall back to a generic label
           // rather than caching the email address on disk.
           manifest[d.id] = {
-            name: x.attendee_name || x.user_name || x.userName || '',
+            name: (x.plus_one_name ? `${x.plus_one_name}${x.plus_one_child === true ? ` · ${t('attendRequests.sheet.child')}` : ''}` : '') || x.attendee_name || x.user_name || x.userName || '',
             tier: x.tier_name || x.ticket_tier_name || x.ticket_type || x.ticketType || x.tierName || '',
             status: x.status || 'active',
             checkedIn: !!x.checked_in_at || x.checked_in === true,
@@ -599,6 +605,10 @@ export default function TicketScannerScreen() {
   const doorVerdictToResult = (row: DoorRow | null, verdict: DoorVerdict, method: CheckInMethod): ScanResult => {
     const attendeeName = row?.name || t('common.attendee');
     const tierName = row?.tier || t('common.generalAdmission');
+    const door =
+      row && row.doorOwes != null
+        ? { owes: Number(row.doorOwes) || 0, currency: String(row.doorCurrency || 'CAD'), paid: row.doorPaid === true }
+        : null;
     switch (verdict) {
       case 'NOT_FOUND':
         return { status: 'NOT_FOUND', message: t('doorScanner.door.notOnList') };
@@ -630,6 +640,7 @@ export default function TicketScannerScreen() {
           tierName,
           ticketId: row?.id,
           method,
+          door,
           checkedInTime,
           message: checkedInTime
             ? `${t('organizerTicketScanner.results.alreadyCheckedInAtPrefix')}${checkedInTime.toLocaleString(locale)}`
@@ -643,12 +654,13 @@ export default function TicketScannerScreen() {
           tierName,
           ticketId: row?.id,
           method,
+          door,
           validityBlock:
             computeTierValidityBlock({ valid_from: row?.validFrom, valid_until: row?.validUntil }, locale, t) ||
             t('organizerCreateEventFlow.canvas.ticketExpired'),
         };
       default:
-        return { status: 'VALID', attendeeName, tierName, ticketId: row?.id, method };
+        return { status: 'VALID', attendeeName, tierName, ticketId: row?.id, method, door };
     }
   };
 
@@ -742,7 +754,11 @@ export default function TicketScannerScreen() {
 
       const ticketData = ticketSnap.data();
 
+      // A family member or plus-one (lib/family): their own name, marked when a child.
       const attendeeName =
+        (ticketData.plus_one_name
+          ? `${ticketData.plus_one_name}${ticketData.plus_one_child === true ? ` · ${t('attendRequests.sheet.child')}` : ''}`
+          : '') ||
         ticketData.attendee_name ||
         ticketData.user_name ||
         ticketData.userName ||
@@ -823,6 +839,7 @@ export default function TicketScannerScreen() {
           tierName,
           ticketId,
           method,
+          door: doorBalance(ticketData),
           checkedInTime,
           message: checkedInTime
             ? `${t('organizerTicketScanner.results.alreadyCheckedInAtPrefix')}${checkedInTime.toLocaleString(locale)}`
@@ -873,6 +890,7 @@ export default function TicketScannerScreen() {
         ticketId,
         validityBlock,
         method,
+        door: doorBalance(ticketData),
       };
     } catch (error: any) {
       // Rules refused this ticket read: this user is door-only here.
@@ -1478,6 +1496,55 @@ export default function TicketScannerScreen() {
                 <Text style={styles.message}>{scanResult.message}</Text>
               )}
 
+              {/* Pay at the door: collect, then record it (needs a connection;
+                  money is never queued offline). Tikem takes no fee on it. */}
+              {scanResult?.door && scanResult.ticketId && (
+                <View style={styles.doorRow}>
+                  <View style={{ flex: 1 }}>
+                    <View style={styles.doorStatus}>
+                      <View style={[styles.doorDot, { backgroundColor: scanResult.door.paid ? T.emerald : T.amber }]} />
+                      <Text style={styles.doorKicker}>
+                        {scanResult.door.paid ? t('doorScanner.door.paidAtDoor') : t('doorScanner.door.payAtDoor')}
+                      </Text>
+                    </View>
+                    {!scanResult.door.paid && (
+                      <Text style={styles.doorAmount}>
+                        {t('doorScanner.door.collectAmount', {
+                          amount: doorMoney(scanResult.door.owes, scanResult.door.currency, language),
+                        })}
+                      </Text>
+                    )}
+                    {doorError ? <Text style={styles.doorError}>{doorError}</Text> : null}
+                  </View>
+                  {!scanResult.door.paid && (
+                    <TouchableOpacity
+                      style={styles.doorButton}
+                      disabled={doorBusy}
+                      accessibilityRole="button"
+                      onPress={async () => {
+                        if (!scanResult?.ticketId) return;
+                        setDoorBusy(true);
+                        setDoorError('');
+                        try {
+                          await postDoorPayment(eventId, scanResult.ticketId, true);
+                          setScanResult((prev) => (prev && prev.door ? { ...prev, door: { ...prev.door, paid: true } } : prev));
+                        } catch {
+                          setDoorError(t('doorScanner.door.paymentNeedsConnection'));
+                        } finally {
+                          setDoorBusy(false);
+                        }
+                      }}
+                    >
+                      {doorBusy ? (
+                        <ActivityIndicator color={T.onWhite} />
+                      ) : (
+                        <Text style={styles.doorButtonText}>{t('doorScanner.door.markPaid')}</Text>
+                      )}
+                    </TouchableOpacity>
+                  )}
+                </View>
+              )}
+
               {isProcessing && scanResult?.status === 'VALID' && (
                 <ActivityIndicator size="large" color={colors.primary} style={styles.loader} />
               )}
@@ -1553,6 +1620,24 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     justifyContent: 'center',
     zIndex: 2,
   },
+  doorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 12,
+    padding: 14,
+    borderRadius: radius.sm,
+    backgroundColor: T.surface,
+    alignSelf: 'stretch',
+  },
+  // Dot + label status (no pill); the white primary button, 40pt like the web.
+  doorStatus: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  doorDot: { width: 6, height: 6, borderRadius: 3 },
+  doorKicker: { fontSize: 11, fontWeight: '700', letterSpacing: 1.2, textTransform: 'uppercase', color: T.textSecondary },
+  doorAmount: { marginTop: 4, fontSize: 20, fontWeight: '700', color: T.textPrimary },
+  doorError: { marginTop: 4, fontSize: 12, color: T.red },
+  doorButton: { backgroundColor: T.white, paddingHorizontal: 16, height: 40, justifyContent: 'center', borderRadius: radius.sm },
+  doorButtonText: { color: T.onWhite, fontWeight: '700', fontSize: 14 },
   message: {
     fontSize: 15,
     color: colors.text,

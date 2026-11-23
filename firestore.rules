@@ -15,6 +15,22 @@ service cloud.firestore {
       return raw is string ? raw.upper() : '';
     }
 
+    // Venue details (lib/events/venue-details.ts): optional, and when present
+    // exactly the shapes the event page knows how to show. .get() so a doc
+    // without them (every event before this) passes untouched.
+    function validVenueDetails(d) {
+      let amenities = d.get('amenities', []);
+      let setting = d.get('venue_setting', null);
+      let age = d.get('age_policy', null);
+      let dress = d.get('dress_code', null);
+      return amenities is list
+        && amenities.size() <= 4
+        && amenities.hasOnly(['parking', 'step_free', 'accessible_washrooms', 'coat_check'])
+        && (setting == null || setting in ['indoor', 'outdoor', 'mixed'])
+        && (age == null || age in ['18+', '21+'])
+        && (dress == null || (dress is string && dress.size() <= 60));
+    }
+
     function isCurrencyAllowedForCountry(countryRaw, currencyRaw) {
       let c = normalizedCountry(countryRaw);
       let cur = normalizedCurrency(currencyRaw);
@@ -274,6 +290,10 @@ service cloud.firestore {
       // draft and publish as a second, server-side step; this makes that the
       // only possible order rather than a convention a client can skip.
       allow create: if isSignedIn()
+        // imp_<hash> (imported drafts) and eb_<id> (Eventbrite copies) are
+        // written only by the server (lib/import): a client must not squat
+        // another organizer's import or Eventbrite id.
+        && !eventId.matches('^(imp|eb)_.*')
         && managesOrg(request.resource.data.organizer_id)
         && request.resource.data.get('is_published', false) == false
         // status 'published' is also honoured as published by some readers, so
@@ -293,9 +313,16 @@ service cloud.firestore {
         // by the Admin SDK only: a lower count would hide shards from the
         // capacity check.
         && request.resource.data.get('inventory_shards_n', null) == null
+        // Import bookkeeping, the Eventbrite ticket link and Eventbrite's
+        // public counts (lib/import): Admin SDK only, so a link out or an
+        // attendance figure visitors see is never typed in by a client.
+        && request.resource.data.get('imported', null) == null
+        && request.resource.data.get('external_url', null) == null
+        && request.resource.data.get('stats', null) == null
         // Approval lists are for FREE events only (docs/specs/approval-lists-and-plus-ones.md).
         && !(request.resource.data.get('requires_approval', false) == true
              && request.resource.data.get('has_paid_tiers', false) == true)
+        && validVenueDetails(request.resource.data)
         && isCurrencyAllowedForCountry(request.resource.data.country, request.resource.data.currency);
 
       allow update: if isSignedIn() && (
@@ -310,6 +337,7 @@ service cloud.firestore {
           // Approval lists are for FREE events only (see create above).
           !(request.resource.data.get('requires_approval', false) == true &&
             request.resource.data.get('has_paid_tiers', false) == true) &&
+          validVenueDetails(request.resource.data) &&
           // H3: moderation fields are client-immutable so a rejected/reported
           // organizer can't re-surface their event. Admin SDK still writes them
           // (it bypasses rules). .get() defaults keep legacy docs that predate
@@ -338,6 +366,18 @@ service cloud.firestore {
           // Admin SDK when the event's shards are created. Lowering it would hide
           // shards (and the seats they hold or sold) from the capacity check.
           request.resource.data.get('inventory_shards_n', null) == resource.data.get('inventory_shards_n', null) &&
+          // Import fields (lib/import) are the server's. The one client change
+          // allowed: marking a synced Eventbrite copy as edited here
+          // (imported.locally_edited = true), so the daily sync stops
+          // overwriting the organizer's own words (lib/import/eventbrite-sync).
+          (request.resource.data.get('imported', null) == resource.data.get('imported', null) ||
+            (resource.data.get('imported', null) is map &&
+             resource.data.imported.get('source', '') == 'eventbrite' &&
+             request.resource.data.get('imported', null) is map &&
+             request.resource.data.imported.diff(resource.data.imported).affectedKeys().hasOnly(['locally_edited']) &&
+             request.resource.data.imported.locally_edited == true)) &&
+          request.resource.data.get('external_url', null) == resource.data.get('external_url', null) &&
+          request.resource.data.get('stats', null) == resource.data.get('stats', null) &&
           // Payout safety (lib/payouts/availability.ts): a cancellation and its
           // payout freeze are set by lib/events/cancel.ts on the Admin SDK and
           // must not be undone from a client — un-cancelling would re-open money
@@ -475,6 +515,10 @@ service cloud.firestore {
       // legitimate client ticket write is a check-in (mobile TicketScannerScreen
       // and EventAttendeesScreen); everything else goes through Admin-SDK routes.
       // The list is mirrored in __tests__/firestore-rules-ticket-update.test.ts.
+      // Pay at the door (lib/tickets/pay-at-door): door_price, door_currency,
+      // door_paid, door_amount, door_paid_at and door_paid_by are deliberately
+      // NOT in it. Only /api/staff/events/{id}/door-payment (Admin SDK) records
+      // cash taken at the door, so no client can mark its own spot paid.
       allow update: if isSignedIn() &&
         (isEventOwner(ticketEventId()) || canCheckin(ticketEventId())) &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly([
@@ -811,6 +855,19 @@ service cloud.firestore {
         resource.data.sender_id == request.auth.uid
       );
       allow create, update, delete: if false;
+
+      // Replies (with their quotes and `reactions` maps) and the opening
+      // message's reactions (reactions/opening) are SERVER-ONLY: written and
+      // read through /api/messages and /api/organizer/messages. A reaction map
+      // is keyed by uid, so letting a participant read it would tell the
+      // attendee which person on the org's team reacted. Listed explicitly
+      // (the default deny below already covers them) so nobody opens them later.
+      match /replies/{replyId} {
+        allow read, write: if false;
+      }
+      match /reactions/{targetId} {
+        allow read, write: if false;
+      }
     }
 
     // User reports + moderation bookkeeping (App Store 1.2) — server only.
@@ -851,6 +908,20 @@ service cloud.firestore {
       allow read, write: if false;
     }
     match /invite_purchases/{purchaseId} {
+      allow read, write: if false;
+    }
+
+    // Event page views (lib/events/views.ts): counts and the hashed
+    // once-per-viewer-per-day markers. Server-only (Admin SDK): organizers read
+    // their counts through GET /api/events/{id}/views. Explicit for
+    // documentation; the default deny below would refuse them anyway.
+    match /event_view_stats/{eventId} {
+      allow read, write: if false;
+      match /days/{day} {
+        allow read, write: if false;
+      }
+    }
+    match /event_view_seen/{markerId} {
       allow read, write: if false;
     }
 

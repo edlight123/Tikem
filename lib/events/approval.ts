@@ -6,6 +6,7 @@
  * mirrors it in mobile/lib/attendRequests.ts (a parity test keeps them equal).
  */
 
+import { familyMax } from '@/lib/events/family'
 import { MAX_FREE_TICKETS_PER_PERSON, hasPaidTier, type TierPriceLike } from '@/lib/ticketPricing'
 
 /** The most plus-ones an organizer can offer, before the free-ticket cap. */
@@ -24,6 +25,8 @@ export type AttendRequestStatus = 'pending' | 'approving' | 'approved' | 'declin
 export interface PlusOne {
   first_name: string
   phone: string | null
+  /** Family registration: this member is a child (lib/events/family). */
+  child?: true
 }
 
 /** One request per person per event: a double tap cannot make two. */
@@ -52,7 +55,12 @@ export function allowedPlusOnes(setting: unknown, cap: number = MAX_FREE_TICKETS
 }
 
 /** The plus-ones a guest may name on this event. */
-export function eventAllowedPlusOnes(event: { plus_ones_max?: unknown } | null | undefined): number {
+export function eventAllowedPlusOnes(
+  event: { plus_ones_max?: unknown; family_registration?: unknown; family_max?: unknown } | null | undefined
+): number {
+  // Family registration names everyone else in the family (lib/events/family).
+  const family = familyMax(event)
+  if (family) return family - 1
   return allowedPlusOnes(event?.plus_ones_max)
 }
 
@@ -97,15 +105,16 @@ export function parseAttendInput(
     }
   }
   const plusOnes: PlusOne[] = []
-  for (const entry of list) {
-    const firstName = String((entry as any)?.firstName ?? (entry as any)?.first_name ?? '').trim()
-    if (!firstName) {
-      return { ok: false, error: 'Each plus-one needs a first name.', code: 'plus_one_name_required' }
-    }
+  for (const [i, entry] of list.entries()) {
+    // Names are optional (owner, 2026-11-21: keep RSVPs easy): "Ahmed +2" is
+    // enough, and an unnamed guest is listed as "Guest 2", "Guest 3"…
+    const typed = String((entry as any)?.firstName ?? (entry as any)?.first_name ?? '').trim()
+    const firstName = typed || `Guest ${i + 2}`
     const phoneRaw = String((entry as any)?.phone ?? '').trim()
     plusOnes.push({
       first_name: firstName.slice(0, PLUS_ONE_NAME_MAX),
       phone: phoneRaw ? phoneNormalizer(phoneRaw) || null : null,
+      ...((entry as any)?.child === true ? { child: true as const } : {}),
     })
   }
   const note = String(raw?.note ?? '').trim()

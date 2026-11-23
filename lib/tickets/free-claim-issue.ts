@@ -20,6 +20,7 @@
 import { adminDb } from '@/lib/firebase/admin'
 import { notifyTicketPurchase, notifyOrganizerTicketSale } from '@/lib/notifications/helpers'
 import { FieldValue } from 'firebase-admin/firestore'
+import { freeClaimCapFor } from '@/lib/events/family'
 import {
   buildTierSoldIncrements,
   releaseInventoryReservation,
@@ -38,11 +39,16 @@ import { tierOrderLimitRefusal, type TierLine } from '@/lib/tickets/purchasable'
 import {
   FREE_CLAIM_LOCK_IN_FLIGHT_MS,
   GUEST_ALREADY_CLAIMED_MESSAGE,
+  MAX_FREE_TICKETS_PER_CLAIM,
+  doorClaimLockId,
   freeClaimLockId,
   isAlreadyExists,
+  isDoorTicket,
   isVoidedFreeTicket,
+  liveDoorTicketsFor,
   liveFreeTicketsFor,
 } from '@/lib/tickets/free-claim-policy'
+import { MAX_DOOR_TICKETS_PER_PERSON, doorTicketFields, isDoorTier } from '@/lib/tickets/pay-at-door'
 import type { PlusOne } from '@/lib/events/approval'
 
 /** One validated line of a claim: which tier, how many, and what to name the tickets. */
@@ -142,7 +148,7 @@ function fail(error: string, code: string, status = 400): FreeClaimOutcome {
 export function plusOneTicketFields(plusOnes: PlusOne[] | undefined, index: number): Record<string, any> {
   if (index < 1 || !plusOnes || !plusOnes[index - 1]) return {}
   const p = plusOnes[index - 1]
-  return { plus_one_name: p.first_name, ...(p.phone ? { plus_one_phone: p.phone } : {}) }
+  return { plus_one_name: p.first_name, ...(p.phone ? { plus_one_phone: p.phone } : {}), ...(p.child ? { plus_one_child: true } : {}) }
 }
 
 export async function issueFreeClaim(
@@ -294,6 +300,32 @@ export async function issueFreeClaim(
     claims = [{ tierId: '', tierName: 'General Admission', quantity: ticketQuantity, unitPrice: price }]
   }
 
+  // ── Pay at the door ─────────────────────────────────────────────────────────
+  // A door tier is price 0 plus door_price > 0 (lib/tickets/pay-at-door): the
+  // claim reserves for free and each ticket records what is owed at the door.
+  // Door reservations have their own lock and cap, so a person's free claim and
+  // door reservation never block each other. One claim is one kind, never both.
+  const claimTiers = claims.map((c) => (c.tierId ? tierDocs.find((t: any) => String(t.id) === c.tierId) : null))
+  const doorFlags = claimTiers.map((t) => isDoorTier(t))
+  const isDoorClaim = doorFlags.length > 0 && doorFlags.every(Boolean)
+  if (!isDoorClaim && doorFlags.some(Boolean)) {
+    return fail('Pay-at-the-door spots are reserved on their own.', 'mixed_door_selection', 400)
+  }
+  // A family-registration event lifts the free cap to the family size (lib/events/family).
+  const claimCap = isDoorClaim ? MAX_DOOR_TICKETS_PER_PERSON : freeClaimCapFor(event)
+  if (ticketQuantity > claimCap) {
+    return fail(
+      isDoorClaim
+        ? `You can reserve at most ${claimCap} spots per event.`
+        : `You can claim at most ${claimCap} free tickets per event.`,
+      'too_many_tickets',
+      400
+    )
+  }
+  /** Same kind as this claim: door reservations and free claims are counted apart. */
+  const sameKind = (t: any) => (isDoorClaim ? isDoorTicket(t) : !isDoorTicket(t))
+  const liveOwnFor = isDoorClaim ? liveDoorTicketsFor : liveFreeTicketsFor
+
   // ── Per-tier order limit ────────────────────────────────────────────────────
   // The organizer's "Limit purchase quantity" (max_per_order). A person gets one
   // free claim per event, so on a free tier this is the per-person limit.
@@ -350,8 +382,8 @@ export async function issueFreeClaim(
   const existing = identity.isGuest
     ? userTicketsSnap.docs
         .map((d: any) => ({ id: d.id, ...d.data() }))
-        .filter((t: any) => t.event_id === eventId && Number(t.price_paid ?? 0) === 0)
-    : liveFreeTicketsFor(userTicketsSnap.docs, String(eventId))
+        .filter((t: any) => t.event_id === eventId && Number(t.price_paid ?? 0) === 0 && sameKind(t))
+    : liveOwnFor(userTicketsSnap.docs, String(eventId))
   if (existing.length > 0) {
     console.log('User already has free ticket(s) for event:', eventId, 'count:', existing.length)
     if (identity.isGuest) {
@@ -362,7 +394,9 @@ export async function issueFreeClaim(
 
   // Take the once-per-event lock BEFORE reserving, so two simultaneous claims by
   // the same claimant cannot both pass the query above and both be issued.
-  const lockRef = adminDb.collection('free_claim_locks').doc(freeClaimLockId(String(eventId), identity))
+  const lockRef = adminDb
+    .collection('free_claim_locks')
+    .doc(isDoorClaim ? doorClaimLockId(String(eventId), identity) : freeClaimLockId(String(eventId), identity))
   let lockHeld = false
   try {
     await lockRef.create({
@@ -395,7 +429,7 @@ export async function issueFreeClaim(
         const ownSnap = await tx.get(
           adminDb.collection('tickets').where('attendee_id', '==', identity.id)
         )
-        const ownLive = liveFreeTicketsFor(ownSnap?.docs || [], String(eventId))
+        const ownLive = liveOwnFor(ownSnap?.docs || [], String(eventId))
         const held = () =>
           ownLive.length > 0
             ? ({ outcome: 'has_tickets' as const, tickets: ownLive })
@@ -437,6 +471,7 @@ export async function issueFreeClaim(
               (t: any) =>
                 t.event_id === String(eventId) &&
                 Number(t.price_paid ?? 0) === 0 &&
+                sameKind(t) &&
                 [t.attendee_id, t.user_id, t.original_attendee_id, t.claimed_by].some(
                   (v: any) => v != null && String(v) === String(identity.id)
                 )
@@ -614,6 +649,9 @@ export async function issueFreeClaim(
           // present, so a plain claim keeps its exact historical doc shape.
           ...(options.ticketFields || {}),
           ...plusOneFieldsFor(issuedIndex),
+          // Pay at the door: what this spot owes on arrival (payment_method becomes
+          // 'pay_at_door'; price_paid stays 0, so no money path ever counts it).
+          ...(isDoorClaim ? doorTicketFields(claimTiers[claims.indexOf(claim)], event.currency || 'CAD') : {}),
         }
         issuedIndex += 1
 

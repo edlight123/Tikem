@@ -4,7 +4,6 @@ import {
   KeyboardAvoidingView,
   Linking,
   Modal,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -154,7 +153,7 @@ export default function DeleteAccountSheet({ visible, onClose }: Props) {
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={busy ? undefined : onClose} />
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.avoid} pointerEvents="box-none">
+      <KeyboardAvoidingView behavior="padding" style={styles.avoid} pointerEvents="box-none">
         <Animated.View style={[styles.sheet, swipe.sheetStyle, { paddingBottom: insets.bottom + 16 }]}>
           {/* No swipe-to-close while a delete/re-auth is in flight. */}
           <View {...(busy ? {} : swipe.panHandlers)}>

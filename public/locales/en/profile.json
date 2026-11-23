@@ -63,6 +63,8 @@
     "promos_desc": "Special offers, featured events, and platform updates",
     "discovery": "Events near you",
     "discovery_desc": "A pick of new events in your city",
+    "weekend_digest": "This weekend",
+    "weekend_digest_desc": "Thursday: what's on this weekend in your city",
     "filling_fast": "Selling fast",
     "filling_fast_desc": "When an event you saved is close to selling out",
     "national_day": "Haitian holidays",
@@ -210,7 +212,13 @@
       "retry": "Try again",
       "empty_title": "No messages yet",
       "empty_body": "Questions you send to an organizer from an event page, and their answers, show up here.",
-      "unread": "New reply"
+      "unread": "New reply",
+      "react": "Add a reaction",
+      "react_with": "React with {{emoji}}",
+      "reaction_count": "{{emoji}}, {{count}}",
+      "reaction_failed": "Couldn't save your reaction.",
+      "blocked": "You can't message this person.",
+      "you_blocked": "You blocked this person. Unblock them to send a message."
     }
   },
   "privacy": {

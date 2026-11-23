@@ -9,7 +9,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { CalendarDays, ChartNoAxesColumnIncreasing, Inbox, ScanLine, UserRound } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
-import * as Haptics from 'expo-haptics';
 import { useAuth } from '../contexts/AuthContext';
 import { useAppMode } from '../contexts/AppModeContext';
 import { ThemeProvider, useTheme } from '../contexts/ThemeContext';
@@ -98,6 +97,8 @@ import PaymentWebViewScreen from '../screens/PaymentWebViewScreen';
 import StripeConnectWebViewScreen from '../screens/StripeConnectWebViewScreen';
 import StripeOnboardingScreen from '../screens/organizer/StripeOnboardingScreen';
 import InAppWebViewScreen from '../screens/InAppWebViewScreen';
+import IntegrationWebViewScreen from '../screens/IntegrationWebViewScreen';
+import ImportEventsScreen from '../screens/organizer/ImportEventsScreen';
 import FirstRunWelcome from '../components/FirstRunWelcome';
 import { useI18n } from '../contexts/I18nContext';
 
@@ -130,6 +131,10 @@ export type RootStackParamList = {
   StripeConnectWebView: { url: string; authToken?: string | null };
   StripeOnboarding: { accountLocation?: 'united_states' | 'canada' | 'france'; hostedOnly?: boolean } | undefined;
   InAppWebView: { url: string; title?: string };
+  // Connect an outside account (Eventbrite) on our www host, then back to returnTo.
+  IntegrationWebView: { url: string; title?: string; returnTo?: string };
+  // Bring events over from Eventbrite, Luma, Meetup or any event page.
+  ImportEvents: { eventbriteResult?: string; at?: number } | undefined;
   // `ref` arrives from a promoter's universal link (tikem.co/events/{id}?ref=CODE);
   // React Navigation merges the query string into params. EventDetailScreen
   // captures and persists it for purchase attribution.
@@ -282,6 +287,8 @@ const GatedOrganizerPayoutSettings = withOrgAccess(OrganizerPayoutSettingsScreen
 const GatedStripeOnboarding = withOrgAccess(StripeOnboardingScreen, 'owner_only');
 const GatedStripeConnectWebView = withOrgAccess(StripeConnectWebViewScreen, 'owner_only');
 const GatedOrganizerOrgTeam = withOrgAccess(OrganizerOrgTeamScreen, 'manage_team');
+const GatedImportEvents = withOrgAccess(ImportEventsScreen, 'manage_events');
+const GatedIntegrationWebView = withOrgAccess(IntegrationWebViewScreen, 'manage_events');
 
 function CustomTabBar({ state, descriptors, navigation, tabs }: TabBarProps) {
   const { colors, isDark } = useTheme();
@@ -388,7 +395,6 @@ function CustomTabBar({ state, descriptors, navigation, tabs }: TabBarProps) {
             <TouchableOpacity
               key={tab.name}
               onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                 (navigation as any).navigate('CreateEvent');
               }}
               style={tabBarStyles.tab}
@@ -420,7 +426,6 @@ function CustomTabBar({ state, descriptors, navigation, tabs }: TabBarProps) {
             const now = Date.now();
             if (now - lastProfileTapRef.current < 300) {
               lastProfileTapRef.current = 0;
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               setMode(mode === 'organizer' ? 'attendee' : 'organizer');
               return;
             }
@@ -432,11 +437,9 @@ function CustomTabBar({ state, descriptors, navigation, tabs }: TabBarProps) {
             target: route.key,
             canPreventDefault: true,
           });
+          // Tab taps are silent: the phone vibrates only when a ticket lands.
           if (!isFocused && !event.defaultPrevented) {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
             navigation.navigate(tab.name);
-          } else if (isFocused) {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
           }
         };
 
@@ -1025,6 +1028,12 @@ export default function AppNavigator() {
               options={{ headerShown: false, presentation: 'modal', gestureEnabled: false }}
             />
             <Stack.Screen name="StripeOnboarding" component={GatedStripeOnboarding} options={{ headerShown: false }} />
+            <Stack.Screen name="ImportEvents" component={GatedImportEvents} options={{ headerShown: false }} />
+            <Stack.Screen
+              name="IntegrationWebView"
+              component={GatedIntegrationWebView}
+              options={{ headerShown: false, presentation: 'modal' }}
+            />
             <Stack.Screen
               name="InAppWebView"
               component={InAppWebViewScreen}

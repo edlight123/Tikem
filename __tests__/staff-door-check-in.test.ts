@@ -259,7 +259,9 @@ describe('GET door-list', () => {
     // t3 is refunded and never came in; `other` belongs to another event.
     expect(ids).toEqual(['t1', 't2', 't4', 't5'])
 
-    const allowed = ['id', 'codeHash', 'name', 'tier', 'status', 'live', 'checkedIn', 'checkedInAt', 'endsAt', 'validFrom', 'validUntil', 'qrVersion']
+    // doorOwes / doorCurrency / doorPaid: pay at the door. What the
+    // door must collect is the door's business; it carries no contact details.
+    const allowed = ['id', 'codeHash', 'name', 'tier', 'status', 'live', 'checkedIn', 'checkedInAt', 'endsAt', 'validFrom', 'validUntil', 'qrVersion', 'doorOwes', 'doorCurrency', 'doorPaid']
     for (const row of json.rows) expect(Object.keys(row).sort()).toEqual([...allowed].sort())
 
     const text = JSON.stringify(json)

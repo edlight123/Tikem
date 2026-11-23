@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { Minus, Plus } from 'lucide-react'
 import { allSelectionsFree, computeSelectionTotal, isFreeTier, MAX_FREE_TICKETS_PER_PERSON, tierMaxPerOrder } from '@/lib/ticketPricing'
 import { priceCart } from '@/lib/checkout/buyer-pricing'
+import { MAX_DOOR_TICKETS_PER_PERSON, doorMoney, doorPriceLabel, doorPriceOf, isDoorTier } from '@/lib/tickets/pay-at-door'
 import { ticketScarcity, scarcityCopy, isUrgent } from '@/lib/ticketScarcity'
 
 interface TicketTier {
@@ -12,6 +13,8 @@ interface TicketTier {
   name: string
   description: string | null
   price: number
+  /** Pay at the door: owed on arrival (price is then 0). */
+  door_price?: number | null
   total_quantity: number
   sold_quantity: number
   sales_start: string | null
@@ -68,6 +71,8 @@ interface EventbriteStyleTicketSelectorProps {
    * stay listed but closed, with the reason; paid tiers sell as usual.
    */
   freeClaimHeld?: boolean
+  /** Free tickets one person may claim here: 2, or the family size (lib/events/family). */
+  freeCap?: number
   /**
    * `discountedTotal` is what THIS component computed after applying the promo —
    * a routing hint only (it decides whether to try the free-claim endpoint). The
@@ -91,11 +96,12 @@ export default function EventbriteStyleTicketSelector({
   eventStartsAt,
   allowGuest = false,
   freeClaimHeld = false,
+  freeCap = MAX_FREE_TICKETS_PER_PERSON,
   onPurchase
 }: EventbriteStyleTicketSelectorProps) {
   /** Who may press "checkout": a signed-in user, or a guest when guests are allowed. */
   const canPurchase = Boolean(userId) || allowGuest
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
   const [tiers, setTiers] = useState<TicketTier[]>([])
   const [quantities, setQuantities] = useState<TierQuantity>({})
   const [loading, setLoading] = useState(true)
@@ -167,12 +173,16 @@ export default function EventbriteStyleTicketSelector({
     const tier = tiers.find(t => t.id === tierId)
     if (!tier) return
 
-    // Free tickets are capped per person across every free tier together.
-    const otherFree = isFreeTier(tier)
-      ? tiers.reduce((sum, t) => (t.id !== tierId && isFreeTier(t) ? sum + (quantities[t.id] || 0) : sum), 0)
+    // Free tickets are capped per person across every free tier together;
+    // pay-at-the-door spots have their own, larger cap (families).
+    const door = isDoorTier(tier)
+    const sameKind = (t: TicketTier) => (door ? isDoorTier(t) : isFreeTier(t) && !isDoorTier(t))
+    const kindCap = door ? MAX_DOOR_TICKETS_PER_PERSON : freeCap
+    const otherSameKind = door || isFreeTier(tier)
+      ? tiers.reduce((sum, t) => (t.id !== tierId && sameKind(t) ? sum + (quantities[t.id] || 0) : sum), 0)
       : 0
-    const stockOrFreeCap = isFreeTier(tier)
-      ? Math.min(getAvailableQuantity(tier), Math.max(0, MAX_FREE_TICKETS_PER_PERSON - otherFree))
+    const stockOrFreeCap = door || isFreeTier(tier)
+      ? Math.min(getAvailableQuantity(tier), Math.max(0, kindCap - otherSameKind))
       : getAvailableQuantity(tier)
     // The organizer's per-order limit on this tier, when set.
     const maxAvailable = Math.min(stockOrFreeCap, tierMaxPerOrder(tier as any) ?? Infinity)
@@ -290,6 +300,8 @@ export default function EventbriteStyleTicketSelector({
   // A cart zeroed by a 100%-off promo still has to go through checkout — the
   // free-claim endpoint requires the tier itself to cost 0 and would refuse it.
   const isFreeOrder = allSelectionsFree(getSelections())
+  /** Pay at the door: what the chosen spots will cost on arrival (nothing online). */
+  const doorDue = tiers.reduce((sum, tier) => sum + doorPriceOf(tier) * (quantities[tier.id] || 0), 0)
 
   return (
     <div className="space-y-4">
@@ -300,7 +312,7 @@ export default function EventbriteStyleTicketSelector({
         {tiers.map((tier) => {
           const available = getAvailableQuantity(tier)
           // A held free claim closes every free tier; the route would refuse it.
-          const freeClaimClosed = freeClaimHeld && isFreeTier(tier)
+          const freeClaimClosed = freeClaimHeld && isFreeTier(tier) && !isDoorTier(tier)
           const isAvailable = isTierAvailable(tier) && !freeClaimClosed
           const quantity = quantities[tier.id] || 0
 
@@ -334,7 +346,11 @@ export default function EventbriteStyleTicketSelector({
                       price broke across two lines. Price leads on its own
                       line; availability is a quiet second. */}
                   <p className="mt-2 text-sm font-medium text-brand-400">
-                    {isFreeTier(tier) ? t('common.free') : `${tier.price.toFixed(2)} ${currency}`}
+                    {isDoorTier(tier)
+                      ? doorPriceLabel(doorPriceOf(tier), currency, i18n.language)
+                      : isFreeTier(tier)
+                        ? t('common.free')
+                        : `${tier.price.toFixed(2)} ${currency}`}
                     {/* Never let a bare face value read as the total. The all-in
                         number is itemized in the summary below, where the fee can be
                         stated for the order as a whole. */}
@@ -481,9 +497,11 @@ export default function EventbriteStyleTicketSelector({
                     {quantities[tier.id]}× {tier.name}
                   </span>
                   <span className="text-fg">
-                    {formatMoney(
-                      computeSelectionTotal([{ price: tier.price, quantity: quantities[tier.id] }])
-                    )}
+                    {isDoorTier(tier)
+                      ? doorMoney(doorPriceOf(tier) * quantities[tier.id], currency, i18n.language)
+                      : formatMoney(
+                          computeSelectionTotal([{ price: tier.price, quantity: quantities[tier.id] }])
+                        )}
                   </span>
                 </div>
               ))}
@@ -503,10 +521,19 @@ export default function EventbriteStyleTicketSelector({
                 <span className="text-fg">{formatMoney(orderPricing.buyerFee)}</span>
               </div>
             )}
-            <div className="border-t border-line pt-2 flex justify-between font-semibold text-lg">
-              <span>{t('events.total')} ({totalTickets} {t('ticket.ticket')}{totalTickets !== 1 ? 's' : ''})</span>
-              <span className="text-brand-400">{formatMoney(orderPricing.total)}</span>
-            </div>
+            {isFreeOrder && doorDue > 0 ? (
+              // Pay at the door: nothing is charged online; the whole amount is
+              // paid to the organizer on arrival (Tikem takes no fee on it).
+              <div className="border-t border-line pt-2 flex justify-between font-semibold text-lg">
+                <span>{t('events.due_at_door', { defaultValue: 'Due at the door' })}</span>
+                <span className="text-brand-400">{doorMoney(doorDue, currency, i18n.language)}</span>
+              </div>
+            ) : (
+              <div className="border-t border-line pt-2 flex justify-between font-semibold text-lg">
+                <span>{t('events.total')} ({totalTickets} {t('ticket.ticket')}{totalTickets !== 1 ? 's' : ''})</span>
+                <span className="text-brand-400">{formatMoney(orderPricing.total)}</span>
+              </div>
+            )}
             {showFeeLine && (
               <p className="text-xs text-fg-subtle">
                 {t('checkout.total_includes_fees', {
@@ -531,6 +558,10 @@ export default function EventbriteStyleTicketSelector({
           ? t('events.sign_in_to_purchase')
           : totalTickets === 0
           ? t('events.select_tickets')
+          : isFreeOrder && doorDue > 0
+          ? totalTickets === 1
+            ? t('events.reserve_spot', { defaultValue: 'Reserve a spot' })
+            : t('events.reserve_spots', { defaultValue: 'Reserve {{count}} spots', count: totalTickets })
           : isFreeOrder
           ? totalTickets === 1
             ? t('events.get_free_ticket', { defaultValue: 'Get free ticket' })

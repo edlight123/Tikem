@@ -10,6 +10,7 @@ import {
   ScrollView,
   Animated,
 } from 'react-native';
+import { useAndroidBottomInset } from '../hooks/useAndroidBottomInset';
 import { useSwipeToClose } from '../hooks/useSwipeToClose';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -77,6 +78,8 @@ export default function FlyerLibrarySheet({ visible, onClose, onSelect, onUpload
   const { colors } = useTheme();
   const { t } = useI18n();
   const styles = getStyles(colors);
+  // Clear of Android's system bar (edge to edge).
+  const bottomInset = useAndroidBottomInset(spacing.xl);
   const swipe = useSwipeToClose(onClose, visible);
 
   const [query, setQuery] = useState('');
@@ -153,7 +156,7 @@ export default function FlyerLibrarySheet({ visible, onClose, onSelect, onUpload
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.backdrop}>
-        <Animated.View style={[styles.sheet, swipe.sheetStyle]}>
+        <Animated.View style={[styles.sheet, bottomInset, swipe.sheetStyle]}>
           <View {...swipe.panHandlers}>
           <View style={styles.grabber} />
 

@@ -7,7 +7,6 @@ import {
   FlatList,
   TextInput,
   KeyboardAvoidingView,
-  Platform,
   Animated,
 } from 'react-native';
 import { useSwipeToClose } from '../../hooks/useSwipeToClose';
@@ -108,7 +107,7 @@ export default function ManualLookupSheet({
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <KeyboardAvoidingView
         style={styles.overlay}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior="padding"
       >
         <Touchable style={styles.backdrop} onPress={onClose} scale={false} haptic={false} />
         <Animated.View style={[styles.sheet, swipe.sheetStyle, { paddingBottom: insets.bottom + spacing.sm }]}>

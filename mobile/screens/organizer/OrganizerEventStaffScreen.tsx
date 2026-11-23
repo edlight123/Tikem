@@ -4,7 +4,6 @@ import {
   Animated,
   KeyboardAvoidingView,
   Modal,
-  Platform,
   Pressable,
   ScrollView,
   Share,
@@ -585,7 +584,7 @@ export default function OrganizerEventStaffScreen() {
         animationType="slide"
         onRequestClose={() => setShowInviteModal(false)}
       >
-        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
           <Pressable
             style={styles.backdrop}
             onPress={() => setShowInviteModal(false)}

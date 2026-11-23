@@ -39,7 +39,8 @@ import { Switch as UISwitch } from '../components/ui/Switch';
  * rather than offered as switches.
  *
  * Buyer switches write the users/{uid} fields the server's policy reads
- * (notify_discovery, notify_filling_fast, notify_national_day). Organizer
+ * (notify_discovery, notify_weekend_digest, notify_filling_fast,
+ * notify_national_day). Organizer
  * switches write the same
  * organizers/{uid}/notificationPreferences/main document as the web's
  * NotificationsForm, through the same PUT /api/organizer/settings/notifications,
@@ -50,6 +51,7 @@ import { Switch as UISwitch } from '../components/ui/Switch';
 // users/{uid} fields — absent means opted in (policy.ts isCategoryEnabled).
 type UserPrefKey =
   | 'notify_discovery'
+  | 'notify_weekend_digest'
   | 'notify_filling_fast'
   | 'notify_national_day'
   | 'notify_friend_invites'
@@ -89,6 +91,7 @@ export default function NotificationSettingsScreen({ navigation, route }: any) {
   const [loading, setLoading] = useState(true);
   const [userPrefs, setUserPrefs] = useState<Record<UserPrefKey, boolean>>({
     notify_discovery: true,
+    notify_weekend_digest: true,
     notify_filling_fast: true,
     notify_national_day: true,
     notify_friend_invites: true,
@@ -132,6 +135,7 @@ export default function NotificationSettingsScreen({ navigation, route }: any) {
         if (!cancelled) {
           setUserPrefs({
             notify_discovery: data.notify_discovery ?? true,
+            notify_weekend_digest: data.notify_weekend_digest ?? true,
             notify_filling_fast: data.notify_filling_fast ?? true,
             notify_national_day: data.notify_national_day ?? true,
             notify_friend_invites: data.notify_friend_invites ?? true,
@@ -312,6 +316,13 @@ export default function NotificationSettingsScreen({ navigation, route }: any) {
                 title={t('notificationSettings.fromTikem.discovery')}
                 value={userPrefs.notify_discovery}
                 onChange={(v) => toggleUserPref('notify_discovery', v)}
+              />
+              {/* Thursday: this weekend in your city (server lib/notifications/weekly-digest). */}
+              <PrefRow
+                divided
+                title={t('notificationSettings.fromTikem.weekend')}
+                value={userPrefs.notify_weekend_digest}
+                onChange={(v) => toggleUserPref('notify_weekend_digest', v)}
               />
               <PrefRow
                 divided
