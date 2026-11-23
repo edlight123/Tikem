@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useTabTaps } from '../../hooks/useTabTaps';
 import {
   View,
   Text,
@@ -100,6 +101,9 @@ export default function OrganizerEventsScreen() {
     setRefreshing(true);
     loadEvents();
   }, [loadEvents]);
+  // Tap the tab again to scroll up; tap twice to refresh.
+  const eventsScroll = useRef<any>(null);
+  useTabTaps(eventsScroll, onRefresh);
 
   const now = new Date();
 
@@ -267,6 +271,7 @@ export default function OrganizerEventsScreen() {
 
       {/* Events List */}
       <ScrollView
+        ref={eventsScroll}
         style={styles.scrollView}
         contentContainerStyle={[styles.list, { paddingBottom: tabBarSpace + 24 }]}
         refreshControl={
