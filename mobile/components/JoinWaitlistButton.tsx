@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   Modal,
 } from 'react-native';
+import { useAndroidBottomInset } from '../hooks/useAndroidBottomInset';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -33,6 +34,8 @@ export default function JoinWaitlistButton({
   const { colors } = useTheme();
   const showAlert = useAppAlert();
   const styles = getStyles(colors);
+  // Clear of Android's system bar (edge to edge).
+  const bottomInset = useAndroidBottomInset(24, 24);
   const { user } = useAuth();
   const { t } = useI18n();
   const [isOnWaitlist, setIsOnWaitlist] = useState(false);
@@ -140,7 +143,7 @@ export default function JoinWaitlistButton({
           onRequestClose={() => setShowInfoModal(false)}
         >
           <TouchableOpacity 
-            style={styles.modalOverlay} 
+            style={[styles.modalOverlay, bottomInset]} 
             activeOpacity={1}
             onPress={() => setShowInfoModal(false)}
           >

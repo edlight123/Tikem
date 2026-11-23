@@ -10,6 +10,7 @@ import {
   TextInput,
   ActivityIndicator,
 } from 'react-native';
+import { useAndroidBottomInset } from '../hooks/useAndroidBottomInset';
 import { X, Minus, Plus, Tag, ChevronDown, ChevronUp } from 'lucide-react-native';
 import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
 import { db } from '../config/firebase';
@@ -127,6 +128,8 @@ export default function TieredTicketSelector({
 }: TieredTicketSelectorProps) {
   const { colors } = useTheme();
   const styles = getStyles(colors);
+  // Clear of Android's system bar (edge to edge).
+  const bottomInset = useAndroidBottomInset(0, 0);
   const { t, language } = useI18n();
   const locale = language === 'fr' ? 'fr-FR' : language === 'ht' ? 'fr-HT' : 'en-US';
   const displayCurrency = String(currency || 'HTG').toUpperCase();
@@ -397,7 +400,7 @@ export default function TieredTicketSelector({
       presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
-      <View style={styles.container}>
+      <View style={[styles.container, bottomInset]}>
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>{t('ticketSelector.title')}</Text>

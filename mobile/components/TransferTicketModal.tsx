@@ -12,6 +12,7 @@ import {
   Share,
   Animated,
 } from 'react-native';
+import { useAndroidBottomInset } from '../hooks/useAndroidBottomInset';
 import { useSwipeToClose } from '../hooks/useSwipeToClose';
 import { X, Share2, Check } from 'lucide-react-native';
 import { useTheme } from '../contexts/ThemeContext';
@@ -43,6 +44,8 @@ export default function TransferTicketModal({
   const { colors } = useTheme();
   const { t } = useI18n();
   const styles = getStyles(colors);
+  // Clear of Android's system bar (edge to edge).
+  const bottomInset = useAndroidBottomInset(0, 0);
   const [toEmail, setToEmail] = useState('');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
@@ -189,7 +192,7 @@ export default function TransferTicketModal({
         behavior="padding"
       >
         <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={close} accessible={false} />
-        <Animated.View style={[styles.modalContainer, swipe.sheetStyle]}>
+        <Animated.View style={[styles.modalContainer, bottomInset, swipe.sheetStyle]}>
           <View {...swipe.panHandlers}>
           <View style={styles.handle} />
           <View style={styles.header}>
