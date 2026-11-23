@@ -456,7 +456,6 @@ export default function EventDetailScreen({ route, navigation }: any) {
           created_at: Timestamp.now()
         });
         setIsFavorite(true);
-        haptics.success();
       }
     } catch (error) {
       console.error('Error toggling favorite:', error);
@@ -669,6 +668,8 @@ export default function EventDetailScreen({ route, navigation }: any) {
   };
 
   const handleFreeTicketSuccess = () => {
+    // The one moment the phone vibrates: the RSVP is confirmed (lib/haptics).
+    haptics.success();
     // Refresh event data to show updated ticket count
     fetchEventDetails();
     // Close the claim modal FIRST. Two RN modals visible at once do not stack
@@ -726,6 +727,8 @@ export default function EventDetailScreen({ route, navigation }: any) {
   };
 
   const handlePaymentSuccess = async (_paymentMethod: string, _transactionId: string) => {
+    // A ticket in hand: the one moment the phone vibrates (lib/haptics).
+    haptics.success();
     // Was a bare OS alert, which is the least celebratory way to confirm a
     // purchase and offered nothing but "OK". Same sheet as the free path.
     fetchEventDetails();
