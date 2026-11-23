@@ -40,11 +40,17 @@ export function isOwnPoster(raw: string | null | undefined): raw is string {
 
 /**
  * The bytes of one of our posters, or null when the URL isn't ours. Throws on
- * a failed fetch, a non-image, or more than 15MB.
+ * a failed fetch, a non-image, more than 15MB, or (with timeoutMs) a slow host.
  */
-export async function fetchOwnPoster(url: string | null | undefined): Promise<Buffer | null> {
+export async function fetchOwnPoster(
+  url: string | null | undefined,
+  opts: { timeoutMs?: number } = {}
+): Promise<Buffer | null> {
   if (!isOwnPoster(url)) return null
-  const res = await fetch(url, { redirect: 'error' })
+  const res = await fetch(url, {
+    redirect: 'error',
+    ...(opts.timeoutMs ? { signal: AbortSignal.timeout(opts.timeoutMs) } : {}),
+  })
   if (!res.ok) throw new Error(String(res.status))
   if (!/^image\//i.test(res.headers.get('content-type') || '')) throw new Error('not an image')
   const declared = Number(res.headers.get('content-length') || 0)
