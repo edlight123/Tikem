@@ -46,6 +46,7 @@ import { isValidDate } from '../lib/dates';
 import WhitePillCTA from '../components/WhitePillCTA';
 import VerifiedBadge from '../components/VerifiedBadge';
 import PaymentModal from '../components/PaymentModal';
+import { externalTicketsUrl } from '../lib/integrationWeb';
 import TieredTicketSelector, { PurchaseSelectionMeta } from '../components/TieredTicketSelector';
 import { resolveEventPricing } from '../lib/ticketPricing';
 import { advertisedPrice } from '../lib/buyerPricing';
@@ -604,6 +605,11 @@ export default function EventDetailScreen({ route, navigation }: any) {
   };
 
   const handlePurchaseTicket = async () => {
+    // Tickets sold on Eventbrite (a synced event): no account needed here.
+    if (outsideTicketsUrl && !isPastEvent) {
+      Linking.openURL(outsideTicketsUrl).catch(() => undefined);
+      return;
+    }
     if (!user) {
       showAlert(
         t('auth.loginRequiredTitle'),
@@ -796,6 +802,8 @@ export default function EventDetailScreen({ route, navigation }: any) {
   const isFree = pricing.isFreeOnly;
   // v1 approval lists are free-only; a paid event with a stray flag sells as usual.
   const requiresApproval = eventNeedsApproval && isFree;
+  // Kept in sync from Eventbrite: tickets are sold there, so the CTA links out.
+  const outsideTicketsUrl = externalTicketsUrl(event);
   const allowedPlusOnesHere = attendAllowedPlusOnes ?? eventAllowedPlusOnes(event);
 
   // Prevent purchase only after the event has ended (not after it has started).
@@ -1312,7 +1320,9 @@ export default function EventDetailScreen({ route, navigation }: any) {
           <WhitePillCTA
             variant={isFree ? 'rsvp' : 'paid'}
             label={
-              requiresApproval
+              outsideTicketsUrl
+                ? t('eventDetail.floating.ticketsOnEventbrite')
+                : requiresApproval
                 ? t('attendRequests.requestToJoin')
                 : isFree
                   ? t('common.rsvp')

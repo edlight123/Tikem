@@ -4,6 +4,7 @@ import { DiscoverEventCard } from '@/components/discover/DiscoverEventCard'
 import { useTranslation } from 'react-i18next'
 import BuyTicketButton from './BuyTicketButton'
 import RequestToJoin from './RequestToJoin'
+import ExternalTicketsLink, { externalTicketsUrl } from './ExternalTicketsLink'
 import JoinWaitlistButton from '@/components/events/JoinWaitlistButton'
 import { eventAllowedPlusOnes } from '@/lib/events/approval'
 import FavoriteButton from '@/components/FavoriteButton'
@@ -59,6 +60,8 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
   const isSoldOut = (event.total_tickets && event.tickets_sold >= event.total_tickets) || false
   // The organizer turned the waitlist on (lib/waitlist.ts emails it when seats free up).
   const waitlistOpen = isSoldOut && (event as any).enable_waitlist === true
+  // Kept in sync from Eventbrite: tickets are sold there, so the page links out.
+  const externalTickets = externalTicketsUrl(event as any)
   const ticketsRemaining = event.total_tickets ? event.total_tickets - (event.tickets_sold || 0) : null
   // Freeness comes from the TIER SET, never from `event.ticket_price` (which is the
   // lowest tier price, hence 0 whenever a free tier sits next to a paid one — that
@@ -342,6 +345,8 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                   {t('ticket.sold_out_caps')}
                 </div>
               )
+            ) : externalTickets ? (
+              <ExternalTicketsLink url={externalTickets} compact />
             ) : (
               (event as any).requires_approval === true ? (
                 <RequestToJoin
@@ -697,6 +702,8 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                     </div>
                   )}
                 </div>
+              ) : externalTickets ? (
+                <ExternalTicketsLink url={externalTickets} />
               ) : (
                 <>
                   {(event as any).requires_approval === true ? (

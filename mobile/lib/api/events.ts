@@ -857,7 +857,16 @@ export async function updateEvent(
     // the STORED doc once it has sold (see withStoredMoneyFields).
     const eventRef = doc(db, 'events', eventId);
     const storedSnap = await getDoc(eventRef);
-    await updateDoc(eventRef, withStoredMoneyFields(updateData, storedSnap.exists() ? storedSnap.data() : null));
+    const stored = storedSnap.exists() ? storedSnap.data() : null;
+    const writeData: Record<string, any> = withStoredMoneyFields(updateData, stored);
+    // A copy kept in sync from Eventbrite (web lib/import/eventbrite-sync): once
+    // edited here, the sync only refreshes its time, link and publication.
+    // firestore.rules lets a client set just this one flag.
+    const imported = (stored as any)?.imported;
+    if (imported?.source === 'eventbrite' && imported.locally_edited !== true) {
+      writeData.imported = { ...imported, locally_edited: true };
+    }
+    await updateDoc(eventRef, writeData);
 
     // ── Apply edits to the whole series ────────────────────────────────────
     // When the caller opts in AND this event belongs to a series, propagate the

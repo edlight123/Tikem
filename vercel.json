@@ -84,6 +84,10 @@
     {
       "path": "/api/cron/post-event-followup",
       "schedule": "5 * * * *"
+    },
+    {
+      "path": "/api/cron/eventbrite-sync",
+      "schedule": "30 6 * * *"
     }
   ]
 }

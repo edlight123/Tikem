@@ -364,7 +364,9 @@
     "free_tier_already_claimed": "Ou gen tikè gratis ou deja",
     "more_dates_one": "+{{count}} lòt dat",
     "more_dates_other": "+{{count}} lòt dat",
-    "rsvp_cta": "Rezève"
+    "rsvp_cta": "Rezève",
+    "tickets_on_eventbrite": "Pran tikè sou Eventbrite",
+    "tickets_on_eventbrite_note": "Tikè pou evènman sa a vann sou Eventbrite."
   },
   "favorites": {
     "title": "Favori mwen",

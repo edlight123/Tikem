@@ -64,7 +64,7 @@ export default function OrganizerEventsScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   // The acting org's events (lib/activeOrg.ts), not the signed-in uid's.
-  const { orgId } = useActiveOrg();
+  const { orgId, can } = useActiveOrg();
 
   useEffect(() => {
     setLoading(true);
@@ -188,6 +188,18 @@ export default function OrganizerEventsScreen() {
         <Text style={styles.title} numberOfLines={1} accessibilityRole="header">
           {t('organizerEvents.title').toLowerCase()}
         </Text>
+        {/* Bring events over from Eventbrite, Luma, Meetup or any event page. */}
+        {can('manage_events') ? (
+          <Touchable
+            style={styles.createButton}
+            hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+            onPress={() => navigation.navigate('ImportEvents')}
+            accessibilityRole="button"
+            accessibilityLabel={t('organizerImport.title')}
+          >
+            <Ionicons name="download-outline" size={20} color={colors.text} />
+          </Touchable>
+        ) : null}
         <Touchable
           style={styles.createButton}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
