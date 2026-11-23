@@ -94,8 +94,10 @@ describe('parseAttendInput', () => {
     expect(parseAttendInput({ plusOnes: [{ firstName: 'a' }] }, 0)).toMatchObject({ ok: false, code: 'too_many_plus_ones' })
   })
 
-  it('requires a first name', () => {
-    expect(parseAttendInput({ plusOnes: [{ firstName: '  ', phone: '1' }] }, 1)).toMatchObject({ ok: false, code: 'plus_one_name_required' })
+  it('names are optional: an unnamed guest is listed as "Guest 2", "Guest 3"…', () => {
+    const r = parseAttendInput({ plusOnes: [{ firstName: '  ', phone: '1' }, { firstName: 'Amina' }, {}] }, 3)
+    expect(r).toMatchObject({ ok: true })
+    expect((r as any).plusOnes.map((p: any) => p.first_name)).toEqual(['Guest 2', 'Amina', 'Guest 4'])
   })
 
   it('caps the note at 280 characters', () => {

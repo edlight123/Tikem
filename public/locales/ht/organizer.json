@@ -637,7 +637,14 @@
     "entry_main_entrance": "Gran pòt la",
     "entry_vip_entrance": "Pòt VIP",
     "entry_side_door": "Pòt akote",
-    "entry_back_entrance": "Pòt dèyè"
+    "entry_back_entrance": "Pòt dèyè",
+    "pay_at_door": "Peye nan pòt la",
+    "paid_at_door": "Peye nan pòt la deja",
+    "collect_amount": "Resevwa {{amount}}",
+    "mark_paid": "Make peye",
+    "undo_payment": "Anile",
+    "payment_needs_connection": "Ou bezwen koneksyon pou anrejistre peman an.",
+    "child": "Timoun"
   },
   "markets": {
     "title": "Kote w fè evènman",
@@ -1037,7 +1044,11 @@
     "attendee_information": "Enfòmasyon sou patisipan an",
     "process_refund": "Fè ranbousman an",
     "resend_ticket_email": "Voye tikè a pa imel ankò",
-    "ticket_information": "Enfòmasyon sou tikè a"
+    "ticket_information": "Enfòmasyon sou tikè a",
+    "pay_at_door": "Peye nan pòt la",
+    "door_paid": "Peye {{amount}} nan pòt la",
+    "door_owes": "Dwe {{amount}} nan pòt la",
+    "with": "avèk"
   },
   "event_staff": {
     "actions": "Aksyon",
@@ -1716,7 +1727,11 @@
     "remove_access_if_lost": "Retire aksè a touswit si yon aparèy pèdi",
     "need_help": "Bezwen èd?",
     "support_can_help": "Ekip sipò nou an ka ede w entegre gwo ekip epi konfigire aksè yo.",
-    "back_to_settings": "Retounen nan paramèt yo"
+    "back_to_settings": "Retounen nan paramèt yo",
+    "at_the_door": "nan pòt la",
+    "door_collected": "Resevwa",
+    "door_outstanding": "Rès pou peye",
+    "door_note": "Yo peye w an pèsòn. Tikem pa pran okenn frè sou li, e li pa fè pati vèsman ou yo."
   },
   "verify_to_withdraw": {
     "title": "Verifye idantite w pou w retire lajan",

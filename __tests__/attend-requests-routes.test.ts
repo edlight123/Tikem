@@ -220,7 +220,8 @@ describe('guest: request to join', () => {
   })
 
   it('validates plus-ones and the note', async () => {
-    expect((await ask(GUEST, { plusOnes: [{ firstName: '' }] })).body.code).toBe('plus_one_name_required')
+    // An unnamed plus-one is fine (listed as "Guest 2").
+    expect((await ask(GUEST, { plusOnes: [{ firstName: '' }] })).body.code).not.toBe('plus_one_name_required')
     expect((await ask(GUEST, { note: 'x'.repeat(281) })).body.code).toBe('note_too_long')
   })
 

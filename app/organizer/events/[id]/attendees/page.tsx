@@ -50,7 +50,16 @@ export default async function AttendeesPage({ params }: { params: Promise<{ id: 
     const phone = String((profile && profile.phone_number) || ticketData.guest_phone || '').trim()
     const attendee =
       row.buyer.name || row.buyer.email || phone
-        ? { id: buyerIdOf(ticketData), full_name: row.buyer.name, email: row.buyer.email, phone_number: phone }
+        ? {
+            id: buyerIdOf(ticketData),
+            // A plus-one or family member's ticket shows their own name, with the
+            // person who registered them (lib/events/family).
+            full_name: String(ticketData.plus_one_name || '').trim() || row.buyer.name,
+            email: row.buyer.email,
+            phone_number: phone,
+            ...(ticketData.plus_one_name ? { guest_of: row.buyer.name || row.buyer.email } : {}),
+            ...(ticketData.plus_one_child === true ? { is_child: true } : {}),
+          }
         : null
 
     return {
@@ -61,6 +70,10 @@ export default async function AttendeesPage({ params }: { params: Promise<{ id: 
       ticket_type: row.tierName || 'General Admission',
       ticket_tier_id: ticketData.tier_id || ticketData.ticket_tier_id || '',
       price_paid: ticketData.price_paid || 0,
+      payment_method: ticketData.payment_method || '',
+      door_price: Number(ticketData.door_price) || 0,
+      door_currency: ticketData.door_currency || '',
+      door_paid: ticketData.door_paid === true,
       currency: ticketData.original_currency || ticketData.currency || null,
       quantity: ticketData.quantity || 1,
       checked_in: row.checkedIn,

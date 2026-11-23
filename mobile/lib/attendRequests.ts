@@ -10,6 +10,7 @@
 
 import { backendJson } from './api/backend';
 import { MAX_FREE_TICKETS_PER_PERSON } from './ticketPricing';
+import { familyMax } from './family';
 
 /** The most plus-ones an organizer can offer, before the free-ticket cap. */
 export const PLUS_ONES_SETTING_MAX = 3;
@@ -46,7 +47,12 @@ export function allowedPlusOnes(setting: unknown, cap: number = MAX_FREE_TICKETS
 }
 
 /** The plus-ones a guest may name on this event. */
-export function eventAllowedPlusOnes(event: { plus_ones_max?: unknown } | null | undefined): number {
+export function eventAllowedPlusOnes(
+  event: { plus_ones_max?: unknown; family_registration?: unknown; family_max?: unknown } | null | undefined
+): number {
+  // Family registration names everyone else in the family (lib/family).
+  const family = familyMax(event);
+  if (family) return family - 1;
   return allowedPlusOnes(event?.plus_ones_max);
 }
 
@@ -82,6 +88,8 @@ export function getOwnAttendRequest(eventId: string): Promise<OwnRequestState> {
 export interface PlusOneInput {
   firstName: string;
   phone?: string;
+  /** Family registration: this member is a child. */
+  child?: boolean;
 }
 
 export function sendAttendRequest(

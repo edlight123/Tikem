@@ -65,6 +65,8 @@ import {
   pickTierWhenUnspecified,
   type TierLine,
   tierOrderLimitRefusal,
+  // Pay-at-the-door tiers never ride in a card cart.
+  doorTierInPaidOrderRefusal,
 } from '@/lib/tickets/purchasable'
 
 /** The event's own currency, or its country's default. */
@@ -350,6 +352,8 @@ export async function POST(request: Request) {
         if (!tierCheck.ok) return refuse({ error: tierCheck.error, code: tierCheck.code }, tierCheck.status)
         const saleRefusal = tierSaleRefusal(tier, line.quantity, true)
         if (saleRefusal) return refuse({ error: saleRefusal }, 400)
+        const doorRefusal = doorTierInPaidOrderRefusal(tier)
+        if (doorRefusal) return refuse({ error: doorRefusal.error, code: doorRefusal.code }, doorRefusal.status)
         orderLines.push({
           tierId: String(tier.id ?? line.tierId),
           tierName: String(tier.name || 'Ticket'),
@@ -380,6 +384,8 @@ export async function POST(request: Request) {
       if (tier) {
         const saleRefusal = tierSaleRefusal(tier, quantity, false)
         if (saleRefusal) return refuse({ error: saleRefusal }, 400)
+        const doorRefusal = doorTierInPaidOrderRefusal(tier)
+        if (doorRefusal) return refuse({ error: doorRefusal.error, code: doorRefusal.code }, doorRefusal.status)
       }
       // No tier docs at all (legacy single-price event): the event's own price.
       orderLines.push({

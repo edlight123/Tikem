@@ -240,3 +240,38 @@ describe('MonCash quote', () => {
     expect(mockFake.docsIn('free_claim_locks')).toHaveLength(0)
   })
 })
+
+/**
+ * Pay at the door (lib/tickets/pay-at-door): a door tier costs 0 online and is
+ * reserved through /api/tickets/claim-free, which stamps what is owed at the
+ * door. In a paid order it would be issued as a plain free ticket owing
+ * nothing, so every paid rail refuses it before any order is written.
+ */
+describe.each(rails)('$name initiate: pay-at-the-door tiers', ({ post }) => {
+  beforeEach(() => {
+    mockState.tiers.door = { ...tier('door', 0), door_price: 500 }
+  })
+
+  it('refuses a door tier next to a paid one, and writes no order', async () => {
+    const res = await post(req({ eventId: EVENT, tiers: [{ tierId: 'door', quantity: 1 }, { tierId: 'ga', quantity: 1 }] }))
+    expect(res.status).toBe(400)
+    expect((await res.json()).code).toBe('door_tier_not_in_paid_order')
+    expect(mockState.inserted).toHaveLength(0)
+  })
+
+  it('refuses a door tier on the single-tier body too', async () => {
+    const res = await post(req({ eventId: EVENT, tierId: 'door', quantity: 1 }))
+    expect(res.status).toBe(400)
+    expect((await res.json()).code).toBe('door_tier_not_in_paid_order')
+    expect(mockState.inserted).toHaveLength(0)
+  })
+})
+
+describe('MonCash quote: pay-at-the-door tiers', () => {
+  it('never prices a door tier', async () => {
+    mockState.tiers.door = { ...tier('door', 0), door_price: 500 }
+    const res = await moncashQuote(req({ eventId: EVENT, tiers: [{ tierId: 'door', quantity: 1 }, { tierId: 'ga', quantity: 1 }] }))
+    expect(res.status).toBe(400)
+    expect((await res.json()).code).toBe('door_tier_not_in_paid_order')
+  })
+})

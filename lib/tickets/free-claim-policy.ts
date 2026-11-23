@@ -65,11 +65,29 @@ export function freeClaimLockId(eventId: string, identity: FreeClaimant): string
   return `${eventId}__${identity.id}`
 }
 
-/** The claimant's LIVE free tickets for this event (lib/tickets/status vocabulary). */
+/** A pay-at-the-door reservation (lib/tickets/pay-at-door): price_paid 0, but not a "free" claim. */
+export const isDoorTicket = (t: any): boolean => t?.payment_method === 'pay_at_door'
+
+/**
+ * The once-per-event lock for a pay-at-the-door reservation: its own key, so a
+ * free claim and a door reservation by the same person never block each other.
+ */
+export function doorClaimLockId(eventId: string, identity: FreeClaimant): string {
+  return `${freeClaimLockId(eventId, identity)}__door`
+}
+
+/** The claimant's LIVE free tickets for this event (lib/tickets/status vocabulary). Door reservations are not free claims. */
 export function liveFreeTicketsFor(docs: any[], eventId: string): any[] {
   return docs
     .map((d: any) => ({ id: d.id, ...d.data() }))
-    .filter((t: any) => t.event_id === eventId && Number(t.price_paid ?? 0) === 0 && isLiveTicketStatus(t.status))
+    .filter((t: any) => t.event_id === eventId && Number(t.price_paid ?? 0) === 0 && !isDoorTicket(t) && isLiveTicketStatus(t.status))
+}
+
+/** The claimant's LIVE pay-at-the-door reservations for this event. */
+export function liveDoorTicketsFor(docs: any[], eventId: string): any[] {
+  return docs
+    .map((d: any) => ({ id: d.id, ...d.data() }))
+    .filter((t: any) => t.event_id === eventId && isDoorTicket(t) && isLiveTicketStatus(t.status))
 }
 
 /**

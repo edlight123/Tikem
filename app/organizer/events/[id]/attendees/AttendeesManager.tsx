@@ -21,6 +21,7 @@ import type { OrgColumn } from '@/components/organizer/ui'
 import { ExportButtons } from '@/components/exports/ExportButtons'
 import { downloadExport } from '@/lib/exports/download'
 import { EMPTY_VALUE } from '@/lib/format'
+import { doorBalance, doorMoney } from '@/lib/tickets/pay-at-door'
 import {
   ticketDisplayKey,
   ticketDisplayLabelKey,
@@ -37,6 +38,11 @@ interface Ticket {
   ticket_tier_id?: string
   price_paid: number
   currency?: string | null
+  /** Pay at the door (lib/tickets/pay-at-door). */
+  payment_method?: string
+  door_price?: number
+  door_currency?: string
+  door_paid?: boolean
   quantity: number
   checked_in?: boolean
   checked_in_at?: string | null
@@ -47,6 +53,9 @@ interface Ticket {
   attendee?: {
     id: string
     full_name?: string
+    /** Plus-one or family member: who registered them. */
+    guest_of?: string
+    is_child?: boolean
     email?: string
     phone_number?: string
   } | null
@@ -86,6 +95,24 @@ function TicketStatus({ t, tx }: { t: Ticket; tx: (k: string) => string }) {
   return <StatusChip className="!normal-case" tone={ticketDisplayTone(k)}>{tx(ticketDisplayLabelKey(k))}</StatusChip>
 }
 
+/**
+ * Pay at the door (lib/tickets/pay-at-door): what this ticket still owes on
+ * arrival, or that it was paid. Dot + label, never a pill. Cash taken at the
+ * door is the organizer's own: no Tikem fee, not part of payouts.
+ */
+function DoorLine({ t, className = '' }: { t: Ticket; className?: string }) {
+  const { t: tx, i18n } = useTranslation('organizer')
+  const door = doorBalance(t as any)
+  if (!door) return null
+  const amount = doorMoney(door.paid ? Number(t.door_price) || 0 : door.owes, door.currency, i18n.language)
+  return (
+    <p className={`mt-0.5 flex items-center gap-1.5 text-xs text-fg-muted ${className}`}>
+      <span aria-hidden="true" className={`h-1.5 w-1.5 rounded-full ${door.paid ? 'bg-success' : 'bg-warning'}`} />
+      {door.paid ? tx('attendees.door_paid', { amount }) : tx('attendees.door_owes', { amount })}
+    </p>
+  )
+}
+
 // Built per render rather than defined once: the status cells are translated,
 // and a module-level constant has no hook to read them from.
 const buildColumns = (tx: (k: string) => string): OrgColumn<Ticket>[] => [
@@ -100,8 +127,15 @@ const buildColumns = (tx: (k: string) => string): OrgColumn<Ticket>[] => [
           <User className="h-4 w-4 text-brand-300" />
         </div>
         <div className="min-w-0">
-          <p className="truncate font-medium text-fg">{t.attendee?.full_name || t.attendee?.email || tx('event_tools.guest')}</p>
-          <p className="truncate text-xs text-fg-muted sm:hidden">{t.attendee?.full_name ? t.attendee?.email || '' : ''}</p>
+          <p className="truncate font-medium text-fg">
+            {t.attendee?.full_name || t.attendee?.email || tx('event_tools.guest')}
+            {t.attendee?.is_child && <ChildTag />}
+          </p>
+          {t.attendee?.guest_of ? (
+            <p className="truncate text-xs text-fg-muted">{tx('attendees.with')} {t.attendee.guest_of}</p>
+          ) : (
+            <p className="truncate text-xs text-fg-muted sm:hidden">{t.attendee?.full_name ? t.attendee?.email || '' : ''}</p>
+          )}
         </div>
       </div>
     ),
@@ -123,6 +157,7 @@ const buildColumns = (tx: (k: string) => string): OrgColumn<Ticket>[] => [
     render: (t: Ticket) => (
       <div>
         <TicketStatus t={t} tx={tx} />
+        <DoorLine t={t} />
         {t.checked_in_at && keyOf(t) === 'checked_in' && (
           <p className="mt-0.5 font-mono tabular-nums text-xs text-fg-muted">
             {format(new Date(t.checked_in_at), 'MMM d, h:mm a')}
@@ -219,11 +254,19 @@ export function AttendeesManager({ eventId, eventTitle, tickets, ticketsError = 
         <User className="h-5 w-5 text-brand-300" />
       </div>
       <div className="min-w-0 flex-1">
-        <p className="truncate font-medium text-fg">{t.attendee?.full_name || t.attendee?.email || tx('event_tools.guest')}</p>
-        <p className="truncate text-xs text-fg-muted">{t.attendee?.full_name ? t.attendee?.email || '' : ''}</p>
+        <p className="truncate font-medium text-fg">
+          {t.attendee?.full_name || t.attendee?.email || tx('event_tools.guest')}
+          {t.attendee?.is_child && <ChildTag />}
+        </p>
+        <p className="truncate text-xs text-fg-muted">
+          {t.attendee?.guest_of
+            ? `${tx('attendees.with')} ${t.attendee.guest_of}`
+            : t.attendee?.full_name ? t.attendee?.email || '' : ''}
+        </p>
       </div>
-      <div>
+      <div className="text-right">
         <TicketStatus t={t} tx={tx} />
+        <DoorLine t={t} className="justify-end" />
       </div>
     </button>
   )
@@ -419,6 +462,11 @@ function AttendeeDetail({ ticket }: { ticket: Ticket }) {
               normalizeCurrency(ticket.currency, 'HTG')
             )}</span>
           </InfoRow>
+          {doorBalance(ticket as any) && (
+            <InfoRow icon={<CreditCard className="h-4 w-4" />} label={tx('attendees.pay_at_door')}>
+              <DoorLine t={ticket} />
+            </InfoRow>
+          )}
         </div>
       </section>
     </div>
@@ -672,4 +720,10 @@ function EmailAttendeesSheet({
       </div>
     </Drawer>
   )
+}
+
+/** Family registration: this attendee is a child (lib/events/family). A quiet label, not a pill. */
+function ChildTag() {
+  const { t } = useTranslation('organizer')
+  return <span className="ml-1.5 text-xs font-normal text-fg-muted">· {t('door.child', { defaultValue: 'Child' })}</span>
 }

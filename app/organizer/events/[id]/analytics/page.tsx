@@ -70,6 +70,16 @@ export default async function EventAnalyticsPage({
         })
       : EMPTY_VALUE
 
+  // Pay at the door: cash recorded at the door, kept apart from revenue (Tikem
+  // takes no fee on it and pays none of it out).
+  const doorCollected = sales.doorCollectedByCurrencyCents
+  const doorOutstanding = sales.doorOutstandingByCurrencyCents
+  const hasDoor = Object.keys(doorCollected).length > 0 || Object.keys(doorOutstanding).length > 0
+  const money = (m: Record<string, number>) =>
+    Object.keys(m).length > 0
+      ? formatPrimaryMoneyFromCentsByCurrency(m, eventCurrency, 'en-US', { currencyDisplay: 'code' })
+      : formatPrimaryMoneyFromCentsByCurrency({ [eventCurrency]: 0 }, eventCurrency, 'en-US', { currencyDisplay: 'code' })
+
   // Sales by day (last 30 days of purchases)
   type DayStat = { date: string; count: number }
   const byDay: Record<string, number> = {}
@@ -140,6 +150,31 @@ export default async function EventAnalyticsPage({
             />
             {viewsCard}
           </div>
+
+          {hasDoor && (
+            <div className="rounded p-5 bg-surface">
+              <h2 className="font-display lowercase italic !text-section !leading-snug text-fg">
+                <T k="event_analytics.at_the_door" />
+              </h2>
+              <div className="mt-3 grid grid-cols-2 gap-4">
+                <div>
+                  <p className="eyebrow text-eyebrow text-fg-subtle">
+                    <T k="event_analytics.door_collected" />
+                  </p>
+                  <p className="mt-1 text-lg font-semibold tabular-nums text-fg">{money(doorCollected)}</p>
+                </div>
+                <div>
+                  <p className="eyebrow text-eyebrow text-fg-subtle">
+                    <T k="event_analytics.door_outstanding" />
+                  </p>
+                  <p className="mt-1 text-lg font-semibold tabular-nums text-fg">{money(doorOutstanding)}</p>
+                </div>
+              </div>
+              <p className="mt-3 text-xs text-fg-subtle">
+                <T k="event_analytics.door_note" />
+              </p>
+            </div>
+          )}
 
           {/* Ticket tier breakdown */}
           {tierBreakdown.length > 0 && (

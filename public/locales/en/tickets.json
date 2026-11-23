@@ -134,7 +134,9 @@
     "no_active_tickets": "No active tickets for this event.",
     "tickets_count_one": "{{count}} Ticket",
     "tickets_count_other": "{{count}} Tickets",
-    "tickets_count_plural": "{{count}} Tickets"
+    "tickets_count_plural": "{{count}} Tickets",
+    "pay_at_door": "Pay {{amount}} at the door",
+    "paid_at_door": "Paid at the door"
   },
   "purchase_success": {
     "title": "Purchase Successful!",

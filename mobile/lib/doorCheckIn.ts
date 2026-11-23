@@ -148,6 +148,24 @@ export async function postCheckIn(
   return { verdict: json.verdict as DoorVerdict, row: (json.row as DoorRow) || null, mine: Boolean(json.mine) };
 }
 
+/**
+ * Pay at the door: record that the cash was taken for one ticket (or undo it).
+ * Needs a connection: money is not queued offline. Returns the updated row.
+ */
+export async function postDoorPayment(eventId: string, ticketId: string, paid: boolean): Promise<DoorRow> {
+  const res = await fetchWithTimeout(
+    `/api/staff/events/${encodeURIComponent(eventId)}/door-payment`,
+    { method: 'POST', body: JSON.stringify({ ticketId, paid }) },
+    CHECK_IN_TIMEOUT_MS,
+  );
+  const json: any = await res.json().catch(() => null);
+  if (res.status === 401 || res.status === 403 || res.status === 404 || res.status === 400) {
+    throw new DoorAccessError(res.status, String(json?.error || 'Forbidden'));
+  }
+  if (!res.ok || !json?.row) throw new DoorOfflineError();
+  return json.row as DoorRow;
+}
+
 // ---------------------------------------------------------------------------
 // Offline queue
 // ---------------------------------------------------------------------------

@@ -30,6 +30,7 @@ import MoneyText from '../../components/MoneyText';
 import OrganizerScreenHeader from '../../components/organizer/OrganizerScreenHeader';
 import { useOverlayHeaderInset } from '../../components/OverlayHeader';
 import SegmentedTabs from '../../components/organizer/SegmentedTabs';
+import { doorBalance, doorMoney } from '../../lib/payAtDoor';
 import { Users } from 'lucide-react-native';
 
 type RouteParams = {
@@ -49,6 +50,11 @@ interface Attendee {
   checked_in_at: any;
   checked_in?: boolean;
   status: string;
+  /** Pay at the door (lib/payAtDoor). */
+  payment_method?: string;
+  door_price?: number;
+  door_currency?: string;
+  door_paid?: boolean;
 }
 
 /** A ticket is checked in if any of the three signals say so. */
@@ -91,6 +97,10 @@ function slimAttendee(a: Attendee): Attendee {
     status: a.status,
     checked_in: a.checked_in,
     checked_in_at: iso(a.checked_in_at),
+    payment_method: (a as any).payment_method,
+    door_price: (a as any).door_price,
+    door_currency: (a as any).door_currency,
+    door_paid: (a as any).door_paid,
   } as Attendee;
 }
 
@@ -109,7 +119,7 @@ export default function EventAttendeesScreen() {
   const insets = useSafeAreaInsets();
   const { height: headerH, onHeight } = useOverlayHeaderInset();
 
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const showAlert = useAppAlert();
   const { formatDate } = useLocaleFormat();
 
@@ -420,7 +430,13 @@ export default function EventAttendeesScreen() {
     const live = isLive(item);
     const pending = pendingIds.has(item.id);
     const paid = Number(item.price_paid) > 0;
-    const sub = [item.tier_name, item.attendee_email].filter(Boolean).join(' · ');
+    const door = doorBalance(item as any);
+    const doorText = door
+      ? door.paid
+        ? t('doorScanner.door.paidAtDoor')
+        : t('doorScanner.door.owesAmount', { amount: doorMoney(door.owes, door.currency, language) })
+      : '';
+    const sub = [item.tier_name, doorText, item.attendee_email].filter(Boolean).join(' · ');
 
     return (
       <View style={styles.row}>

@@ -233,6 +233,12 @@ async function getEventByIdUncached(eventId: string): Promise<Event | null> {
         // explicit flags are what `resolveEventPricing` trusts first.
         is_rsvp: data?.is_rsvp ?? undefined,
         has_paid_tiers: data?.has_paid_tiers ?? undefined,
+        // Pay at the door (lib/tickets/pay-at-door) and family registration
+        // (lib/events/family): whitelisted so cards and the event page see them.
+        pay_at_door: data?.pay_at_door === true ? true : undefined,
+        door_price_from: Number(data?.door_price_from) > 0 ? Number(data?.door_price_from) : undefined,
+        family_registration: data?.family_registration === true ? true : undefined,
+        family_max: Number(data?.family_max) > 0 ? Number(data?.family_max) : undefined,
         image_url: data?.banner_image_url || data?.image_url,
         banner_image_url: data?.banner_image_url || data?.image_url,
         // The template behind a "Make a poster" poster (lib/posters): the composer
@@ -422,6 +428,12 @@ const readPublishedEvents = unstable_cache(
         // Pricing classification signals — see lib/ticketPricing.ts.
         is_rsvp: data?.is_rsvp ?? undefined,
         has_paid_tiers: data?.has_paid_tiers ?? undefined,
+        // Pay at the door (lib/tickets/pay-at-door) and family registration
+        // (lib/events/family): whitelisted so cards and the event page see them.
+        pay_at_door: data?.pay_at_door === true ? true : undefined,
+        door_price_from: Number(data?.door_price_from) > 0 ? Number(data?.door_price_from) : undefined,
+        family_registration: data?.family_registration === true ? true : undefined,
+        family_max: Number(data?.family_max) > 0 ? Number(data?.family_max) : undefined,
         image_url: data.banner_image_url || data.image_url,
         banner_image_url: data.banner_image_url || data.image_url,
         // The template behind a "Make a poster" poster (lib/posters): the composer
@@ -619,6 +631,12 @@ export async function getOrganizerEvents(
         // next to paid ones and cannot decide freeness on its own.
         is_rsvp: data?.is_rsvp ?? undefined,
         has_paid_tiers: data?.has_paid_tiers ?? undefined,
+        // Pay at the door (lib/tickets/pay-at-door) and family registration
+        // (lib/events/family): whitelisted so cards and the event page see them.
+        pay_at_door: data?.pay_at_door === true ? true : undefined,
+        door_price_from: Number(data?.door_price_from) > 0 ? Number(data?.door_price_from) : undefined,
+        family_registration: data?.family_registration === true ? true : undefined,
+        family_max: Number(data?.family_max) > 0 ? Number(data?.family_max) : undefined,
         image_url: data.banner_image_url || data.image_url,
         banner_image_url: data.banner_image_url || data.image_url,
         // The template behind a "Make a poster" poster (lib/posters): the composer
@@ -751,6 +769,12 @@ export async function getAdminEvents(
         // next to paid ones and cannot decide freeness on its own.
         is_rsvp: data?.is_rsvp ?? undefined,
         has_paid_tiers: data?.has_paid_tiers ?? undefined,
+        // Pay at the door (lib/tickets/pay-at-door) and family registration
+        // (lib/events/family): whitelisted so cards and the event page see them.
+        pay_at_door: data?.pay_at_door === true ? true : undefined,
+        door_price_from: Number(data?.door_price_from) > 0 ? Number(data?.door_price_from) : undefined,
+        family_registration: data?.family_registration === true ? true : undefined,
+        family_max: Number(data?.family_max) > 0 ? Number(data?.family_max) : undefined,
         image_url: data.banner_image_url || data.image_url,
         banner_image_url: data.banner_image_url || data.image_url,
         // The template behind a "Make a poster" poster (lib/posters): the composer
@@ -846,6 +870,12 @@ export async function getOrganizerEventsClient(
         // next to paid ones and cannot decide freeness on its own.
         is_rsvp: data?.is_rsvp ?? undefined,
         has_paid_tiers: data?.has_paid_tiers ?? undefined,
+        // Pay at the door (lib/tickets/pay-at-door) and family registration
+        // (lib/events/family): whitelisted so cards and the event page see them.
+        pay_at_door: data?.pay_at_door === true ? true : undefined,
+        door_price_from: Number(data?.door_price_from) > 0 ? Number(data?.door_price_from) : undefined,
+        family_registration: data?.family_registration === true ? true : undefined,
+        family_max: Number(data?.family_max) > 0 ? Number(data?.family_max) : undefined,
         image_url: data.banner_image_url || data.image_url,
         banner_image_url: data.banner_image_url || data.image_url,
         // The template behind a "Make a poster" poster (lib/posters): the composer

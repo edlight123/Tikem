@@ -66,6 +66,16 @@ describe('firestore.rules — tickets (S1)', () => {
     }
   })
 
+  it('pay-at-the-door fields are server-only (door-payment route, Admin SDK)', () => {
+    // Cash taken at the door is recorded by /api/staff/events/:id/door-payment,
+    // never by a client write: a client could otherwise mark its own spot paid
+    // or rewrite what it owes.
+    const writable = update.slice(update.indexOf('hasOnly(['), update.indexOf('])'))
+    for (const f of ['door_price', 'door_currency', 'door_paid', 'door_amount', 'door_paid_at', 'door_paid_by']) {
+      expect(writable).not.toContain(`'${f}'`)
+    }
+  })
+
   it('a transferred ticket (qr_version >= 1) never checks in by a direct client write', () => {
     // Only the server can judge WHICH code was scanned (lib/tickets/qr.ts).
     expect(update).toMatch(/\]\) &&\s*(\/\/[^\n]*\n\s*)*resource\.data\.get\('qr_version', 0\) == 0 &&/)

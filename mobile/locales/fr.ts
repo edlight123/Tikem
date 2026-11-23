@@ -2615,6 +2615,7 @@ export default {
       sellTitle: 'Vendre des billets',
       sellDesc: 'Définir les prix et les types de billets.',
       rsvpTitle: 'RSVP gratuit',
+      doorTitle: 'Payer à l’entrée',
       rsvpDesc: 'Collectez des RSVP gratuits avec une limite.',
     },
     confirm: {
@@ -2646,6 +2647,9 @@ export default {
           'Attention : cet événement se tient en {event}, mais votre compte de paiement connecté est enregistré en {account}. Vous serez quand même payé sur ce compte, dans sa devise, après conversion. Un versement local en {event} exigerait un compte connecté distinct, que Tikèm ne prend pas encore en charge.',
       },
     canvas: {
+      addTicketTypes: 'Plusieurs types d’invités ? Ajoutez des types de billets',
+      ticketTypes: 'Types prêts',
+      doorHint: 'Les gens réservent gratuitement et vous paient à l’arrivée. Tikem ne prend aucuns frais.',
       nationalDay: {
         label: 'Un événement pour {day} ?',
         hint: 'Mettez-le en avant sur la bannière {day}.',
@@ -2696,6 +2700,7 @@ export default {
       freeTicket: 'Billet gratuit',
       unlimitedQty: 'Quantité illimitée',
       unlimitedLabel: 'Illimité',
+      doorPriceLabel: 'À l’entrée',
       ticketDescription: 'Description du billet (facultatif)',
       trailer: 'Regarder la vidéo promo',
       aboutTicket: 'À propos de ce billet',
@@ -2910,6 +2915,12 @@ export default {
       tier: 'Palier',
       available: 'disponibles',
       helpText: "Voici comment votre événement apparaîtra aux participants. Prêt à publier ?",
+    },
+    family: {
+      upTo: 'Personnes par inscription',
+      hint: 'Une personne inscrit sa famille ; chacun reçoit son billet.',
+      freeOnly: 'Pour les événements gratuits.',
+      label: 'Inscription familiale',
     },
   },
 
@@ -3246,6 +3257,7 @@ export default {
     empty: 'Aucune image trouvée',
   },
   eventDetail: {
+    familyBadge: 'Familles bienvenues, jusqu’à {count} par inscription',
     // Affiche + morceau (masqués quand l’événement n’en a pas).
     lineup: {
       title: 'Affiche',
@@ -3319,6 +3331,7 @@ export default {
     },
     floating: {
       ticketsOnEventbrite: 'Billets sur Eventbrite',
+      reserveSpot: 'Réserver une place',
       notOnSale: 'Pas en vente',
       eventCancelled: 'Événement annulé',
       noTicketsAvailable: 'Aucun billet disponible',
@@ -3432,6 +3445,8 @@ export default {
     details: {
       title: 'Informations du billet',
       type: 'Type',
+      payAtDoor: 'Paiement à l’entrée',
+      paidAtDoor: 'Payé',
       quantity: 'Quantité',
       price: 'Prix',
       ticketId: 'ID du billet',
@@ -3459,6 +3474,8 @@ export default {
   },
 
   freeTicket: {
+    doorDue: '{amount} à payer à l’entrée. Tikem ne prend aucuns frais.',
+    familyTitle: 'Qui vient avec vous ?',
     sheetTitle: 'réserver',
     ticketsLabel: 'Billets',
     alreadyTitle: 'Vous y allez',
@@ -3498,6 +3515,8 @@ export default {
     total: 'Total',
     free: 'GRATUIT',
     claimButton: { one: 'Réclamer {count} billet', other: 'Réclamer {count} billets' },
+    reserveButton: { one: 'Réserver {count} place', other: 'Réserver {count} places' },
+    doorOnly: 'Paiement à l’entrée. Tikem ne prend aucuns frais.',
     soldOutTitle: 'Complet',
     soldOutBody: 'Aucun billet disponible',
     limitedTitle: 'Disponibilité limitée',
@@ -3765,7 +3784,13 @@ export default {
       notValid: 'Non valide',
     },
     door: {
+      owesAmount: 'Doit {amount} à l’entrée',
+      collectAmount: 'Encaisser {amount}',
       notOnList: 'Ce billet ne figure pas sur la liste de l’entrée.',
+      payAtDoor: 'Paiement à l’entrée',
+      paidAtDoor: 'Payé à l’entrée',
+      markPaid: 'Marquer payé',
+      paymentNeedsConnection: 'Connexion requise pour enregistrer le paiement.',
       noAccess: 'Vous n’avez plus accès au contrôle des entrées pour cet événement.',
       lookupSubtitle: '{count} invités sur la liste de l’entrée',
       placeholder: 'Nom ou code du billet',
@@ -4077,6 +4102,7 @@ export default {
   attendRequests: {
     requestToJoin: "Demander à participer",
     sheet: {
+      child: 'Enfant',
       title: "demander à participer",
       subtitle: "L'organisateur approuve chaque invité. Vous serez notifié.",
       bringing: "Vous venez accompagné ?",
@@ -4084,7 +4110,7 @@ export default {
       guestCount: "+{count} invité",
       max: "max {max}",
       guestLabel: "Invité {n}",
-      firstName: "Prénom",
+      firstName: "Prénom (facultatif)",
       firstNamePlaceholder: "Prénom de l'invité",
       phone: "Téléphone (facultatif)",
       phonePlaceholder: "+509 XXXX XXXX",

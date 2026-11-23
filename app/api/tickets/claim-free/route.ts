@@ -20,6 +20,8 @@ import {
 // The free-ticket limits are shared with the card route, which can carry free
 // lines in a multi-tier cart (lib/tickets/free-claim-policy).
 import { MAX_FREE_TICKETS_PER_CLAIM } from '@/lib/tickets/free-claim-policy'
+import { FAMILY_MAX_LIMIT, freeClaimCapFor } from '@/lib/events/family'
+import { MAX_DOOR_TICKETS_PER_PERSON } from '@/lib/tickets/pay-at-door'
 import { issueFreeClaim } from '@/lib/tickets/free-claim-issue'
 import {
   eventAllowedPlusOnes,
@@ -37,6 +39,10 @@ import {
 function fail(error: string, code: string, status = 400) {
   return NextResponse.json({ error, code }, { status })
 }
+
+
+/** No claim is ever larger than this: the door cap (6) or the largest family (8). */
+const OUTER_CAP = Math.max(MAX_DOOR_TICKETS_PER_PERSON, FAMILY_MAX_LIMIT)
 
 export async function POST(request: Request) {
   try {
@@ -106,7 +112,10 @@ export async function POST(request: Request) {
     // capped — and REFUSED rather than truncated, since silently trimming a
     // multi-tier cart would issue an order the buyer never asked for.
     const selectionsTotal = requestedSelections.reduce((sum, s) => sum + s.quantity, 0)
-    if (useSelections && selectionsTotal > MAX_FREE_TICKETS_PER_CLAIM) {
+    // The outer ceiling is the pay-at-the-door cap (6, families); free claims
+    // are held to 2 once the event is known (below), and issueFreeClaim checks
+    // each claim against its own kind's cap.
+    if (useSelections && selectionsTotal > OUTER_CAP) {
       return fail(
         `You can claim at most ${MAX_FREE_TICKETS_PER_CLAIM} free tickets per event.`,
         'too_many_tickets',
@@ -122,10 +131,10 @@ export async function POST(request: Request) {
         const refusal = invalidQuantityRefusal(MAX_FREE_TICKETS_PER_CLAIM)
         return fail(refusal.error, refusal.code, refusal.status)
       }
-      singleQuantity = Math.min(Math.max(1, asNumber), MAX_FREE_TICKETS_PER_CLAIM)
+      singleQuantity = Math.min(Math.max(1, asNumber), OUTER_CAP)
     }
-    const ticketQuantity = useSelections ? selectionsTotal : singleQuantity
-    if (parseTicketQuantity(ticketQuantity, MAX_FREE_TICKETS_PER_CLAIM) === null) {
+    let ticketQuantity = useSelections ? selectionsTotal : singleQuantity
+    if (parseTicketQuantity(ticketQuantity, OUTER_CAP) === null) {
       const refusal = invalidQuantityRefusal(MAX_FREE_TICKETS_PER_CLAIM)
       return fail(refusal.error, refusal.code, refusal.status)
     }
@@ -141,6 +150,17 @@ export async function POST(request: Request) {
     }
 
     const event = { id: eventDoc.id, ...eventDoc.data() } as any
+
+    // Free claims stay at 2 per person: the legacy shape clamps (frozen
+    // contract), a cart over the cap is refused. Pay-at-the-door events allow 6.
+    // A family-registration event allows the family size (lib/events/family).
+    if (event.pay_at_door !== true) {
+      const freeCap = freeClaimCapFor(event)
+      if (useSelections && selectionsTotal > freeCap) {
+        return fail(`You can claim at most ${freeCap} free tickets per event.`, 'too_many_tickets', 400)
+      }
+      if (!useSelections) ticketQuantity = Math.min(ticketQuantity, freeCap)
+    }
 
     // Cancelled, unpublished, rejected or finished events issue nothing.
     const purchasable = checkEventPurchasable(event)
@@ -281,7 +301,10 @@ export async function POST(request: Request) {
       promoApplied,
       // A guest has no /tickets page to be sent to — hand back their own signed link.
       ...(identity.guestToken ? { guestTicketUrl: guestTicketUrl(identity.guestToken) } : {}),
-      message: `${ticketQuantity} free ticket${ticketQuantity !== 1 ? 's' : ''} claimed successfully!`
+      message:
+        event.pay_at_door === true
+          ? `${ticketQuantity} spot${ticketQuantity !== 1 ? 's' : ''} reserved. Pay at the door.`
+          : `${ticketQuantity} free ticket${ticketQuantity !== 1 ? 's' : ''} claimed successfully!`
     })
   } catch (error: any) {
     console.error('Claim free ticket error:', error)

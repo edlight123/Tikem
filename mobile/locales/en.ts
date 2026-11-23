@@ -773,6 +773,7 @@ export default {
       sellTitle: 'Sell tickets',
       sellDesc: 'Set prices and ticket tiers.',
       rsvpTitle: 'Free RSVP',
+      doorTitle: 'Pay at the door',
       rsvpDesc: 'Collect free RSVPs with a guest cap.',
     },
     confirm: {
@@ -804,6 +805,9 @@ export default {
           'Heads up: this event is in {event}, but your connected payout account is registered in {account}. You’ll still be paid into that account, in its currency, after a conversion. A local {event} payout would need a separate connected account, which Tikèm doesn’t support yet.',
       },
     canvas: {
+      addTicketTypes: 'Different kinds of guests? Add ticket types',
+      ticketTypes: 'Ready-made types',
+      doorHint: 'People reserve for free and pay you on arrival. Tikem takes no fee.',
       nationalDay: {
         label: 'Part of {day}?',
         hint: 'Feature it on the {day} banner.',
@@ -854,6 +858,7 @@ export default {
       freeTicket: 'Free ticket',
       unlimitedQty: 'Unlimited quantity',
       unlimitedLabel: 'Unlimited',
+      doorPriceLabel: 'At the door',
       ticketDescription: 'Ticket description (optional)',
       trailer: 'Watch promo video',
       aboutTicket: 'About this ticket',
@@ -1070,6 +1075,12 @@ export default {
       tier: 'Tier',
       available: 'available',
       helpText: 'This is how your event will appear to attendees. Ready to publish?',
+    },
+    family: {
+      upTo: 'People per registration',
+      hint: 'One person registers their family; everyone gets their own ticket.',
+      freeOnly: 'For free events.',
+      label: 'Family registration',
     },
   },
 
@@ -3283,6 +3294,7 @@ export default {
     empty: 'No images found',
   },
   eventDetail: {
+    familyBadge: 'Families welcome, up to {count} per registration',
     // Lineup rail + song card (hidden entirely when the event has neither).
     lineup: {
       title: 'Lineup',
@@ -3356,6 +3368,7 @@ export default {
     },
     floating: {
       ticketsOnEventbrite: 'Get tickets on Eventbrite',
+      reserveSpot: 'Reserve a spot',
       notOnSale: 'Not on sale',
       eventCancelled: 'Event cancelled',
       noTicketsAvailable: 'No tickets available',
@@ -3470,6 +3483,8 @@ export default {
     details: {
       title: 'Ticket Information',
       type: 'Type',
+      payAtDoor: 'Pay at the door',
+      paidAtDoor: 'Paid',
       quantity: 'Quantity',
       price: 'Price',
       ticketId: 'Ticket ID',
@@ -3497,6 +3512,8 @@ export default {
   },
 
   freeTicket: {
+    doorDue: '{amount} to pay at the door. Tikem takes no fee.',
+    familyTitle: 'Who is coming with you?',
     sheetTitle: 'rsvp',
     ticketsLabel: 'Tickets',
     alreadyTitle: "You're going",
@@ -3536,6 +3553,8 @@ export default {
     total: 'Total',
     free: 'FREE',
     claimButton: { one: 'Claim {count} Ticket', other: 'Claim {count} Tickets' },
+    reserveButton: { one: 'Reserve {count} spot', other: 'Reserve {count} spots' },
+    doorOnly: 'Pay at the door. Tikem takes no fee.',
     soldOutTitle: 'Sold Out',
     soldOutBody: 'No tickets available',
     limitedTitle: 'Limited Availability',
@@ -3745,7 +3764,13 @@ export default {
       notValid: 'Not valid',
     },
     door: {
+      owesAmount: 'Owes {amount} at the door',
+      collectAmount: 'Collect {amount}',
       notOnList: 'This ticket isn’t on the door list.',
+      payAtDoor: 'Pay at the door',
+      paidAtDoor: 'Paid at the door',
+      markPaid: 'Mark paid',
+      paymentNeedsConnection: 'Needs a connection to record the payment.',
       noAccess: 'You no longer have check-in access for this event.',
       lookupSubtitle: '{count} guests on the door list',
       placeholder: 'Name or ticket code',
@@ -4058,6 +4083,7 @@ export default {
   attendRequests: {
     requestToJoin: "Request to join",
     sheet: {
+      child: 'Child',
       title: "request to join",
       subtitle: "The host approves every guest. You will be notified.",
       bringing: "Bringing someone?",
@@ -4065,7 +4091,7 @@ export default {
       guestCount: "+{count} guest",
       max: "max {max}",
       guestLabel: "Guest {n}",
-      firstName: "First name",
+      firstName: "First name (optional)",
       firstNamePlaceholder: "Guest first name",
       phone: "Phone (optional)",
       phonePlaceholder: "+509 XXXX XXXX",

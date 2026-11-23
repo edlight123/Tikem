@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { DoorModeTopBar } from '@/components/scan/DoorModeTopBar'
 import { ScanViewport } from '@/components/scan/ScanViewport'
 import { ScanResultOverlay } from '@/components/scan/ScanResultOverlay'
@@ -9,6 +10,8 @@ import { ManualLookupSheet } from '@/components/scan/ManualLookupSheet'
 import { useScanController } from '@/lib/scan/useScanController'
 import { performCheckIn, performOverrideCheckIn } from '@/app/organizer/scan/actions'
 import type { CheckInParams, CheckInResult } from '@/lib/scan/checkInTicket'
+import { DoorCollectBar } from '@/components/scan/DoorCollectBar'
+import { doorBalance } from '@/lib/tickets/pay-at-door'
 
 interface DoorModeInterfaceProps {
   eventId: string
@@ -46,7 +49,12 @@ export function DoorModeInterface({
       return next
     })
 
+  // Pay at the door: payments recorded on this phone since the page loaded.
+  const [doorPaidLocal, setDoorPaidLocal] = useState<Record<string, boolean>>({})
+
   // The override's own verdict (re-entry allowed, or refused and why).
+  const { t } = useTranslation('common')
+  const childLabel = t('events.family_child', { defaultValue: 'Child' })
   const [overrideResult, setOverrideResult] = useState<CheckInResult | null>(null)
   const [overriding, setOverriding] = useState(false)
   const overrideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -65,12 +73,15 @@ export function DoorModeInterface({
   const attendees = useMemo(() => {
     return tickets.map((ticket) => ({
       ticketId: ticket.id,
-      attendeeName: ticket.attendee?.full_name || ticket.attendee_name || ticket.attendee?.email || 'Guest',
+      // A family member or plus-one shows under their own name, marked when a child.
+      attendeeName: (ticket as any).plus_one_name
+        ? `${(ticket as any).plus_one_name}${(ticket as any).plus_one_child ? ` · ${childLabel}` : ''}`
+        : ticket.attendee?.full_name || ticket.attendee_name || ticket.attendee?.email || 'Guest',
       attendeeEmail: ticket.attendee?.email || '',
       ticketType: ticket.ticket_type || 'General Admission',
       checkedIn: checkedInIds.has(String(ticket.id)),
     }))
-  }, [tickets, checkedInIds])
+  }, [tickets, checkedInIds, childLabel])
 
   // Scan controller
   const { state, result, handleScan, manualCheckIn, reset } = useScanController({
@@ -164,6 +175,27 @@ export function DoorModeInterface({
           />
         )
       )}
+
+      {/* Pay at the door: what the scanned ticket owes, over the result. */}
+      {(result || overrideResult) &&
+        currentTicketId &&
+        (() => {
+          const ticket = tickets.find((t) => String(t.id) === currentTicketId)
+          const balance = doorBalance(ticket)
+          if (!balance) return null
+          const paid = doorPaidLocal[currentTicketId] ?? balance.paid
+          const owes = Number(ticket?.door_price) || balance.owes
+          return (
+            <DoorCollectBar
+              eventId={eventId}
+              ticketId={currentTicketId}
+              owes={owes}
+              currency={balance.currency}
+              paid={paid}
+              onChange={(next) => setDoorPaidLocal((prev) => ({ ...prev, [currentTicketId]: next }))}
+            />
+          )
+        })()}
 
       {/* Manual Lookup Sheet */}
       <ManualLookupSheet

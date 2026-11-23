@@ -637,7 +637,14 @@
     "entry_main_entrance": "Entrée principale",
     "entry_vip_entrance": "Entrée VIP",
     "entry_side_door": "Porte latérale",
-    "entry_back_entrance": "Entrée arrière"
+    "entry_back_entrance": "Entrée arrière",
+    "pay_at_door": "Paiement à l’entrée",
+    "paid_at_door": "Payé à l’entrée",
+    "collect_amount": "Encaisser {{amount}}",
+    "mark_paid": "Marquer payé",
+    "undo_payment": "Annuler",
+    "payment_needs_connection": "Connexion requise pour enregistrer le paiement.",
+    "child": "Enfant"
   },
   "markets": {
     "title": "Où vous organisez vos événements",
@@ -1037,7 +1044,11 @@
     "attendee_information": "Informations sur le participant",
     "process_refund": "Effectuer le remboursement",
     "resend_ticket_email": "Renvoyer le billet par e-mail",
-    "ticket_information": "Informations sur le billet"
+    "ticket_information": "Informations sur le billet",
+    "pay_at_door": "Paiement à l’entrée",
+    "door_paid": "Payé {{amount}} à l’entrée",
+    "door_owes": "Doit {{amount}} à l’entrée",
+    "with": "avec"
   },
   "event_staff": {
     "actions": "Actions",
@@ -1716,7 +1727,11 @@
     "remove_access_if_lost": "Retirez l'accès immédiatement en cas de perte d'un appareil",
     "need_help": "Besoin d'aide ?",
     "support_can_help": "Notre équipe d'assistance peut aider à intégrer de grandes équipes et configurer les accès.",
-    "back_to_settings": "Retour aux paramètres"
+    "back_to_settings": "Retour aux paramètres",
+    "at_the_door": "à l’entrée",
+    "door_collected": "Encaissé",
+    "door_outstanding": "Reste dû",
+    "door_note": "Payé en personne. Tikem ne prend aucuns frais dessus et ce montant ne fait pas partie de vos versements."
   },
   "verify_to_withdraw": {
     "title": "Vérifiez votre identité pour retirer",

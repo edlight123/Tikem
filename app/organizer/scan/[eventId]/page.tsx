@@ -139,7 +139,15 @@ export default async function DoorModeScanPage({ params }: { params: Promise<{ e
       // A name only (door staff may lack viewAttendees): guest, comp and
       // guest-list tickets carry it on the ticket, with no users doc behind them.
       attendee_name: String(ticketData.attendee_name || ticketData.recipient_name || ''),
+      // A plus-one or family member (lib/events/family): their own name, and whether they're a child.
+      plus_one_name: String(ticketData.plus_one_name || ''),
+      plus_one_child: ticketData.plus_one_child === true,
       price_paid: ticketData.price_paid || 0,
+      // Pay at the door (lib/tickets/pay-at-door): what is owed on arrival.
+      payment_method: String(ticketData.payment_method || ''),
+      door_price: Number(ticketData.door_price) || 0,
+      door_currency: String(ticketData.door_currency || ''),
+      door_paid: ticketData.door_paid === true,
       checked_in: ticketData.checked_in || false,
       qr_code: ticketData.qr_code || ticketData.qr_code_data || '',
       attendee,

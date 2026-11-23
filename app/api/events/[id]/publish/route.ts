@@ -15,6 +15,7 @@ import { resolveEmailLang } from '@/lib/email-kit/recipient'
 import { appUrl } from '@/lib/email-kit/layout'
 import { MIN_PAID_PRICE_ERROR_CODE, publishPriceBelowMinimum } from '@/lib/min-paid-price'
 import { readOrgBrandAdmin } from '@/lib/firestore/org-brand-server'
+import { isPaidEvent } from '@/lib/events/paid-event'
 
 const TIER_LIMIT = 25
 
@@ -25,11 +26,6 @@ async function loadTiers(eventId: string): Promise<any[]> {
     .limit(TIER_LIMIT)
     .get()
   return tiersSnapshot.docs.map((d: any) => d.data() || {})
-}
-
-function isPaidEvent(eventData: any, tiers: any[]): boolean {
-  if ((eventData?.ticket_price || 0) > 0) return true
-  return tiers.some((t: any) => (t?.price || 0) > 0)
 }
 
 function toIso(value: any): string | null {

@@ -125,3 +125,24 @@ export function tierDescriptionFrom(tier: { name?: unknown; description?: unknow
   if (!description) return '';
   return description === str(tier?.name).trim() ? '' : description;
 }
+
+// ---------------------------------------------------------------------------
+// Pay at the door (mirror of the web's lib/events/door-mode.ts).
+// ---------------------------------------------------------------------------
+
+import { doorPriceOf, isDoorEvent } from './payAtDoor';
+
+export type ComposerMode = 'tickets' | 'rsvp' | 'door';
+
+export function composerModeOf(event: any, tiers: any[] = []): ComposerMode {
+  if (!event && tiers.length === 0) return 'tickets';
+  if (isDoorEvent(event, tiers)) return 'door';
+  if (event?.is_rsvp === true || event?.ticket_name === 'RSVP') return 'rsvp';
+  return 'tickets';
+}
+
+/** The amount the editor shows for a stored tier: its door price on a door tier, else its price. */
+export function tierEditorPrice(tier: { price?: unknown; door_price?: unknown }): string {
+  const door = doorPriceOf(tier);
+  return String(door > 0 ? door : Number(tier?.price ?? 0) || 0);
+}

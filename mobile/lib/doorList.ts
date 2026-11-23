@@ -39,6 +39,10 @@ export type DoorRow = {
    * code. Optional: a list cached by an older build has no such field.
    */
   qrVersion?: number;
+  /** Pay at the door: still owed on arrival (null/absent for any other ticket). */
+  doorOwes?: number | null;
+  doorCurrency?: string | null;
+  doorPaid?: boolean;
 };
 
 export type DoorVerdict =

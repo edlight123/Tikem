@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { requireOrgPage, requireEventPage } from '../../../_lib/orgPage'
 import EventComposer from '../../EventComposer'
 import { isDemoMode, DEMO_EVENTS } from '@/lib/demo'
+import { tierEditorPrice } from '@/lib/events/door-mode'
 import { getOrganizerVerificationStatus } from '@/lib/organizerVerification'
 
 export const dynamic = 'force-dynamic'
@@ -51,7 +52,8 @@ export default async function EditEventPage({ params }: { params: Promise<{ id: 
       // Floor for the quantity field.
       sold_quantity: Number(t.sold_quantity ?? 0) || 0,
       name: t.name ?? '',
-      price: String(t.price ?? 0),
+      // A door tier shows its door price (lib/events/door-mode).
+      price: tierEditorPrice(t),
       qty: String(t.total_quantity ?? t.quantity ?? 0),
       // Per-tier sale + entry windows MUST ride along: the composer writes
       // every editable field on save, so omitting these here would erase

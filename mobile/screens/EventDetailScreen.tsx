@@ -50,6 +50,8 @@ import PaymentModal from '../components/PaymentModal';
 import { externalTicketsUrl } from '../lib/integrationWeb';
 import TieredTicketSelector, { PurchaseSelectionMeta } from '../components/TieredTicketSelector';
 import { resolveEventPricing } from '../lib/ticketPricing';
+import { doorPriceLabel, isDoorEvent, isDoorTier, lowestDoorPrice } from '../lib/payAtDoor';
+import { familyMax, freeClaimCapFor } from '../lib/family';
 import { advertisedPrice } from '../lib/buyerPricing';
 import { formatPrice } from '../lib/currency';
 import { setTicketsRefreshHint } from '../lib/ticketsRefreshHint';
@@ -660,7 +662,7 @@ export default function EventDetailScreen({ route, navigation }: any) {
     // Free-ONLY event: nothing to choose, claim directly. Clear any tier picked
     // in an earlier flow so the server resolves the event's free tier itself and
     // the sheet owns the quantity (see lockedQuantity below).
-    if (isFree && heldFreeTickets > 0) {
+    if (freeOnly && heldFreeTickets > 0) {
       // Already going: one free claim per event. Show their tickets instead.
       navigation.navigate('EventTickets', { eventId });
       return;
@@ -810,11 +812,23 @@ export default function EventDetailScreen({ route, navigation }: any) {
   // alongside a paid one has ticket_price === 0 — testing it sent every buyer
   // straight to the free-claim modal and hid the paid tier entirely.
   const pricing = resolveEventPricing(event);
+  const eventTiers: any[] = Array.isArray((event as any).ticket_tiers) ? (event as any).ticket_tiers : [];
+  // Pay at the door (lib/payAtDoor): tiers cost 0 online and carry what is owed
+  // on arrival. Reserved through the tier picker ("Reserve a spot").
+  const payAtDoor = isDoorEvent(event as any, eventTiers);
+  const doorFrom = payAtDoor ? lowestDoorPrice(eventTiers) ?? (Number((event as any).door_price_from) || null) : null;
+  // A free event with several ticket types (Adults, Children...) is picked in
+  // the tier picker too; one free type keeps the quick RSVP sheet.
+  const freeOnly = pricing.isFreeOnly && !payAtDoor;
+  const freeTypes =
+    freeOnly && eventTiers.filter((tier) => Number(tier?.price ?? 0) === 0 && !isDoorTier(tier) && tier?.is_active !== false).length > 1;
   // `isFree` now means "there is no paid way in", i.e. tier selection can be
   // skipped. A mixed event is NOT free: the buyer must choose a tier.
-  const isFree = pricing.isFreeOnly;
+  const isFree = freeOnly && !freeTypes;
+  // Family registration (lib/family): one person registers up to N people.
+  const familySize = familyMax(event as any);
   // v1 approval lists are free-only; a paid event with a stray flag sells as usual.
-  const requiresApproval = eventNeedsApproval && isFree;
+  const requiresApproval = eventNeedsApproval && freeOnly;
   // Kept in sync from Eventbrite: tickets are sold there, so the CTA links out.
   const outsideTicketsUrl = externalTicketsUrl(event);
   const allowedPlusOnesHere = attendAllowedPlusOnes ?? eventAllowedPlusOnes(event);
@@ -948,6 +962,9 @@ export default function EventDetailScreen({ route, navigation }: any) {
         <View style={styles.content}>
           {/* Title block — text-first, under the poster */}
           <Text style={styles.title}>{event.title}</Text>
+          {familySize > 0 && (
+            <Text style={styles.familyText}>{t('eventDetail.familyBadge', { count: familySize })}</Text>
+          )}
 
           {/* Date, then where, at the same size (owner, 2026-11-18, from a
               Stitch reference: "the date is above, the location immediately
@@ -1262,7 +1279,7 @@ export default function EventDetailScreen({ route, navigation }: any) {
               {isCancelled ? t('eventDetail.floating.eventCancelled') : t('eventDetail.floating.notOnSale')}
             </Text>
           </View>
-        ) : isFree && !requiresApproval && heldFreeTickets > 0 ? (
+        ) : freeOnly && !requiresApproval && heldFreeTickets > 0 ? (
           // Already holds this free-only event's claim: no claim sheet to open.
           // Dot + label status (never a pill badge) and one way to the tickets.
           <View style={styles.goingRow}>
@@ -1334,17 +1351,27 @@ export default function EventDetailScreen({ route, navigation }: any) {
           // Adaptive white-pill primary action (POSH §2.2): free → RSVP,
           // paid → Get Tickets with a muted price sub-label.
           <WhitePillCTA
-            variant={isFree ? 'rsvp' : 'paid'}
+            variant={freeOnly || payAtDoor ? 'rsvp' : 'paid'}
             label={
               outsideTicketsUrl
                 ? t('eventDetail.floating.ticketsOnEventbrite')
                 : requiresApproval
                 ? t('attendRequests.requestToJoin')
-                : isFree
+                : payAtDoor
+                  ? t('eventDetail.floating.reserveSpot')
+                  : freeOnly
                   ? t('common.rsvp')
                   : t('eventDetail.floating.getTickets')
             }
-            subLabel={isFree ? undefined : priceSubLabel}
+            subLabel={
+              payAtDoor
+                ? doorFrom
+                  ? doorPriceLabel(doorFrom, event.currency || 'HTG', language)
+                  : undefined
+                : freeOnly
+                  ? undefined
+                  : priceSubLabel
+            }
             onPress={handlePurchaseTicket}
             loading={purchasing}
             style={styles.floatingCtaPill}
@@ -1363,6 +1390,7 @@ export default function EventDetailScreen({ route, navigation }: any) {
         country={event?.country}
         feeIncidence={(event as any)?.fee_incidence ?? (event as any)?.feeIncidence}
         freeClaimHeld={heldFreeTickets > 0}
+        freeCap={freeClaimCapFor(event as any)}
       />
 
       <PurchaseSuccessSheet
@@ -1402,6 +1430,7 @@ export default function EventDetailScreen({ route, navigation }: any) {
         onClose={() => setShowRequestSheet(false)}
         eventId={eventId}
         allowedPlusOnes={allowedPlusOnesHere}
+        family={familySize > 0}
         onSent={(request) => {
           // Close the sheet FIRST: two RN modals do not stack on iOS.
           setShowRequestSheet(false);
@@ -1544,6 +1573,8 @@ export default function EventDetailScreen({ route, navigation }: any) {
 }
 
 const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
+  // Family registration line under the title (lib/family).
+  familyText: { marginTop: 6, fontSize: 13, color: colors.textSecondary },
   container: {
     flex: 1,
     backgroundColor: colors.background,
