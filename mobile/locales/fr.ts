@@ -1356,6 +1356,13 @@ export default {
 
   organizerEventManagement: {
     openScanner: 'Ouvrir le scanner d\'entrée',
+    publish: {
+      cta: 'Publier',
+      successTitle: 'Votre événement est en ligne',
+      successBody: 'Le public peut le trouver et prendre des billets dès maintenant.',
+      blockedTitle: 'Pas encore publié',
+      failed: 'Publication impossible. Réessayez.',
+    },
     stats: {
       sellThrough: 'Taux de vente',
       checkedIn: 'Enregistrés',

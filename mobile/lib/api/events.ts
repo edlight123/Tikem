@@ -1125,8 +1125,18 @@ export async function toggleEventPublication(
   } catch (error: any) {
     console.error('Error toggling event publication:', error);
     // Preserve the server's explanation (e.g. "Reconnect Stripe in Payout
-    // settings...") — the caller shows error.message directly.
-    throw new Error(error?.message || 'Failed to update event status');
+    // settings...") — the caller shows error.message directly — and its
+    // machine-readable `code` and body, so the caller can offer the fix
+    // (lib/publishFix).
+    const err = new Error(error?.payload?.error || error?.message || 'Failed to update event status') as Error & {
+      code?: string;
+      status?: number;
+      payload?: any;
+    };
+    err.code = error?.code;
+    err.status = error?.status;
+    err.payload = error?.payload;
+    throw err;
   }
 }
 
