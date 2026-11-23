@@ -255,7 +255,15 @@ export default function OrganizerDashboardScreen() {
           </Touchable>
         ) : null}
       </View>
-      <View style={styles.avatar}>
+      {/* The org's mark opens its public page (TestFlight 2026-11-23: the
+          avatar did nothing on tap). */}
+      <Touchable
+        style={styles.avatar}
+        onPress={() => orgId && navigation.navigate('OrganizerProfile', { organizerId: orgId })}
+        disabled={!orgId}
+        accessibilityRole="button"
+        accessibilityLabel={t('organizerDashboard.openOrgPage', { name: displayName })}
+      >
         {avatarUri ? (
           <Image
             source={{ uri: avatarUri }}
@@ -267,7 +275,7 @@ export default function OrganizerDashboardScreen() {
         ) : (
           <OrgMark size={56} color={colors.text} />
         )}
-      </View>
+      </Touchable>
     </View>
   );
 

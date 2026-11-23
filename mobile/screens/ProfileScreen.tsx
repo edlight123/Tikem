@@ -600,9 +600,8 @@ export default function ProfileScreen() {
         {isOwnOrganizer && activeOrg.isOwner ? (
           <View style={styles.block}>
             <SectionHeader title={t('profile.organization.sectionTitle')} />
-            {/* The brand as a card, not a settings row (owner, 2026-11-18:
-                "see how you can make this more premium"): the logo large with
-                a camera badge, the name in the serif, the whole card opens the
+            {/* The brand at row height (owner, 2026-11-23): the logo with a
+                camera badge, the name in the serif, the whole card opens the
                 edit. No "Add logo" text button. */}
             <TouchableOpacity style={styles.orgCard} onPress={openEdit} activeOpacity={0.85} accessibilityRole="button">
               <Touchable
@@ -616,7 +615,7 @@ export default function ProfileScreen() {
                 {orgLogo ? (
                   <Image source={{ uri: orgLogo }} style={styles.orgLogoImage} contentFit="cover" transition={150} />
                 ) : (
-                  <Briefcase size={24} color={colors.textSecondary} />
+                  <Briefcase size={16} color={colors.textSecondary} />
                 )}
                 {uploadingLogo ? (
                   <View style={styles.busyOverlay}>
@@ -625,7 +624,7 @@ export default function ProfileScreen() {
                 ) : null}
               </Touchable>
               <View pointerEvents="none" style={styles.orgCamera}>
-                <Camera size={12} color="#000" strokeWidth={2.4} />
+                <Camera size={8} color="#000" strokeWidth={2.4} />
               </View>
               <View style={styles.orgMeta}>
                 <Text style={[styles.orgName, !orgName && styles.orgNameEmpty]} numberOfLines={1}>
@@ -1040,21 +1039,26 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
 
     block: { marginTop: 28 },
 
+    // Row height, like the ListRows below (TestFlight 2026-11-23: "fix those
+    // heights, make it like the rest of the cards"): 52pt, 16 / 10 padding
+    // around a 32px mark, the same box as ListRow's icon tile.
     orgCard: {
       backgroundColor: T.surface,
       borderRadius: radius.lg,
-      padding: 16,
+      minHeight: 52,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 16,
+      gap: 12,
     },
     orgCamera: {
       position: 'absolute',
-      left: 16 + 72 - 18,
-      top: 16 + 72 - 18,
-      width: 24,
-      height: 24,
-      borderRadius: 12,
+      left: 16 + 32 - 11,
+      top: 10 + 32 - 11,
+      width: 16,
+      height: 16,
+      borderRadius: 8,
       backgroundColor: '#FFFFFF',
       borderWidth: 2,
       borderColor: T.surface,
@@ -1062,9 +1066,9 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       justifyContent: 'center',
     },
     orgLogo: {
-      width: 72,
-      height: 72,
-      borderRadius: radius.md,
+      width: 32,
+      height: 32,
+      borderRadius: radius.sm,
       overflow: 'hidden',
       backgroundColor: T.surfaceRaised,
       alignItems: 'center',
@@ -1072,9 +1076,9 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     },
     orgLogoImage: { width: '100%', height: '100%' },
     orgMeta: { flex: 1, minWidth: 0 },
-    orgName: { fontFamily: font.serif, fontSize: 26, lineHeight: 30, color: colors.text },
+    orgName: { fontFamily: font.serif, fontSize: 18, lineHeight: 22, color: colors.text },
     orgNameEmpty: { color: colors.textSecondary, fontFamily: undefined, fontSize: 15, fontWeight: '600' },
-    orgHint: { marginTop: 4, fontSize: 13, lineHeight: 17, color: colors.textSecondary },
+    orgHint: { marginTop: 1, fontSize: 13, lineHeight: 17, color: colors.textSecondary },
     orgAction: { fontSize: 13, fontWeight: '700', color: colors.text },
 
     // Same width and gap as EventRail's cards; overflow is clipped by the page.

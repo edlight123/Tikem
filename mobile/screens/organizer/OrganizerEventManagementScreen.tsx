@@ -60,7 +60,7 @@ import OrganizerScreenHeader from '../../components/organizer/OrganizerScreenHea
 import { useOverlayHeaderInset } from '../../components/OverlayHeader';
 import ChromeBlur from '../../components/ChromeBlur';
 import StatusChip from '../../components/StatusChip';
-import StatTriplet from '../../components/StatTriplet';
+import { eventStatLines } from '../../lib/eventStatLines';
 import { getEventViews, type EventViews } from '../../lib/eventViews';
 import SectionHeader from '../../components/SectionHeader';
 import { resolvePosterTheme } from '../../lib/posterGradient';
@@ -106,7 +106,7 @@ export default function OrganizerEventManagementScreen() {
     navigation.setOptions({ headerShown: false });
   }, [navigation]);
 
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const showAlert = useAppAlert();
   const { formatDate, formatTime } = useLocaleFormat();
 
@@ -417,25 +417,13 @@ export default function OrganizerEventManagementScreen() {
     return { status: 'live', label: t('organizerEventManagement.status.onSale') };
   })();
 
-  const stats = [
-    {
-      label: t('organizerEventManagement.stats.sold'),
-      value: capacity > 0 ? `${ticketsSold}/${capacity}` : String(ticketsSold),
-    },
-    { label: t('organizerEventManagement.stats.checkedIn'), value: String(ticketsCheckedIn) },
-    ...(sellThrough !== null
-      ? [{ label: t('organizerEventManagement.stats.sellThrough'), value: `${sellThrough}%` }]
-      : []),
-    ...(views
-      ? [
-          {
-            label: t('eventViews.views'),
-            value: views.total.toLocaleString(),
-            caption: views.today > 0 ? t('eventViews.today', { count: views.today }) : undefined,
-          },
-        ]
-      : []),
-  ];
+  const statLines = eventStatLines(t, language, {
+    sold: ticketsSold,
+    capacity,
+    checkedIn: ticketsCheckedIn,
+    sellThrough,
+    views: views ? { total: views.total, today: views.today } : null,
+  });
 
   const canCancel = event?.status !== 'cancelled';
   const ctaBlockH = 56 + 16 + Math.max(insets.bottom, 16);
@@ -572,9 +560,22 @@ export default function OrganizerEventManagementScreen() {
           {!!metaLine && <Text style={styles.meta}>{metaLine}</Text>}
         </View>
 
-        {/* Metrics sit directly on the canvas (no stat boxes). */}
+        {/* Metrics as two quiet lines on the canvas, numbers semibold and
+            labels muted (owner 2026-11-23: "one or two lines max, no need
+            for this grid"). */}
         <View style={styles.statsWrap}>
-          <StatTriplet items={stats} columns={stats.length === 4 ? 2 : 3} />
+          {statLines.map((segments, li) => (
+            <Text key={li} style={styles.statLine}>
+              {segments.map((seg, si) => (
+                <Text key={si}>
+                  {si > 0 ? <Text style={styles.statSep}>{' · '}</Text> : null}
+                  {seg.value ? <Text style={styles.statValue}>{seg.value}</Text> : null}
+                  {seg.value ? ' ' : ''}
+                  {seg.label}
+                </Text>
+              ))}
+            </Text>
+          ))}
         </View>
 
         {/* Ticket types */}
@@ -768,7 +769,21 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   statsWrap: {
     paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingTop: 16,
+    gap: 4,
+  },
+  statLine: {
+    fontSize: 15,
+    lineHeight: 21,
+    color: colors.textSecondary,
+  },
+  statValue: {
+    fontWeight: '600',
+    color: colors.text,
+    fontVariant: ['tabular-nums'],
+  },
+  statSep: {
+    color: colors.textTertiary,
   },
   section: {
     paddingHorizontal: 20,
