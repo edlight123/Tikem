@@ -173,7 +173,7 @@ export default function DeleteAccountSheet({ visible, onClose }: Props) {
           </View>
           </View>
 
-          <ScrollView style={styles.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+          <ScrollView keyboardDismissMode="on-drag" style={styles.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
             {step === 'confirm' ? (
               <>
                 <Text style={styles.body}>{t('profile.deleteAccount.intro')}</Text>

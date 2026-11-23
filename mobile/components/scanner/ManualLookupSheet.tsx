@@ -159,7 +159,7 @@ export default function ManualLookupSheet({
             )}
           </View>
 
-          <FlatList
+          <FlatList keyboardDismissMode="on-drag"
             data={results}
             keyExtractor={(g) => g.ticketId}
             keyboardShouldPersistTaps="handled"

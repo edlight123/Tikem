@@ -1189,7 +1189,7 @@ export default function OrganizerPayoutSettingsScreenV2() {
         <View style={styles.container}>
           <OrganizerScreenHeader title={t('organizerPayoutSettings.verifyModal.headerTitle')} onBack={() => setShowVerificationModal(false)} />
 
-          <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 24 }}>
+          <ScrollView keyboardDismissMode="on-drag" contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 24 }}>
             {/* What the document must show: a requirement, so it stays. */}
             <Text style={styles.fieldEyebrow}>{t('organizerPayoutSettings.verifyModal.requiredTitle')}</Text>
             <ListGroup inset={16}>
@@ -1474,7 +1474,7 @@ export default function OrganizerPayoutSettingsScreenV2() {
       return (
         <>
           {renderStepHeader(1)}
-          <ScrollView contentContainerStyle={styles.stepBody}>
+          <ScrollView keyboardDismissMode="on-drag" contentContainerStyle={styles.stepBody}>
             <Text style={styles.stepTitle}>{t('organizerPayoutSettings.setup.identity.title')}</Text>
             <Text style={styles.stepLead}>{t('organizerPayoutSettings.setup.identity.lead')}</Text>
             {identityVerified ? (
@@ -1524,7 +1524,7 @@ export default function OrganizerPayoutSettingsScreenV2() {
       return (
         <>
           {renderStepHeader(2)}
-          <ScrollView contentContainerStyle={styles.stepBody}>
+          <ScrollView keyboardDismissMode="on-drag" contentContainerStyle={styles.stepBody}>
             <Text style={[styles.stepTitle, styles.stepTitleSolo]}>{t('organizerPayoutSettings.setup.markets.title')}</Text>
             <Text style={styles.monoLabel}>{t('organizerPayoutSettings.setup.markets.pickAll')}</Text>
             <MarketsPicker
@@ -1554,7 +1554,7 @@ export default function OrganizerPayoutSettingsScreenV2() {
     return (
       <>
         {renderStepHeader(3)}
-        <ScrollView contentContainerStyle={styles.stepBody} keyboardShouldPersistTaps="handled">
+        <ScrollView keyboardDismissMode="on-drag" contentContainerStyle={styles.stepBody} keyboardShouldPersistTaps="handled">
           <Text style={[styles.stepTitle, styles.stepTitleSolo]}>{t('organizerPayoutSettings.setup.method.title')}</Text>
 
           {showHaitiRail ? (
@@ -1842,7 +1842,7 @@ export default function OrganizerPayoutSettingsScreenV2() {
         onBack={() => (inHistory ? setActiveTab('methods') : navigation.goBack())}
       />
 
-      <ScrollView
+      <ScrollView keyboardDismissMode="on-drag"
         contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 32 }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.textSecondary} />

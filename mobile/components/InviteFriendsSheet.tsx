@@ -424,7 +424,7 @@ export function InviteFriendsSheet({
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.list} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+            <ScrollView keyboardDismissMode="on-drag" style={styles.list} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
               {showOnTikem && (
                 <>
                   <Text style={styles.section}>{t('invites.sectionFriends').toLowerCase()}</Text>

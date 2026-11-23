@@ -568,7 +568,7 @@ export default function EventAttendeesScreen() {
       </View>
 
       {/* Attendees list */}
-      <FlatList
+      <FlatList keyboardDismissMode="on-drag" keyboardShouldPersistTaps="handled"
         data={filteredAttendees}
         ListHeaderComponent={
           filterStatus === 'not_checked_in' && notCheckedInCount > 0 && !searchQuery ? (

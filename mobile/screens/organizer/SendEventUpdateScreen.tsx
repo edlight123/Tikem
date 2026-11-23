@@ -136,7 +136,7 @@ export default function SendEventUpdateScreen() {
         </Touchable>
       </OverlayHeader>
 
-      <ScrollView
+      <ScrollView keyboardDismissMode="on-drag"
         style={styles.content}
         contentContainerStyle={{ paddingTop: headerH, paddingBottom: insets.bottom + 16 }}
         keyboardShouldPersistTaps="handled"

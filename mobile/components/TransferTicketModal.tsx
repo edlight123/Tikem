@@ -209,7 +209,7 @@ export default function TransferTicketModal({
           </View>
           </View>
 
-          <ScrollView
+          <ScrollView keyboardDismissMode="on-drag"
             style={styles.content}
             contentContainerStyle={styles.contentInner}
             showsVerticalScrollIndicator={false}

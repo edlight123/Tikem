@@ -229,7 +229,7 @@ export default function OrganizerCompsScreen() {
           overlay
           onHeight={onHeight}
         />
-        <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: headerH + 16 }]}>
+        <ScrollView keyboardDismissMode="on-drag" contentContainerStyle={[styles.scrollContent, { paddingTop: headerH + 16 }]}>
           {/* Issue form: title, then label + input pairs (inputs ≈45 tall:
               paddingVertical 12×2 + text), a stepper row, and the submit pill. */}
           <View style={styles.formCard}>
@@ -271,7 +271,7 @@ export default function OrganizerCompsScreen() {
         overlay
         onHeight={onHeight}
       />
-      <ScrollView
+      <ScrollView keyboardDismissMode="on-drag"
         contentContainerStyle={[styles.scrollContent, { paddingTop: headerH + 16 }]}
         keyboardShouldPersistTaps="handled"
       >

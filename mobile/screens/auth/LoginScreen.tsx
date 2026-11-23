@@ -167,7 +167,7 @@ export default function LoginScreen({ navigation }: any) {
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? undefined : 'height'}
       >
-      <ScrollView
+      <ScrollView keyboardDismissMode="on-drag"
         style={styles.flex}
         contentContainerStyle={[styles.content, { paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + spacing.xl }]}
         keyboardShouldPersistTaps="handled"

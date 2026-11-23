@@ -193,7 +193,7 @@ export default function ConnectionsScreen() {
           inviteEventTitle={typeof route?.params?.inviteEventTitle === 'string' ? route.params.inviteEventTitle : null}
         />
       ) : (
-        <ScrollView
+        <ScrollView keyboardDismissMode="on-drag"
           contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 32 }}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
         >
@@ -432,7 +432,7 @@ function FindTab({ colors, onOpen, onChange, onRequireAuth, insets, autoSync, in
   }, [autoSync, startSync]);
 
   return (
-    <ScrollView
+    <ScrollView keyboardDismissMode="on-drag"
       contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 32 }}
       keyboardShouldPersistTaps="handled"
     >

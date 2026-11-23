@@ -264,7 +264,8 @@ export default function MessageThreadScreen({ navigation, route }: any) {
       setThread((th) =>
         th ? { ...th, reply_count: th.reply_count + 1, messages: [...th.messages, saved] } : th,
       );
-      setDraft('');
+      // The input stays live while sending, so only clear what was sent.
+      setDraft((d) => (d.trim() === body ? '' : d));
       setReplyingTo(null);
       nearBottom.current = true;
       requestAnimationFrame(() => scrollRef.current?.scrollToEnd({ animated: true }));
@@ -676,7 +677,8 @@ export default function MessageThreadScreen({ navigation, route }: any) {
                     selectionColor={colors.primary}
                     multiline
                     maxLength={maxLength}
-                    editable={!sending}
+                    // Stays editable while sending: toggling editable blurs the
+                    // input on iOS and drops the keyboard after every message.
                     accessibilityLabel={t('attendeeMessages.replyLabel')}
                   />
                   <Touchable
