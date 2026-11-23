@@ -73,9 +73,25 @@ async function prepare(image: Buffer): Promise<Buffer> {
     .toBuffer()
 }
 
+/** A read that takes longer than this fails instead of holding the function to its limit. */
+const READ_DEADLINE_MS = 25_000
+
+function withDeadline<T>(p: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const deadline = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      // A worker that died (e.g. a core file missing) never answers: drop it
+      // so the next read starts a fresh one.
+      workerPromise = null
+      reject(new Error('flyer read timed out'))
+    }, ms)
+  })
+  return Promise.race([p, deadline]).finally(() => clearTimeout(timer))
+}
+
 export async function ocrFlyer(image: Buffer): Promise<OcrLine[]> {
-  const [worker, png] = await Promise.all([getWorker(), prepare(image)])
-  const { data } = await worker.recognize(png, {}, { blocks: true } as any)
+  const [worker, png] = await withDeadline(Promise.all([getWorker(), prepare(image)]), READ_DEADLINE_MS)
+  const { data } = await withDeadline(worker.recognize(png, {}, { blocks: true } as any), READ_DEADLINE_MS)
   const lines: OcrLine[] = []
   for (const block of (data as any).blocks || []) {
     for (const para of block.paragraphs || []) {

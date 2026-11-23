@@ -75,12 +75,11 @@ const nextConfig = {
       './node_modules/tesseract.js/src/**',
       './node_modules/tesseract.js/package.json',
       './node_modules/tesseract.js-core/package.json',
-      './node_modules/tesseract.js-core/tesseract-core-lstm.js',
-      './node_modules/tesseract.js-core/tesseract-core-lstm.wasm',
-      './node_modules/tesseract.js-core/tesseract-core-simd-lstm.js',
-      './node_modules/tesseract.js-core/tesseract-core-simd-lstm.wasm',
-      './node_modules/tesseract.js-core/tesseract-core-relaxedsimd-lstm.js',
-      './node_modules/tesseract.js-core/tesseract-core-relaxedsimd-lstm.wasm',
+      // Every core build: tesseract.js picks lstm / non-lstm and simd /
+      // relaxed-simd at runtime from the CPU, so tracing one set is not enough
+      // (a missing relaxedsimd.wasm hung the route until the 60 s limit).
+      './node_modules/tesseract.js-core/tesseract-core*.js',
+      './node_modules/tesseract.js-core/tesseract-core*.wasm',
       './node_modules/wasm-feature-detect/**',
       './node_modules/bmp-js/**',
       './node_modules/zlibjs/**',
