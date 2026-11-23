@@ -970,6 +970,8 @@
     "balance_changed": "Balans ou chanje, tanpri eseye ankò.",
     "free_event_nothing": "Evènman gratis, pa gen anyen pou peye.",
     "back_to_all": "← Retounen nan tout revni yo",
+    "withdrawn_amount": "{{amount}} retire",
+    "not_withdrawn_yet": "Poko retire",
     "paid_to_stripe": "Peye sou kont Stripe ou",
     "paid_to_stripe_hint": "Vant ak kat yo ale dirèk sou kont Stripe ou, se poutèt sa yo pa nan Nèt ni nan Disponib isit la."
   },

@@ -126,6 +126,15 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
   const needsPayoutMethodToWithdraw =
     isHaitiRailEvent && (haitiProfileStatus === null || haitiProfileStatus === 'not_setup')
 
+  // Every sale went to the organizer's own Stripe (Connect) and nothing is
+  // held, available or withdrawn here (Tikra 8deac01e earningsDisplay).
+  const connectOnly =
+    !!earnings &&
+    Number((earnings as any).heldByStripeAmount || 0) > 0 &&
+    !(Number(earnings.netAmount) > 0) &&
+    !(Number((earnings as any).availableToWithdraw) > 0) &&
+    !(Number(earnings.withdrawnAmount) > 0)
+
   const availableToWithdraw = useMemo(() => {
     if (!earnings) return 0
     if (earnings.withdrawalBlocked) return 0
@@ -519,7 +528,15 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
           icon={TrendingUp}
           label={t('event_earnings.net_earnings')}
           value={formatCurrency(earnings.netAmount, earnings.currency)}
-          sublabel={earnings.withdrawnAmount > 0 ? `${formatCurrency(earnings.withdrawnAmount, earnings.currency)} withdrawn` : 'Not withdrawn yet'}
+          sublabel={
+            // A Connect-only event (every sale paid to the organizer's own
+            // Stripe) has nothing to withdraw here, so no withdrawal line.
+            connectOnly
+              ? undefined
+              : earnings.withdrawnAmount > 0
+                ? t('event_earnings.withdrawn_amount', { amount: formatCurrency(earnings.withdrawnAmount, earnings.currency) })
+                : t('event_earnings.not_withdrawn_yet')
+          }
         />
         <MetricCard
           icon={Wallet}
