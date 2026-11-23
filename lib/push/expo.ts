@@ -1,6 +1,5 @@
 import { adminDb } from '@/lib/firebase/admin'
 import { FieldValue, type QueryDocumentSnapshot } from 'firebase-admin/firestore'
-import { after } from 'next/server'
 import {
   buildExpoMessages,
   failureLog,
@@ -184,6 +183,11 @@ function checkReceiptsLater(userId: string, accepted: Array<{ id: string; token:
   if (receiptRunScheduled) return
   receiptRunScheduled = true
   try {
+    // Required lazily: importing next/server at module load pulls in the Web
+    // Request global, which plain Node scripts and the jest node environment
+    // lack (it broke every module that imports push at load time).
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { after } = require('next/server') as typeof import('next/server')
     after(checkPendingReceipts)
   } catch {
     // Not inside a request: skip the receipt check.
