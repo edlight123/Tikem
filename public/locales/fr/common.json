@@ -364,7 +364,18 @@
     "free_tier_already_claimed": "Vous avez déjà votre billet gratuit",
     "more_dates_one": "+{{count}} autre date",
     "more_dates_other": "+{{count}} autres dates",
-    "rsvp_cta": "Réserver"
+    "rsvp_cta": "Réserver",
+    "reserve_spot": "Réserver une place",
+    "reserve_spots": "Réserver {{count}} places",
+    "due_at_door": "À payer à l’entrée",
+    "pay_at_door": "Paiement à l’entrée",
+    "door_note": "Réservez maintenant, payez à l’arrivée.",
+    "family_people": "Personnes, vous compris",
+    "family_title": "Qui vient avec vous ?",
+    "family_child": "Enfant",
+    "family_hint": "Chaque personne reçoit son billet dans votre compte.",
+    "family_badge": "Familles bienvenues, jusqu’à {{count}} par inscription",
+    "card_door_price": "{{price}} à l’entrée"
   },
   "favorites": {
     "title": "Mes favoris",
@@ -1516,7 +1527,17 @@
       "use": "Utiliser cette affiche",
       "failed": "Impossible de créer l’affiche. Réessayez.",
       "sampleTitle": "Votre événement"
-    }
+    },
+    "payAtDoor": "Payer à l’entrée",
+    "doorHint": "Les gens réservent gratuitement et vous paient à l’arrivée. Tikem ne prend aucuns frais.",
+    "doorLocked": "Des personnes ont réservé avec paiement à l’entrée. Gardez ce mode ou annulez d’abord leurs places.",
+    "tierDoorPriceLabel": "À l’entrée",
+    "family": "Inscription familiale",
+    "familyFreeOnly": "Pour les événements gratuits.",
+    "familyHint": "Une personne inscrit sa famille ; chacun reçoit son billet.",
+    "familyUpTo": "Personnes par inscription",
+    "ticketTypes": "Types prêts",
+    "addTicketTypes": "Plusieurs types d’invités ? Ajoutez des types de billets"
   },
   "promoter": {
     "portal_eyebrow": "Portail promoteur",
@@ -2028,7 +2049,7 @@
       "decrease": "Un accompagnant de moins",
       "increase": "Un accompagnant de plus",
       "first_name": "Prénom",
-      "first_name_placeholder": "Prénom de l'accompagnant",
+      "first_name_placeholder": "Prénom de l’accompagnant (facultatif)",
       "phone": "Téléphone (facultatif)",
       "note": "Un mot pour l'organisateur",
       "note_placeholder": "Ami du DJ, je viens de Jacmel",

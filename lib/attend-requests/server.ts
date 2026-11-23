@@ -17,7 +17,8 @@
 import { adminDb } from '@/lib/firebase/admin'
 import { hasEventAccess } from '@/lib/events/access-guard'
 import { checkEventPurchasable } from '@/lib/tickets/purchasable'
-import { freeClaimAlreadyUsed, MAX_FREE_TICKETS_PER_CLAIM } from '@/lib/tickets/free-claim-policy'
+import { freeClaimAlreadyUsed } from '@/lib/tickets/free-claim-policy'
+import { freeClaimCapFor } from '@/lib/events/family'
 import { issueFreeClaim } from '@/lib/tickets/free-claim-issue'
 import { identityFromUser } from '@/lib/guest/checkout'
 import { normalizePhone } from '@/lib/guest/identity'
@@ -157,8 +158,8 @@ export async function createAttendRequest(
   const parsed = parseAttendInput(body || {}, eventAllowedPlusOnes(event), (p) => normalizePhone(p))
   if (!parsed.ok) return refuse(400, parsed.code, parsed.error)
   const quantity = 1 + parsed.plusOnes.length
-  if (quantity > MAX_FREE_TICKETS_PER_CLAIM) {
-    return refuse(400, 'too_many_plus_ones', `You can bring at most ${MAX_FREE_TICKETS_PER_CLAIM - 1} plus-one.`)
+  if (quantity > freeClaimCapFor(event)) {
+    return refuse(400, 'too_many_plus_ones', `You can bring at most ${freeClaimCapFor(event) - 1} plus-one.`)
   }
 
   if (await freeClaimAlreadyUsed(eventId, { isGuest: false, id: user.id })) {
@@ -323,9 +324,9 @@ export async function approveRequest(eventId: string, event: any, requestId: str
     const plusOnes = Array.isArray(d.plus_ones) ? d.plus_ones : []
     const quantity = 1 + plusOnes.length
     // The cap may have dropped since the request was made.
-    if (quantity > MAX_FREE_TICKETS_PER_CLAIM) {
+    if (quantity > freeClaimCapFor(event)) {
       return backToPending(
-        refuse(409, 'too_many_plus_ones', `Guests can bring at most ${MAX_FREE_TICKETS_PER_CLAIM - 1} plus-one now.`)
+        refuse(409, 'too_many_plus_ones', `Guests can bring at most ${freeClaimCapFor(event) - 1} plus-one now.`)
       )
     }
 

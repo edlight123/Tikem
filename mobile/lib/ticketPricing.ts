@@ -104,13 +104,15 @@ export function tierMaxPerOrder(tier: { max_per_order?: unknown; maxPerOrder?: u
  */
 export function freeClaimCap(
   tiers: Array<{ id?: string; price?: unknown; max_per_order?: unknown; maxPerOrder?: unknown }> | null | undefined,
-  tierId?: string | null
+  tierId?: string | null,
+  /** The per-person limit: 2, or the family size on a family-registration event (lib/events/family). */
+  base: number = MAX_FREE_TICKETS_PER_PERSON
 ): number {
   const list = Array.isArray(tiers) ? tiers : [];
   const relevant = tierId
     ? list.filter((t) => String(t.id) === String(tierId))
     : list.filter((t) => tierPrice(t as TierPriceLike) === 0);
-  let cap = MAX_FREE_TICKETS_PER_PERSON;
+  let cap = base;
   for (const t of relevant) {
     const max = tierMaxPerOrder(t);
     if (max !== null) cap = Math.min(cap, max);

@@ -45,14 +45,36 @@ export interface EventSalesSummary {
   checkedIn: number
   /** cents per currency; empty when nothing paid was sold. */
   revenueByCurrencyCents: Record<string, number>
+  /**
+   * Pay at the door: cash the organizer's team recorded at the door,
+   * and what reserved spots still owe. Never revenue through Tikem: no fee and
+   * no payout touches it, so it is reported beside revenue, not in it.
+   */
+  doorCollectedByCurrencyCents: Record<string, number>
+  doorOutstandingByCurrencyCents: Record<string, number>
 }
 
 export function summarizeEventTickets(tickets: TicketLike[], eventCurrency: string): EventSalesSummary {
-  const out: EventSalesSummary = { ticketsSold: 0, checkedIn: 0, revenueByCurrencyCents: {} }
+  const out: EventSalesSummary = {
+    ticketsSold: 0,
+    checkedIn: 0,
+    revenueByCurrencyCents: {},
+    doorCollectedByCurrencyCents: {},
+    doorOutstandingByCurrencyCents: {},
+  }
   for (const t of tickets) {
     if (!ticketCountsAsSold(t)) continue
     out.ticketsSold += 1
     if (isCheckedIn(t)) out.checkedIn += 1
+    if (t?.payment_method === 'pay_at_door') {
+      const cur = normalizeCurrency(t?.door_currency || eventCurrency, 'CAD')
+      const cents = Math.round(Number(t?.door_paid === true ? t?.door_amount ?? t?.door_price : t?.door_price) * 100)
+      if (Number.isFinite(cents) && cents > 0) {
+        const bucket = t?.door_paid === true ? out.doorCollectedByCurrencyCents : out.doorOutstandingByCurrencyCents
+        bucket[cur] = (bucket[cur] || 0) + cents
+      }
+      continue
+    }
     const cents = ticketRevenueCents(t)
     if (cents > 0) {
       const cur = ticketSaleCurrency(t, eventCurrency)

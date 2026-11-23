@@ -381,3 +381,20 @@ describe('seat hold at checkout start', () => {
     )
   })
 })
+
+describe('pay-at-the-door tiers never ride in a card order', () => {
+  it('refuses a door tier as a $0 line next to a paid one, and creates no PaymentIntent', async () => {
+    tier('door', 0, { door_price: 10 })
+    const { status, data } = await post({ tiers: [{ tierId: 'door', quantity: 1 }, { tierId: 'ga', quantity: 1 }] })
+    expect(status).toBe(400)
+    expect(data.code).toBe('door_tier_not_in_paid_order')
+    expect(mockCreate).not.toHaveBeenCalled()
+  })
+
+  it('refuses a door tier on the single-tier body too', async () => {
+    tier('door', 0, { door_price: 10 })
+    const { status, data } = await post({ tierId: 'door', quantity: 1 })
+    expect(status).toBe(400)
+    expect(data.code).toBe('door_tier_not_in_paid_order')
+  })
+})

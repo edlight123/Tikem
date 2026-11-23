@@ -45,6 +45,10 @@ interface MobileKeyFactsProps {
    * and the checkout selector cannot disagree. See lib/ticketScarcity.
    */
   scarcity?: Scarcity
+  /** Pay at the door: "HTG 500 at the door" replaces the price line. */
+  doorLabel?: string
+  /** A quiet extra line under the price (family registration). */
+  note?: string
 }
 
 export default function MobileKeyFacts({
@@ -62,7 +66,9 @@ export default function MobileKeyFacts({
   currency,
   remainingTickets,
   isSoldOut,
-  scarcity
+  scarcity,
+  doorLabel,
+  note,
 }: MobileKeyFactsProps) {
   const { t, i18n } = useTranslation('common')
   const dfLocale = dateLocaleFor(i18n.language)
@@ -88,7 +94,9 @@ export default function MobileKeyFacts({
     .filter((p) => p && p.trim())
     .join(' · ')
 
-  const priceLine = isFree
+  const priceLine = doorLabel
+    ? doorLabel
+    : isFree
     ? t('common.free')
     : `${hasFreeOption ? `${t('common.free')}, ` : ''}${ticketPrice.toLocaleString(intlLocaleFor(i18n.language))} ${currency}`
 
@@ -103,16 +111,19 @@ export default function MobileKeyFacts({
       {place && <p className="mt-0.5 text-body text-fg-muted">{place}</p>}
 
       {/* A free event's button already says so; "Free" here was a repeat. */}
-      {!isFree && (
+      {(!isFree || doorLabel) && (
       <p className="mt-3 text-body font-semibold text-fg">
         {priceLine}
+        {!doorLabel && (
         <span className="ml-1.5 text-meta font-normal text-fg-subtle">
           {feesIncluded
             ? t('events.fees_included', { defaultValue: 'Fees included' })
             : t('events.per_ticket', { defaultValue: 'per ticket' })}
         </span>
+        )}
       </p>
       )}
+      {note && <p className="mt-1 text-meta text-fg-subtle">{note}</p>}
 
       {/* Scarcity, not inventory. This printed "{{count}} remaining" on every
           event — "500 remaining" is an advert for the empty room, which is the

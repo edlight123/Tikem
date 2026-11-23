@@ -1135,3 +1135,131 @@ describe('free claim lock: stale vs held', () => {
     expect(state.added).toHaveLength(0)
   })
 })
+
+/**
+ * PAY AT THE DOOR. A door tier is price 0 plus
+ * door_price > 0: the claim reserves for free and stamps what is owed at the
+ * door. Door claims have their own lock and cap (6, families), so holding a
+ * free ticket never blocks a door reservation, or the reverse.
+ */
+describe('PAY AT THE DOOR reservations', () => {
+  beforeEach(() => {
+    reset()
+    state.event = { ...state.event, currency: 'CAD', pay_at_door: true }
+    state.tiers = [
+      { id: 'doorAdult', event_id: 'evt1', name: 'Adult', price: 0, door_price: 10, total_quantity: 100, sold_quantity: 0, sort_order: 0 },
+      { id: 'doorFamily', event_id: 'evt1', name: 'Family of 4', price: 0, door_price: 30, total_quantity: 20, sold_quantity: 0, sort_order: 1 },
+      { id: 'freeKids', event_id: 'evt1', name: 'Kids', price: 0, total_quantity: 50, sold_quantity: 0, sort_order: 2 },
+    ]
+  })
+  afterAll(() => {
+    state.event = { ...state.event, currency: 'HTG', pay_at_door: undefined }
+  })
+
+  it('reserves up to six door spots, each owing its door price, Tikem taking nothing', async () => {
+    const res = await POST(req({ eventId: 'evt1', tierId: 'doorAdult', quantity: 4 }))
+    expect(res.status).toBe(200)
+    expect((await res.json()).message).toBe('4 spots reserved. Pay at the door.')
+    expect(state.added).toHaveLength(4)
+    for (const t of state.added) {
+      expect(t).toMatchObject({ payment_method: 'pay_at_door', door_price: 10, door_currency: 'CAD', door_paid: false, price_paid: 0 })
+    }
+    expect(Object.keys(state.locks).some((k) => k.endsWith('__door'))).toBe(true)
+  })
+
+  it('stamps each tier its own door price in a multi-tier reservation', async () => {
+    await POST(req({ eventId: 'evt1', selections: [{ tierId: 'doorAdult', quantity: 2 }, { tierId: 'doorFamily', quantity: 1 }] }))
+    expect(state.added.map((t: any) => [t.tier_id, t.door_price])).toEqual([
+      ['doorAdult', 10],
+      ['doorAdult', 10],
+      ['doorFamily', 30],
+    ])
+  })
+
+  it('refuses more than six', async () => {
+    const res = await POST(req({ eventId: 'evt1', selections: [{ tierId: 'doorAdult', quantity: 7 }] }))
+    expect(res.status).toBe(400)
+    expect((await res.json()).code).toBe('too_many_tickets')
+    expect(state.added).toHaveLength(0)
+  })
+
+  it('refuses mixing door and free tiers in one claim', async () => {
+    const res = await POST(req({ eventId: 'evt1', selections: [{ tierId: 'doorAdult', quantity: 1 }, { tierId: 'freeKids', quantity: 1 }] }))
+    expect(res.status).toBe(400)
+    expect((await res.json()).code).toBe('mixed_door_selection')
+    expect(state.added).toHaveLength(0)
+  })
+
+  it('still caps a plain free tier at two on a door event', async () => {
+    const res = await POST(req({ eventId: 'evt1', selections: [{ tierId: 'freeKids', quantity: 3 }] }))
+    expect(res.status).toBe(400)
+    expect((await res.json()).code).toBe('too_many_tickets')
+  })
+
+  it('a free ticket does not block a door reservation', async () => {
+    state.existingTickets = [{ id: 'old1', event_id: 'evt1', price_paid: 0, payment_method: 'free', status: 'valid', attendee_id: 'u1' }]
+    state.locks['evt1__u1'] = { event_id: 'evt1', kind: 'account', ticket_ids: ['old1'] }
+    const res = await POST(req({ eventId: 'evt1', tierId: 'doorAdult', quantity: 2 }))
+    expect(res.status).toBe(200)
+    expect(state.added).toHaveLength(2)
+  })
+
+  it('a door reservation does not block a free claim', async () => {
+    state.existingTickets = [{ id: 'old1', event_id: 'evt1', price_paid: 0, payment_method: 'pay_at_door', status: 'valid', attendee_id: 'u1' }]
+    state.locks['evt1__u1__door'] = { event_id: 'evt1', kind: 'account', ticket_ids: ['old1'] }
+    const res = await POST(req({ eventId: 'evt1', tierId: 'freeKids', quantity: 1 }))
+    expect(res.status).toBe(200)
+    expect(state.added[0].payment_method).toBe('free')
+  })
+
+  it('a second door reservation returns the first (one reservation per person)', async () => {
+    state.existingTickets = [{ id: 'old1', event_id: 'evt1', price_paid: 0, payment_method: 'pay_at_door', status: 'valid', attendee_id: 'u1' }]
+    const body = await (await POST(req({ eventId: 'evt1', tierId: 'doorAdult', quantity: 1 }))).json()
+    expect(body.alreadyClaimed).toBe(true)
+    expect(state.added).toHaveLength(0)
+  })
+})
+
+describe('family registration (lib/events/family)', () => {
+  beforeEach(reset)
+  afterEach(() => {
+    delete state.event.family_registration
+    delete state.event.family_max
+  })
+
+  it('lets one person register their family: each member named, children marked', async () => {
+    state.event.family_registration = true
+    state.event.family_max = 5
+    const res = await POST(
+      req({
+        eventId: 'evt1',
+        tierId: 'freeA',
+        quantity: 4,
+        plusOnes: [{ firstName: 'Maryam' }, { firstName: 'Yusuf', child: true }, { firstName: 'Aisha', child: true }],
+      })
+    )
+    const body = await res.json()
+    expect(res.status).toBe(200)
+    expect(body.count).toBe(4)
+    const named = state.added.filter((t: any) => t.plus_one_name)
+    expect(named.map((t: any) => [t.plus_one_name, t.plus_one_child === true])).toEqual([
+      ['Maryam', false],
+      ['Yusuf', true],
+      ['Aisha', true],
+    ])
+  })
+
+  it('holds the family to its size', async () => {
+    state.event.family_registration = true
+    state.event.family_max = 3
+    const body = await (await POST(req({ eventId: 'evt1', tierId: 'freeA', quantity: 8 }))).json()
+    expect(body.count).toBe(3)
+    const cart = await POST(req({ eventId: 'evt1', selections: [{ tierId: 'freeA', quantity: 4 }] }))
+    expect(cart.status).toBe(400)
+  })
+
+  it('keeps the usual 2 per person when it is off', async () => {
+    const body = await (await POST(req({ eventId: 'evt1', tierId: 'freeA', quantity: 5 }))).json()
+    expect(body.count).toBe(2)
+  })
+})

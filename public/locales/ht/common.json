@@ -364,7 +364,18 @@
     "free_tier_already_claimed": "Ou gen tikè gratis ou deja",
     "more_dates_one": "+{{count}} lòt dat",
     "more_dates_other": "+{{count}} lòt dat",
-    "rsvp_cta": "Rezève"
+    "rsvp_cta": "Rezève",
+    "reserve_spot": "Rezève yon plas",
+    "reserve_spots": "Rezève {{count}} plas",
+    "due_at_door": "Pou peye nan pòt la",
+    "pay_at_door": "Peye nan pòt la",
+    "door_note": "Rezève kounye a, peye lè w rive.",
+    "family_people": "Moun, ou menm ladan l",
+    "family_title": "Kiyès k ap vini avè w?",
+    "family_child": "Timoun",
+    "family_hint": "Chak moun resevwa pwòp tikè pa l nan kont ou.",
+    "family_badge": "Fanmi yo byenveni, jiska {{count}} pa enskripsyon",
+    "card_door_price": "{{price}} nan pòt la"
   },
   "favorites": {
     "title": "Favori mwen",
@@ -1516,7 +1527,17 @@
       "use": "Sèvi ak afich sa a",
       "failed": "Nou pa t ka fè afich la. Eseye ankò.",
       "sampleTitle": "Evènman ou"
-    }
+    },
+    "payAtDoor": "Peye nan pòt la",
+    "doorHint": "Moun yo rezève gratis epi yo peye w lè yo rive. Tikem pa pran okenn frè.",
+    "doorLocked": "Gen moun ki deja rezève pou peye nan pòt la. Kenbe mòd sa a oswa anile plas yo anvan.",
+    "tierDoorPriceLabel": "Nan pòt la",
+    "family": "Enskripsyon fanmi",
+    "familyFreeOnly": "Pou evènman gratis.",
+    "familyHint": "Yon moun enskri fanmi l; chak moun resevwa pwòp tikè pa l.",
+    "familyUpTo": "Moun pa enskripsyon",
+    "ticketTypes": "Kalite pare",
+    "addTicketTypes": "Plizyè kalite envite? Ajoute kalite tikè"
   },
   "promoter": {
     "portal_eyebrow": "Pòtay pwomotè",
@@ -2028,7 +2049,7 @@
       "decrease": "Yon moun mwens",
       "increase": "Yon moun anplis",
       "first_name": "Prenon",
-      "first_name_placeholder": "Prenon moun nan",
+      "first_name_placeholder": "Non envite a (si ou vle)",
       "phone": "Telefòn (si w vle)",
       "note": "Yon ti mo pou òganizatè a",
       "note_placeholder": "Zanmi DJ a, m ap soti Jakmèl",

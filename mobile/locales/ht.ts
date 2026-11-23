@@ -2516,6 +2516,7 @@ export default {
     },
     saveFailedUpdate: 'Pa t kapab mete evènman an ajou. Tanpri eseye ankò.',
     entry: {
+      doorTitle: 'Peye nan pòt la',
       kicker: 'NOUVO EVÈNMAN',
       title: 'Ann lanse pwochen evènman ou',
       lead: 'Chwazi kijan moun antre. Ou ka ajiste tout bagay apre.',
@@ -2554,6 +2555,10 @@ export default {
           'Atansyon: evènman sa a nan {event}, men kont peman ou konekte a anrejistre nan {account}. Y ap toujou peye w nan kont sa a, nan lajan pa l, apre yon konvèsyon. Pou yon peman lokal nan {event}, ou ta bezwen yon lòt kont konekte, e Tikèm poko sipòte sa.',
       },
     canvas: {
+      addTicketTypes: 'Plizyè kalite envite? Ajoute kalite tikè',
+      ticketTypes: 'Kalite pare',
+      doorHint: 'Moun yo rezève gratis epi yo peye w lè yo rive. Tikem pa pran okenn frè.',
+      doorPriceLabel: 'Nan pòt la',
       nationalDay: {
         label: 'Evènman sa a pou {day}?',
         hint: 'Fè l parèt sou banyè {day} an.',
@@ -2819,6 +2824,12 @@ export default {
       available: 'disponib',
       helpText: 'Men kijan evènman ou a ap parèt pou patisipan yo. Ou pare pou pibliye?',
     },
+    family: {
+      upTo: 'Moun pa enskripsyon',
+      hint: 'Yon moun enskri fanmi l; chak moun resevwa pwòp tikè pa l.',
+      freeOnly: 'Pou evènman gratis.',
+      label: 'Enskripsyon fanmi',
+    },
   },
 
   organizerCreateEventLegacy: {
@@ -3051,6 +3062,7 @@ export default {
     empty: 'Nou pa jwenn okenn imaj',
   },
   eventDetail: {
+    familyBadge: 'Fanmi yo byenveni, jiska {count} pa enskripsyon',
     // Pwogram + mizik (kache lè evènman an pa genyen yo).
     lineup: {
       title: 'Pwogram',
@@ -3123,6 +3135,7 @@ export default {
       pastBody: 'Evènman sa a deja fini. Biyè pa disponib ankò.',
     },
     floating: {
+      reserveSpot: 'Rezève yon plas',
       notOnSale: 'Pa an vant',
       eventCancelled: 'Evènman anile',
       noTicketsAvailable: 'Pa gen biyè disponib',
@@ -3234,6 +3247,8 @@ export default {
       attendee: 'Patisipan',
     },
     details: {
+      paidAtDoor: 'Peye',
+      payAtDoor: 'Peye nan pòt la',
       title: 'Enfòmasyon biyè',
       type: 'Kalite',
       quantity: 'Kantite',
@@ -3263,6 +3278,10 @@ export default {
   },
 
   freeTicket: {
+    reserveButton: { one: 'Rezève {count} plas', other: 'Rezève {count} plas' },
+    familyTitle: 'Kiyès k ap vini avè w?',
+    doorOnly: 'Peye nan pòt la. Tikem pa pran okenn frè.',
+    doorDue: '{amount} pou peye nan pòt la. Tikem pa pran okenn frè.',
     sheetTitle: 'rezève',
     ticketsLabel: 'Biyè',
     alreadyTitle: 'Ou prale',
@@ -3569,6 +3588,12 @@ export default {
       notValid: 'Pa valid',
     },
     door: {
+      paymentNeedsConnection: 'Ou bezwen koneksyon pou anrejistre peman an.',
+      markPaid: 'Make peye',
+      owesAmount: 'Dwe {amount} nan pòt la',
+      collectAmount: 'Resevwa {amount}',
+      paidAtDoor: 'Peye nan pòt la deja',
+      payAtDoor: 'Peye nan pòt la',
       notOnList: 'Biyè sa a pa sou lis pòt la.',
       noAccess: 'Ou pa gen aksè pou kontwole antre pou evènman sa a ankò.',
       lookupSubtitle: '{count} envite sou lis pòt la',
@@ -3879,6 +3904,7 @@ export default {
   attendRequests: {
     requestToJoin: "Mande pou vini",
     sheet: {
+      child: 'Timoun',
       title: "mande pou vini",
       subtitle: "Òganizatè a apwouve chak envite. N ap avèti w.",
       bringing: "W ap vini ak yon moun?",
@@ -3886,7 +3912,7 @@ export default {
       guestCount: "+{count} envite",
       max: "maks {max}",
       guestLabel: "Envite {n}",
-      firstName: "Prenon",
+      firstName: "Prenon (si ou vle)",
       firstNamePlaceholder: "Prenon envite a",
       phone: "Telefòn (si w vle)",
       phonePlaceholder: "+509 XXXX XXXX",

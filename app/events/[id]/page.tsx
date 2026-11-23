@@ -152,9 +152,13 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
       // collection we already fetched above. See lib/ticketPricing.ts.
       // Plus the per-person limit, so the free-claim stepper stops where the
       // server would refuse (freeClaimCap).
+      // Pay at the door: the amount owed on arrival (price is then 0), and
+      // whether the tier is on sale, so several free types can be told apart.
       const tierPriceShadow = tiersSnapshot.docs.map((doc: any) => ({
         price: Number(doc.data()?.price ?? 0) || 0,
         ...(Number(doc.data()?.max_per_order) > 0 ? { max_per_order: Number(doc.data().max_per_order) } : {}),
+        ...(Number(doc.data()?.door_price) > 0 ? { door_price: Number(doc.data().door_price) } : {}),
+        ...(doc.data()?.is_active === false ? { is_active: false } : {}),
       }))
 
       // Combine event and organizer data

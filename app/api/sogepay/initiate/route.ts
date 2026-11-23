@@ -23,6 +23,7 @@ import {
   parseTicketQuantity,
   pickTierWhenUnspecified,
   tierOrderLimitRefusal,
+  doorTierInPaidOrderRefusal,
 } from '@/lib/tickets/purchasable'
 import { priceOrderCents } from '@/lib/checkout/buyer-pricing'
 import { getPlatformSettings } from '@/lib/admin/platform-settings'
@@ -210,6 +211,11 @@ export async function POST(request: Request) {
         if (limitRefusal) {
           return NextResponse.json({ error: limitRefusal.error, code: limitRefusal.code }, { status: limitRefusal.status })
         }
+        // Pay-at-the-door tiers are reserved free, never bought by card here.
+        const doorRefusal = doorTierInPaidOrderRefusal(tierRow)
+        if (doorRefusal) {
+          return NextResponse.json({ error: doorRefusal.error, code: doorRefusal.code }, { status: doorRefusal.status })
+        }
 
         const sold = Number(tierRow.sold_quantity || 0)
         const total = Number(tierRow.total_quantity || 0)
@@ -261,6 +267,10 @@ export async function POST(request: Request) {
         const limitRefusal = tierOrderLimitRefusal(tierRow, qty)
         if (limitRefusal) {
           return NextResponse.json({ error: limitRefusal.error, code: limitRefusal.code }, { status: limitRefusal.status })
+        }
+        const doorRefusal = doorTierInPaidOrderRefusal(tierRow)
+        if (doorRefusal) {
+          return NextResponse.json({ error: doorRefusal.error, code: doorRefusal.code }, { status: doorRefusal.status })
         }
         const sold = Number(tierRow.sold_quantity || 0)
         const total = Number(tierRow.total_quantity || 0)

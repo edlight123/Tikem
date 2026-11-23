@@ -636,7 +636,14 @@
     "entry_main_entrance": "Main Entrance",
     "entry_vip_entrance": "VIP Entrance",
     "entry_side_door": "Side Door",
-    "entry_back_entrance": "Back Entrance"
+    "entry_back_entrance": "Back Entrance",
+    "pay_at_door": "Pay at the door",
+    "paid_at_door": "Paid at the door",
+    "collect_amount": "Collect {{amount}}",
+    "mark_paid": "Mark paid",
+    "undo_payment": "Undo",
+    "payment_needs_connection": "Needs a connection to record the payment.",
+    "child": "Child"
   },
   "markets": {
     "title": "Where you run events",
@@ -1034,7 +1041,11 @@
     "attendee_information": "Attendee Information",
     "process_refund": "Process Refund",
     "resend_ticket_email": "Resend Ticket Email",
-    "ticket_information": "Ticket Information"
+    "ticket_information": "Ticket Information",
+    "pay_at_door": "Pay at the door",
+    "door_paid": "Paid {{amount}} at the door",
+    "door_owes": "Owes {{amount}} at the door",
+    "with": "with"
   },
   "event_staff": {
     "actions": "Actions",
@@ -1703,7 +1714,11 @@
     "remove_access_if_lost": "Remove access immediately if a device is lost",
     "need_help": "Need help?",
     "support_can_help": "Our support team can help onboard large teams and set up access.",
-    "back_to_settings": "Back to Settings"
+    "back_to_settings": "Back to Settings",
+    "at_the_door": "at the door",
+    "door_collected": "Collected",
+    "door_outstanding": "Still owed",
+    "door_note": "Paid to you in person. Tikem takes no fee on it and it is not part of your payouts."
   },
   "verify_to_withdraw": {
     "title": "Verify your identity to withdraw",

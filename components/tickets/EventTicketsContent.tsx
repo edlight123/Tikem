@@ -29,6 +29,7 @@ import { EditorialHeader } from '@/components/ui/EditorialHeader'
 import { SectionHeader } from '@/components/ui/EditorialRails'
 import { EmptyState, StatusChip } from '@/components/ui/kit'
 import { TikemWordmark } from '@/components/ui/TikemLogo'
+import { doorBalance, doorMoney } from '@/lib/tickets/pay-at-door'
 import {
   CalendarDays,
   MapPin,
@@ -77,7 +78,7 @@ const STACK_ACTION =
   'flex items-center justify-center gap-2 w-full rounded-xl bg-surface px-4 py-3 text-sm font-semibold text-fg-soft transition-colors hover:bg-surface-high hover:text-fg'
 
 export default function EventTicketsContent({ event, tickets }: EventTicketsContentProps) {
-  const { t } = useTranslation('tickets')
+  const { t, i18n } = useTranslation('tickets')
   const [showUsed, setShowUsed] = useState(false)
 
   const cleanTitle = String(event.title || 'Event').replace(/^\[[^\]]*\]\s*/, '')
@@ -250,6 +251,21 @@ export default function EventTicketsContent({ event, tickets }: EventTicketsCont
                           {cleanTitle}
                         </h3>
                         <div className="label-mono mt-1 text-eyebrow text-on-inverse/55">{dateLine}</div>
+                        {(() => {
+                          // Pay at the door: what to bring, or that it is settled.
+                          const door = doorBalance(ticket)
+                          if (!door) return null
+                          return (
+                            <div className="mt-2 text-eyebrow font-bold uppercase tracking-wide text-on-inverse/75">
+                              {door.paid
+                                ? t('event_tickets.paid_at_door', { defaultValue: 'Paid at the door' })
+                                : t('event_tickets.pay_at_door', {
+                                    amount: doorMoney(door.owes, door.currency, i18n.language),
+                                    defaultValue: 'Pay {{amount}} at the door',
+                                  })}
+                            </div>
+                          )
+                        })()}
                       </div>
                       <span className="shrink-0 rounded bg-shade/[0.07] px-2.5 py-1 text-eyebrow font-semibold uppercase tracking-wide text-on-inverse/70">
                         {tierName}

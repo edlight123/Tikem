@@ -20,6 +20,7 @@ import { isDeviceOnlyImageUri } from '../localImageUri';
 import { profileImageContentType } from '../profileImagePath';
 import { hasPaidTier } from '../ticketPricing';
 import { plusOnesSetting } from '../attendRequests';
+import { familyMax } from '../family';
 import { backendJson } from './backend';
 import { guestlistVisibilityFrom, showGuestlistFor, type GuestlistVisibility } from '../guestlistVisibility';
 import type { LineupRecord } from '../lineup';
@@ -29,6 +30,13 @@ import {
   resolveOrphan,
   type ExistingTier,
 } from '../tierReconcile';
+
+/** The lowest door price on a pay-at-the-door event, for cards (null otherwise). */
+function doorPriceFrom(eventData: { pay_at_door?: boolean; ticket_tiers?: Array<{ door_price?: string }> }): number | null {
+  if (eventData.pay_at_door !== true) return null;
+  const prices = (eventData.ticket_tiers || []).map((t) => parseFloat(t.door_price || '')).filter((n) => n > 0);
+  return prices.length ? Math.min(...prices) : null;
+}
 
 /**
  * SHA-256 hex of the trimmed raw access code (trim only; case-sensitive).
@@ -84,6 +92,8 @@ export interface CreateEventData {
     sold_quantity?: number;
     name: string;
     price: string;
+    /** Pay at the door: the amount owed on arrival (price is then '0'). */
+    door_price?: string;
     quantity: string;
     /** Optional per-tier blurb shown on the event detail page. */
     description?: string;
@@ -122,6 +132,8 @@ export interface CreateEventData {
   guestlist?: LineupRecord[];
   /** Free RSVP event — no paid tiers; a single free tier caps attendance. */
   is_rsvp?: boolean;
+  /** Reserve free, pay the organizer on arrival. */
+  pay_at_door?: boolean;
   /** When false the event is hidden from Discover/Explore (share-by-link only). */
   show_on_explore?: boolean;
   /**
@@ -183,6 +195,9 @@ export interface CreateEventData {
   requires_approval?: boolean;
   /** Named plus-ones a guest may bring, 0..3 (capped again by the free limit). */
   plus_ones_max?: number;
+  /** Family registration (lib/family): free events only. */
+  family_registration?: boolean;
+  family_max?: number;
 }
 
 /** Hard cap on how many occurrences a single recurring series may generate. */
@@ -260,6 +275,8 @@ function tierEditableFields(
   return {
     name: tier.name,
     price: parseFloat(tier.price) || 0,
+    // Pay at the door (lib/payAtDoor): price stays 0, the amount lives here.
+    door_price: parseFloat(tier.door_price || '') > 0 ? parseFloat(tier.door_price as string) : null,
     quantity: totalQuantity,
     total_quantity: totalQuantity,
     available,
@@ -397,6 +414,8 @@ function buildTierEmbedded(
     ...(live ? { id: live.id } : {}),
     name: tier.name,
     price: parseFloat(tier.price) || 0,
+    // Pay at the door: readers of the embedded array see what is owed on arrival.
+    ...(parseFloat(tier.door_price || '') > 0 ? { door_price: parseFloat(tier.door_price as string) } : {}),
     quantity: live ? live.quantity : parseInt(tier.quantity) || 0,
     available: live ? live.available : parseInt(tier.quantity) || 0,
     description: tier.description || '',
@@ -430,6 +449,9 @@ function webParityFields(eventData: CreateEventData) {
     // Approval lists are for free events only; the rule refuses approval + paid.
     requires_approval: !paid && !!eventData.requires_approval,
     plus_ones_max: plusOnesSetting({ plus_ones_max: eventData.plus_ones_max }),
+    // Family registration: free events only (not paid, not pay at the door).
+    family_registration: !paid && eventData.pay_at_door !== true && !!eventData.family_registration,
+    family_max: familyMax({ family_registration: true, family_max: eventData.family_max }),
     is_online: !!eventData.is_online,
     national_day: eventData.national_day || null,
     enable_waitlist: eventData.ticket_tiers.some((t) => !!t.waitlist),
@@ -654,6 +676,8 @@ export async function createEvent(
         // Denormalized organizer display name (org brand preferred). See above.
         organizer_name: organizerName,
         is_rsvp: eventData.is_rsvp || false,
+        pay_at_door: eventData.pay_at_door === true,
+        door_price_from: doorPriceFrom(eventData),
         // Advanced settings — default visible/on when the caller omits them.
         show_on_explore: eventData.show_on_explore !== false,
         video_url: eventData.video_url || '',
@@ -831,6 +855,8 @@ export async function updateEvent(
       total_tickets: totalCapacity,
       capacity: totalCapacity,
       is_rsvp: eventData.is_rsvp || false,
+      pay_at_door: eventData.pay_at_door === true,
+      door_price_from: doorPriceFrom(eventData),
       // Advanced settings — default visible/on when the caller omits them.
       show_on_explore: eventData.show_on_explore !== false,
       video_url: eventData.video_url || '',

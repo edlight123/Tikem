@@ -192,6 +192,10 @@ export function isStripeConnectTicket(ticket: any): boolean {
 }
 
 export function ticketPriceMinor(ticket: any): number {
+  // Pay at the door (lib/tickets/pay-at-door): the cash is the organizer's own,
+  // taken in person. Tikem never held it, takes no fee on it and owes none of
+  // it, so it is never gross here, whatever door_amount says.
+  if (String(ticket?.payment_method ?? '').toLowerCase().trim() === 'pay_at_door') return 0
   return majorToMinor(ticket?.price_paid ?? ticket?.pricePaid)
 }
 
@@ -268,6 +272,9 @@ export function ticketFactsFromDocs(tickets: any[]): TicketFacts {
     refundedMinor: 0,
   }
   for (const data of tickets) {
+    // Pay at the door: no money through Tikem, and staff often check these in
+    // by hand while taking cash, so they would skew the manual-check-in signal.
+    if (data?.payment_method === 'pay_at_door') continue
     const status = String(data?.status || '').toLowerCase()
     const refundStatus = String(data?.refund_status || '').toLowerCase()
 

@@ -2,6 +2,7 @@
  * Helper utilities for the Discover page
  */
 
+import { doorMoney } from '@/lib/tickets/pay-at-door'
 import { addDays, format, isSameDay, isSameWeek, parseISO } from 'date-fns'
 import { wallClock } from '@/lib/home/format'
 import type { Database } from '@/types/database'
@@ -158,6 +159,16 @@ export function getEventPriceLabel(
   t?: Translate
 ): string {
   const curr = event?.currency || 'HTG'
+  // Pay at the door (lib/tickets/pay-at-door): nothing is charged online, so
+  // the card says what is owed on arrival, never "Free".
+  if ((event as any)?.pay_at_door === true) {
+    const from = Number((event as any)?.door_price_from)
+    if (from > 0) {
+      const price = doorMoney(from, curr, 'en')
+      return t ? t('events.card_door_price', { price, defaultValue: `${price} at the door` }) : `${price} at the door`
+    }
+    return t ? t('events.pay_at_door', { defaultValue: 'Pay at the door' }) : 'Pay at the door'
+  }
   const display = getCardPriceDisplay(event)
   switch (display.kind) {
     case 'free':

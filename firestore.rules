@@ -475,6 +475,10 @@ service cloud.firestore {
       // legitimate client ticket write is a check-in (mobile TicketScannerScreen
       // and EventAttendeesScreen); everything else goes through Admin-SDK routes.
       // The list is mirrored in __tests__/firestore-rules-ticket-update.test.ts.
+      // Pay at the door (lib/tickets/pay-at-door): door_price, door_currency,
+      // door_paid, door_amount, door_paid_at and door_paid_by are deliberately
+      // NOT in it. Only /api/staff/events/{id}/door-payment (Admin SDK) records
+      // cash taken at the door, so no client can mark its own spot paid.
       allow update: if isSignedIn() &&
         (isEventOwner(ticketEventId()) || canCheckin(ticketEventId())) &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly([

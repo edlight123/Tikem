@@ -64,6 +64,8 @@ interface BuyTicketButtonProps {
    */
   userId: string | null
   isFree: boolean
+  /** Pay at the door: reserve free, pay on arrival (the button says "Reserve a spot"). */
+  payAtDoor?: boolean
   ticketPrice: number
   eventTitle?: string
   /** Event start, for the ticket selector's "selling fast" pace rule. */
@@ -82,6 +84,13 @@ interface BuyTicketButtonProps {
    * allowedPlusOnes). 0 = the plain quantity claim, unchanged.
    */
   plusOnesAllowed?: number
+  /** Family registration (lib/events/family): people one registration covers, 0 when off. */
+  familyMax?: number
+  /**
+   * A free event with several ticket types (Adults, Children...): the buyer picks
+   * types in the tier selector instead of the one-quantity free step.
+   */
+  freeTypes?: boolean
   /**
    * Live free tickets the signed-in buyer already holds for this event (read on
    * the server with the claim route's own dedup). One free claim per event, so
@@ -94,7 +103,7 @@ interface BuyTicketButtonProps {
   maxFreePerPerson?: number
 }
 
-export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, eventTitle = 'Event', currency = 'HTG', country, feeIncidence = null, eventStartsAt, isPasswordProtected = false, plusOnesAllowed = 0, heldFreeTickets = 0, maxFreePerPerson = MAX_FREE_TICKETS_PER_PERSON }: BuyTicketButtonProps) {
+export default function BuyTicketButton({ eventId, userId, isFree, payAtDoor = false, ticketPrice, eventTitle = 'Event', currency = 'HTG', country, feeIncidence = null, eventStartsAt, isPasswordProtected = false, plusOnesAllowed = 0, familyMax = 0, freeTypes = false, heldFreeTickets = 0, maxFreePerPerson = MAX_FREE_TICKETS_PER_PERSON }: BuyTicketButtonProps) {
   const { t } = useTranslation('common')
   const router = useRouter()
   const { showToast } = useToast()
@@ -112,12 +121,14 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
   // Free claims pick a quantity in their own step, not on the page (owner,
   // 2026-11-18: "why choosing the quantity on the main screen?").
   const [showFreeStep, setShowFreeStep] = useState(false)
-  const freeCap = Math.max(1, Math.min(MAX_FREE_TICKETS_PER_PERSON, maxFreePerPerson))
+  // A family-registration event lifts the free limit to the family size
+  // (lib/events/family); the organizer's per-person limit still applies.
+  const freeCap = Math.max(1, Math.min(familyMax || MAX_FREE_TICKETS_PER_PERSON, maxFreePerPerson))
   // One ticket per person and no plus-ones: nothing to choose, so RSVP claims
   // straight away instead of opening a step with a stuck "1".
   const freeNeedsStep = freeCap > 1 || plusOnesAllowed > 0
   // Optional names for the extra free tickets (plus-ones). Index i names ticket i+2.
-  const [plusOneNames, setPlusOneNames] = useState<Array<{ firstName: string; phone: string }>>([])
+  const [plusOneNames, setPlusOneNames] = useState<Array<{ firstName: string; phone: string; child?: boolean }>>([])
   const plusOneSlots = isFree && plusOnesAllowed > 0 ? Math.min(Math.max(0, quantity - 1), plusOnesAllowed) : 0
   const [selectedTierId, setSelectedTierId] = useState<string | null>(null)
   const [selectedTierPrice, setSelectedTierPrice] = useState<number>(0)
@@ -679,15 +690,17 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
             : {
                 eventId,
                 quantity,
-                // Named plus-ones ride along only when every extra ticket has a
-                // name; otherwise this stays the plain quantity claim.
+                // Names are optional: plus-ones ride along when at least one
+                // name (or a Child mark) was given, and the server lists a blank
+                // one as "Guest 2", "Guest 3"; otherwise the plain quantity claim.
                 ...(plusOneSlots > 0 &&
                 plusOneSlots === quantity - 1 &&
-                plusOneNames.slice(0, plusOneSlots).every((p) => p?.firstName?.trim())
+                plusOneNames.slice(0, plusOneSlots).some((p) => p?.firstName?.trim() || (familyMax && p?.child))
                   ? {
-                      plusOnes: plusOneNames.slice(0, plusOneSlots).map((p) => ({
-                        firstName: p.firstName.trim(),
-                        phone: p.phone.trim() || undefined,
+                      plusOnes: Array.from({ length: plusOneSlots }, (_, i) => plusOneNames[i]).map((p) => ({
+                        firstName: (p?.firstName || '').trim(),
+                        phone: (p?.phone || '').trim() || undefined,
+                        ...(familyMax && p?.child ? { child: true } : {}),
                       })),
                     }
                   : {}),
@@ -1273,7 +1286,9 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
             <div className="space-y-4">
               {/* Quantity Selector for Free Tickets */}
               <div className="flex items-center justify-between bg-surface rounded-xl p-4">
-                <span className="text-sm font-medium text-fg-muted">{t('events.quantity')}</span>
+                <span className="text-sm font-medium text-fg-muted">
+                  {familyMax ? t('events.family_people', { defaultValue: 'People, you included' }) : t('events.quantity')}
+                </span>
                 <div className="flex items-center space-x-3">
                   <button
                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
@@ -1302,7 +1317,9 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
               {plusOneSlots > 0 && (
                 <div className="space-y-2 rounded bg-surface-low p-4">
                   <p className="text-eyebrow font-bold uppercase tracking-[0.12em] text-fg-subtle">
-                    {t('attend_requests.claim.plus_one_title')}
+                    {familyMax
+                      ? t('events.family_title', { defaultValue: 'Who is coming with you?' })
+                      : t('attend_requests.claim.plus_one_title')}
                   </p>
                   {Array.from({ length: plusOneSlots }).map((_, i) => (
                     <div key={i} className="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -1315,12 +1332,30 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
                         onChange={(e) =>
                           setPlusOneNames((all) => {
                             const next = all.slice()
-                            next[i] = { firstName: e.target.value, phone: all[i]?.phone || '' }
+                            next[i] = { firstName: e.target.value, phone: all[i]?.phone || '', child: all[i]?.child }
                             return next
                           })
                         }
                         className="w-full rounded bg-surface px-3 py-2.5 text-base text-fg placeholder:text-fg-faint focus:outline-none focus:ring-2 focus:ring-brand-400/50 sm:text-sm"
                       />
+                      {familyMax ? (
+                        // Family registration: mark children instead of asking for a phone.
+                        <label className="flex min-h-11 items-center gap-2 text-sm text-fg-muted">
+                          <input
+                            type="checkbox"
+                            checked={!!plusOneNames[i]?.child}
+                            onChange={(e) =>
+                              setPlusOneNames((all) => {
+                                const next = all.slice()
+                                next[i] = { firstName: all[i]?.firstName || '', phone: all[i]?.phone || '', child: e.target.checked }
+                                return next
+                              })
+                            }
+                            className="h-4 w-4 accent-brand-400"
+                          />
+                          {t('events.family_child', { defaultValue: 'Child' })}
+                        </label>
+                      ) : (
                       <input
                         value={plusOneNames[i]?.phone || ''}
                         type="tel"
@@ -1337,9 +1372,14 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
                         }
                         className="w-full rounded bg-surface px-3 py-2.5 text-base text-fg placeholder:text-fg-faint focus:outline-none focus:ring-2 focus:ring-brand-400/50 sm:text-sm"
                       />
+                      )}
                     </div>
                   ))}
-                  <p className="text-xs text-fg-subtle">{t('attend_requests.claim.plus_one_hint')}</p>
+                  <p className="text-xs text-fg-subtle">
+                    {familyMax
+                      ? t('events.family_hint', { defaultValue: 'Each person gets their own ticket in your account.' })
+                      : t('attend_requests.claim.plus_one_hint')}
+                  </p>
                 </div>
               )}
 
@@ -1378,7 +1418,13 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
             disabled={loading || tierProbeLoading}
             className="block w-full bg-inverse hover:bg-inverse-hover text-on-inverse text-center text-body font-semibold py-2.5 px-5 rounded transition-colors disabled:opacity-50 min-h-12"
           >
-            {loading || tierProbeLoading ? t('events.processing') : t('events.buy_ticket')}
+            {loading || tierProbeLoading
+              ? t('events.processing')
+              : payAtDoor
+                ? t('events.reserve_spot', { defaultValue: 'Reserve a spot' })
+                : freeTypes
+                  ? t('events.rsvp_cta', { defaultValue: 'RSVP' })
+                  : t('events.buy_ticket')}
           </button>
 
           {/* Tiered Ticket Selection Modal */}
@@ -1397,6 +1443,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
                 eventStartsAt={eventStartsAt}
                 allowGuest={isGuestCheckout}
                 freeClaimHeld={heldFree > 0}
+                freeCap={freeCap}
                 onPurchase={handleTieredPurchase}
               />
             </BottomSheet>

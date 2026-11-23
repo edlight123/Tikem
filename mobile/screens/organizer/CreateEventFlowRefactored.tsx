@@ -11,6 +11,8 @@
  *   sheet gates publishing in create mode, with a save-as-draft escape hatch.
  */
 
+import { familyMax } from '../../lib/family';
+import { TIER_SETS, isUntouchedDraft, tierNameFor, tierSetLabel, type TierSet } from '../../lib/ticketTypes';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   View,
@@ -87,7 +89,7 @@ import { lineupFromEvent, lineupEntryToRecord, type LineupEntry } from '../../li
 import { AFTER_ALERT_MS } from '../../lib/moderationActions';
 import { allowedPlusOnes, plusOnesSetting } from '../../lib/attendRequests';
 import { MAX_FREE_TICKETS_PER_PERSON } from '../../lib/ticketPricing';
-import { isRsvpEvent, resolveEventTimezone, rsvpCapacityFrom, tierDescriptionFrom } from '../../lib/composerFields';
+import { composerModeOf, isRsvpEvent, resolveEventTimezone, rsvpCapacityFrom, tierDescriptionFrom, tierEditorPrice, type ComposerMode } from '../../lib/composerFields';
 
 type RouteParams = {
   CreateEvent: undefined;
@@ -170,6 +172,8 @@ export interface EventDraft {
 
   // Free RSVP path — no paid tiers, a single attendance cap instead.
   is_rsvp: boolean;
+  /** Pay at the door (lib/payAtDoor): tiers save at price 0 with the amount as door_price. */
+  pay_at_door: boolean;
   capacity: string;
 
   // Advanced settings (POSH secondary sections).
@@ -212,6 +216,9 @@ export interface EventDraft {
   // FREE events only: turned off whenever a tier costs money.
   requires_approval: boolean;
   plus_ones_max: number;
+  /** Family registration (lib/family): one person registers up to family_max people. */
+  family_registration: boolean;
+  family_max: number;
 }
 
 const CATEGORIES = [
@@ -547,6 +554,7 @@ export default function CreateEventFlowRefactored() {
     ticket_tiers: [{ name: 'General Admission', price: '0', quantity: '100', description: '', unlimited: false }],
     currency: 'HTG',
     is_rsvp: false,
+    pay_at_door: false,
     capacity: '100',
     show_on_explore: true,
     video_url: '',
@@ -562,6 +570,8 @@ export default function CreateEventFlowRefactored() {
     access_code: '',
     requires_approval: false,
     plus_ones_max: 0,
+    family_registration: false,
+    family_max: 6,
     is_online: false,
     fee_incidence: '',
     lineup: [],
@@ -662,7 +672,8 @@ export default function CreateEventFlowRefactored() {
                 ...(sourceTiers !== embeddedTiers && tier.id ? { id: String(tier.id) } : {}),
                 sold_quantity: soldQuantityOf(tier),
                 name: tier.name || 'General Admission',
-                price: String(tier.price ?? 0),
+                // A door tier shows its door price (lib/composerFields tierEditorPrice).
+                price: tierEditorPrice(tier),
                 // Unlimited tiers store a large sentinel; don't surface it as the field value.
                 quantity: unlimited ? '' : String(rawQty),
                 // A description equal to the name is the old save placeholder.
@@ -687,6 +698,7 @@ export default function CreateEventFlowRefactored() {
 
         // `is_rsvp` (mobile) or `ticket_name: 'RSVP'` (web).
         const isRsvp = isRsvpEvent(event as any);
+        const isDoor = composerModeOf(event as any, sourceTiers) === 'door';
         // The free tier an RSVP saves back into (same pick as rsvpSourceTier).
         const rsvpTier = isRsvp
           ? sourceTiers.find((tier: any) => Number(tier?.price ?? 0) === 0) || null
@@ -722,7 +734,8 @@ export default function CreateEventFlowRefactored() {
           ticket_tiers: formattedTicketTiers,
           // A missing currency follows the event's country (HTG for Haiti), as on the web.
           currency: event.currency || defaultCurrencyForCountry((event as any).country || 'HT'),
-          is_rsvp: isRsvp,
+          is_rsvp: isRsvp && !isDoor,
+          pay_at_door: isDoor,
           capacity: isRsvp
             ? rsvpCapacityFrom(event as any, rsvpTier, UNLIMITED_SENTINEL)
             : String((event as any).total_tickets ?? formattedTicketTiers[0]?.quantity ?? '100'),
@@ -748,6 +761,8 @@ export default function CreateEventFlowRefactored() {
           access_code: '',
           requires_approval: (event as any).requires_approval === true,
           plus_ones_max: plusOnesSetting(event as any),
+          family_registration: (event as any).family_registration === true,
+          family_max: familyMax({ family_registration: true, family_max: (event as any).family_max }),
           is_online: Boolean((event as any).is_online),
           // Only an explicit choice counts; anything else follows the country.
           fee_incidence:
@@ -790,14 +805,15 @@ export default function CreateEventFlowRefactored() {
   // there's no payout rail yet. Force the free path whenever such a country is
   // selected (covers edit mode / any entry path), so validation + save use RSVP.
   useEffect(() => {
-    if (isComingSoon((eventDraft as any).country) && !eventDraft.is_rsvp) {
+    // Paid tickets wait for the country; pay at the door works everywhere.
+    if (isComingSoon((eventDraft as any).country) && !eventDraft.is_rsvp && !eventDraft.pay_at_door) {
       updateDraft({ is_rsvp: true });
     }
-  }, [eventDraft.country, eventDraft.is_rsvp]);
+  }, [eventDraft.country, eventDraft.is_rsvp, eventDraft.pay_at_door]);
 
   // Choose the entry mode (sell tickets vs free RSVP) and enter the canvas.
-  const chooseMode = (rsvp: boolean) => {
-    updateDraft({ is_rsvp: rsvp });
+  const chooseMode = (mode: ComposerMode) => {
+    updateDraft({ is_rsvp: mode === 'rsvp', pay_at_door: mode === 'door' });
     setEntryChosen(true);
   };
 
@@ -883,8 +899,11 @@ export default function CreateEventFlowRefactored() {
   // Coming-soon markets (e.g. Dominican Republic): browsable + selectable, but no
   // payout rail yet → paid tickets are disabled, only free/RSVP is allowed.
   const countryComingSoon = isComingSoon(selectedCountry);
+  // Pay at the door: the typed amounts are door prices (saved as door_price,
+  // price 0), so the event is never paid: no payout notice, no paid gate.
   const hasPaidTier =
     !eventDraft.is_rsvp &&
+    !eventDraft.pay_at_door &&
     eventDraft.ticket_tiers.some((tier) => {
       const price = parseFloat(tier.price);
       return Number.isFinite(price) && price > 0;
@@ -974,7 +993,8 @@ export default function CreateEventFlowRefactored() {
     // Coming-soon markets (e.g. Dominican Republic) have no payout rail yet, so an
     // organizer may only create FREE/RSVP events there. Force the free path on
     // selection; the tickets section shows a "coming soon" notice instead of tiers.
-    const forceRsvp = isComingSoon(countryCode) ? { is_rsvp: true } : {};
+    // Pay at the door works everywhere (no payout rail involved).
+    const forceRsvp = isComingSoon(countryCode) && !eventDraft.pay_at_door ? { is_rsvp: true } : {};
     // Reset the event currency to the newly-selected country's default
     // (US→USD, CA→CAD, FR→EUR, HT→HTG) so a stale currency never carries over.
     const currency = defaultCurrencyForCountry(countryCode);
@@ -1024,6 +1044,30 @@ export default function CreateEventFlowRefactored() {
         ...eventDraft.ticket_tiers,
         { name: '', price: '', quantity: '', description: '', unlimited: false },
       ],
+    });
+  };
+  // A ready-made set (lib/ticketTypes): fills a fresh draft, otherwise adds
+  // after what is there. New rows copy the first tier's price and quantity;
+  // every name stays editable.
+  const applyTierSet = (set: TierSet) => {
+    const cur = eventDraft.ticket_tiers;
+    const base = cur[0] || { name: '', price: '', quantity: '', description: '', unlimited: false };
+    const fresh = set.names.map((n) => ({
+      name: tierNameFor(n, language),
+      price: base.price,
+      quantity: base.quantity,
+      description: '',
+      unlimited: !!base.unlimited,
+    }));
+    updateDraft({ ticket_tiers: isUntouchedDraft(cur as any, 'id') ? fresh : [...cur, ...fresh] });
+  };
+  // A free event with several kinds of guests: the tickets canvas with every
+  // tier at 0 (the event stays free; guests pick a type when they RSVP).
+  const switchRsvpToTypes = () => {
+    updateDraft({
+      is_rsvp: false,
+      pay_at_door: false,
+      ticket_tiers: [{ name: '', price: '0', quantity: eventDraft.capacity || '100', description: '', unlimited: false }],
     });
   };
   const removeTier = (index: number) => {
@@ -1394,7 +1438,7 @@ export default function CreateEventFlowRefactored() {
         if (tier.price === '' || !Number.isFinite(price) || price < 0) errs[`tier_${i}_price`] = t('organizerCreateEventFlow.validation.tierPrice');
         // US/CA: a paid tier costs at least 2.00; FR: at least 1.00 EUR, so an
         // absorbed fixed fee can never exceed the price (lib/minPaidPrice.ts).
-        else if (isBelowMinPaidPrice(price, eventDraft.country)) errs[`tier_${i}_price`] = minPriceMessage();
+        else if (!eventDraft.pay_at_door && isBelowMinPaidPrice(price, eventDraft.country)) errs[`tier_${i}_price`] = minPriceMessage();
         // Unlimited tiers have no cap, so skip the quantity requirement.
         if (!tier.unlimited) {
           const qty = parseInt(tier.quantity || '0', 10);
@@ -1531,6 +1575,8 @@ export default function CreateEventFlowRefactored() {
       ...shared,
       ticket_tiers: draft.ticket_tiers.map((tier) => ({
         ...tier,
+        // Pay at the door: the typed amount is owed on arrival; online it costs 0.
+        ...(draft.pay_at_door ? { price: '0', door_price: tier.price } : { door_price: '' }),
         quantity: tier.unlimited ? UNLIMITED_SENTINEL : tier.quantity,
       })),
     };
@@ -1931,7 +1977,7 @@ export default function CreateEventFlowRefactored() {
               <TouchableOpacity
                 style={styles.entryTile}
                 activeOpacity={0.85}
-                onPress={() => chooseMode(false)}
+                onPress={() => chooseMode('tickets')}
               >
                 <View style={styles.entryTileIcon}>
                   <Ionicons name="pricetags-outline" size={24} color={colors.text} />
@@ -1945,13 +1991,27 @@ export default function CreateEventFlowRefactored() {
               <TouchableOpacity
                 style={styles.entryTile}
                 activeOpacity={0.85}
-                onPress={() => chooseMode(true)}
+                onPress={() => chooseMode('rsvp')}
               >
                 <View style={styles.entryTileIcon}>
                   <Ionicons name="people-outline" size={24} color={colors.text} />
                 </View>
                 <View style={styles.entryTileText}>
                   <Text style={styles.entryTileLabel}>{t('organizerCreateEventFlow.entry.rsvpTitle')}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.entryTile}
+                activeOpacity={0.85}
+                onPress={() => chooseMode('door')}
+              >
+                <View style={styles.entryTileIcon}>
+                  <Ionicons name="cash-outline" size={24} color={colors.text} />
+                </View>
+                <View style={styles.entryTileText}>
+                  <Text style={styles.entryTileLabel}>{t('organizerCreateEventFlow.entry.doorTitle')}</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
               </TouchableOpacity>
@@ -2356,14 +2416,14 @@ export default function CreateEventFlowRefactored() {
             <View style={styles.canvasPad}>
               <View style={styles.sectionHeaderRow}>
                 <Text style={styles.sectionHeader}>{t('organizerCreateEventFlow.canvas.ticketsHeader')}</Text>
-                {!eventDraft.is_rsvp && !countryComingSoon && (
+                {!eventDraft.is_rsvp && (!countryComingSoon || eventDraft.pay_at_door) && (
                   <TouchableOpacity onPress={addTier} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                     <Ionicons name="add-circle" size={26} color={colors.text} />
                   </TouchableOpacity>
                 )}
               </View>
 
-              {countryComingSoon && (
+              {countryComingSoon && !eventDraft.pay_at_door && (
                 <View style={styles.comingSoonNotice}>
                   <Ionicons name="time-outline" size={16} color={colors.textSecondary} />
                   <Text style={styles.comingSoonNoticeText}>
@@ -2402,7 +2462,7 @@ export default function CreateEventFlowRefactored() {
                 </View>
               )}
 
-              {(eventDraft.is_rsvp || countryComingSoon) ? (
+              {(eventDraft.is_rsvp || (countryComingSoon && !eventDraft.pay_at_door)) ? (
                 <>
                   <InlineTextRow
                     colors={colors}
@@ -2412,9 +2472,16 @@ export default function CreateEventFlowRefactored() {
                     error={!!errors.capacity}
                     keyboardType="numeric"
                   />
+                  {/* Several free types (Adults, Children...): the tickets canvas at 0. */}
+                  <TouchableOpacity onPress={switchRsvpToTypes} hitSlop={8} style={styles.tierTypesLinkRow} accessibilityRole="button">
+                    <Text style={styles.tierTypesLink}>{t('organizerCreateEventFlow.canvas.addTicketTypes')}</Text>
+                  </TouchableOpacity>
                 </>
               ) : (
                 <>
+                  {eventDraft.pay_at_door && (
+                    <Text style={styles.doorHint}>{t('organizerCreateEventFlow.canvas.doorHint')}</Text>
+                  )}
                   {/* Currency control — derives from the selected country.
                       Multi-currency markets (HT → HTG/USD) get a chooser; single-
                       currency markets (US→USD, CA→CAD, FR→EUR) show a fixed label. */}
@@ -2450,6 +2517,26 @@ export default function CreateEventFlowRefactored() {
                       </View>
                     );
                   })()}
+
+                  {/* Ready-made types (lib/ticketTypes): one quiet row of chips. */}
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.tierSetRow}
+                    keyboardShouldPersistTaps="handled"
+                  >
+                    <Text style={styles.tierSetLabel}>{t('organizerCreateEventFlow.canvas.ticketTypes')}</Text>
+                    {TIER_SETS.map((set) => (
+                      <TouchableOpacity
+                        key={set.key}
+                        style={styles.tierSetChip}
+                        onPress={() => applyTierSet(set)}
+                        accessibilityRole="button"
+                      >
+                        <Text style={styles.tierSetChipText}>{tierSetLabel(set, language)}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
 
                   {eventDraft.ticket_tiers.map((tier, index) => {
                     // Free = price parses to exactly 0 (blank price is "not set").
@@ -2512,7 +2599,7 @@ export default function CreateEventFlowRefactored() {
                           ) : (
                             <InlineTextRow
                               colors={colors}
-                              placeholder={`${t('organizerCreateEvent.tickets.price')} (${getCurrencySymbol()}) *`}
+                              placeholder={`${eventDraft.pay_at_door ? t('organizerCreateEventFlow.canvas.doorPriceLabel') : t('organizerCreateEvent.tickets.price')} (${getCurrencySymbol()}) *`}
                               value={tier.price}
                               onChangeText={(text) => updateTier(index, 'price', text)}
                               error={!!errors[`tier_${index}_price`]}
@@ -2542,7 +2629,7 @@ export default function CreateEventFlowRefactored() {
                       </View>
                       {/* Live: a paid price below the market minimum (US/CA 2.00,
                           FR 1.00 EUR). Free (0) and Haiti are never flagged. */}
-                      {isBelowMinPaidPrice(tier.price, eventDraft.country) && (
+                      {!eventDraft.pay_at_door && isBelowMinPaidPrice(tier.price, eventDraft.country) && (
                         <View style={styles.scheduleError}>
                           <Ionicons name="alert-circle" size={16} color={colors.error} />
                           <Text style={styles.scheduleErrorText}>{minPriceMessage()}</Text>
@@ -2954,8 +3041,51 @@ export default function CreateEventFlowRefactored() {
                     />
                   </View>
 
+                  {/* Family registration (lib/family): free events only. One person
+                      registers up to N people, each with their own ticket. */}
+                  <View style={styles.settingRow}>
+                    <View style={styles.settingTextCol}>
+                      <Text style={styles.settingLabel}>{t('organizerCreateEvent.family.label')}</Text>
+                      <Text style={styles.settingHint}>
+                        {hasPaidTier || eventDraft.pay_at_door
+                          ? t('organizerCreateEvent.family.freeOnly')
+                          : t('organizerCreateEvent.family.hint')}
+                      </Text>
+                    </View>
+                    <Switch
+                      value={eventDraft.family_registration && !hasPaidTier && !eventDraft.pay_at_door}
+                      onValueChange={(v) => updateDraft({ family_registration: v })}
+                      disabled={hasPaidTier || eventDraft.pay_at_door}
+                      trackColor={{ false: colors.border, true: colors.primary }}
+                      thumbColor={colors.white}
+                      ios_backgroundColor={colors.border}
+                    />
+                  </View>
+                  {eventDraft.family_registration && !hasPaidTier && !eventDraft.pay_at_door && (
+                    <View style={styles.chipBlock}>
+                      <Text style={styles.chipLabel}>{t('organizerCreateEvent.family.upTo')}</Text>
+                      <View style={[styles.chipScroll, { flexDirection: 'row', flexWrap: 'wrap', marginTop: 8 }]}>
+                        {[2, 3, 4, 5, 6, 7, 8].map((n) => {
+                          const selected = eventDraft.family_max === n;
+                          return (
+                            <TouchableOpacity
+                              key={n}
+                              style={[styles.chip, selected && styles.chipActive]}
+                              onPress={() => updateDraft({ family_max: n })}
+                              accessibilityRole="button"
+                              accessibilityState={{ selected }}
+                            >
+                              <Text style={[styles.chipText, selected && styles.chipTextActive]}>{n}</Text>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+                    </View>
+                  )}
+
                   {/* Plus-ones: Off / 1 / 2 / 3, with the number guests really
                       get under the free-ticket cap (allowedPlusOnes). */}
+                  {!(eventDraft.family_registration && !hasPaidTier && !eventDraft.pay_at_door) && (
                   <View style={styles.chipBlock}>
                     <Text style={styles.chipLabel}>{t('attendRequests.composer.plusOnes')}</Text>
                     <View style={[styles.chipScroll, { flexDirection: 'row', flexWrap: 'wrap', marginTop: 8 }]}>
@@ -2985,6 +3115,7 @@ export default function CreateEventFlowRefactored() {
                       </Text>
                     )}
                   </View>
+                  )}
 
                   {/* Poster theme — override the auto-picked gradient. Auto (default)
                       clears the override; a swatch pins that theme everywhere the
@@ -3413,6 +3544,15 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+
+  // ── Ready-made ticket types + pay-at-the-door hint (quiet, one 4px radius) ──
+  tierSetRow: { alignItems: 'center', gap: 8, paddingVertical: 10 },
+  tierSetLabel: { fontSize: 12, color: colors.textTertiary },
+  tierSetChip: { height: 32, justifyContent: 'center', paddingHorizontal: 12, borderRadius: radius.sm, backgroundColor: colors.surface },
+  tierSetChipText: { fontSize: 12, fontWeight: '600', color: colors.textSecondary },
+  tierTypesLinkRow: { paddingVertical: 12 },
+  tierTypesLink: { fontSize: 13, fontWeight: '600', color: colors.textSecondary },
+  doorHint: { fontSize: 12, color: colors.textSecondary, paddingVertical: 8 },
 
   // ── Chips (country / city / category) ──
   chipBlock: {

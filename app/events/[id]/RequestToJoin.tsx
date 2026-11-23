@@ -35,12 +35,15 @@ export default function RequestToJoin({
   userId,
   isPasswordProtected = false,
   compact = false,
+  family = false,
 }: {
   eventId: string
   userId: string | null
   isPasswordProtected?: boolean
   /** The phone's sticky buy bar: one row (status left, action right). */
   compact?: boolean
+  /** Family registration (lib/events/family): a Child mark replaces the phone. */
+  family?: boolean
 }) {
   const { t } = useTranslation('common')
   const { showToast } = useToast()
@@ -50,7 +53,7 @@ export default function RequestToJoin({
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [guests, setGuests] = useState<Array<{ firstName: string; phone: string }>>([])
+  const [guests, setGuests] = useState<Array<{ firstName: string; phone: string; child?: boolean }>>([])
   const [note, setNote] = useState('')
   const [needsCode, setNeedsCode] = useState(false)
   const [code, setCode] = useState('')
@@ -105,10 +108,6 @@ export default function RequestToJoin({
   async function send(e?: React.FormEvent) {
     e?.preventDefault()
     if (busy) return
-    if (guests.some((g) => !g.firstName.trim())) {
-      setError(t('attend_requests.errors.plus_one_name_required'))
-      return
-    }
     setBusy(true)
     setError(null)
     try {
@@ -120,7 +119,12 @@ export default function RequestToJoin({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          plusOnes: guests.map((g) => ({ firstName: g.firstName.trim(), phone: g.phone.trim() || undefined })),
+          // Names are optional: a blank one is listed as "Guest 2", "Guest 3".
+          plusOnes: guests.map((g) => ({
+            firstName: g.firstName.trim(),
+            phone: g.phone.trim() || undefined,
+            ...(family && g.child ? { child: true } : {}),
+          })),
           note: note.trim(),
         }),
       })
@@ -298,7 +302,6 @@ export default function RequestToJoin({
                     <input
                       value={g.firstName}
                       maxLength={PLUS_ONE_NAME_MAX}
-                      required
                       autoComplete="off"
                       onChange={(e) =>
                         setGuests((all) => all.map((x, j) => (j === i ? { ...x, firstName: e.target.value } : x)))
@@ -307,20 +310,32 @@ export default function RequestToJoin({
                       className={`${field} mt-1.5`}
                     />
                   </label>
-                  <label className="block text-sm text-fg-muted">
-                    {t('attend_requests.sheet.phone')}
-                    <input
-                      value={g.phone}
-                      type="tel"
-                      inputMode="tel"
-                      autoComplete="off"
-                      onChange={(e) =>
-                        setGuests((all) => all.map((x, j) => (j === i ? { ...x, phone: e.target.value } : x)))
-                      }
-                      placeholder="+509"
-                      className={`${field} mt-1.5`}
-                    />
-                  </label>
+                  {family ? (
+                    <label className="flex min-h-11 items-center gap-2 text-sm text-fg-muted">
+                      <input
+                        type="checkbox"
+                        checked={!!g.child}
+                        onChange={(e) => setGuests((all) => all.map((x, j) => (j === i ? { ...x, child: e.target.checked } : x)))}
+                        className="h-4 w-4 accent-brand-400"
+                      />
+                      {t('events.family_child', { defaultValue: 'Child' })}
+                    </label>
+                  ) : (
+                    <label className="block text-sm text-fg-muted">
+                      {t('attend_requests.sheet.phone')}
+                      <input
+                        value={g.phone}
+                        type="tel"
+                        inputMode="tel"
+                        autoComplete="off"
+                        onChange={(e) =>
+                          setGuests((all) => all.map((x, j) => (j === i ? { ...x, phone: e.target.value } : x)))
+                        }
+                        placeholder="+509"
+                        className={`${field} mt-1.5`}
+                      />
+                    </label>
+                  )}
                 </div>
               ))}
             </div>

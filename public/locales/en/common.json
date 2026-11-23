@@ -364,7 +364,18 @@
     "free_tier_already_claimed": "You already have your free ticket",
     "more_dates_one": "+{{count}} more date",
     "more_dates_other": "+{{count}} more dates",
-    "rsvp_cta": "RSVP"
+    "rsvp_cta": "RSVP",
+    "reserve_spot": "Reserve a spot",
+    "reserve_spots": "Reserve {{count}} spots",
+    "due_at_door": "Due at the door",
+    "pay_at_door": "Pay at the door",
+    "door_note": "Reserve now, pay on arrival.",
+    "family_people": "People, you included",
+    "family_title": "Who is coming with you?",
+    "family_child": "Child",
+    "family_hint": "Each person gets their own ticket in your account.",
+    "family_badge": "Families welcome, up to {{count}} per registration",
+    "card_door_price": "{{price}} at the door"
   },
   "favorites": {
     "title": "My Favorites",
@@ -1516,7 +1527,17 @@
       "use": "Use this poster",
       "failed": "Could not make the poster. Try again.",
       "sampleTitle": "Your event"
-    }
+    },
+    "payAtDoor": "Pay at the door",
+    "doorHint": "People reserve for free and pay you on arrival. Tikem takes no fee.",
+    "doorLocked": "People have reserved at the door. Keep pay at the door or cancel their spots first.",
+    "tierDoorPriceLabel": "At the door",
+    "family": "Family registration",
+    "familyFreeOnly": "For free events.",
+    "familyHint": "One person registers their family; everyone gets their own ticket.",
+    "familyUpTo": "People per registration",
+    "ticketTypes": "Ready-made types",
+    "addTicketTypes": "Different kinds of guests? Add ticket types"
   },
   "promoter": {
     "portal_eyebrow": "Promoter portal",
@@ -2028,7 +2049,7 @@
       "decrease": "One fewer guest",
       "increase": "One more guest",
       "first_name": "First name",
-      "first_name_placeholder": "Guest first name",
+      "first_name_placeholder": "Guest first name (optional)",
       "phone": "Phone (optional)",
       "note": "Note to the host",
       "note_placeholder": "Friend of the DJ, coming from Jacmel",
