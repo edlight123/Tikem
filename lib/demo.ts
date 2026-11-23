@@ -162,6 +162,10 @@ export const DEMO_EVENTS = [
     currency: 'HTG',
     pay_at_door: true,
     door_price_from: 500,
+    amenities: ['parking', 'step_free'],
+    venue_setting: 'outdoor',
+    age_policy: '18+',
+    dress_code: 'All white',
     ticket_tiers: [
       { name: 'General', price: 0, door_price: 500 },
       { name: 'VIP', price: 0, door_price: 1500 },
