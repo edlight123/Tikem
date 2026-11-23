@@ -20,6 +20,7 @@ import { defaultAvatar } from '../../lib/defaultAvatar';
 import { inboxTime } from '../../lib/messageTime';
 import { select as hapticSelect } from '../../lib/haptics';
 import { useTabBarSpace } from '../../hooks/useTabBarSpace';
+import { useTabTaps } from '../../hooks/useTabTaps';
 import EventAnnouncements, { OrgAnnouncements } from '../../components/organizer/EventAnnouncements';
 import SwipeToDismiss from '../../components/ui/SwipeToDismiss';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -206,6 +207,9 @@ export default function OrganizerMessagesScreen({ asTab = false }: { asTab?: boo
     setRefreshing(true);
     load();
   };
+  // Tab only: tap the active Inbox tab to scroll up, double tap to refresh.
+  const tabScroll = useRef<ScrollView>(null);
+  useTabTaps(tabScroll, onRefresh);
 
   const timeLabels = { yesterday: t('attendeeMessages.yesterday') };
 
@@ -452,6 +456,7 @@ export default function OrganizerMessagesScreen({ asTab = false }: { asTab?: boo
           {paneTabs}
         </View>
         <ScrollView
+          ref={tabScroll}
           style={styles.flex}
           contentContainerStyle={{ paddingBottom: tabBarSpace + 24 }}
           showsVerticalScrollIndicator={false}

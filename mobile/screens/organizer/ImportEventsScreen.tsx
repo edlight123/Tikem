@@ -284,7 +284,7 @@ export default function ImportEventsScreen() {
   };
 
   return (
-    <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView style={styles.screen} behavior="padding">
       <OrganizerScreenHeader title={t('organizerImport.title')} onBack={() => navigation.goBack()} />
       <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 40 }}>
         <Text style={styles.lede}>{t('organizerImport.lede')}</Text>

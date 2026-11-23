@@ -262,7 +262,7 @@ export default function EventAnnouncements({ eventId, eventTitle }: { eventId: s
   return (
     <View style={styles.wrap}>
       <Modal visible={!!editing} transparent animationType="slide" onRequestClose={() => setEditing(null)}>
-        <KeyboardAvoidingView style={styles.sheetOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <KeyboardAvoidingView style={styles.sheetOverlay} behavior="padding">
           <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={() => setEditing(null)} accessible={false} />
           <View style={[styles.sheet, { backgroundColor: colors.surface }]}>
             <View style={styles.sheetHead}>
