@@ -61,8 +61,17 @@ export interface EventFilters {
   // Event type
   eventType: EventTypeFilter
 
-  /** Only events whose venue the organizer marked step-free (lib/events/venue-details). */
+  /**
+   * Older Step-free switch (`?stepFree=1`). Still honoured so shared links
+   * and saved state keep working; the modal now writes `amenities`.
+   */
   stepFree?: boolean
+
+  /**
+   * Venue facts the event must have, ALL of them (lib/events/venue-details
+   * keys: facilities and accessibility). `?amenities=parking,step_free`.
+   */
+  amenities?: string[]
   
   // Sort
   sortBy: SortOption

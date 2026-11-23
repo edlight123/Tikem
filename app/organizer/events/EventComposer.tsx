@@ -113,8 +113,11 @@ import { SectionHeader } from '@/components/ui/EditorialRails'
 import {
   AGE_POLICIES,
   DRESS_CODE_MAX,
-  VENUE_AMENITIES,
+  VENUE_ACCESSIBILITY,
+  VENUE_FACILITIES,
   VENUE_SETTINGS,
+  amenityKeysOf,
+  venueDetailsCount,
   venueDetailsFields,
   venueDetailsOf,
   type VenueDetails,
@@ -640,6 +643,8 @@ export default function EventComposer({
   // on the event page under "good to know" (lib/events/venue-details).
   const [venueDetails, setVenueDetails] = useState<VenueDetails>(() => venueDetailsOf(event))
   const patchVenueDetails = (patch: Partial<VenueDetails>) => setVenueDetails((d) => ({ ...d, ...patch }))
+  // Folded by default: one quiet row with a count (premium = quiet).
+  const [venueDetailsOpen, setVenueDetailsOpen] = useState(false)
   // Saved event defaults, for a NEW event in its starting country only.
   // Computed once: the defaults seed the first render and never re-apply.
   const [seed] = useState<ComposerSeed>(() =>
@@ -1148,8 +1153,13 @@ export default function EventComposer({
             setEndDate(`${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`)
           } else if (day) setEndDate(day)
         })
+      // The read moves an online draft back in person when it names a place.
+      let onlineAfterRead = isOnline
       if (r.venue_name || r.address || r.city) {
-        if (isOnline && !venueName.trim() && !address.trim()) setIsOnline(false)
+        if (isOnline && !venueName.trim() && !address.trim()) {
+          setIsOnline(false)
+          onlineAfterRead = false
+        }
         if (r.venue_name) fill('venue_name', !venueName.trim(), () => setVenueName(r.venue_name!))
         if (r.address) fill('address', !address.trim(), () => setAddress(r.address!))
         if (r.city) fill('city', !city.trim() || isDefaultCity(city), () => setCity(r.city!))
@@ -1171,6 +1181,13 @@ export default function EventComposer({
       }
       if (r.age_policy) fill('age_policy', !venueDetails.age_policy, () => patchVenueDetails({ age_policy: r.age_policy }))
       if (r.dress_code) fill('dress_code', !venueDetails.dress_code, () => patchVenueDetails({ dress_code: r.dress_code }))
+      // Venue facts the flyer prints are added to what is ticked, never taken
+      // away; an online event has no venue to describe.
+      const foundAmenities = amenityKeysOf(r.amenities || []).filter((k) => !venueDetails.amenities.includes(k))
+      if (foundAmenities.length && !onlineAfterRead)
+        fill('amenities', true, () =>
+          setVenueDetails((d) => ({ ...d, amenities: amenityKeysOf([...d.amenities, ...foundAmenities]) }))
+        )
       setFlyerNote({
         filled,
         check: r.uncertain.filter((f) => filled.includes(f)),
@@ -2789,77 +2806,108 @@ export default function EventComposer({
               )}
 
               {/* Venue details: optional facts people ask before they come.
-                  Chips, not switches, so seven answers fit in one quiet card.
-                  Access and setting describe a place, so an online event
-                  only keeps the age and the dress code. */}
-              <div className="space-y-3 rounded-xl bg-surface-low px-4 py-3.5">
-                <div className="flex items-center gap-2 text-meta font-medium text-fg-subtle">
-                  <Accessibility className="h-4 w-4" />{' '}
-                  {t('composer.venueDetails.title', { defaultValue: 'Venue details' })}
-                  <span className="font-normal">· {t('composer.venueDetails.hint')}</span>
-                </div>
-                {!isOnline && (
-                  <>
-                    <div className="flex flex-wrap gap-2" role="group" aria-label={t('composer.venueDetails.access')}>
-                      {VENUE_AMENITIES.map((k) => {
-                        const on = venueDetails.amenities.includes(k)
-                        return (
-                          <button
-                            key={k}
-                            type="button"
-                            aria-pressed={on}
-                            onClick={() =>
-                              patchVenueDetails({
-                                amenities: on ? venueDetails.amenities.filter((a) => a !== k) : [...venueDetails.amenities, k],
-                              })
-                            }
-                            className={chipCls(on)}
-                          >
-                            {t(`composer.venueDetails.amenities.${k}`)}
-                          </button>
-                        )
-                      })}
+                  Folded behind one quiet row (with a count) so the composer
+                  does not grow; chips, not switches, when open. What the place
+                  has, accessibility and the setting describe a place, so an
+                  online event only keeps the age and the dress code. */}
+              <div className="rounded-xl bg-surface-low px-4 py-3.5">
+                <button
+                  type="button"
+                  onClick={() => setVenueDetailsOpen((v) => !v)}
+                  aria-expanded={venueDetailsOpen}
+                  className="flex w-full items-center gap-2 text-left text-meta font-medium text-fg-subtle hover:text-fg-muted"
+                >
+                  <Accessibility className="h-4 w-4" aria-hidden="true" />
+                  <span>{t('composer.venueDetails.title', { defaultValue: 'Venue details' })}</span>
+                  <span className="font-normal">
+                    ·{' '}
+                    {venueDetailsCount(venueDetails) > 0
+                      ? t('composer.venueDetails.selected', { count: venueDetailsCount(venueDetails) })
+                      : t('composer.venueDetails.hint')}
+                  </span>
+                  <ChevronDown
+                    className={`ml-auto h-4 w-4 transition-transform ${venueDetailsOpen ? 'rotate-180' : ''}`}
+                    aria-hidden="true"
+                  />
+                </button>
+                {venueDetailsOpen && (
+                  <div className="mt-3 space-y-3">
+                    {!isOnline && (
+                      <>
+                        {(
+                          [
+                            ['facilities', VENUE_FACILITIES],
+                            ['accessibility', VENUE_ACCESSIBILITY],
+                          ] as const
+                        ).map(([group, keys]) => (
+                          <div key={group} className="space-y-2">
+                            <p className="text-meta text-fg-subtle">{t(`composer.venueDetails.${group}`)}</p>
+                            <div className="flex flex-wrap gap-2" role="group" aria-label={t(`composer.venueDetails.${group}`)}>
+                              {keys.map((k) => {
+                                const on = venueDetails.amenities.includes(k)
+                                return (
+                                  <button
+                                    key={k}
+                                    type="button"
+                                    aria-pressed={on}
+                                    onClick={() =>
+                                      patchVenueDetails({
+                                        amenities: on
+                                          ? venueDetails.amenities.filter((a) => a !== k)
+                                          : amenityKeysOf([...venueDetails.amenities, k]),
+                                      })
+                                    }
+                                    className={chipCls(on)}
+                                  >
+                                    {t(`composer.venueDetails.amenities.${k}`)}
+                                  </button>
+                                )
+                              })}
+                            </div>
+                          </div>
+                        ))}
+                        <div className="flex flex-wrap gap-2" role="group" aria-label={t('composer.venueDetails.setting')}>
+                          {VENUE_SETTINGS.map((k) => {
+                            const on = venueDetails.venue_setting === k
+                            return (
+                              <button
+                                key={k}
+                                type="button"
+                                aria-pressed={on}
+                                onClick={() => patchVenueDetails({ venue_setting: on ? null : k })}
+                                className={chipCls(on)}
+                              >
+                                {t(`composer.venueDetails.settings.${k}`)}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </>
+                    )}
+                    <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={t('composer.venueDetails.age')}>
+                      {([null, ...AGE_POLICIES] as const).map((k) => (
+                        <button
+                          key={k ?? 'all'}
+                          type="button"
+                          role="radio"
+                          aria-checked={venueDetails.age_policy === k}
+                          onClick={() => patchVenueDetails({ age_policy: k })}
+                          className={chipCls(venueDetails.age_policy === k)}
+                        >
+                          {t(`composer.venueDetails.ages.${k ? k.slice(0, 2) : 'all'}`)}
+                        </button>
+                      ))}
                     </div>
-                    <div className="flex flex-wrap gap-2" role="group" aria-label={t('composer.venueDetails.setting')}>
-                      {VENUE_SETTINGS.map((k) => {
-                        const on = venueDetails.venue_setting === k
-                        return (
-                          <button
-                            key={k}
-                            type="button"
-                            aria-pressed={on}
-                            onClick={() => patchVenueDetails({ venue_setting: on ? null : k })}
-                            className={chipCls(on)}
-                          >
-                            {t(`composer.venueDetails.settings.${k}`)}
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </>
+                    <input
+                      value={venueDetails.dress_code || ''}
+                      onChange={(e) => patchVenueDetails({ dress_code: e.target.value.slice(0, DRESS_CODE_MAX) || null })}
+                      maxLength={DRESS_CODE_MAX}
+                      placeholder={t('composer.venueDetails.dressCode')}
+                      aria-label={t('composer.venueDetails.dressCode')}
+                      className="w-full rounded bg-surface px-3 py-2.5 text-body text-fg placeholder:text-fg-subtle focus:bg-surface-raised focus:outline-none focus:ring-2 focus:ring-brand-400/50"
+                    />
+                  </div>
                 )}
-                <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={t('composer.venueDetails.age')}>
-                  {([null, ...AGE_POLICIES] as const).map((k) => (
-                    <button
-                      key={k ?? 'all'}
-                      type="button"
-                      role="radio"
-                      aria-checked={venueDetails.age_policy === k}
-                      onClick={() => patchVenueDetails({ age_policy: k })}
-                      className={chipCls(venueDetails.age_policy === k)}
-                    >
-                      {t(`composer.venueDetails.ages.${k ? k.slice(0, 2) : 'all'}`)}
-                    </button>
-                  ))}
-                </div>
-                <input
-                  value={venueDetails.dress_code || ''}
-                  onChange={(e) => patchVenueDetails({ dress_code: e.target.value.slice(0, DRESS_CODE_MAX) || null })}
-                  maxLength={DRESS_CODE_MAX}
-                  placeholder={t('composer.venueDetails.dressCode')}
-                  aria-label={t('composer.venueDetails.dressCode')}
-                  className="w-full rounded bg-surface px-3 py-2.5 text-body text-fg placeholder:text-fg-subtle focus:bg-surface-raised focus:outline-none focus:ring-2 focus:ring-brand-400/50"
-                />
               </div>
 
               {/* Category as a Posh-style row of chips */}

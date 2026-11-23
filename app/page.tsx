@@ -88,6 +88,7 @@ export default async function HomePage({
     filters.price !== 'any' ||
     filters.eventType !== 'all' ||
     !!filters.stepFree ||
+    !!filters.amenities?.length ||
     urlParams.has('search') ||
     urlParams.has('sort')
   if (isListingQuery) redirect(`/discover?${urlParams.toString()}`)

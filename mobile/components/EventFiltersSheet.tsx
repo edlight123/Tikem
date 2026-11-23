@@ -13,7 +13,8 @@ import {
 import { Touchable } from './ui/Touchable';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { Accessibility, X } from 'lucide-react-native';
+import { X } from 'lucide-react-native';
+import { VENUE_ACCESSIBILITY, VENUE_FACILITIES, amenityKeysOf, wantedAmenities } from '../lib/venueDetails';
 import { useFilters } from '../contexts/FiltersContext';
 import { useI18n } from '../contexts/I18nContext';
 import { getCategoryLabel } from '../lib/categories';
@@ -304,26 +305,43 @@ export default function EventFiltersSheet() {
             </View>
           </View>
 
-          {/* Access: events whose venue the organizer marked step-free. */}
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>{t('venueDetails.accessLabel').toUpperCase()}</Text>
-            <View style={styles.chipsRow}>
-              <TouchableOpacity
-                style={[styles.chip, styles.chipFixed, draftFilters.stepFree && styles.chipActive]}
-                onPress={() => setDraftFilters({ ...draftFilters, stepFree: !draftFilters.stepFree })}
-                hitSlop={CHIP_HIT_SLOP}
-                accessibilityRole="button"
-                accessibilityState={{ selected: !!draftFilters.stepFree }}
-              >
-                <View style={styles.chipInline}>
-                  <Accessibility size={14} color={draftFilters.stepFree ? colors.onPrimary : colors.textSecondary} strokeWidth={1.75} />
-                  <Text style={[styles.chipText, draftFilters.stepFree && styles.chipTextActive]}>
-                    {t('venueDetails.stepFreeFilter')}
-                  </Text>
+          {/* Venue facts: what the place has, then accessibility. Multi-
+              select; an event must have every chosen one. The older
+              Step-free switch reads as the step_free chip. */}
+          {([
+            ['facilitiesLabel', VENUE_FACILITIES],
+            ['accessibilityLabel', VENUE_ACCESSIBILITY],
+          ] as const).map(([label, keys]) => {
+            const chosen = wantedAmenities(draftFilters);
+            return (
+              <View key={label} style={styles.section}>
+                <Text style={styles.sectionLabel}>{t(`venueDetails.${label}`).toUpperCase()}</Text>
+                <View style={styles.chipsRow}>
+                  {keys.map((k) => {
+                    const on = chosen.includes(k);
+                    return (
+                      <TouchableOpacity
+                        key={k}
+                        style={[styles.chip, on && styles.chipActive]}
+                        onPress={() =>
+                          setDraftFilters({
+                            ...draftFilters,
+                            stepFree: undefined,
+                            amenities: on ? chosen.filter((a) => a !== k) : amenityKeysOf([...chosen, k]),
+                          })
+                        }
+                        hitSlop={CHIP_HIT_SLOP}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected: on }}
+                      >
+                        <Text style={[styles.chipText, on && styles.chipTextActive]}>{t(`venueDetails.amenities.${k}`)}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
-              </TouchableOpacity>
-            </View>
-          </View>
+              </View>
+            );
+          })}
 
           {/* Price Filter — the custom min–max range is the standard control.
               "Any" and "Free" remain as quick shortcuts. */}
@@ -570,15 +588,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   // a second button rather than a chosen value.
   chipActive: {
     backgroundColor: colors.primary,
-  },
-  // A lone toggle chip sizes to its label instead of stretching the row.
-  chipFixed: {
-    flexGrow: 0,
-  },
-  chipInline: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
   },
   // lineHeight is explicit so every chip is exactly the same height whatever the
   // label or the device's font metrics.

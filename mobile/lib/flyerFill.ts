@@ -9,6 +9,8 @@
  * Pure (no React Native imports) so the website's jest suite can test it.
  */
 
+import { amenityKeysOf } from './venueDetails'
+
 /** What /api/flyers/read returns (the website's lib/flyer/parse FlyerRead). */
 export interface FlyerRead {
   title: string | null
@@ -24,6 +26,8 @@ export interface FlyerRead {
   currency: string | null
   age_policy: '18+' | '21+' | null
   dress_code: string | null
+  /** Venue facts printed on the flyer (lib/venueDetails keys). Absent from older servers. */
+  amenities?: string[]
   uncertain: string[]
   personal_details: string[]
 }
@@ -44,6 +48,8 @@ export interface FlyerFillDraft {
   ticket_tiers: Array<{ id?: string; name: string; price: string; [k: string]: unknown }>
   age_policy: string | null
   dress_code: string | null
+  /** The ticked venue facts; optional so older callers still type-check. */
+  amenities?: string[]
 }
 
 /** "21:00" → "9:00 PM", the composer's own time format. */
@@ -100,6 +106,12 @@ export function flyerDraftPatch(
 
   if (r.age_policy) take('age_policy', !draft.age_policy, { age_policy: r.age_policy })
   if (r.dress_code) take('dress_code', !draft.dress_code, { dress_code: r.dress_code })
+  // Venue facts are added to what is ticked, never taken away; an online
+  // event has no venue to describe.
+  const online = patch.is_online ?? draft.is_online
+  const have = draft.amenities || []
+  const found = amenityKeysOf(r.amenities || []).filter((k) => !have.includes(k))
+  if (found.length && !online) take('amenities', true, { amenities: amenityKeysOf([...have, ...found]) })
 
   return { patch, filled, check: r.uncertain.filter((f) => filled.includes(f)), currencyNote }
 }

@@ -3,7 +3,7 @@
  */
 
 import { EventFilters, PriceFilter } from '../types/filters';
-import { isStepFree } from '../lib/venueDetails';
+import { hasAllAmenities, wantedAmenities } from '../lib/venueDetails';
 import { isBudgetFriendlyTicketPrice, isOverBudgetTicketPrice } from '../lib/pricing';
 import { findMetro, isEventInMetro, normalizePlace } from '../data/metros';
 import { 
@@ -172,9 +172,11 @@ export function applyFilters(events: any[], filters: EventFilters): any[] {
     }
   }
 
-  // Step-free: an organizer-ticked venue detail, so events that say nothing are left out.
-  if (filters.stepFree) {
-    filtered = filtered.filter((event) => isStepFree(event));
+  // Venue facts (and the older Step-free switch): organizer-ticked, so an
+  // event must have EVERY chosen one; events that say nothing are left out.
+  const amenities = wantedAmenities(filters);
+  if (amenities.length) {
+    filtered = filtered.filter((event) => hasAllAmenities(event, amenities));
   }
 
   // Sort
@@ -203,7 +205,7 @@ export function countActiveFilters(filters: EventFilters): number {
   if (filters.categories.length > 0) count++;
   if (filters.price !== 'any') count++;
   if (filters.eventType !== 'all') count++;
-  if (filters.stepFree) count++;
+  count += wantedAmenities(filters).length;
   
   return count;
 }
