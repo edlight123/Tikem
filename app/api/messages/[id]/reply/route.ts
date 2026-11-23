@@ -16,6 +16,11 @@
  *  - MAX_ATTENDEE_STREAK attendee messages in a row without an organizer
  *    answer (the opener counts).
  *
+ * A follow-up may quote one earlier message of the SAME thread
+ * (`reply_to_id`); the excerpt is built here from that message, never taken
+ * from the client. Nothing is written when either side has blocked the other
+ * (lib/messages/blockGuard.ts): 403 `blocked` / `you_blocked`.
+ *
  * The organizer then gets an in-app notification and a push for every
  * follow-up, and at most one email per thread per 30 minutes.
  */
@@ -27,7 +32,10 @@ import {
   appendAttendeeFollowUp,
   getThreadForParticipant,
   MAX_FOLLOWUP_LENGTH,
+  resolveReplyTo,
 } from '@/lib/organizer-messages'
+import { readReplyToId } from '@/lib/messages/threadExtras'
+import { blockMessage, messagingRefusal } from '@/lib/messages/blockGuard'
 
 export const dynamic = 'force-dynamic'
 
@@ -58,12 +66,27 @@ export async function POST(
     if (message.length > MAX_FOLLOWUP_LENGTH) {
       return fail(`Keep it under ${MAX_FOLLOWUP_LENGTH} characters.`, 'message_too_long')
     }
+    // Optional: the message this one quotes (`reply_to_id`, or `reply_to.id`).
+    const replyToId = readReplyToId(body)
+    if (replyToId === null) return fail('That message can no longer be quoted.', 'reply_to_not_found')
 
     const record = await getThreadForParticipant(threadId, user.id)
     if (!record) return fail('Message not found.', 'thread_not_found', 404)
     if (record.role !== 'attendee') {
       return fail('Organizers reply from their inbox.', 'organizer_use_inbox', 403)
     }
+    // A block either way closes the thread: the org (owner or an admin) blocked
+    // this attendee, or the attendee blocked the org.
+    const refusal = await messagingRefusal({
+      side: 'attendee',
+      orgId: String(record.data.organizer_id || ''),
+      attendeeId: user.id,
+    })
+    if (refusal) return fail(blockMessage(refusal), refusal, 403)
+
+    // The quoted message must belong to THIS thread.
+    const replyTo = replyToId ? await resolveReplyTo(threadId, record.data, replyToId) : null
+    if (replyToId && !replyTo) return fail('That message can no longer be quoted.', 'reply_to_not_found')
 
     // The name on the thread was snapshotted when it was opened; keep using
     // it so the organizer sees one consistent name across the conversation.
@@ -77,6 +100,7 @@ export async function POST(
       attendeeId: user.id,
       authorName,
       body: message,
+      replyTo,
     })
 
     if (!result.ok) {

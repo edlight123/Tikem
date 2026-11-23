@@ -15,6 +15,7 @@ import { NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase/admin'
 import { getCurrentUser } from '@/lib/auth'
 import { alertOrganizerOfMessage } from '@/lib/organizer-message-alerts'
+import { blockMessage, messagingRefusal } from '@/lib/messages/blockGuard'
 import { FieldValue } from 'firebase-admin/firestore'
 
 /** The three things an attendee can be writing about. Anything else is rejected. */
@@ -74,6 +75,10 @@ export async function POST(request: Request) {
     if (organizerId === user.id) {
       return fail('You are the organizer of this event.', 'self_contact', 409)
     }
+    // A block either way: the org (its owner or an admin) blocked this person,
+    // or they blocked the org (lib/messages/blockGuard.ts).
+    const refusal = await messagingRefusal({ side: 'attendee', orgId: organizerId, attendeeId: user.id })
+    if (refusal) return fail(blockMessage(refusal), refusal, 403)
 
     // Throttle per user PER EVENT rather than globally: someone with tickets to
     // five events has a legitimate reason to message five organizers in a row,

@@ -47,6 +47,7 @@ export async function GET(request: Request) {
       organizerId: org.value.orgId,
       eventId,
       limit: Number.isFinite(rawLimit) ? rawLimit : DEFAULT_THREADS_PER_PAGE,
+      viewerId: user.id,
     })
 
     // The unread count describes the whole page, not the filtered slice —

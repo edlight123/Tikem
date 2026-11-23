@@ -62,6 +62,27 @@
 import { adminDb } from '@/lib/firebase/admin'
 import { FieldValue } from 'firebase-admin/firestore'
 import type { QueryDocumentSnapshot } from 'firebase-admin/firestore'
+import {
+  OPENING_MESSAGE_ID,
+  REACTIONS_SUBCOLLECTION,
+  buildReplyTo,
+  readStoredReplyTo,
+  sanitizeReactionMap,
+  summarizeReactions,
+  toggleReaction,
+  type ReactionEmoji,
+  type ReactionSummary,
+  type ReplyTo,
+} from '@/lib/messages/threadExtras'
+
+export {
+  ALLOWED_REACTIONS,
+  OPENING_MESSAGE_ID,
+  REPLY_EXCERPT_LENGTH,
+  type ReactionEmoji,
+  type ReactionSummary,
+  type ReplyTo,
+} from '@/lib/messages/threadExtras'
 
 export const COLLECTION = 'organizer_messages'
 export const REPLIES_SUBCOLLECTION = 'replies'
@@ -109,6 +130,13 @@ export interface OrganizerMessageReply {
    */
   author_id?: string
   sent_by?: string
+  /**
+   * Emoji reactions as the VIEWER sees them: one entry per emoji with a count
+   * and whether it is theirs. Never who reacted (the raw map stays server-side).
+   */
+  reactions?: ReactionSummary[]
+  /** The message this one quotes (excerpt built server-side, no names). */
+  reply_to?: ReplyTo
 }
 
 export interface OrganizerMessageThread {
@@ -133,6 +161,8 @@ export interface OrganizerMessageThread {
   event_poster?: string | null
   /** The attendee's public profile photo, when they have one. Never PII. */
   sender_photo?: string | null
+  /** Reactions on the opening message (counts only). */
+  opening_reactions?: ReactionSummary[]
 }
 
 function toIso(value: unknown): string | null {
@@ -160,8 +190,10 @@ function isUnread(data: Record<string, any>): boolean {
   return !data.organizer_read_at
 }
 
-function mapReply(doc: QueryDocumentSnapshot): OrganizerMessageReply {
+function mapReply(doc: QueryDocumentSnapshot, viewerId?: string | null): OrganizerMessageReply {
   const d = doc.data()
+  const reactions = summarizeReactions(d.reactions, viewerId)
+  const replyTo = readStoredReplyTo(d.reply_to)
   // Every reply written before follow-ups existed is an organizer reply and
   // already carries the field; default the same way for safety.
   const role: AuthorRole = d.author_role === 'attendee' ? 'attendee' : 'organizer'
@@ -172,6 +204,28 @@ function mapReply(doc: QueryDocumentSnapshot): OrganizerMessageReply {
     author_name: String(d.author_name || (role === 'attendee' ? 'An attendee' : 'The organizer')),
     created_at: toIso(d.created_at),
     ...(role === 'organizer' && d.author_id ? { author_id: String(d.author_id) } : {}),
+    ...(reactions.length ? { reactions } : {}),
+    ...(replyTo ? { reply_to: replyTo } : {}),
+  }
+}
+
+/** Where the opening message's reactions live (server-only; see lib/messages/threadExtras). */
+function openingReactionsRef(threadId: string) {
+  return adminDb
+    .collection(COLLECTION)
+    .doc(threadId)
+    .collection(REACTIONS_SUBCOLLECTION)
+    .doc(OPENING_MESSAGE_ID)
+}
+
+/** The opener's reactions for one viewer. Best effort: none on a read fault. */
+async function loadOpeningReactions(threadId: string, viewerId?: string | null): Promise<ReactionSummary[]> {
+  try {
+    const snap = await openingReactionsRef(threadId).get()
+    return snap.exists ? summarizeReactions((snap.data() || {}).by, viewerId) : []
+  } catch (error) {
+    console.warn('organizer-messages: opening reactions read failed', error)
+    return []
   }
 }
 
@@ -215,7 +269,7 @@ async function labelTeamReplies(replies: OrganizerMessageReply[]): Promise<void>
   }
 }
 
-async function loadReplies(threadId: string): Promise<OrganizerMessageReply[]> {
+async function loadReplies(threadId: string, viewerId?: string | null): Promise<OrganizerMessageReply[]> {
   const snap = await adminDb
     .collection(COLLECTION)
     .doc(threadId)
@@ -223,7 +277,7 @@ async function loadReplies(threadId: string): Promise<OrganizerMessageReply[]> {
     .orderBy('created_at', 'asc')
     .limit(MAX_REPLIES_PER_THREAD)
     .get()
-  return snap.docs.map((d: QueryDocumentSnapshot) => mapReply(d))
+  return snap.docs.map((d: QueryDocumentSnapshot) => mapReply(d, viewerId))
 }
 
 function mapThread(
@@ -264,6 +318,8 @@ export async function listThreadsForOrganizer(options: {
   organizerId: string
   eventId?: string
   limit?: number
+  /** The signed-in team member, to mark which reactions are theirs. */
+  viewerId?: string | null
 }): Promise<OrganizerMessageThread[]> {
   const limit = Math.min(
     Math.max(1, options.limit || DEFAULT_THREADS_PER_PAGE),
@@ -284,7 +340,7 @@ export async function listThreadsForOrganizer(options: {
       const data = doc.data()
       const replies =
         (typeof data.reply_count === 'number' ? data.reply_count : 0) > 0
-          ? await loadReplies(doc.id)
+          ? await loadReplies(doc.id, options.viewerId)
           : []
       return mapThread(doc.id, data, replies)
     })
@@ -321,6 +377,24 @@ export async function listThreadsForOrganizer(options: {
     }
   } catch (error) {
     console.warn('organizer-messages: inbox art lookup failed', error)
+  }
+
+  // Reactions on each opening message: one batched read for the page.
+  try {
+    if (threads.length) {
+      const snaps = await adminDb.getAll(...threads.map((t) => openingReactionsRef(t.id)))
+      const byThread = new Map<string, ReactionSummary[]>()
+      for (const r of snaps as any[]) {
+        const threadId = r?.ref?.parent?.parent?.id
+        if (r?.exists && threadId) byThread.set(threadId, summarizeReactions((r.data() || {}).by, options.viewerId))
+      }
+      for (const t of threads) {
+        const list = byThread.get(t.id)
+        if (list?.length) t.opening_reactions = list
+      }
+    }
+  } catch (error) {
+    console.warn('organizer-messages: inbox reactions lookup failed', error)
   }
 
   await labelTeamReplies(threads.flatMap((t) => t.replies))
@@ -447,19 +521,43 @@ export interface ConversationView {
   messages: ConversationMessage[]
   /** The OTHER side's public profile photo (the attendee for an organizer viewer, the organizer for an attendee). */
   other_photo?: string | null
+  /**
+   * The OTHER side's uid, so the app can open their profile: the attendee for
+   * an organizer viewer, the organization for an attendee. Never PII.
+   */
+  other_id?: string | null
+  /**
+   * Either side blocked the other: no new messages or reactions
+   * (lib/messages/blockGuard.ts). `blocked_by_viewer` says it was the viewer's
+   * own side, so the app can say "unblock to message" instead.
+   */
+  blocked?: boolean
+  blocked_by_viewer?: boolean
 }
 
-/** The full conversation for one of its participants. */
+/**
+ * The full conversation for one of its participants. `viewerId` is the
+ * signed-in user (a team member viewing as the organizer included), used to
+ * mark which reaction is theirs and to read the block state from their side.
+ */
 export async function buildConversationView(
-  record: ThreadRecord & { role: ParticipantRole }
+  record: ThreadRecord & { role: ParticipantRole },
+  viewerId?: string | null
 ): Promise<ConversationView> {
   const { data } = record
   const replyCount = typeof data.reply_count === 'number' ? data.reply_count : 0
   const otherId = String((record.role === 'organizer' ? data.sender_id : data.organizer_id) || '')
-  const [replies, poster, otherPhoto] = await Promise.all([
-    replyCount > 0 ? loadReplies(record.id) : Promise.resolve([] as OrganizerMessageReply[]),
+  const { threadBlockState } = await import('@/lib/messages/blockGuard')
+  const [replies, poster, otherPhoto, openerReactions, blocks] = await Promise.all([
+    replyCount > 0 ? loadReplies(record.id, viewerId) : Promise.resolve([] as OrganizerMessageReply[]),
     eventPoster(String(data.event_id || '')),
     publicPhoto(otherId),
+    loadOpeningReactions(record.id, viewerId),
+    threadBlockState({
+      orgId: String(data.organizer_id || ''),
+      attendeeId: String(data.sender_id || ''),
+      actingUserId: record.role === 'organizer' ? viewerId : null,
+    }).catch(() => ({ orgBlockedAttendee: false, attendeeBlockedOrg: false })),
   ])
   const attendeeName = String(data.sender_name || 'An attendee')
   const organizerName =
@@ -476,12 +574,15 @@ export async function buildConversationView(
     }
   }
   const opener: ConversationMessage = {
-    id: 'opening',
+    id: OPENING_MESSAGE_ID,
     body: String(data.message || ''),
     author_role: 'attendee',
     author_name: attendeeName,
     created_at: toIso(data.created_at),
+    ...(openerReactions.length ? { reactions: openerReactions } : {}),
   }
+  const blockedByViewer =
+    record.role === 'organizer' ? blocks.orgBlockedAttendee : blocks.attendeeBlockedOrg
   return {
     id: record.id,
     event_id: String(data.event_id || ''),
@@ -497,6 +598,9 @@ export async function buildConversationView(
     awaiting_organizer: attendeeStreak(data) >= MAX_ATTENDEE_STREAK,
     messages: [opener, ...replies],
     other_photo: otherPhoto,
+    other_id: otherId || null,
+    blocked: blocks.orgBlockedAttendee || blocks.attendeeBlockedOrg,
+    blocked_by_viewer: blockedByViewer,
   }
 }
 
@@ -614,6 +718,8 @@ export async function appendAttendeeFollowUp(params: {
   attendeeId: string
   authorName: string
   body: string
+  /** Already validated against this thread (resolveReplyTo). */
+  replyTo?: ReplyTo | null
 }): Promise<FollowUpResult> {
   const threadRef = adminDb.collection(COLLECTION).doc(params.threadId)
   const replyRef = threadRef.collection(REPLIES_SUBCOLLECTION).doc()
@@ -636,6 +742,7 @@ export async function appendAttendeeFollowUp(params: {
       author_role: 'attendee',
       author_name: params.authorName,
       created_at: FieldValue.serverTimestamp(),
+      ...(params.replyTo ? { reply_to: params.replyTo } : {}),
     })
     tx.update(threadRef, {
       status: 'open',
@@ -656,6 +763,7 @@ export async function appendAttendeeFollowUp(params: {
         author_role: 'attendee',
         author_name: params.authorName,
         created_at: new Date().toISOString(),
+        ...(params.replyTo ? { reply_to: params.replyTo } : {}),
       },
     }
   })
@@ -695,6 +803,8 @@ export async function appendOrganizerReply(params: {
   authorName: string
   body: string
   alreadyRead: boolean
+  /** Already validated against this thread (resolveReplyTo). */
+  replyTo?: ReplyTo | null
 }): Promise<OrganizerMessageReply> {
   const threadRef = adminDb.collection(COLLECTION).doc(params.threadId)
   const replyRef = threadRef.collection(REPLIES_SUBCOLLECTION).doc()
@@ -706,6 +816,7 @@ export async function appendOrganizerReply(params: {
     author_role: 'organizer',
     author_name: params.authorName,
     created_at: FieldValue.serverTimestamp(),
+    ...(params.replyTo ? { reply_to: params.replyTo } : {}),
   })
   batch.update(threadRef, {
     status: 'replied',
@@ -734,7 +845,75 @@ export async function appendOrganizerReply(params: {
     author_role: 'organizer',
     author_name: params.authorName,
     created_at: new Date().toISOString(),
+    ...(params.replyTo ? { reply_to: params.replyTo } : {}),
   }
+}
+
+/**
+ * The quote for a reply to message `messageId` of this thread, built from the
+ * quoted message itself. Null when the id names nothing in THIS thread (the
+ * reply doc is looked up under the thread, so another thread's id can't match).
+ */
+export async function resolveReplyTo(
+  threadId: string,
+  threadData: Record<string, any>,
+  messageId: string
+): Promise<ReplyTo | null> {
+  if (messageId === OPENING_MESSAGE_ID) {
+    return buildReplyTo(OPENING_MESSAGE_ID, { body: threadData.message, author_role: 'attendee' })
+  }
+  const snap = await adminDb
+    .collection(COLLECTION)
+    .doc(threadId)
+    .collection(REPLIES_SUBCOLLECTION)
+    .doc(messageId)
+    .get()
+  if (!snap.exists) return null
+  const d = snap.data() || {}
+  return buildReplyTo(messageId, {
+    body: d.body,
+    author_role: d.author_role === 'attendee' ? 'attendee' : 'organizer',
+  })
+}
+
+export type ReactionResult =
+  | { ok: true; reactions: ReactionSummary[]; mine: ReactionEmoji | null }
+  | { ok: false; code: 'message_not_found' }
+
+/**
+ * Toggle `userId`'s reaction on one message of the thread. A reply carries its
+ * own `reactions` map; the opener's lives at reactions/opening (never on the
+ * client-readable root). The caller has already checked the user may act on
+ * this thread and that no block stands. Transactional so two quick taps
+ * resolve in order rather than overwriting each other.
+ */
+export async function toggleMessageReaction(params: {
+  threadId: string
+  messageId: string
+  userId: string
+  emoji: ReactionEmoji
+}): Promise<ReactionResult> {
+  const threadRef = adminDb.collection(COLLECTION).doc(params.threadId)
+  const isOpener = params.messageId === OPENING_MESSAGE_ID
+
+  return adminDb.runTransaction(async (tx: any): Promise<ReactionResult> => {
+    if (isOpener) {
+      const ref = openingReactionsRef(params.threadId)
+      const thread = await tx.get(threadRef)
+      const snap = await tx.get(ref)
+      if (!thread.exists) return { ok: false, code: 'message_not_found' }
+      const next = toggleReaction(snap.exists ? (snap.data() || {}).by : {}, params.userId, params.emoji)
+      tx.set(ref, { by: next.reactions, updated_at: FieldValue.serverTimestamp() })
+      return { ok: true, mine: next.mine, reactions: summarizeReactions(next.reactions, params.userId) }
+    }
+    const ref = threadRef.collection(REPLIES_SUBCOLLECTION).doc(params.messageId)
+    const snap = await tx.get(ref)
+    if (!snap.exists) return { ok: false, code: 'message_not_found' }
+    const current = sanitizeReactionMap((snap.data() || {}).reactions)
+    const next = toggleReaction(current, params.userId, params.emoji)
+    tx.update(ref, { reactions: next.reactions })
+    return { ok: true, mine: next.mine, reactions: summarizeReactions(next.reactions, params.userId) }
+  })
 }
 
 export function countUnread(threads: OrganizerMessageThread[]): number {

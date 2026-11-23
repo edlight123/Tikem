@@ -811,6 +811,19 @@ service cloud.firestore {
         resource.data.sender_id == request.auth.uid
       );
       allow create, update, delete: if false;
+
+      // Replies (with their quotes and `reactions` maps) and the opening
+      // message's reactions (reactions/opening) are SERVER-ONLY: written and
+      // read through /api/messages and /api/organizer/messages. A reaction map
+      // is keyed by uid, so letting a participant read it would tell the
+      // attendee which person on the org's team reacted. Listed explicitly
+      // (the default deny below already covers them) so nobody opens them later.
+      match /replies/{replyId} {
+        allow read, write: if false;
+      }
+      match /reactions/{targetId} {
+        allow read, write: if false;
+      }
     }
 
     // User reports + moderation bookkeeping (App Store 1.2) — server only.

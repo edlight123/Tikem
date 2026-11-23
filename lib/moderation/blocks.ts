@@ -1,5 +1,7 @@
 /**
- * Blocking an organizer (App Store guideline 1.2: "block abusive users").
+ * Blocking an organizer, or any person (App Store guideline 1.2: "block
+ * abusive users"). An organizer's id IS their uid, so one store covers both:
+ * blocking an attendee writes the same doc keyed by their uid.
  *
  * Stored at users/{uid}/blocked_organizers/{organizerId} — owner-readable,
  * server-written only (firestore.rules). Blocking:
@@ -9,7 +11,10 @@
  *   - removes the blocker's follow, so "new event from an organizer you follow"
  *     notifications stop, and re-following is refused while the block stands
  *     (the follow API checks, and firestore.rules refuses a client-side follow),
- *   - hides in-app notifications that carry that organizerId (client-side).
+ *   - hides in-app notifications that carry that organizerId (client-side),
+ *   - refuses messages between the two: every message write path (the first
+ *     message, both reply routes, reactions) asks lib/messages/blockGuard.ts
+ *     before writing, in both directions.
  * A direct link to one of their events still opens: blocking curates what you
  * are shown, it does not break a ticket you already hold.
  */
@@ -48,6 +53,30 @@ export async function isOrganizerBlocked(uid: string | null | undefined, organiz
     return snap.exists
   } catch (err) {
     console.error('[blocks] read failed', err)
+    return false
+  }
+}
+
+/**
+ * Has `blockerId` blocked any of `otherIds`? Empty and self ids are ignored.
+ * Fails open (false) on a read fault, like isOrganizerBlocked: a Firestore
+ * hiccup must not silently swallow every message.
+ */
+export async function isBlockedByAny(
+  blockerId: string | null | undefined,
+  otherIds: Array<string | null | undefined>
+): Promise<boolean> {
+  const blocker = String(blockerId || '').trim()
+  if (!blocker) return false
+  const ids = Array.from(
+    new Set(otherIds.map((id) => String(id || '').trim()).filter((id) => id && id !== blocker))
+  )
+  if (ids.length === 0) return false
+  try {
+    const snaps = await Promise.all(ids.map((id) => blocksRef(blocker).doc(id).get()))
+    return snaps.some((snap: any) => snap?.exists === true)
+  } catch (err) {
+    console.error('[blocks] message check failed', err)
     return false
   }
 }
