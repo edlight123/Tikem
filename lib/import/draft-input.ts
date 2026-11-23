@@ -19,4 +19,21 @@ export interface DraftInput {
   /** The currency the source listed, or null when it did not say. */
   currency: string | null
   tiers: Array<{ name: string; price: number; quantity: number }>
+  /** The IANA zone the source gives (Eventbrite start.timezone), when it gives one. */
+  timezone?: string | null
+}
+
+/**
+ * A real IANA zone, else null. An imported draft keeps the zone its source
+ * states (a Seattle event is shown in Seattle time, not New York's, the
+ * default for US): the same rule the Eventbrite sync already follows.
+ */
+export function validZone(z: unknown): string | null {
+  if (typeof z !== 'string' || !z) return null
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: z })
+    return z
+  } catch {
+    return null
+  }
 }
