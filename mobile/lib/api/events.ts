@@ -226,6 +226,34 @@ export interface SaveEventOptions {
    * when the event has no series_id. Defaults to false (edit only this event).
    */
   applyToSeries?: boolean;
+  /**
+   * Called when the chosen photo could not be uploaded. The event is still
+   * saved (without the new photo) so a storage hiccup never blocks it; the
+   * caller tells the organizer to add the photo again.
+   */
+  onPhotoUploadFailed?: () => void;
+}
+
+/**
+ * Upload a device photo, or null when the upload fails (the failure is
+ * reported through options.onPhotoUploadFailed, never thrown).
+ */
+async function uploadEventImageOrNull(
+  organizerId: string,
+  uri: string,
+  options: SaveEventOptions
+): Promise<string | null> {
+  try {
+    return await uploadEventImage(organizerId, uri);
+  } catch (e: any) {
+    console.warn('Event photo upload failed; saving without it:', e?.message || e);
+    try {
+      options.onPhotoUploadFailed?.();
+    } catch {
+      // A caller's callback never breaks the save.
+    }
+    return null;
+  }
 }
 
 /**
@@ -532,10 +560,12 @@ export async function createEvent(
       console.error('Error loading organizer profile for organizer_name stamp:', profileError);
     }
 
-    // Upload image to Firebase Storage if it's a local URI
-    let coverImageUrl = eventData.banner_image_url;
+    // Upload image to Firebase Storage if it's a local URI. A photo that can't
+    // upload never blocks the event: it is created without it (never with the
+    // phone-only file path) and the caller says so.
+    let coverImageUrl: string | null | undefined = eventData.banner_image_url;
     if (isDeviceOnlyImageUri(eventData.banner_image_url)) {
-      coverImageUrl = await uploadEventImage(organizerId, eventData.banner_image_url);
+      coverImageUrl = await uploadEventImageOrNull(organizerId, eventData.banner_image_url, options);
     }
 
     // Parse the base dates/times. Recurring occurrences are shifted from these.
@@ -766,10 +796,13 @@ export async function updateEvent(
   options: SaveEventOptions = {}
 ): Promise<void> {
   try {
-    // Upload image to Firebase Storage if it's a new local URI
-    let coverImageUrl = eventData.banner_image_url;
+    // Upload image to Firebase Storage if it's a new local URI. If it fails the
+    // rest of the edit is still saved and the stored photo is left as it was.
+    let coverImageUrl: string | null | undefined = eventData.banner_image_url;
+    let keepStoredPhoto = false;
     if (isDeviceOnlyImageUri(eventData.banner_image_url)) {
-      coverImageUrl = await uploadEventImage(organizerId, eventData.banner_image_url);
+      coverImageUrl = await uploadEventImageOrNull(organizerId, eventData.banner_image_url, options);
+      keepStoredPhoto = coverImageUrl === null;
     }
 
     // Parse dates and times into proper datetime
@@ -852,6 +885,12 @@ export async function updateEvent(
       // payout gate, and the Firestore rule refuses a client write that does so
       // — it goes through the server route below instead.
     };
+
+    if (keepStoredPhoto) {
+      delete (updateData as any).banner_image_url;
+      delete (updateData as any).cover_image_url;
+      delete (updateData as any).image_url;
+    }
 
     // Update the event document — with the money-defining fields taken from
     // the STORED doc once it has sold (see withStoredMoneyFields).

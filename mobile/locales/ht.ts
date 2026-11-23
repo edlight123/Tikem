@@ -2509,6 +2509,7 @@ export default {
     loadError: 'Pa t kapab chaje done evènman an',
     createSuccessBody: 'Evènman ou a kreye avèk siksè!',
     updateSuccessBody: 'Evènman ou a mete ajou avèk siksè!',
+    photoUploadFailed: 'Foto a pa t monte. Ajoute l ankò nan Modifye evènman.',
     saveFailedCreate: 'Pa t kapab kreye evènman an. Tanpri eseye ankò.',
     publishCheckFailed: {
       title: 'Nou pa t kapab tcheke konfigirasyon peman an',

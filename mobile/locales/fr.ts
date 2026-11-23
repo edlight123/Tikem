@@ -2540,6 +2540,7 @@ export default {
     loadError: "Impossible de charger les données de l'événement",
     createSuccessBody: 'Votre événement a été créé avec succès !',
     updateSuccessBody: 'Votre événement a été mis à jour avec succès !',
+    photoUploadFailed: "La photo n'a pas pu être envoyée. Ajoutez-la à nouveau depuis Modifier l'événement.",
     saveFailedCreate: "Échec de la création de l'événement. Veuillez réessayer.",
     publishCheckFailed: {
       title: 'Impossible de vérifier vos paramètres de versement',

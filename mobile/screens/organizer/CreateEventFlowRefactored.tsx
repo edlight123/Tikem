@@ -1641,22 +1641,28 @@ export default function CreateEventFlowRefactored() {
     }
 
     setSaving(true);
+    // A photo that could not upload no longer blocks the save: the event is
+    // saved without it and the success message says the photo needs adding again.
+    let photoFailed = false;
+    const saveOptions: SaveEventOptions = { ...options, onPhotoUploadFailed: () => { photoFailed = true; } };
+    const withPhotoNote = (body: string) =>
+      photoFailed ? `${body}\n\n${t('organizerCreateEventFlow.photoUploadFailed')}` : body;
     try {
       if (isEditMode && eventId) {
         // Update existing event
         // organizer_id never changes on edit; the id here only names uploads.
-        await updateEvent(eventId, eventOrgId || userProfile.id, eventData, options);
+        await updateEvent(eventId, eventOrgId || userProfile.id, eventData, saveOptions);
         console.log('Event updated with ID:', eventId);
 
         setConfirmVisible(false);
         showAlert(
           t('common.success'),
-          t('organizerCreateEventFlow.updateSuccessBody'),
+          withPhotoNote(t('organizerCreateEventFlow.updateSuccessBody')),
           [{ text: t('common.ok'), onPress: () => navigation.goBack() }]
         );
       } else {
         // Create new event
-        const newEventId = await createEvent(eventOrgId || userProfile.id, eventData, options);
+        const newEventId = await createEvent(eventOrgId || userProfile.id, eventData, saveOptions);
         console.log('Event created with ID:', newEventId);
 
         // Publish-first: the first event someone saves for THEMSELVES makes
@@ -1692,21 +1698,25 @@ export default function CreateEventFlowRefactored() {
           setMode('organizer', { landingTab: 'MyEvents' });
           showAlert(
             nowOrganizer ? t('organizerCreateEventFlow.firstEvent.title') : t('common.success'),
-            nowOrganizer
-              ? options.publish === false
-                ? t('organizerCreateEventFlow.firstEvent.draftBody')
-                : t('organizerCreateEventFlow.firstEvent.body')
-              : options.publish === false
-                ? t('organizerCreateEventFlow.draftSuccessBody')
-                : t('organizerCreateEventFlow.createSuccessBody'),
+            withPhotoNote(
+              nowOrganizer
+                ? options.publish === false
+                  ? t('organizerCreateEventFlow.firstEvent.draftBody')
+                  : t('organizerCreateEventFlow.firstEvent.body')
+                : options.publish === false
+                  ? t('organizerCreateEventFlow.draftSuccessBody')
+                  : t('organizerCreateEventFlow.createSuccessBody')
+            ),
             [{ text: t('organizerCreateEventFlow.firstEvent.cta') }]
           );
         } else {
           showAlert(
             t('common.success'),
-            options.publish === false
-              ? t('organizerCreateEventFlow.draftSuccessBody')
-              : t('organizerCreateEventFlow.createSuccessBody'),
+            withPhotoNote(
+              options.publish === false
+                ? t('organizerCreateEventFlow.draftSuccessBody')
+                : t('organizerCreateEventFlow.createSuccessBody')
+            ),
             [{ text: t('common.ok'), onPress: () => navigation.goBack() }]
           );
         }
