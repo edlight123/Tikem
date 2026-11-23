@@ -47,7 +47,7 @@ const STOCK_MINUTES: Record<string, number> = {
 }
 
 export const MAX_REMINDERS = 6
-export const REMINDER_MESSAGE_MAX = 240
+export const REMINDER_MESSAGE_MAX = 140
 /** Earliest reminder: one week ahead. */
 export const MAX_MINUTES_BEFORE = 7 * 24 * 60
 /** Nothing closer to the start than this (see MIN_REMINDER_OFFSET_MINUTES). */
@@ -57,14 +57,38 @@ export const DAY_BEFORE_MINUTES = 24 * 60
 
 const ID_RE = /^[a-z0-9_]{1,40}$/
 
-/** Plain text only: no tags, no control characters, one line of spaces, clipped. */
+/**
+ * Organizer words go out under the Tikèm name, so they are a phishing vector.
+ * Only push and the in-app bell ever carry them (attributed to the organizer,
+ * see event-reminder-send); WhatsApp and email always use the stock template.
+ * Links, email addresses and phone numbers are stripped here, both when the
+ * organizer saves and again when the cron sends.
+ */
+const URL_RE = /\b(?:https?:\/\/|hxxps?:\/\/|www\.)\S+/gi
+const EMAIL_RE = /[A-Z0-9._%+-]+\s*(?:@|\(at\)|\[at\])\s*[A-Z0-9.-]+\s*(?:\.|\(dot\)|\[dot\])\s*[A-Z]{2,}/gi
+/** A bare domain ("tikem-pay.co", "bit.ly/x"), with or without a path. */
+const DOMAIN_RE = /\b[a-z0-9-]+(?:\.[a-z0-9-]+)*\.(?:[a-z]{2,24})(?:\/\S*)?\b/gi
+/** Seven or more digits, allowing spaces, dots, dashes, parentheses and a leading +. */
+const PHONE_RE = /\+?\(?\d(?:[\s().-]*\d){6,}/g
+
+export function stripContactDetails(text: string): string {
+  return text
+    .replace(URL_RE, ' ')
+    .replace(EMAIL_RE, ' ')
+    .replace(DOMAIN_RE, (m) => (/^\d+(?:\.\d+)*$/.test(m) ? m : ' '))
+    .replace(PHONE_RE, ' ')
+}
+
+/**
+ * Plain text only: no tags, no control characters, no links / emails / phone
+ * numbers, one line of spaces, clipped to REMINDER_MESSAGE_MAX.
+ */
 export function cleanReminderMessage(input: unknown): string | undefined {
   if (typeof input !== 'string') return undefined
-  const text = input
+  const plain = input
     .replace(/<[^>]*>/g, '')
-    .replace(/[\u0000-\u0008\u000B-\u001F\u007F]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim()
+    .replace(/[\u0000-\u0008\u000B-\u001F\u007F-\u009F​-‏‪-‮⁦-⁩]/g, ' ')
+  const text = stripContactDetails(plain).replace(/\s+/g, ' ').trim()
   if (!text) return undefined
   return Array.from(text).slice(0, REMINDER_MESSAGE_MAX).join('').trim()
 }

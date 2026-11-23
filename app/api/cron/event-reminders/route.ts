@@ -1,13 +1,17 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/firebase-db/server'
 import { sendEmail } from '@/lib/email'
-import { sendWhatsAppMessage, getEventReminderWhatsApp } from '@/lib/whatsapp'
+import { sendWhatsAppMessage } from '@/lib/whatsapp'
 import { sendEventReminder } from '@/lib/notification-triggers'
 import { claimReminder, releaseReminderClaim } from '@/lib/notifications/reminder-claim'
 import { liveTicketStatusesForQuery } from '@/lib/tickets/status'
 import { startDate } from '@/lib/notifications/event-reminder-settings'
 import { runEventReminders, type ReminderTicket } from '@/lib/notifications/event-reminder-run'
-import { sendConfiguredEventReminder } from '@/lib/notifications/event-reminder-send'
+import {
+  dayBeforeWhatsAppText,
+  eventOrganizerName,
+  sendConfiguredEventReminder,
+} from '@/lib/notifications/event-reminder-send'
 import { resolveEmailLang } from '@/lib/email-kit/recipient'
 import { appUrl } from '@/lib/email-kit/layout'
 import { getEventReminderEmail } from '@/lib/email-templates/reminder'
@@ -108,12 +112,16 @@ export async function GET(request: Request) {
         await sendConfiguredEventReminder({
           eventId: event.id,
           eventTitle: event.title,
+          organizerName: eventOrganizerName(event),
           attendeeIds,
           reminder,
         })
       },
 
-      async sendDayBefore(event, tickets, reminder) {
+      // Always the stock email and WhatsApp text: organizer words never go
+      // out on these Tikèm-branded channels (phishing risk), only in the
+      // attributed push / bell entry.
+      async sendDayBefore(event, tickets) {
         let emailsSent = 0
         let whatsappSent = 0
         for (const ticket of tickets) {
@@ -139,19 +147,11 @@ export async function GET(request: Request) {
           })
           if (emailResult.success) emailsSent++
 
-          // WhatsApp when a phone is on file: the organizer's own words when
-          // they wrote some, else the stock text.
+          // WhatsApp when a phone is on file, stock text only.
           if (attendee.phone) {
             const whatsappResult = await sendWhatsAppMessage({
               to: attendee.phone,
-              message: reminder.message
-                ? `*${event.title}*\n\n${reminder.message}\n\n---\nTikèm`
-                : getEventReminderWhatsApp(
-                    attendee.full_name || 'Guest',
-                    event.title,
-                    24,
-                    `${event.venue_name}, ${event.city}`
-                  ),
+              message: dayBeforeWhatsAppText(attendee, event),
             })
             if (whatsappResult.success) whatsappSent++
           }

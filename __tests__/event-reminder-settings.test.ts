@@ -62,6 +62,8 @@ import {
 import {
   DEFAULT_EVENT_REMINDERS,
   MIN_MINUTES_BEFORE,
+  REMINDER_MESSAGE_MAX,
+  cleanReminderMessage,
   dueReminders,
   isStockReminder,
   reminderClaimKey,
@@ -70,7 +72,8 @@ import {
   type EventReminder,
 } from '@/lib/notifications/event-reminder-settings'
 import { runEventReminders, type ReminderRunDeps } from '@/lib/notifications/event-reminder-run'
-import { customReminderCopy } from '@/lib/notifications/event-reminder-send'
+import { customReminderCopy, dayBeforeWhatsAppText } from '@/lib/notifications/event-reminder-send'
+import { getEventReminderWhatsApp } from '@/lib/whatsapp'
 
 const MINUTE = 60_000
 const at = (base: Date, minutes: number) => new Date(base.getTime() + minutes * MINUTE)
@@ -181,14 +184,73 @@ describe('default behaviour is unchanged', () => {
 })
 
 describe('custom copy', () => {
-  it('uses the organizer words, else a plain "starts in"', () => {
+  it('attributes the organizer words, else a plain "starts in"', () => {
     expect(customReminderCopy('Kompa Night', { id: 'r', minutes_before: 2880, enabled: true })).toEqual({
       title: 'Reminder: Kompa Night',
       body: '"Kompa Night" starts in 2 days!',
     })
+    expect(
+      customReminderCopy('Kompa Night', { id: 'r', minutes_before: 60, enabled: true, message: 'Gates at 8' }, 'Lakou Events').body
+    ).toBe('Lakou Events: Gates at 8')
     expect(customReminderCopy('Kompa Night', { id: 'r', minutes_before: 60, enabled: true, message: 'Gates at 8' }).body).toBe(
-      'Gates at 8'
+      'The organizer: Gates at 8'
     )
+  })
+
+  it('re-cleans stored text at send time (data saved before the rule, or by another path)', () => {
+    const body = customReminderCopy(
+      'K',
+      { id: 'r', minutes_before: 60, enabled: true, message: 'Pay at https://evil.example/pay or call +509 3712 3456' },
+      'Org'
+    ).body
+    expect(body).not.toMatch(/evil|https|3712/)
+    expect(body.startsWith('Org: ')).toBe(true)
+  })
+
+  it('the day-before WhatsApp is always the stock template', () => {
+    const text = dayBeforeWhatsAppText({ full_name: 'Ana' }, { title: 'Kompa Night', venue_name: 'Parc', city: 'PAP' })
+    expect(text).toBe(getEventReminderWhatsApp('Ana', 'Kompa Night', 24, 'Parc, PAP'))
+  })
+})
+
+describe('organizer message stripping (saved and sent)', () => {
+  const clean = (m: string) => cleanReminderMessage(m)
+
+  it('removes links in every common disguise', () => {
+    for (const m of [
+      'Pay here https://tikem-pay.co/x now',
+      'Pay here http://bit.ly/abc now',
+      'Pay here www.tikem-refund.com now',
+      'Pay here tikem-refund.com/claim now',
+      'Pay here bit.ly/abc now',
+      'Pay here hxxps://evil.co now',
+    ]) {
+      expect(clean(m)).toBe('Pay here now')
+    }
+  })
+
+  it('removes email addresses and phone numbers', () => {
+    expect(clean('Write to refunds@tikem-help.com today')).toBe('Write to today')
+    expect(clean('Write to refunds (at) evil (dot) com today')).toBe('Write to today')
+    expect(clean('Call +509 3712-3456 now')).toBe('Call now')
+    expect(clean('Call (305) 555 0199 now')).toBe('Call now')
+    expect(clean('WhatsApp 50937123456')).toBe('WhatsApp')
+  })
+
+  it('keeps ordinary words, times and short numbers', () => {
+    expect(clean('Doors 8:30 pm, bring ID. Table 12, 2 drinks.')).toBe('Doors 8:30 pm, bring ID. Table 12, 2 drinks.')
+  })
+
+  it('plain text, control and direction characters removed, capped at 140', () => {
+    expect(clean('<a href="x">Hi</a>\u0007‮there')).toBe('Hi there')
+    expect(Array.from(clean('a'.repeat(500))!).length).toBe(REMINDER_MESSAGE_MAX)
+    expect(REMINDER_MESSAGE_MAX).toBeLessThanOrEqual(140)
+    expect(clean('https://only.a.link')).toBeUndefined()
+  })
+
+  it('the organizer route validation strips before saving', () => {
+    const v = validateReminders([{ id: 'r1', minutes_before: 60, message: 'Tickets at www.fake.co call 509-3712-3456' }])
+    expect(v).toEqual({ ok: true, reminders: [{ id: 'r1', minutes_before: 60, enabled: true, message: 'Tickets at call' }] })
   })
 })
 
@@ -230,6 +292,7 @@ describe('cron run with claims (dedupe)', () => {
     await runEventReminders(at(NOW, 30), d) // next window edge
     expect(calls).toEqual([{ kind: 'stock', eventId: 'ev1', id: 'event_reminder_24h', key: 'event_reminder_24h', attendees: ['u1', 'u2'] }])
     expect(d.sendDayBefore).toHaveBeenCalledTimes(1)
+    expect((d.sendDayBefore as jest.Mock).mock.calls[0]).toHaveLength(2)
     expect(first.totalEmailsSent).toBe(3)
     expect(first.results.map((r) => r.type)).toEqual(['event_reminder_24h', 'event_reminder_3h', 'event_reminder_30min'])
     expect(fakeDb.store.has('reminderClaims/ev1__event_reminder_24h')).toBe(true)
@@ -253,6 +316,8 @@ describe('cron run with claims (dedupe)', () => {
       await runEventReminders(at(NOW, h * 60 + 1), d)
     }
     expect(calls.map((c) => `${c.kind}:${c.key}`)).toEqual(['custom:event_reminder_24h_at_2880', 'custom:r_hour_at_60'])
+    // The day-before hook never receives a reminder (so never its words).
+    for (const call of (d.sendDayBefore as jest.Mock).mock.calls) expect(call).toHaveLength(2)
     // The moved day-before reminder is no longer exactly one day out: no email.
     expect(d.sendDayBefore).not.toHaveBeenCalled()
   })

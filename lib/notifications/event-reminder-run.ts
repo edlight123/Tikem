@@ -31,12 +31,12 @@ export interface ReminderRunDeps {
   sendStock(event: Record<string, any>, attendeeIds: string[], reminder: EventReminder): Promise<void>
   /** A moved, added or reworded reminder (lib/notifications/event-reminder-send). */
   sendCustom(event: Record<string, any>, attendeeIds: string[], reminder: EventReminder): Promise<void>
-  /** Email + WhatsApp to every ticket holder; returns what went out. */
-  sendDayBefore(
-    event: Record<string, any>,
-    tickets: ReminderTicket[],
-    reminder: EventReminder
-  ): Promise<{ emailsSent: number; whatsappSent: number }>
+  /**
+   * Email + WhatsApp to every ticket holder; returns what went out. Takes no
+   * reminder on purpose: these Tikèm-branded channels always carry the stock
+   * template, never the organizer's words (phishing risk).
+   */
+  sendDayBefore(event: Record<string, any>, tickets: ReminderTicket[]): Promise<{ emailsSent: number; whatsappSent: number }>
 }
 
 export interface ReminderRunRow {
@@ -105,7 +105,7 @@ export async function runEventReminders(now: Date, deps: ReminderRunDeps): Promi
 
       // Email and WhatsApp only for the reminder one day before (to avoid spam).
       if (reminder.minutes_before === DAY_BEFORE_MINUTES) {
-        const extra = await deps.sendDayBefore(event, tickets, reminder)
+        const extra = await deps.sendDayBefore(event, tickets)
         r.emailsSent += extra.emailsSent
         r.whatsappSent += extra.whatsappSent
       }

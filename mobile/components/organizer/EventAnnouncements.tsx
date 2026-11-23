@@ -235,7 +235,8 @@ export default function EventAnnouncements({ eventId, eventTitle }: { eventId: s
     const stock = minutes != null && STOCK_MINUTES[id] === minutes && !message;
     return {
       title: stock ? 'Event Reminder' : `Reminder: ${eventTitle}`,
-      body: message || `"${eventTitle}" starts in ${serverSpan(minutes ?? 0)}!`,
+      // The server attributes the organizer's words (never Tikèm's voice).
+      body: message ? `${org}: ${message}` : `"${eventTitle}" starts in ${serverSpan(minutes ?? 0)}!`,
       channels:
         minutes === 1440 ? t('organizerMessages.preview.channelsAll') : t('organizerMessages.preview.channelsPush'),
       who: t('organizerMessages.preview.whoTicketHolders'),

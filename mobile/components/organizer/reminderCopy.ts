@@ -7,7 +7,9 @@
 
 export const FOLLOWUP_ID = 'post_event_followup';
 export const MAX_REMINDERS = 6;
-export const MESSAGE_MAX = 240;
+/** Server cap (lib/notifications/event-reminder-settings REMINDER_MESSAGE_MAX). Links, emails and
+ * phone numbers are stripped by the server, which also prefixes the organizer's name. */
+export const MESSAGE_MAX = 140;
 
 /** The stock reminders and their stock times, in minutes before the start. */
 export const STOCK_MINUTES: Record<string, number> = {
