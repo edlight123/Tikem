@@ -79,17 +79,35 @@ const READ_DEADLINE_MS = 25_000
 function withDeadline<T>(p: Promise<T>, ms: number): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined
   const deadline = new Promise<never>((_, reject) => {
+    // The worker in use when this read started: the one to retire if it hangs.
+    const inUse = workerPromise
     timer = setTimeout(() => {
-      // A worker that died (e.g. a core file missing) never answers: drop it
-      // so the next read starts a fresh one.
-      workerPromise = null
+      // A worker that died (e.g. a core file missing) or is stuck never
+      // answers: terminate it so it can't keep eating CPU and memory, and drop
+      // it (only if it is still the current one) so the next read starts fresh.
+      if (inUse && workerPromise === inUse) workerPromise = null
+      inUse?.then((w) => w.terminate()).catch(() => {})
       reject(new Error('flyer read timed out'))
     }, ms)
   })
   return Promise.race([p, deadline]).finally(() => clearTimeout(timer))
 }
 
-export async function ocrFlyer(image: Buffer): Promise<OcrLine[]> {
+/**
+ * One read at a time per warm instance: a Tesseract worker handles one job at
+ * a time anyway, and queueing keeps a burst from piling up memory. Each read
+ * is capped by its own deadline once it starts; the per-user and per-IP daily
+ * limits on the route keep the queue short.
+ */
+let queue: Promise<unknown> = Promise.resolve()
+
+export function ocrFlyer(image: Buffer): Promise<OcrLine[]> {
+  const run = queue.then(() => ocrFlyerNow(image))
+  queue = run.catch(() => {})
+  return run
+}
+
+async function ocrFlyerNow(image: Buffer): Promise<OcrLine[]> {
   const [worker, png] = await withDeadline(Promise.all([getWorker(), prepare(image)]), READ_DEADLINE_MS)
   const { data } = await withDeadline(worker.recognize(png, {}, { blocks: true } as any), READ_DEADLINE_MS)
   const lines: OcrLine[] = []
