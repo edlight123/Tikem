@@ -10,6 +10,7 @@ import {
   CalendarDays,
   CheckCircle2,
   DollarSign,
+  Eye,
   Image as ImageIcon,
   MapPin,
   Globe,
@@ -38,6 +39,8 @@ export function EventCommandCenter({ event, stats, tickets, tiers }: EventComman
   const capacity = Number(stats?.capacity || 0)
   const sold = Number(stats?.ticketsSold || 0)
   const checkedIn = Number(stats?.checkedIn || 0)
+  const views = Number(stats?.views || 0)
+  const viewsToday = Number(stats?.viewsToday || 0)
   const pctSold = capacity > 0 ? Math.min(100, Math.round((sold / capacity) * 100)) : 0
 
   // --- Sales trend (last N days, derived from purchase timestamps) ---
@@ -85,6 +88,14 @@ export function EventCommandCenter({ event, stats, tickets, tiers }: EventComman
        replaced standalone placeholder dashes with a comma-space. */
       sub: sold > 0 ? `${Math.round((checkedIn / sold) * 100)}%` : '\u2013', icon: CheckCircle2 },
     { label: 'Capacity sold', value: `${pctSold}%`, icon: TrendingUp },
+    // Page views (lib/events/views.ts): one per visitor per day; the organizer's
+    // and the team's own visits never count.
+    {
+      label: tx('page_views.label'),
+      value: views.toLocaleString(),
+      sub: viewsToday > 0 ? tx('page_views.today', { count: viewsToday }) : undefined,
+      icon: Eye,
+    },
   ]
 
   return (
@@ -113,9 +124,12 @@ export function EventCommandCenter({ event, stats, tickets, tiers }: EventComman
       )}
 
       {/* KPI strip — single compact divided row */}
-      <div className="grid grid-cols-2 divide-x divide-y divide-line overflow-hidden rounded-lg bg-surface-low sm:grid-cols-4 sm:divide-y-0">
-        {kpis.map((k) => (
-          <div key={k.label} className="px-4 py-3">
+      <div className="grid grid-cols-2 divide-x divide-y divide-line overflow-hidden rounded-lg bg-surface-low sm:grid-cols-5 sm:divide-y-0">
+        {kpis.map((k, i) => (
+          <div
+            key={k.label}
+            className={`px-4 py-3${i === kpis.length - 1 && kpis.length % 2 === 1 ? ' col-span-2 sm:col-span-1' : ''}`}
+          >
             <p className="label-mono truncate uppercase text-eyebrow text-fg-muted">{k.label}</p>
             <p className="mt-1 flex items-baseline gap-1.5">
               <span className="text-xl font-bold font-mono tabular-nums text-fg">{k.value}</span>

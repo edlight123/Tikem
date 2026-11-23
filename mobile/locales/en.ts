@@ -3032,6 +3032,33 @@ export default {
     emailRequired: "Enter their email.",
     failed: "Couldn't transfer the ticket. Try again.",
   },
+  // Page views on the organizer's event screens (lib/eventViews.ts).
+  eventViews: {
+    views: "Views",
+    today: "{count} today",
+  },
+  // Editing an event's automatic reminders (components/organizer/EventAnnouncements).
+  organizerReminders: {
+    reminder: "Reminder",
+    add: "Add a reminder",
+    off: "Off",
+    when: "When",
+    messageLabel: "Your message (optional)",
+    messagePlaceholder: "Leave empty for the standard reminder",
+    save: "Save",
+    remove: "Remove",
+    saveFailed: "Couldn't save. Try again.",
+    newTitle: "new reminder",
+    before: "{span} before",
+    weekOne: "1 week",
+    weekOther: "{count} weeks",
+    dayOne: "1 day",
+    dayOther: "{count} days",
+    hourOne: "1 hour",
+    hourOther: "{count} hours",
+    minOne: "1 min",
+    minOther: "{count} min",
+  },
   organizerMessages: {
     preview: {
       followupTitle: "How was {event}?",
@@ -3629,6 +3656,8 @@ export default {
       sectionBody: 'Optional. Turn these off and nothing above changes.',
       discovery: 'Events near you',
       discoveryBody: 'A pick of new events in your city.',
+      weekend: "This weekend",
+      weekendBody: "Thursday: what's on this weekend in your city.",
       fillingFast: 'Selling fast',
       fillingFastBody: 'When an event you follow is close to selling out.',
       nationalDay: 'Haitian holidays',

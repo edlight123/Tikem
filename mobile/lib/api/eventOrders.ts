@@ -71,6 +71,8 @@ export interface EventAnalytics {
 export interface EventAnalyticsResponse {
   event: { id: string; title: string; currency: string };
   analytics: EventAnalytics;
+  /** Page views (server lib/events/views.ts). Absent from older servers. */
+  views?: { total: number; today: number };
 }
 
 export interface RefundResult {

@@ -947,6 +947,12 @@
   ],
   "fieldOverrides": [
     {
+      "collectionGroup": "event_view_seen",
+      "fieldPath": "expires_at",
+      "ttl": true,
+      "indexes": []
+    },
+    {
       "collectionGroup": "inventory_shards",
       "fieldPath": "h",
       "ttl": false,

@@ -1271,6 +1271,10 @@
     "new_password": "Nouveau mot de passe",
     "password_min_length": "Le mot de passe doit contenir au moins 8 caractères"
   },
+  "page_views": {
+    "label": "Vues de la page",
+    "today": "{{count}} aujourd’hui"
+  },
   "command_center": {
     "add_a_flyer": "Ajouter une affiche",
     "add_one": "En ajouter un",

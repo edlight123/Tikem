@@ -1271,6 +1271,10 @@
     "new_password": "Nouvo modpas",
     "password_min_length": "Modpas la dwe gen omwen 8 karaktè"
   },
+  "page_views": {
+    "label": "Vizit paj la",
+    "today": "{{count}} jodi a"
+  },
   "command_center": {
     "add_a_flyer": "Ajoute yon flyer",
     "add_one": "Ajoute youn",

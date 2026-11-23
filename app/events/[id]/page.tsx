@@ -12,6 +12,7 @@ import MobileNavWrapper from '@/components/MobileNavWrapper'
 import EventDetailsClient from './EventDetailsClient'
 import { liveFreeTicketCount } from '@/lib/tickets/free-claim-policy'
 import AttributionBeacon from './AttributionBeacon'
+import ViewBeacon from './ViewBeacon'
 import { buildEventJsonLd, serializeJsonLd } from './eventJsonLd'
 import { CANONICAL_SITE_URL } from '@/lib/site-url'
 import { cookies } from 'next/headers'
@@ -350,6 +351,8 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
         />
       )}
       <AttributionBeacon eventId={id} />
+      {/* Page views for the organizer (lib/events/views.ts): public events only. */}
+      {isPublic && <ViewBeacon eventId={id} />}
       <EventDetailsClient 
         event={serializedEvent}
         user={user}

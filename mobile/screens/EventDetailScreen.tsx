@@ -35,6 +35,7 @@ import { db } from '../config/firebase';
 import { backendJson } from '../lib/api/backend';
 import { getPromoterRef, setPromoterRef } from '../lib/promoterRef';
 import { Attribution, attributionFromParams, sendClickOnce } from '../lib/attribution';
+import { pingEventView } from '../lib/eventViews';
 import { goBackOrHome } from '../lib/goBackOrHome';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
@@ -166,6 +167,11 @@ export default function EventDetailScreen({ route, navigation }: any) {
     sendClickOnce(eventId, fromLink).catch(() => undefined);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventId, rp.t, rp.ref, rp.utm_source, rp.utm_medium, rp.utm_campaign]);
+  // One page view for the organizer's count (lib/eventViews.ts). The server
+  // dedupes per viewer per day and skips the organizer's own team.
+  useEffect(() => {
+    pingEventView(eventId);
+  }, [eventId]);
   const { user, userProfile } = useAuth();
   const { t, language } = useI18n();
   const { colors } = useTheme();

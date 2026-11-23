@@ -854,6 +854,20 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Event page views (lib/events/views.ts): counts and the hashed
+    // once-per-viewer-per-day markers. Server-only (Admin SDK): organizers read
+    // their counts through GET /api/events/{id}/views. Explicit for
+    // documentation; the default deny below would refuse them anyway.
+    match /event_view_stats/{eventId} {
+      allow read, write: if false;
+      match /days/{day} {
+        allow read, write: if false;
+      }
+    }
+    match /event_view_seen/{markerId} {
+      allow read, write: if false;
+    }
+
     // Default deny for everything else
     // KYC exemptions for internal accounts (the store-review demo organizer).
     // Server-only: lib/kyc/identity.ts reads it with the Admin SDK.
