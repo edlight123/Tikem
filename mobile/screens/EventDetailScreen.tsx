@@ -7,7 +7,6 @@ import {
     StyleSheet, 
     TouchableOpacity, 
   ActivityIndicator,
-  Share,
   Dimensions,
   Linking,
     Animated,
@@ -42,6 +41,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { parseVideoEmbed } from '../lib/videoEmbed';
 import { colors as T, radius, withAlpha, font } from '../theme/tokens';
 import { formatEventTime } from '../lib/dates';
+import { shareLink } from '../lib/share';
 import { isValidDate } from '../lib/dates';
 import WhitePillCTA from '../components/WhitePillCTA';
 import VerifiedBadge from '../components/VerifiedBadge';
@@ -471,9 +471,12 @@ export default function EventDetailScreen({ route, navigation }: any) {
       // Minimal on purpose (owner, 2026-11-17): the link's preview card is the
       // poster, so the message is just the name, the date and the link.
       const when = event.start_datetime ? formatEventTime(event.start_datetime, event, 'EEE, MMM d', language) : '';
-      await Share.share({
-        message: `${[event.title, when].filter(Boolean).join(' · ')}\nhttps://www.tikem.co/events/${eventId}`,
+      // iOS: the link travels as `url` so iMessage shows the poster preview
+      // without the link printed twice (lib/share shareLink).
+      await shareLink({
         title: event.title,
+        text: [event.title, when].filter(Boolean).join(' · '),
+        url: `https://www.tikem.co/events/${eventId}`,
       });
     } catch (error) {
       console.error('Error sharing:', error);

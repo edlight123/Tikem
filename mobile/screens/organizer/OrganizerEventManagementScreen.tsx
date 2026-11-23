@@ -6,7 +6,6 @@ import {
   Animated,
   RefreshControl,
   StatusBar,
-  Share,
   useWindowDimensions,
 } from 'react-native';
 import { useAppAlert } from '../../components/AppAlert';
@@ -28,6 +27,7 @@ import {
 } from '../../lib/api/events';
 import { useI18n } from '../../contexts/I18nContext';
 import { useActiveOrg } from '../../lib/activeOrg';
+import { shareLink } from '../../lib/share';
 import { useLocaleFormat } from '../../lib/format';
 import { Image as ExpoImage } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -237,9 +237,7 @@ export default function OrganizerEventManagementScreen() {
   const handleShareEvent = async () => {
     try {
       const url = `https://www.tikem.co/events/${eventId}`;
-      await Share.share({
-        message: `${event?.title || t('common.event')}\n\n${url}`,
-      });
+      await shareLink({ text: event?.title || t('common.event'), url });
     } catch {
       // Share sheet dismissed / unavailable — nothing to surface.
     }
