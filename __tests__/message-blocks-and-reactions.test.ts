@@ -226,6 +226,14 @@ describe('isBlockedByAny', () => {
     failBlockReads = true
     const spy = jest.spyOn(console, 'error').mockImplementation(() => {})
     expect(await isBlockedByAny('org1', ['att1'])).toBe(false)
+    expect(await isBlockedByAny('org1', ['att1'], { failClosed: true })).toBe(true)
+    spy.mockRestore()
+  })
+
+  it('write checks fail closed: a read fault refuses the message', async () => {
+    failBlockReads = true
+    const spy = jest.spyOn(console, 'error').mockImplementation(() => {})
+    expect(await messagingRefusal({ side: 'attendee', orgId: 'org1', attendeeId: 'att1' })).not.toBeNull()
     spy.mockRestore()
   })
 })

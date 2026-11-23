@@ -64,7 +64,8 @@ export async function isOrganizerBlocked(uid: string | null | undefined, organiz
  */
 export async function isBlockedByAny(
   blockerId: string | null | undefined,
-  otherIds: Array<string | null | undefined>
+  otherIds: Array<string | null | undefined>,
+  opts: { failClosed?: boolean } = {}
 ): Promise<boolean> {
   const blocker = String(blockerId || '').trim()
   if (!blocker) return false
@@ -77,7 +78,9 @@ export async function isBlockedByAny(
     return snaps.some((snap: any) => snap?.exists === true)
   } catch (err) {
     console.error('[blocks] message check failed', err)
-    return false
+    // Write paths (sending, reacting) fail CLOSED: a block must hold through a
+    // read fault; the sender can retry. Display paths fail open.
+    return opts.failClosed === true
   }
 }
 

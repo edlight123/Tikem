@@ -18,8 +18,9 @@
  * The org is always the thread's own `organizer_id`, never the org the app is
  * acting for (the same rule as threadViewer: Freddy, 2026-11-17).
  *
- * Every read fails open: a Firestore fault must not silently swallow every
- * message (isBlockedByAny logs and answers false).
+ * Write checks (messagingRefusal) fail CLOSED: if the block docs can't be
+ * read, the write is refused and the sender can retry, so a block always holds.
+ * Display-only reads (threadBlockState without failClosed) fail open.
  */
 import { isBlockedByAny } from '@/lib/moderation/blocks'
 import { teamCol } from '@/lib/organizer/context'
@@ -64,6 +65,7 @@ export async function threadBlockState(params: {
   orgId: string
   attendeeId: string
   actingUserId?: string | null
+  failClosed?: boolean
 }): Promise<ThreadBlockState> {
   const orgId = String(params.orgId || '').trim()
   const attendeeId = String(params.attendeeId || '').trim()
@@ -75,8 +77,8 @@ export async function threadBlockState(params: {
   const orgSide = Array.from(new Set([...voices, ...(acting ? [acting] : [])])).filter((id) => id !== attendeeId)
 
   const [orgChecks, attendeeBlockedOrg] = await Promise.all([
-    Promise.all(orgSide.map((id) => isBlockedByAny(id, [attendeeId]))),
-    isBlockedByAny(attendeeId, [orgId, acting]),
+    Promise.all(orgSide.map((id) => isBlockedByAny(id, [attendeeId], { failClosed: params.failClosed }))),
+    isBlockedByAny(attendeeId, [orgId, acting], { failClosed: params.failClosed }),
   ])
   return { orgBlockedAttendee: orgChecks.some(Boolean), attendeeBlockedOrg }
 }
@@ -115,6 +117,7 @@ export async function messagingRefusal(params: {
     orgId: params.orgId,
     attendeeId: params.attendeeId,
     actingUserId: params.side === 'organizer' ? params.actingUserId : null,
+    failClosed: true,
   })
   return refusalFor(params.side, state)
 }
