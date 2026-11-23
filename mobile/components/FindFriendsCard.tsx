@@ -112,16 +112,16 @@ export default function FindFriendsCard({ variant, style }: { variant: 'profile'
         {hasFriends ? (
           <View style={styles.pile}>
             {faces.map((f, i) => (
-              <View key={f.uid} style={{ marginLeft: i === 0 ? 0 : -10, zIndex: faces.length - i }}>
+              <View key={f.uid} style={{ marginLeft: i === 0 ? 0 : -8, zIndex: faces.length - i }}>
                 <View style={styles.ring}>
-                  <PersonAvatar user={f} size={40} />
+                  <PersonAvatar user={f} size={28} />
                 </View>
               </View>
             ))}
           </View>
         ) : (
           <View style={styles.icon}>
-            <Users size={18} color={colors.text} strokeWidth={2} />
+            <Users size={16} color={colors.text} strokeWidth={2} />
           </View>
         )}
         <View style={styles.meta}>
@@ -160,17 +160,21 @@ const getStyles = (colors: any) =>
     card: {
       backgroundColor: colors.surface,
       borderRadius: radius.lg,
-      padding: 16,
+      // Row height, like Profile's organization card and the ListRows
+      // (TestFlight 2026-11-23): 52pt, 16 / 10 padding around a 32px mark.
+      minHeight: 52,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 14,
+      gap: 12,
     },
     pile: { flexDirection: 'row', alignItems: 'center' },
-    ring: { borderRadius: 22, borderWidth: 2, borderColor: colors.surface },
+    ring: { borderRadius: 16, borderWidth: 2, borderColor: colors.surface },
     icon: {
-      width: 44,
-      height: 44,
-      borderRadius: radius.md,
+      width: 32,
+      height: 32,
+      borderRadius: radius.sm,
       backgroundColor: colors.surfaceRaised,
       alignItems: 'center',
       justifyContent: 'center',
@@ -180,8 +184,8 @@ const getStyles = (colors: any) =>
     sub: { fontSize: 13, color: colors.textSecondary, marginTop: 2 },
     // A compact raised button, the app's secondary size.
     action: {
-      height: 34,
-      paddingHorizontal: 14,
+      height: 30,
+      paddingHorizontal: 12,
       borderRadius: radius.button,
       backgroundColor: colors.surfaceRaised,
       alignItems: 'center',

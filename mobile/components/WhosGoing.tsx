@@ -12,6 +12,7 @@ import { useAppAlert } from './AppAlert';
 import type { GuestlistVisibility } from '../lib/guestlistVisibility';
 import type { EventSocialAttendance, PublicUserSummary } from '../types/social';
 import { shouldShowGoingCount } from '../lib/socialProof';
+import { goingCountKey, whosGoingLine } from '../lib/whosGoingLine';
 import { DEFAULT_AVATAR_COUNT, defaultAvatar, defaultAvatarAt, defaultAvatarIndex } from '../lib/defaultAvatar';
 
 interface WhosGoingProps {
@@ -114,7 +115,7 @@ export default function WhosGoing({ eventId, visibility = 'faces', capacity, alw
     return (
       <View style={styles.section}>
         <Text style={styles.inlineLine}>
-          {[viewerIsGoing ? t('whosGoing.youreGoing') : '', showCount ? t('whosGoing.goingCount', { count: totalGoing }) : '']
+          {[viewerIsGoing ? t('whosGoing.youreGoing') : '', showCount ? t(goingCountKey(totalGoing), { count: totalGoing }) : '']
             .filter(Boolean)
             .join(' · ')}
         </Text>
@@ -140,10 +141,10 @@ export default function WhosGoing({ eventId, visibility = 'faces', capacity, alw
       <View style={styles.section}>
         <Text style={styles.inlineLine}>
           {viewerIsGoing && showCount
-            ? `${t('whosGoing.youreGoing')} · ${t('whosGoing.goingCount', { count: totalGoing })}`
+            ? `${t('whosGoing.youreGoing')} · ${t(goingCountKey(totalGoing), { count: totalGoing })}`
             : viewerIsGoing
               ? t('whosGoing.youreGoing')
-              : t('whosGoing.goingCount', { count: totalGoing })}
+              : t(goingCountKey(totalGoing), { count: totalGoing })}
         </Text>
       </View>
     );
@@ -192,33 +193,10 @@ export default function WhosGoing({ eventId, visibility = 'faces', capacity, alw
   // Two names when nobody's "You" leads the line: "Olivier and Marie are
   // going" fills the row the way Posh does (owner, 2026-11-18).
   const secondName = viewerIsGoing ? '' : (faces[1]?.displayName || '').split(' ')[0];
-  const namedCount = (leadName ? 1 : 0) + (secondName ? 1 : 0);
-  const othersCount = Math.max(0, totalGoing - (viewerIsGoing ? 1 : 0) - namedCount);
-  const many = (one: string, other: string) => (othersCount === 1 ? one : other);
-  const sentenceKey = viewerIsGoing
-    ? leadName
-      ? othersCount > 0
-        ? many('whosGoing.line.youLeadOne', 'whosGoing.line.youLeadOthers')
-        : 'whosGoing.line.youLead'
-      : othersCount > 0
-        ? many('whosGoing.line.youOne', 'whosGoing.line.youOthers')
-        : 'whosGoing.line.youOnly'
-    : secondName
-      ? othersCount === 0
-        ? 'whosGoing.line.leadSecond'
-        : sayCount
-          ? many('whosGoing.line.leadSecondOne', 'whosGoing.line.leadSecondOthers')
-          : 'whosGoing.line.leadSecondVague'
-      : leadName
-        ? othersCount === 0
-          ? 'whosGoing.line.leadOnly'
-          : sayCount
-            ? many('whosGoing.line.leadOne', 'whosGoing.line.leadOthers')
-            : 'whosGoing.line.leadOthersVague'
-        : sayCount
-          ? 'whosGoing.line.count'
-          : 'whosGoing.line.vague';
-  const template = t(sentenceKey, { count: othersCount, total: totalGoing });
+  // The grammar (singular, "you" first, names only, a bare count) lives in
+  // lib/whosGoingLine so it is tested in every language.
+  const line = whosGoingLine({ viewerIsGoing, leadName, secondName, totalGoing, sayCount });
+  const template = t(line.key, { count: line.count, total: line.total });
   const bold = { you: t('whosGoing.youBadge'), lead: leadName, second: secondName };
   const sentence = template.split(/(\{you\}|\{lead\}|\{second\})/).map((part, i) =>
     part === '{you}' || part === '{lead}' || part === '{second}' ? (

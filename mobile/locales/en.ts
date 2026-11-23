@@ -37,14 +37,20 @@ export default {
     clearSearch: 'Clear search',
     noAreasMatch: 'No areas match',
   },
-  // The "are you here?" card at the top of Home when the device region and
-  // the saved country disagree. {inCountry} carries its own preposition.
+  // The one-line "In the US?  Show  ×" prompt at the top of Home. ask.* must fit
+  // one line at 375pt beside the flag, the action and the ×.
   locationBanner: {
     title: 'Looks like you’re {inCountry}',
     subtitle: 'Show events in {city}?',
-    yes: 'Yes',
-    change: 'Change',
+    show: 'Show',
     notNow: 'Not now',
+    ask: {
+      HT: 'In Haiti?',
+      US: 'In the US?',
+      CA: 'In Canada?',
+      FR: 'In France?',
+      DO: 'In the DR?',
+    },
     inCountry: {
       HT: 'in Haiti',
       US: 'in the United States',
@@ -121,6 +127,7 @@ export default {
       leadSecondOthers: "{lead}, {second} and {count} others are going",
       leadSecondVague: "{lead}, {second} and others are going",
       count: "{total} going",
+      countOne: "{total} going",
       vague: "See who's going",
       leadOthersVague: "{lead} and others are going",
     },
@@ -133,6 +140,7 @@ export default {
     friendGoingOther: '{count} friends going',
     youreGoing: 'You\'re going',
     goingCount: '{count} going',
+    goingCountOne: '{count} going',
     youBadge: 'You',
     leadAndOthers: '{name} and {count} others going',
     leadAndOne: '{name} and 1 other going',
@@ -458,7 +466,7 @@ export default {
       title: 'Sound',
       autoplay: 'Play event songs',
       autoplayHint: "An event's song starts on its own when you open the event. It stays quiet when your phone is on silent.",
-      trailers: "Play trailers automatically",
+      trailers: "Autoplay trailers",
       trailersHint: "An event's trailer plays silently on its page. Turn off to save data.",
     },
     social: {
@@ -1793,6 +1801,17 @@ export default {
       checkedIn: 'Checked in',
       sold: 'Sold',
     },
+    // The two quiet stat lines under the title ("0/120 sold · 0 checked in").
+    // The number is drawn before each label; One = singular.
+    statLine: {
+      soldOne: 'sold',
+      soldOther: 'sold',
+      checkedInOne: 'checked in',
+      checkedInOther: 'checked in',
+      sellThrough: 'sold',
+      viewsOne: 'view',
+      viewsOther: 'views',
+    },
     status: {
       paused: 'Paused',
       onSale: 'On sale',
@@ -2792,6 +2811,7 @@ export default {
     loading: 'Loading dashboard...',
     title: 'Organizer Dashboard',
     welcomeBack: 'Welcome back',
+    openOrgPage: 'Open the page of {name}',
     organizerFallback: 'Organizer',
     todaysEvents: "Today's Events",
     noEventsToday: 'No events scheduled for today',

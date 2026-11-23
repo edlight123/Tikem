@@ -16,6 +16,7 @@ import { Camera, X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
+import { goingCountKey } from '../lib/whosGoingLine';
 import { useAppAlert } from './AppAlert';
 import { colors as T, font, radius } from '../theme/tokens';
 import { fetchEventGuestlist } from '../lib/api/social';
@@ -198,7 +199,7 @@ export default function GuestlistSheet({
             <View style={{ flex: 1 }}>
               <View {...swipe.panHandlers}>
                 <Text style={styles.listTitle}>{t('whosGoing.listTitle')}</Text>
-                {showCount && <Text style={styles.listSub}>{t('whosGoing.goingCount', { count: totalGoing })}</Text>}
+                {showCount && <Text style={styles.listSub}>{t(goingCountKey(totalGoing), { count: totalGoing })}</Text>}
               </View>
 
               {loading || !list ? (

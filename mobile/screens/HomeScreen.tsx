@@ -444,7 +444,7 @@ export default function HomeScreen({ navigation }: any) {
       >
         <Animated.View style={{ height: headerSpacerHeight }} />
         {/* In the scroll content (not pinned over it) so it scrolls away. */}
-        <LocationDetectionBanner onChangeLocation={() => setLocationSheetOpen(true)} />
+        <LocationDetectionBanner />
         {loading ? (
           <HomeFeedSkeleton />
         ) : error && events.length === 0 ? (
