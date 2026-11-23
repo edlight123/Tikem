@@ -176,10 +176,16 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
       // photo, is_verified, organization_name/logo) instead of users/{uid}.
       // If the projection isn't backfilled yet, fall back to a name/avatar
       // placeholder so the screen still renders (events below still load).
-      const organizerDoc = await getDoc(doc(db, 'public_profiles', organizerId));
-      const organizerData = organizerDoc.exists()
-        ? { id: organizerDoc.id, ...organizerDoc.data() }
-        : { id: organizerId };
+      // public_profiles is readable only when signed in (firestore.rules), so a
+      // guest's read is refused: keep the placeholder and name the page from
+      // the organizer's own (public) events below instead of failing the screen.
+      let organizerData: any = { id: organizerId };
+      try {
+        const organizerDoc = await getDoc(doc(db, 'public_profiles', organizerId));
+        if (organizerDoc.exists()) organizerData = { id: organizerDoc.id, ...organizerDoc.data() };
+      } catch {
+        // Signed out (or offline): keep the placeholder.
+      }
       setOrganizer(organizerData);
 
       // Fetch events
@@ -189,7 +195,14 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
         where('is_published', '==', true)
       );
       const eventsSnapshot = await getDocs(eventsQuery);
-      
+      if (!organizerData.organization_name && !organizerData.full_name) {
+        const named: any = eventsSnapshot.docs.map((d) => d.data()).find((d: any) => d.organizer_name);
+        if (named) {
+          organizerData = { ...organizerData, organization_name: named.organizer_name };
+          setOrganizer(organizerData);
+        }
+      }
+
       const now = new Date();
       const upcoming: any[] = [];
       const past: any[] = [];
