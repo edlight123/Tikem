@@ -42,5 +42,6 @@ export function mapEventbriteEvent(ev: any): DraftInput | null {
     source: 'eventbrite.com',
     currency: currency || null,
     tiers: tiers.length ? tiers : [{ name: 'Free', price: 0, quantity: 100 }],
+    timezone: typeof ev?.start?.timezone === 'string' ? ev.start.timezone : null,
   }
 }

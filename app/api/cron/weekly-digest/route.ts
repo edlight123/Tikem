@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase/admin'
 import { sendDiscretionary } from '@/lib/notifications/campaigns'
-import { runThursdayDigest } from '@/lib/notifications/weekly-digest'
+import { DISCOVERY_HORIZON_DAYS, runThursdayDigest } from '@/lib/notifications/weekly-digest'
+import { readPublishedEventsInWindow } from '@/lib/events/published-in-window'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -30,15 +31,24 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  let eventsScanned = 0
+  let eventsTruncated = false
   let usersScanned = 0
+  const now = new Date()
   try {
-    const result = await runThursdayDigest(new Date(), {
+    const result = await runThursdayDigest(now, {
       async loadEvents() {
         // Read once and match in memory: a query per person would cost far more.
-        const snap = await adminDb.collection('events').where('is_published', '==', true).limit(MAX_EVENTS_SCANNED).get()
-        eventsScanned = snap.size
-        return snap.docs.map((d: any) => ({ id: d.id, ...(d.data() || {}) }))
+        // Only the digest's own window (next DISCOVERY_HORIZON_DAYS), soonest
+        // first, both start_datetime types: an unordered limit() over every
+        // published event returned an arbitrary slice that could miss them.
+        const { events, truncated } = await readPublishedEventsInWindow(
+          adminDb,
+          now,
+          new Date(now.getTime() + DISCOVERY_HORIZON_DAYS * 24 * 60 * 60 * 1000),
+          MAX_EVENTS_SCANNED
+        )
+        eventsTruncated = truncated
+        return events
       },
       async loadUsers() {
         // Only people whose city is known (set at push-token registration).
@@ -51,7 +61,7 @@ export async function GET(request: Request) {
       },
     })
 
-    const truncated = usersScanned >= MAX_USERS_PER_RUN || eventsScanned >= MAX_EVENTS_SCANNED
+    const truncated = usersScanned >= MAX_USERS_PER_RUN || eventsTruncated
     return NextResponse.json({ ok: true, ...result, ...(truncated ? { truncated: true } : {}) })
   } catch (error: any) {
     console.error('[weekly-digest] failed', error)

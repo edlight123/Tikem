@@ -209,8 +209,9 @@ export default function HomeScreen({ navigation }: any) {
         userCountry,
       );
 
-      // Sort client-side so the query needs no ORDERED composite index (the
-      // equality-only is_published + country index is enough).
+      // Already soonest-first from the fetch (upcoming window, both
+      // start_datetime types merged). Re-sorting is cheap and keeps this screen
+      // correct whatever the fetch returns.
       eventsData.sort((a: any, b: any) => {
         const aTime = a?.start_datetime ? new Date(a.start_datetime).getTime() : Number.POSITIVE_INFINITY;
         const bTime = b?.start_datetime ? new Date(b.start_datetime).getTime() : Number.POSITIVE_INFINITY;
@@ -443,7 +444,7 @@ export default function HomeScreen({ navigation }: any) {
       >
         <Animated.View style={{ height: headerSpacerHeight }} />
         {/* In the scroll content (not pinned over it) so it scrolls away. */}
-        <LocationDetectionBanner onChangeLocation={() => setLocationSheetOpen(true)} />
+        <LocationDetectionBanner />
         {loading ? (
           <HomeFeedSkeleton />
         ) : error && events.length === 0 ? (

@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import type { PublicUserSummary } from '@/types/social'
 import type { GuestlistVisibility } from '@/lib/guestlistVisibility'
 import { shouldShowGoingCount } from '@/lib/socialProof'
+import { whosGoingLineKey } from '@/lib/whosGoingLine'
 import { defaultAvatarAt, defaultAvatarIndex, defaultAvatarUrl } from '@/lib/defaultAvatar'
 import GuestlistSheet from './GuestlistSheet'
 
@@ -168,49 +169,16 @@ export default function WhosGoing({
   // Two names when "You" isn't leading: "Olivier and Marie are going" fills
   // the line the way Posh does (owner, 2026-11-18). Same rule as the app.
   const secondName = viewerIsGoing ? '' : (faces[1]?.displayName || '').split(' ')[0]
-  const othersCount = Math.max(
-    0,
-    totalGoing - (viewerIsGoing ? 1 : 0) - (leadName ? 1 : 0) - (secondName ? 1 : 0)
-  )
-  const lineKey = viewerIsGoing
-    ? leadName
-      ? othersCount === 0
-        ? 'you_lead'
-        : othersCount === 1
-          ? 'you_lead_one'
-          : 'you_lead_others'
-      : othersCount === 0
-        ? 'you_only'
-        : othersCount === 1
-          ? 'you_one'
-          : 'you_others'
-    : secondName
-      ? othersCount === 0
-        ? 'lead_second'
-        : !sayCount
-          ? 'lead_second_vague'
-          : othersCount === 1
-            ? 'lead_second_one'
-            : 'lead_second_others'
-      : leadName
-        ? othersCount === 0
-          ? 'lead_only'
-          : !sayCount
-            ? 'lead_vague'
-            : othersCount === 1
-              ? 'lead_one'
-              : 'lead_others'
-        : sayCount
-          ? 'count'
-          : 'vague'
+  // Grammar and plural handling live in lib/whosGoingLine (tested in en/fr/ht).
+  const line = whosGoingLineKey({ viewerIsGoing, leadName, secondName, totalGoing, sayCount })
   const YOU = '\u0001'
   const LEAD = '\u0002'
   const SECOND = '\u0003'
-  const template = t(`whos_going.line.${lineKey}`, {
+  const template = t(`whos_going.line.${line.key}`, {
     you: YOU,
     lead: LEAD,
     second: SECOND,
-    count: lineKey === 'count' ? totalGoing : othersCount,
+    ...(line.count !== undefined ? { count: line.count } : {}),
     interpolation: { escapeValue: false },
   })
   const sub = template.split(/([\u0001\u0002\u0003])/).map((part, i) =>

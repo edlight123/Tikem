@@ -836,10 +836,24 @@ export default function AppNavigator() {
     if (!user && mode !== 'attendee') setMode('attendee');
   }, [loading, mode, modeLoading, setMode, user]);
 
-  // Register for push notifications once user is signed in.
+  // Register for push notifications once the user is signed in, and again each
+  // time the app comes back to the foreground: permission may have been granted
+  // in Settings since, and the server may have dropped the token. The cache
+  // (lib/pushTokenCache) makes the repeat free unless it is due a refresh.
   useEffect(() => {
-    if (!user?.uid) return;
-    registerForPushNotificationsIfPossible().catch((e) => console.warn('Push registration failed', e));
+    const uid = user?.uid;
+    if (!uid) return;
+    const register = (prompt: boolean) =>
+      registerForPushNotificationsIfPossible({ prompt, uid }).catch((e) => console.warn('Push registration failed', e?.message || e));
+    register(true);
+    // At most every 10 minutes: fetching the Expo token is a network call.
+    let lastForeground = Date.now();
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state !== 'active' || Date.now() - lastForeground < 10 * 60 * 1000) return;
+      lastForeground = Date.now();
+      register(false);
+    });
+    return () => sub.remove();
   }, [user?.uid]);
 
   useEffect(() => {

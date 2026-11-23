@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase/admin'
 import { sendDiscretionary } from '@/lib/notifications/campaigns'
 import { resolveOrgRecipients } from '@/lib/notifications/orgRecipients'
+import { readPublishedEventsInWindow } from '@/lib/events/published-in-window'
 
 export const dynamic = 'force-dynamic'
 
@@ -38,18 +39,19 @@ export async function GET(request: Request) {
   const windowEnd = new Date(now.getTime() + WINDOW_END_HOURS * 60 * 60 * 1000)
 
   try {
-    const snap = await adminDb
-      .collection('events')
-      .where('is_published', '==', true)
-      .limit(MAX_EVENTS_SCANNED)
-      .get()
+    // Only the nudge window, both start_datetime types (an unordered limit()
+    // over every published event returned an arbitrary slice that could miss it).
+    const { events: windowEvents, truncated } = await readPublishedEventsInWindow(
+      adminDb,
+      windowStart,
+      windowEnd,
+      MAX_EVENTS_SCANNED
+    )
 
     let notified = 0
     let considered = 0
 
-    for (const doc of snap.docs) {
-      const event: any = { id: doc.id, ...(doc.data() || {}) }
-
+    for (const event of windowEvents as any[]) {
       // Normalize the mixed ISO-string / Timestamp representation before comparing.
       const raw = event?.start_datetime
       const start = raw?.toDate ? raw.toDate() : raw ? new Date(raw) : null
@@ -90,7 +92,7 @@ export async function GET(request: Request) {
       ok: true,
       notified,
       considered,
-      ...(snap.size >= MAX_EVENTS_SCANNED ? { truncated: true } : {}),
+      ...(truncated ? { truncated: true } : {}),
     })
   } catch (error: any) {
     console.error('[organizer-nudge] failed', error)

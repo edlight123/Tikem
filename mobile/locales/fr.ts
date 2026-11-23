@@ -64,14 +64,20 @@ export default {
     clearSearch: 'Effacer la recherche',
     noAreasMatch: 'Aucune zone ne correspond',
   },
-  // La carte « vous êtes ici ? » en haut de l'accueil. {inCountry} porte sa
-  // propre préposition.
+  // La ligne « Vous êtes aux États-Unis ?  Voir  × » en haut de l'accueil.
+  // ask.* doit tenir sur une ligne à 375 pt à côté du drapeau, de l'action et du ×.
   locationBanner: {
     title: 'On dirait que vous êtes {inCountry}',
     subtitle: 'Voir les événements à {city} ?',
-    yes: 'Oui',
-    change: 'Changer',
+    show: 'Voir',
     notNow: 'Plus tard',
+    ask: {
+      HT: 'Vous êtes en Haïti ?',
+      US: 'Vous êtes aux États-Unis ?',
+      CA: 'Vous êtes au Canada ?',
+      FR: 'Vous êtes en France ?',
+      DO: 'Vous êtes en Rép. dominicaine ?',
+    },
     inCountry: {
       HT: 'en Haïti',
       US: 'aux États-Unis',
@@ -134,20 +140,21 @@ export default {
   whosGoing: {
     seeAll: "Tout voir",
     line: {
-      youLeadOthers: "{you}, {lead} et {count} autres y allez",
-      youLeadOne: "{you}, {lead} et 1 autre y allez",
-      youLead: "{you} et {lead} y allez",
-      youOthers: "{you} et {count} autres y allez",
-      youOne: "{you} et 1 autre y allez",
+      youLeadOthers: "{you} y allez avec {lead} et {count} autres",
+      youLeadOne: "{you} y allez avec {lead} et une autre personne",
+      youLead: "{you} y allez avec {lead}",
+      youOthers: "{you} y allez avec {count} autres personnes",
+      youOne: "{you} y allez avec une autre personne",
       youOnly: "{you} y allez",
       leadOnly: "{lead} y va",
-      leadOne: "{lead} et 1 autre y vont",
+      leadOne: "{lead} et une autre personne y vont",
       leadOthers: "{lead} et {count} autres y vont",
       leadSecond: "{lead} et {second} y vont",
-      leadSecondOne: "{lead}, {second} et 1 autre y vont",
+      leadSecondOne: "{lead}, {second} et une autre personne y vont",
       leadSecondOthers: "{lead}, {second} et {count} autres y vont",
       leadSecondVague: "{lead}, {second} et d'autres y vont",
       count: "{total} participants",
+      countOne: "{total} participant",
       vague: "Voir qui y va",
       leadOthersVague: "{lead} et d'autres y vont",
     },
@@ -159,10 +166,11 @@ export default {
     friendGoingOne: '{count} ami y va',
     friendGoingOther: '{count} amis y vont',
     youreGoing: 'Vous y allez',
-    goingCount: '{count} y vont',
+    goingCount: '{count} participants',
+    goingCountOne: '{count} participant',
     youBadge: 'Vous',
     leadAndOthers: '{name} et {count} autres y vont',
-    leadAndOne: '{name} et 1 autre y vont',
+    leadAndOne: '{name} et une autre personne y vont',
     leadAndOthersVague: "{name} et d'autres y vont",
     leadOnly: '{name} y va',
     privacyNoteOne: '{count} personne y va. Les participants gardent leur présence privée.',
@@ -485,7 +493,7 @@ export default {
       title: 'Son',
       autoplay: 'Lire la chanson des événements',
       autoplayHint: "La chanson d'un événement démarre toute seule quand vous ouvrez sa page. Elle reste muette quand votre téléphone est en silencieux.",
-      trailers: "Lire les bandes-annonces automatiquement",
+      trailers: "Bandes-annonces auto",
       trailersHint: "La bande-annonce d'un événement se lit sans le son sur sa page. Désactivez pour économiser vos données.",
     },
     social: {
@@ -1356,10 +1364,28 @@ export default {
 
   organizerEventManagement: {
     openScanner: 'Ouvrir le scanner d\'entrée',
+    publish: {
+      cta: 'Publier',
+      successTitle: 'Votre événement est en ligne',
+      successBody: 'Le public peut le trouver et prendre des billets dès maintenant.',
+      blockedTitle: 'Pas encore publié',
+      failed: 'Publication impossible. Réessayez.',
+    },
     stats: {
       sellThrough: 'Taux de vente',
       checkedIn: 'Enregistrés',
       sold: 'Vendus',
+    },
+    // Les deux lignes de chiffres sous le titre (« 0/120 vendus · 0 enregistrés »).
+    // Le nombre précède chaque libellé ; One = singulier (0 et 1 en français).
+    statLine: {
+      soldOne: 'vendu',
+      soldOther: 'vendus',
+      checkedInOne: 'enregistré',
+      checkedInOther: 'enregistrés',
+      sellThrough: 'vendu',
+      viewsOne: 'vue',
+      viewsOther: 'vues',
     },
     status: {
       paused: 'En pause',
@@ -2357,6 +2383,7 @@ export default {
     loading: 'Chargement du tableau…',
     title: 'Tableau organisateur',
     welcomeBack: 'Bon retour',
+    openOrgPage: 'Ouvrir la page de {name}',
     organizerFallback: 'Organisateur',
     todaysEvents: "Événements d’aujourd’hui",
     noEventsToday: 'Aucun événement prévu aujourd’hui',

@@ -1,45 +1,25 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Image, ImageLoadEventData } from 'expo-image';
-import { API_BASE_URL } from '../lib/api/backend';
+import { posterFit } from '../lib/posterFit';
 
 /**
- * An event poster that never crops a flyer badly.
+ * An event poster that fills its frame and never crops a flyer badly.
  *
- * Most organizers upload a flyer made for Instagram (square) or Stories
- * (9:16), and our cards are 4:5. Filling the card with `cover` cut the date or
- * venue off the edge of those flyers. Now a flyer whose shape is close to the
- * frame still fills it; one that isn't is shown WHOLE on one even, deep tone
- * taken from the flyer (the website's /api/posters/tone; the app can't read
- * pixels without a native module). A blurred copy left uneven patches above
- * and below the art; a single tone reads as a deliberate mount.
+ * - An image close to the frame's shape fills it (`cover`).
+ * - A landscape image (wider than tall) is a photo, not a flyer: it fills the
+ *   frame too (TestFlight 2026-11-23: "the picture should fill entire thing";
+ *   a landscape photo sat in grey bands above and below).
+ * - A square or Stories flyer, whose date and venue a crop would cut off, is
+ *   shown WHOLE (`contain`) over a blurred, cover-filled copy of itself, so
+ *   the frame is never an empty band: the art's own colours run to the edges.
  *
- * The flyer's shape is only known once it loads, so it is remembered per URL:
+ * The image's shape is only known once it loads, so it is remembered per URL:
  * a recycled or re-rendered card lays out right on the first frame instead of
  * jumping from cropped to fitted.
  */
 
-// How far (relative) a flyer's shape may differ from the frame and still fill
-// it. 12% loses a sliver at the edges, never a line of text.
-const FILL_TOLERANCE = 0.12;
-
 const knownRatios = new Map<string, number>();
-const knownTones = new Map<string, Promise<string>>();
-
-// Neutral mount while the tone loads (and if it can't be read).
-const MOUNT = '#141414';
-
-function toneFor(uri: string): Promise<string> {
-  let p = knownTones.get(uri);
-  if (!p) {
-    p = fetch(`${API_BASE_URL}/api/posters/tone?url=${encodeURIComponent(uri)}`)
-      .then((r) => r.json())
-      .then((j) => (typeof j?.tone === 'string' ? j.tone : MOUNT))
-      .catch(() => MOUNT);
-    knownTones.set(uri, p);
-  }
-  return p;
-}
 
 interface Props {
   uri: string;
@@ -60,19 +40,7 @@ export default function PosterImage({ uri, frameRatio, recyclingKey, transition 
     if (r !== ratio) setRatio(r);
   };
 
-  const fits = ratio === undefined || Math.abs(ratio - frameRatio) / frameRatio <= FILL_TOLERANCE;
-  const [tone, setTone] = useState(MOUNT);
-
-  useEffect(() => {
-    if (fits) return;
-    let live = true;
-    toneFor(uri).then((t) => live && setTone(t));
-    return () => {
-      live = false;
-    };
-  }, [fits, uri]);
-
-  if (fits) {
+  if (posterFit(ratio, frameRatio) === 'cover') {
     return (
       <Image
         source={{ uri }}
@@ -87,7 +55,18 @@ export default function PosterImage({ uri, frameRatio, recyclingKey, transition 
   }
 
   return (
-    <View style={[StyleSheet.absoluteFill, { backgroundColor: tone }]}>
+    <View style={StyleSheet.absoluteFill}>
+      {/* The same flyer, filled and blurred, behind the whole one. */}
+      <Image
+        source={{ uri }}
+        style={[StyleSheet.absoluteFill, styles.backdrop]}
+        contentFit="cover"
+        blurRadius={30}
+        cachePolicy="memory-disk"
+        transition={transition}
+        recyclingKey={recyclingKey ? `bg-${recyclingKey}` : undefined}
+      />
+      <View style={styles.backdropShade} />
       <Image
         source={{ uri }}
         style={StyleSheet.absoluteFill}
@@ -100,3 +79,10 @@ export default function PosterImage({ uri, frameRatio, recyclingKey, transition 
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  // Zoomed a little so the blur's soft edge never shows inside the frame.
+  backdrop: { transform: [{ scale: 1.2 }] },
+  // Keeps the blurred copy behind the sharp flyer rather than competing with it.
+  backdropShade: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.28)' },
+});

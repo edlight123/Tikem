@@ -20,7 +20,7 @@ import { safeFetchImage } from '@/lib/import/safe-fetch'
 import { resolveImportMarket, type ImportFlag } from '@/lib/import/market'
 import { defaultPassFeesToBuyer, pickDefaultComposerCountry, timezoneForEvent } from '@/lib/events/composer-country'
 import { getDeclaredMarkets } from '@/lib/firestore/organizer-markets'
-import type { DraftInput } from '@/lib/import/draft-input'
+import { validZone, type DraftInput } from '@/lib/import/draft-input'
 
 /** The draft id for one organizer's copy of one source event. */
 export function importDraftId(orgId: string, key: string): string {
@@ -116,7 +116,7 @@ export async function writeDraft(
     commune: '',
     country: market.country,
     currency: market.currency,
-    timezone: timezoneForEvent(market.country, city),
+    timezone: validZone(d.timezone) || timezoneForEvent(market.country, city),
     start_datetime: d.start,
     end_datetime: d.end && Date.parse(d.end) > Date.parse(d.start) ? d.end : new Date(Date.parse(d.start) + 2 * 3_600_000).toISOString(),
     is_online: d.online,

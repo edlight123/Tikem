@@ -221,8 +221,9 @@ export default function DiscoverScreen({ navigation, route }: any) {
         userCountry,
       );
 
-      // Sort client-side so the query needs no ORDERED composite index (the
-      // equality-only is_published + country index is enough).
+      // Already soonest-first from the fetch (upcoming window, both
+      // start_datetime types merged). Re-sorting is cheap and keeps this screen
+      // correct whatever the fetch returns.
       eventsData.sort((a, b) => {
         const aTime = a?.start_datetime ? new Date(a.start_datetime).getTime() : Number.POSITIVE_INFINITY
         const bTime = b?.start_datetime ? new Date(b.start_datetime).getTime() : Number.POSITIVE_INFINITY

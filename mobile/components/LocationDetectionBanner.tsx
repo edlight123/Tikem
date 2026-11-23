@@ -3,11 +3,12 @@
  * Shows when device region differs from saved profile country
  * Offers to update user's location preferences
  *
- * Design (2026-10-29 TestFlight: "what the heck is this? … more subtle and
- * premium"): one slim filled row, not a card with a headline and buttons.
- * The flag, one quiet question ("Wè evènman nan Miami?"), then the answers as
- * words: "Chanje" in grey, "Wi" in white, and a small ×. Teal stays out of it
- * (POSH: the chrome is black, white and grey).
+ * Design (TestFlight 2026-11-23: "can't read full thing, make more premium"):
+ * one quiet line, short enough to never truncate at 375pt in any language.
+ * The flag, a short question ("Vous êtes aux États-Unis ?"), one action
+ * ("Voir") and a small ×. No headline, no Yes/Change pair: the header's place
+ * picker already changes the place. A faint fill, no shadow, 4px corners;
+ * teal stays out of it (POSH: the chrome is black, white and grey).
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -27,6 +28,7 @@ import { getDeviceLocationInfo, DEFAULT_CITIES } from '../utils/deviceLocation';
 import { locationLabel } from '../data/metros';
 import { useTheme } from '../contexts/ThemeContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { radius } from '../theme/tokens';
 
 const BANNER_DISMISSED_KEY = 'location_banner_dismissed';
 const BANNER_DISMISSED_EXPIRY = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -42,15 +44,7 @@ function flagFor(code: string | null): string {
     .replace(/./g, (c) => String.fromCodePoint(0x1f1e6 + c.charCodeAt(0) - 65));
 }
 
-interface LocationDetectionBannerProps {
-  /**
-   * Opens the app's location picker. When given, the banner shows a quiet
-   * "Change" action that remembers the dismissal and hands over to the picker.
-   */
-  onChangeLocation?: () => void;
-}
-
-export default function LocationDetectionBanner({ onChangeLocation }: LocationDetectionBannerProps = {}) {
+export default function LocationDetectionBanner() {
   const { colors } = useTheme();
   const { t } = useI18n();
   const styles = getStyles(colors);
@@ -165,12 +159,6 @@ export default function LocationDetectionBanner({ onChangeLocation }: LocationDe
     hideBanner();
   };
 
-  const handleChange = async () => {
-    await rememberDismissal();
-    hideBanner();
-    onChangeLocation?.();
-  };
-
   const hideBanner = () => {
     Animated.timing(progress, {
       toValue: 0,
@@ -185,7 +173,11 @@ export default function LocationDetectionBanner({ onChangeLocation }: LocationDe
 
   const city = locationLabel(DEFAULT_CITIES[detectedCountry] || '', detectedCountry);
   const flag = flagFor(detectedCountry);
-  const inCountry = t(`locationBanner.inCountry.${detectedCountry}`);
+  // A short per-country question; a country without one falls back to the
+  // longer "Looks like you're in …".
+  const askKey = `locationBanner.ask.${detectedCountry}`;
+  const asked = t(askKey);
+  const question = asked !== askKey ? asked : t('locationBanner.title', { inCountry: t(`locationBanner.inCountry.${detectedCountry}`) });
   // An in-flow row at the top of the feed (it scrolls away with it), so it
   // only nudges in a few points rather than dropping from above the notch.
   const translateY = progress.interpolate({
@@ -204,46 +196,33 @@ export default function LocationDetectionBanner({ onChangeLocation }: LocationDe
       <View style={styles.bar} accessibilityRole="alert">
         <Text style={styles.flagText} allowFontScaling={false}>{flag}</Text>
         <Text style={styles.question} numberOfLines={1}>
-          {city
-            ? t('locationBanner.subtitle', { city })
-            : t('locationBanner.title', { inCountry })}
+          {question}
         </Text>
-
-        {!!onChangeLocation && (
-          <TouchableOpacity
-            onPress={handleChange}
-            disabled={updating}
-            hitSlop={{ top: 12, bottom: 12, left: 6, right: 6 }}
-            accessibilityRole="button"
-            style={styles.action}
-          >
-            <Text style={styles.changeText}>{t('locationBanner.change')}</Text>
-          </TouchableOpacity>
-        )}
 
         <TouchableOpacity
           onPress={handleAccept}
           disabled={updating}
-          hitSlop={{ top: 12, bottom: 12, left: 6, right: 6 }}
+          hitSlop={{ top: 12, bottom: 12, left: 8, right: 4 }}
           accessibilityRole="button"
+          accessibilityLabel={city ? t('locationBanner.subtitle', { city }) : t('locationBanner.show')}
           style={styles.action}
         >
           {updating ? (
             <ActivityIndicator size="small" color={colors.text} />
           ) : (
-            <Text style={styles.yesText}>{t('locationBanner.yes')}</Text>
+            <Text style={styles.showText}>{t('locationBanner.show')}</Text>
           )}
         </TouchableOpacity>
 
         <TouchableOpacity
           onPress={handleDismiss}
           disabled={updating}
-          hitSlop={{ top: 12, bottom: 12, left: 8, right: 12 }}
+          hitSlop={{ top: 12, bottom: 12, left: 4, right: 12 }}
           accessibilityRole="button"
           accessibilityLabel={t('locationBanner.notNow')}
           style={styles.close}
         >
-          <X size={14} color={colors.textTertiary} />
+          <X size={14} color={colors.textTertiary} strokeWidth={1.75} />
         </TouchableOpacity>
       </View>
     </Animated.View>
@@ -255,52 +234,40 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   // the feed while scrolling (simulator audit 2026-11-16).
   container: {
     marginHorizontal: 16,
-    marginTop: 8,
+    marginTop: 4,
     marginBottom: 8,
   },
-  // A fill, not a hairline: one slim raised row with a soft shadow for lift
-  // over the header and the feed.
+  // One quiet line on a faint fill (no hairline, no shadow, no card).
   bar: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 48,
-    paddingLeft: 14,
-    paddingRight: 10,
-    borderRadius: 4,
-    backgroundColor: colors.surfaceRaised,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.35,
-    shadowRadius: 18,
-    elevation: 10,
+    height: 40,
+    paddingLeft: 12,
+    paddingRight: 6,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surface,
   },
   flagText: {
-    fontSize: 17,
-    marginRight: 10,
+    fontSize: 14,
+    marginRight: 8,
   },
   question: {
     flex: 1,
-    fontSize: 15,
-    fontWeight: '500',
-    color: colors.text,
+    minWidth: 0,
+    fontSize: 14,
+    color: colors.textSecondary,
   },
   action: {
-    paddingHorizontal: 8,
+    paddingHorizontal: 10,
     minWidth: 28,
     alignItems: 'center',
   },
-  changeText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: colors.textSecondary,
-  },
-  yesText: {
-    fontSize: 13,
-    fontWeight: '700',
+  showText: {
+    fontSize: 14,
+    fontWeight: '600',
     color: colors.text,
   },
   close: {
-    marginLeft: 4,
-    padding: 4,
+    padding: 6,
   },
 });
