@@ -38,8 +38,41 @@ const LEGACY_NESTED: Partial<Record<string, 'reminders' | 'updates'>> = {
 }
 
 /**
+ * Markets where messages about events from organizers the person doesn't
+ * follow need an express yes: Canada (CASL) and France (CNIL / ePrivacy). A
+ * pre-ticked default doesn't count as consent there. Haiti and the US keep the
+ * long-standing default of on.
+ *
+ * Keep in step with mobile/lib/notifyDefaults.ts.
+ */
+export const CONSENT_MARKETS: ReadonlySet<string> = new Set(['CA', 'FR'])
+
+/**
+ * The switches that start OFF in a consent market: "events near you" and the
+ * Thursday "this weekend in your city" digest that replaced its Thursday send
+ * (lib/notifications/weekly-digest.ts). Both are about other organizers' events.
+ */
+export const CONSENT_MARKET_OPT_IN_FIELDS: ReadonlySet<string> = new Set([
+  'notify_discovery',
+  'notify_weekend_digest',
+])
+
+/**
+ * Is this person in a consent market? Either signal counts: the country they
+ * chose (default_country) or the one they were last seen in (last_seen_country,
+ * from the IP; it is what the city pushes target). When in doubt, ask first.
+ */
+export function inConsentMarket(data: Record<string, any> | null | undefined): boolean {
+  return [data?.default_country, data?.defaultCountry, data?.last_seen_country].some((c) =>
+    CONSENT_MARKETS.has(String(c || '').trim().toUpperCase())
+  )
+}
+
+/**
  * Is this switch on? Top-level field first, then the legacy nested value,
- * then on (an absent field means opted in, as policy.ts has always assumed).
+ * then the default: on (an absent field means opted in, as policy.ts has
+ * always assumed), except the discovery switches in a consent market, which
+ * stay off until the person turns them on. An explicit choice always wins.
  */
 export function readUserNotifyPref(
   data: Record<string, any> | null | undefined,
@@ -52,6 +85,7 @@ export function readUserNotifyPref(
     const nested = data?.notify?.[legacyKey]
     if (typeof nested === 'boolean') return nested
   }
+  if (CONSENT_MARKET_OPT_IN_FIELDS.has(field) && inConsentMarket(data)) return false
   return true
 }
 

@@ -22,6 +22,7 @@ import StatusChip from '../components/StatusChip';
 import { Skeleton } from '../components/Skeleton';
 import { useAppAlert } from '../components/AppAlert';
 import { backendJson } from '../lib/api/backend';
+import { inConsentMarket, readNotifyPref } from '../lib/notifyDefaults';
 // The MOBILE push module (Expo token → /api/push/register-expo). Not to be
 // confused with the web's two server-side notification modules.
 import { registerForPushNotificationsIfPossible } from '../lib/pushNotifications';
@@ -79,7 +80,7 @@ type OrganizerPrefs = {
 type PushState = 'granted' | 'denied' | 'undetermined' | 'unknown';
 
 export default function NotificationSettingsScreen({ navigation, route }: any) {
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
   const { t } = useI18n();
   const showAlert = useAppAlert();
   const insets = useSafeAreaInsets();
@@ -134,8 +135,9 @@ export default function NotificationSettingsScreen({ navigation, route }: any) {
         const data = (snap.exists() ? snap.data() : {}) as Record<string, any>;
         if (!cancelled) {
           setUserPrefs({
-            notify_discovery: data.notify_discovery ?? true,
-            notify_weekend_digest: data.notify_weekend_digest ?? true,
+            // Off by default in Canada and France (consent law); see notifyDefaults.
+            notify_discovery: readNotifyPref(data, 'notify_discovery'),
+            notify_weekend_digest: readNotifyPref(data, 'notify_weekend_digest'),
             notify_filling_fast: data.notify_filling_fast ?? true,
             notify_national_day: data.notify_national_day ?? true,
             notify_friend_invites: data.notify_friend_invites ?? true,
@@ -144,7 +146,11 @@ export default function NotificationSettingsScreen({ navigation, route }: any) {
           });
         }
       } catch {
-        // Defaults (all on) match what the server assumes for a missing field.
+        // Unread: fall back to the profile's country so the two discovery
+        // switches show what the server assumes for a missing field.
+        if (!cancelled && inConsentMarket(userProfile)) {
+          setUserPrefs((p) => ({ ...p, notify_discovery: false, notify_weekend_digest: false }));
+        }
       }
       if (isOrganizer) {
         try {
