@@ -24,8 +24,13 @@ service cloud.firestore {
       let age = d.get('age_policy', null);
       let dress = d.get('dress_code', null);
       return amenities is list
-        && amenities.size() <= 4
-        && amenities.hasOnly(['parking', 'step_free', 'accessible_washrooms', 'coat_check'])
+        && amenities.size() <= 18
+        // Facilities, then accessibility (VENUE_FACILITIES + VENUE_ACCESSIBILITY).
+        && amenities.hasOnly([
+          'parking', 'backup_power', 'air_conditioning', 'security', 'table_service', 'food', 'bar', 'coat_check',
+          'step_free', 'wheelchair', 'elevator', 'accessible_washrooms', 'accessible_parking', 'seating',
+          'sign_language', 'captions', 'quiet_room', 'service_animals'
+        ])
         && (setting == null || setting in ['indoor', 'outdoor', 'mixed'])
         && (age == null || age in ['18+', '21+'])
         && (dress == null || (dress is string && dress.size() <= 60));

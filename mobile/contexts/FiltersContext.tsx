@@ -4,6 +4,7 @@ import { EventFilters, DEFAULT_FILTERS } from '../types/filters';
 import { useAuth } from './AuthContext';
 import { getDeviceLocationInfo, getSupportedCountry, isSupportedCountry } from '../utils/deviceLocation';
 import { findMetro, locationLabel, type Metro } from '../data/metros';
+import { wantedAmenities } from '../lib/venueDetails';
 
 // Last country the app actually resolved to (profile or explicit user choice).
 // Hydrated on launch so the header/fetch never start from a locale guess the
@@ -254,7 +255,7 @@ export function FiltersProvider({ children }: { children: ReactNode }) {
     if (appliedFilters.categories.length > 0) count++;
     if (appliedFilters.price !== DEFAULT_FILTERS.price) count++;
     if (appliedFilters.eventType !== DEFAULT_FILTERS.eventType) count++;
-    if (appliedFilters.stepFree) count++;
+    count += wantedAmenities(appliedFilters).length;
     
     return count;
   };

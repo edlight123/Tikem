@@ -7,6 +7,7 @@ import { CATEGORIES, PRICE_FILTERS, CITY_CONFIG, formatPriceForCountry } from '@
 import { parsePriceRange } from '@/lib/filters/utils'
 import { FilterChip } from './FilterChip'
 import { format } from 'date-fns'
+import { wantedAmenities } from '@/lib/events/venue-details'
 
 interface FilterChipsRowProps {
   filters: EventFilters
@@ -81,7 +82,8 @@ export function FilterChipsRow({ filters, onRemoveFilter, onClearAll, userCountr
     chips.push({ key: 'eventType', label: typeLabel })
   }
 
-  if (filters.stepFree) chips.push({ key: 'stepFree', label: t('filters.step_free') })
+  // One chip per chosen venue fact (the older Step-free switch included).
+  for (const k of wantedAmenities(filters)) chips.push({ key: 'amenities', value: k, label: t(`filters.amenities.${k}`) })
 
   if (chips.length === 0) return null
 

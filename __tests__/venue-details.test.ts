@@ -1,8 +1,9 @@
 /**
- * Venue details (parking, step-free, accessible washrooms, coat check,
- * indoor/outdoor, age policy, dress code): the web and app helpers agree, the
- * Discover filters use them, the app's flyer fill only touches empty fields,
- * and firestore.rules validates the same shapes the helpers write.
+ * Venue details (what the place has, accessibility, indoor/outdoor, age
+ * policy, dress code): the web and app helpers agree, the Discover filters
+ * use them (`?amenities=` and the older `?stepFree=1`), the flyer reader
+ * spots venue facts, the app's flyer fill only adds to what is set, and
+ * firestore.rules validates the same shapes the helpers write.
  */
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -14,6 +15,7 @@ import { countActiveFilters, filtersEqual, parseFiltersFromURL, serializeFilters
 import { applyFilters, countActiveFilters as appCount } from '../mobile/utils/filterUtils'
 import { DEFAULT_FILTERS as APP_DEFAULT_FILTERS } from '../mobile/types/filters'
 import { flyerDraftPatch, to12h, type FlyerFillDraft, type FlyerRead } from '../mobile/lib/flyerFill'
+import { parseFlyerText } from '@/lib/flyer/parse'
 
 const samples: unknown[] = [
   {},
@@ -21,11 +23,14 @@ const samples: unknown[] = [
   { amenities: ['step_free', 'parking', 'wudu', 3], venue_setting: 'outdoor', age_policy: '21+', dress_code: '  All   white  ' },
   { amenities: 'parking', venue_setting: 'roof', age_policy: '16+', dress_code: 42 },
   { amenities: ['coat_check', 'accessible_washrooms'], venue_setting: 'mixed', dress_code: 'x'.repeat(90) },
+  { amenities: ['quiet_room', 'backup_power', 'wheelchair', 'air_conditioning', 'backup_power', 'hearing_loop'], venue_setting: 'indoor' },
 ]
 
 describe('venue details: web and app agree', () => {
   it('the mirror carries the same keys', () => {
     expect(app.VENUE_AMENITIES).toEqual(web.VENUE_AMENITIES)
+    expect(app.VENUE_FACILITIES).toEqual(web.VENUE_FACILITIES)
+    expect(app.VENUE_ACCESSIBILITY).toEqual(web.VENUE_ACCESSIBILITY)
     expect(app.VENUE_SETTINGS).toEqual(web.VENUE_SETTINGS)
     expect(app.AGE_POLICIES).toEqual(web.AGE_POLICIES)
     expect(app.DRESS_CODE_MAX).toBe(web.DRESS_CODE_MAX)
@@ -36,6 +41,8 @@ describe('venue details: web and app agree', () => {
     const w = web.venueDetailsOf(sample)
     expect(app.venueDetailsOf(sample)).toEqual(w)
     expect(app.venueDetailLines(w)).toEqual(web.venueDetailLines(w))
+    expect(app.venueAccessLines(w)).toEqual(web.venueAccessLines(w))
+    expect(app.venueDetailsCount(w)).toBe(web.venueDetailsCount(w))
     expect(app.venueDetailsFields(w, true)).toEqual(web.venueDetailsFields(w, true))
   })
 
@@ -55,36 +62,99 @@ describe('venue details: web and app agree', () => {
     expect(web.venueDetailsFields(d, true)).toEqual({ amenities: [], venue_setting: null, age_policy: '21+', dress_code: 'All white' })
   })
 
-  it('lists access first, then setting, then the rules', () => {
-    const lines = web.venueDetailLines(web.venueDetailsOf(samples[2]))
-    expect(lines.map((l) => l.key)).toEqual(['step_free', 'parking', 'outdoor', 'age_21', 'dress_code'])
+  it('lists what the place has, then setting, then the rules; accessibility apart', () => {
+    const d = web.venueDetailsOf(samples[2])
+    const lines = web.venueDetailLines(d)
+    expect(lines.map((l) => l.key)).toEqual(['parking', 'outdoor', 'age_21', 'dress_code'])
     expect(lines[lines.length - 1].value).toBe('All white')
+    expect(web.venueAccessLines(d).map((l) => l.key)).toEqual(['step_free'])
+  })
+
+  it('splits the keys into two groups, with one icon each', () => {
+    expect([...web.VENUE_AMENITIES]).toEqual([...web.VENUE_FACILITIES, ...web.VENUE_ACCESSIBILITY])
+    for (const k of web.VENUE_FACILITIES) expect(web.isAccessibilityKey(k)).toBe(false)
+    for (const k of web.VENUE_ACCESSIBILITY) expect(web.isFacilityKey(k)).toBe(false)
+    for (const k of web.VENUE_AMENITIES) expect(web.VENUE_DETAIL_ICONS[k]).toBeTruthy()
+    const icons = Object.values(web.VENUE_DETAIL_ICONS)
+    expect(new Set(icons).size).toBe(icons.length)
+    // Outdoor seating would repeat venue_setting.
+    expect(web.VENUE_AMENITIES as readonly string[]).not.toContain('outdoor_seating')
+  })
+
+  it('keeps the keys events already carry', () => {
+    for (const k of ['parking', 'step_free', 'accessible_washrooms', 'coat_check']) {
+      expect(web.VENUE_AMENITIES as readonly string[]).toContain(k)
+    }
+  })
+
+  it('reads the new keys in group order, de-duplicated, unknown ones dropped', () => {
+    const d = web.venueDetailsOf(samples[5])
+    expect(d.amenities).toEqual(['backup_power', 'air_conditioning', 'wheelchair', 'quiet_room'])
+    expect(web.venueDetailLines(d).map((l) => l.key)).toEqual(['backup_power', 'air_conditioning', 'indoor'])
+    expect(web.venueAccessLines(d).map((l) => l.key)).toEqual(['wheelchair', 'quiet_room'])
+    expect(web.venueDetailsCount(d)).toBe(5)
+  })
+
+  it('every key has a chip label, an event-page line and a filter label in en/fr/ht', () => {
+    for (const lang of ['en', 'fr', 'ht']) {
+      const c = JSON.parse(readFileSync(join(__dirname, '..', 'public', 'locales', lang, 'common.json'), 'utf8'))
+      for (const k of web.VENUE_AMENITIES) {
+        expect(c.composer.venueDetails.amenities[k]).toBeTruthy()
+        expect(c.venue_details[k]).toBeTruthy()
+        expect(c.filters.amenities[k]).toBeTruthy()
+      }
+    }
   })
 })
 
-describe('the Step-free filter', () => {
+describe('the venue filters', () => {
   const events: any[] = [
     { id: 'a', amenities: ['step_free'], start_datetime: '2026-12-01T20:00:00Z' },
     { id: 'b', amenities: ['parking'], start_datetime: '2026-12-01T20:00:00Z' },
     { id: 'c', start_datetime: '2026-12-01T20:00:00Z' },
+    { id: 'd', amenities: ['parking', 'air_conditioning', 'step_free', 'wheelchair'], start_datetime: '2026-12-01T20:00:00Z' },
   ]
 
-  it('web: keeps only step-free events, round-trips the URL and counts as a filter', () => {
+  it('web: the older Step-free switch and ?stepFree=1 still work', () => {
     const f = { ...DEFAULT_FILTERS, stepFree: true }
-    expect(filterEvents(events, f).map((e: any) => e.id)).toEqual(['a'])
-    expect(filterEvents(events, DEFAULT_FILTERS)).toHaveLength(3)
-    const params = serializeFilters(f)
-    expect(params.get('stepFree')).toBe('1')
-    expect(filtersEqual(parseFiltersFromURL(params), f)).toBe(true)
-    expect(parseFiltersFromURL(new URLSearchParams()).stepFree).toBeUndefined()
+    expect(filterEvents(events, f).map((e: any) => e.id)).toEqual(['a', 'd'])
+    expect(filterEvents(events, DEFAULT_FILTERS)).toHaveLength(4)
+    const parsed = parseFiltersFromURL(new URLSearchParams('stepFree=1'))
+    expect(parsed.amenities).toEqual(['step_free'])
+    expect(filtersEqual(parsed, f)).toBe(true)
+    expect(serializeFilters(f).get('amenities')).toBe('step_free')
+    expect(parseFiltersFromURL(new URLSearchParams()).amenities).toBeUndefined()
     expect(countActiveFilters(f)).toBe(countActiveFilters(DEFAULT_FILTERS) + 1)
   })
 
-  it('app: keeps only step-free events and counts as a filter', () => {
+  it('web: ?amenities= keeps events with ALL chosen facts and round-trips', () => {
+    const f = parseFiltersFromURL(new URLSearchParams('amenities=step_free,parking,bogus'))
+    expect(f.amenities).toEqual(['parking', 'step_free'])
+    expect(filterEvents(events, f).map((e: any) => e.id)).toEqual(['d'])
+    const again = parseFiltersFromURL(serializeFilters(f))
+    expect(again.amenities).toEqual(['parking', 'step_free'])
+    expect(filtersEqual(again, f)).toBe(true)
+    expect(countActiveFilters(f)).toBe(countActiveFilters(DEFAULT_FILTERS) + 2)
+    // ?stepFree=1 alongside amenities folds in once.
+    expect(parseFiltersFromURL(new URLSearchParams('amenities=step_free&stepFree=1')).amenities).toEqual(['step_free'])
+  })
+
+  it('helpers: all-of match, empty keeps everything', () => {
+    expect(web.hasAllAmenities(events[3], ['air_conditioning', 'wheelchair'])).toBe(true)
+    expect(web.hasAllAmenities(events[1], ['parking', 'step_free'])).toBe(false)
+    expect(web.hasAllAmenities(events[2], [])).toBe(true)
+    expect(web.wantedAmenities({ amenities: ['wheelchair'], stepFree: true })).toEqual(['step_free', 'wheelchair'])
+    expect(app.wantedAmenities({ amenities: ['wheelchair'], stepFree: true })).toEqual(['step_free', 'wheelchair'])
+  })
+
+  it('app: the older Step-free switch and the new multi-select both filter and count', () => {
     const appEvents = events.map((e) => ({ ...e, start_datetime: new Date(e.start_datetime) }))
     const f = { ...APP_DEFAULT_FILTERS, country: '', stepFree: true }
-    expect(applyFilters(appEvents as any, f).map((e: any) => e.id)).toEqual(['a'])
+    expect(applyFilters(appEvents as any, f).map((e: any) => e.id).sort()).toEqual(['a', 'd'])
     expect(appCount(f)).toBe(appCount(APP_DEFAULT_FILTERS) + 1)
+    const g = { ...APP_DEFAULT_FILTERS, country: '', amenities: ['air_conditioning', 'parking'] }
+    expect(applyFilters(appEvents as any, g).map((e: any) => e.id)).toEqual(['d'])
+    expect(appCount(g)).toBe(appCount(APP_DEFAULT_FILTERS) + 2)
   })
 })
 
@@ -103,6 +173,7 @@ describe('the app flyer fill', () => {
     currency: 'HTG',
     age_policy: '18+',
     dress_code: null,
+    amenities: ['backup_power', 'air_conditioning'],
     uncertain: ['start_time'],
     personal_details: [],
   }
@@ -121,6 +192,7 @@ describe('the app flyer fill', () => {
     ticket_tiers: [{ name: 'General Admission', price: '0', quantity: '100' }],
     age_policy: null,
     dress_code: null,
+    amenities: [],
   }
 
   it('writes times the way the composer does', () => {
@@ -140,9 +212,10 @@ describe('the app flyer fill', () => {
       venue_name: 'Hotel Montana',
       currency: 'HTG',
       age_policy: '18+',
+      amenities: ['backup_power', 'air_conditioning'],
     })
     expect(patch.ticket_tiers?.[0].price).toBe('1500')
-    expect(filled).toEqual(['title', 'date', 'start_time', 'end_time', 'venue_name', 'price', 'age_policy'])
+    expect(filled).toEqual(['title', 'date', 'start_time', 'end_time', 'venue_name', 'price', 'age_policy', 'amenities'])
     expect(check).toEqual(['start_time'])
   })
 
@@ -155,10 +228,48 @@ describe('the app flyer fill', () => {
     expect(filled).not.toContain('title')
   })
 
+  it('adds venue facts to what is ticked, never removes, and skips online events', () => {
+    const { patch } = flyerDraftPatch(read, { ...draft, amenities: ['parking', 'air_conditioning'] }, ['HTG'])
+    expect(patch.amenities).toEqual(['parking', 'backup_power', 'air_conditioning'])
+    const same = flyerDraftPatch({ ...read, venue_name: null }, { ...draft, amenities: ['backup_power', 'air_conditioning'] }, ['HTG'])
+    expect(same.filled).not.toContain('amenities')
+    const online = flyerDraftPatch({ ...read, venue_name: null }, { ...draft, is_online: true }, ['HTG'])
+    expect(online.patch.amenities).toBeUndefined()
+    // An older server sends no amenities at all.
+    const { amenities: _drop, ...older } = read
+    expect(flyerDraftPatch(older as FlyerRead, draft, ['HTG']).patch.amenities).toBeUndefined()
+  })
+
   it('leaves the price when the flyer currency is not sold in the event country', () => {
     const { patch, currencyNote } = flyerDraftPatch(read, { ...draft, currency: 'USD' }, ['USD'])
     expect(patch.ticket_tiers).toBeUndefined()
     expect(currencyNote).toBe('HTG')
+  })
+})
+
+describe('the flyer reader spots venue facts', () => {
+  const read = (...texts: string[]) =>
+    parseFlyerText(
+      texts.map((text) => ({ text, height: 20, confidence: 90 })),
+      new Date('2026-11-01T12:00:00Z')
+    ).amenities
+
+  it('maps the words flyers print, in Kreyòl, French and English', () => {
+    expect(read('KONPA LAKAY', 'Dèlko 24/24 · Parking gratuit', 'Sécurité assurée')).toEqual(['parking', 'backup_power', 'security'])
+    expect(read('Salle climatisée', 'Tables VIP disponibles', 'Open bar')).toEqual(['air_conditioning', 'table_service', 'bar'])
+    expect(read('FULL AC', 'Manje sou plas')).toEqual(['air_conditioning', 'food'])
+    expect(read('Wheelchair accessible', 'ASL interpreter')).toEqual(['wheelchair', 'sign_language'])
+  })
+
+  it('is cautious: a bar in the venue name or an "ac" fragment is not a fact', () => {
+    expect(read('Sunset Bar Live', 'Rue Pacot')).toEqual([])
+    expect(read('Lakay Lounge', 'Delmas 75, Pétion-ville')).toEqual([])
+  })
+
+  it('only ever returns venue-details keys', () => {
+    for (const k of read('Generator, AC, parking, security, VIP tables, food, open bar, wheelchair, sign language')) {
+      expect(web.VENUE_AMENITIES as readonly string[]).toContain(k)
+    }
   })
 })
 

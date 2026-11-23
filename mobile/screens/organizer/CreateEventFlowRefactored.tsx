@@ -48,7 +48,16 @@ import { useI18n } from '../../contexts/I18nContext';
 import GuestlistVisibilityPicker from '../../components/GuestlistVisibilityPicker';
 import { guestlistVisibilityFrom, type GuestlistVisibility } from '../../lib/guestlistVisibility';
 import { createEvent, updateEvent, uploadEventFlyer, SaveEventOptions } from '../../lib/api/events';
-import { AGE_POLICIES, DRESS_CODE_MAX, VENUE_AMENITIES, VENUE_SETTINGS, venueDetailsOf } from '../../lib/venueDetails';
+import {
+  AGE_POLICIES,
+  DRESS_CODE_MAX,
+  VENUE_ACCESSIBILITY,
+  VENUE_FACILITIES,
+  VENUE_SETTINGS,
+  amenityKeysOf,
+  venueDetailsCount,
+  venueDetailsOf,
+} from '../../lib/venueDetails';
 import { flyerDraftPatch, type FlyerRead } from '../../lib/flyerFill';
 import { isDeviceOnlyImageUri } from '../../lib/localImageUri';
 import { nationalDayForEventDate, nationalDayName } from '../../lib/nationalDays';
@@ -497,6 +506,8 @@ export default function CreateEventFlowRefactored() {
   const [communeListOpen, setCommuneListOpen] = useState(false);
   // Advanced-settings disclosure (POSH Show/Hide advanced settings).
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  // Venue details start folded: one quiet row with a count (premium = quiet).
+  const [venueDetailsOpen, setVenueDetailsOpen] = useState(false);
   // Natural aspect ratio of the uploaded poster (width / height), measured on
   // load so the preview renders at the flyer's TRUE proportions (posh shows
   // the poster as-is rather than forcing 2:3). Clamped to a sane band so a
@@ -2556,77 +2567,109 @@ export default function CreateEventFlowRefactored() {
                 </>
               )}
 
-              {/* Venue details: optional access, setting, age, dress code
-                  (lib/venueDetails), shown on the event page. Access and
-                  setting describe a place, so an online event keeps only the
-                  age and the dress code. */}
+              {/* Venue details: optional facts people ask before they come
+                  (lib/venueDetails), shown on the event page. Folded behind
+                  one quiet row so the composer does not grow; the row says
+                  how many answers are set. What the place has, accessibility
+                  and the setting describe a place, so an online event keeps
+                  only the age and the dress code. */}
               <View style={styles.chipBlock}>
-                <Text style={styles.chipLabel}>{t('venueDetails.composerTitle')}</Text>
-                {!eventDraft.is_online && (
+                <TouchableOpacity
+                  style={styles.venueDetailsToggle}
+                  onPress={() => setVenueDetailsOpen((v) => !v)}
+                  activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityState={{ expanded: venueDetailsOpen }}
+                >
+                  <Text style={styles.chipLabel}>
+                    {t('venueDetails.composerTitle')}
+                    {venueDetailsCount(venueDetailsOf(eventDraft)) > 0
+                      ? ` · ${t('venueDetails.selectedCount', { n: venueDetailsCount(venueDetailsOf(eventDraft)) })}`
+                      : ''}
+                  </Text>
+                  <Ionicons name={venueDetailsOpen ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textSecondary} />
+                </TouchableOpacity>
+                {venueDetailsOpen && (
                   <>
+                    {!eventDraft.is_online && (
+                      <>
+                        {([
+                          ['facilitiesLabel', VENUE_FACILITIES],
+                          ['accessibilityLabel', VENUE_ACCESSIBILITY],
+                        ] as const).map(([label, keys]) => (
+                          <View key={label} style={styles.venueDetailsGroup}>
+                            <Text style={styles.venueDetailsGroupLabel}>{t(`venueDetails.${label}`)}</Text>
+                            <View style={[styles.chipScroll, styles.chipWrap]}>
+                              {keys.map((k) => {
+                                const selected = eventDraft.amenities.includes(k);
+                                return (
+                                  <TouchableOpacity
+                                    key={k}
+                                    style={[styles.chip, selected && styles.chipActive]}
+                                    onPress={() =>
+                                      updateDraft({
+                                        amenities: selected
+                                          ? eventDraft.amenities.filter((a) => a !== k)
+                                          : amenityKeysOf([...eventDraft.amenities, k]),
+                                      })
+                                    }
+                                    accessibilityRole="button"
+                                    accessibilityState={{ selected }}
+                                  >
+                                    <Text style={[styles.chipText, selected && styles.chipTextActive]}>
+                                      {t(`venueDetails.amenities.${k}`)}
+                                    </Text>
+                                  </TouchableOpacity>
+                                );
+                              })}
+                            </View>
+                          </View>
+                        ))}
+                        <View style={[styles.chipScroll, styles.chipWrap]}>
+                          {VENUE_SETTINGS.map((k) => {
+                            const selected = eventDraft.venue_setting === k;
+                            return (
+                              <TouchableOpacity
+                                key={k}
+                                style={[styles.chip, selected && styles.chipActive]}
+                                onPress={() => updateDraft({ venue_setting: selected ? null : k })}
+                                accessibilityRole="button"
+                                accessibilityState={{ selected }}
+                              >
+                                <Text style={[styles.chipText, selected && styles.chipTextActive]}>{t(`venueDetails.settings.${k}`)}</Text>
+                              </TouchableOpacity>
+                            );
+                          })}
+                        </View>
+                      </>
+                    )}
                     <View style={[styles.chipScroll, styles.chipWrap]}>
-                      {VENUE_AMENITIES.map((k) => {
-                        const selected = eventDraft.amenities.includes(k);
+                      {([null, ...AGE_POLICIES] as const).map((k) => {
+                        const selected = eventDraft.age_policy === k;
                         return (
                           <TouchableOpacity
-                            key={k}
+                            key={k ?? 'all'}
                             style={[styles.chip, selected && styles.chipActive]}
-                            onPress={() =>
-                              updateDraft({
-                                amenities: selected ? eventDraft.amenities.filter((a) => a !== k) : [...eventDraft.amenities, k],
-                              })
-                            }
-                            accessibilityRole="button"
+                            onPress={() => updateDraft({ age_policy: k })}
+                            accessibilityRole="radio"
                             accessibilityState={{ selected }}
                           >
-                            <Text style={[styles.chipText, selected && styles.chipTextActive]}>{t(`venueDetails.amenities.${k}`)}</Text>
+                            <Text style={[styles.chipText, selected && styles.chipTextActive]}>
+                              {k ? k : t('venueDetails.ages.all')}
+                            </Text>
                           </TouchableOpacity>
                         );
                       })}
                     </View>
-                    <View style={[styles.chipScroll, styles.chipWrap]}>
-                      {VENUE_SETTINGS.map((k) => {
-                        const selected = eventDraft.venue_setting === k;
-                        return (
-                          <TouchableOpacity
-                            key={k}
-                            style={[styles.chip, selected && styles.chipActive]}
-                            onPress={() => updateDraft({ venue_setting: selected ? null : k })}
-                            accessibilityRole="button"
-                            accessibilityState={{ selected }}
-                          >
-                            <Text style={[styles.chipText, selected && styles.chipTextActive]}>{t(`venueDetails.settings.${k}`)}</Text>
-                          </TouchableOpacity>
-                        );
-                      })}
-                    </View>
+                    <InlineTextRow
+                      colors={colors}
+                      placeholder={t('venueDetails.dressCodePlaceholder')}
+                      value={eventDraft.dress_code || ''}
+                      onChangeText={(text) => updateDraft({ dress_code: text.slice(0, DRESS_CODE_MAX) || null })}
+                      maxLength={DRESS_CODE_MAX}
+                    />
                   </>
                 )}
-                <View style={[styles.chipScroll, styles.chipWrap]}>
-                  {([null, ...AGE_POLICIES] as const).map((k) => {
-                    const selected = eventDraft.age_policy === k;
-                    return (
-                      <TouchableOpacity
-                        key={k ?? 'all'}
-                        style={[styles.chip, selected && styles.chipActive]}
-                        onPress={() => updateDraft({ age_policy: k })}
-                        accessibilityRole="radio"
-                        accessibilityState={{ selected }}
-                      >
-                        <Text style={[styles.chipText, selected && styles.chipTextActive]}>
-                          {k ? k : t('venueDetails.ages.all')}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-                <InlineTextRow
-                  colors={colors}
-                  placeholder={t('venueDetails.dressCodePlaceholder')}
-                  value={eventDraft.dress_code || ''}
-                  onChangeText={(text) => updateDraft({ dress_code: text.slice(0, DRESS_CODE_MAX) || null })}
-                  maxLength={DRESS_CODE_MAX}
-                />
               </View>
 
               {/* Category */}
@@ -3825,6 +3868,14 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     flexDirection: 'row',
     flexWrap: 'wrap',
   },
+  venueDetailsToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: 24,
+  },
+  venueDetailsGroup: { gap: 8 },
+  venueDetailsGroupLabel: { fontSize: 12, color: colors.textTertiary },
   payoutRegimeNote: {
     fontSize: 12,
     lineHeight: 17,

@@ -64,6 +64,11 @@ export interface FlyerRead {
   /** "18+" / "21+" when the flyer says so. */
   age_policy: '18+' | '21+' | null
   dress_code: string | null
+  /**
+   * Venue facts the flyer prints ("AC", "parking", "generator / dèlko",
+   * "VIP tables"), as lib/events/venue-details keys, in that file's order.
+   */
+  amenities: string[]
   /** Fields that were filled from a guess (a weekday only, a time with no am/pm…). */
   uncertain: FlyerField[]
   /** Phone numbers and emails printed on the flyer, for the organizer to decide on. */
@@ -398,6 +403,26 @@ const PRESENTS = /^(.{2,60}?)\s+(?:presents?|presente(?:nt)?|prezante|pwezante|e
 const PHONE = /(?:\+?\d{1,3}[ .-]?)?(?:\(?\d{3}\)?[ .-]?)?\b\d{3,4}[ .-]\d{4}\b/g
 const EMAIL = /[\w.+-]+@[\w-]+\.[\w.]+/g
 const AGE = /\b(18|21)\s?\+|\b(18|21)\s?(?:ans|years?|lane)\s?(?:\+|et plus|and up|and over|oswa plis)/
+/**
+ * Venue facts a flyer prints, folded (accents off, lowercase), to the
+ * venue-details keys. Cautious: only words that mean the fact. A bare "bar"
+ * is often the venue's own name, so only "open bar" and the like count.
+ * Kept in lib/events/venue-details order.
+ */
+const AMENITY_WORDS: Array<[string, RegExp]> = [
+  ['parking', /\b(?:parking|pakin|stationnement)\b/],
+  ['backup_power', /\b(?:generator|generatrice|groupe electrogene|delko|jenerate\w*|(?:kouran|courant|electricite|power) 24\s?\/\s?24)\b/],
+  ['air_conditioning', /\b(?:air[\s-]?condition(?:ed|ing|nee)?|climatise[es]?|climatisation|klimatize|e?r kondisyone)\b/],
+  ['security', /\b(?:securite|sekirite|security)\b/],
+  ['table_service', /\b(?:vip tables?|tables? vip|tab vip|bottle service|service bouteilles?|reservation de tables?|table reservations?)\b/],
+  ['food', /\b(?:food|nourriture|manje|restauration|buffet|grillades?|griyo)\b/],
+  ['bar', /\b(?:open bar|bar ouvert|full bar|bar disponible|bar sou plas)\b/],
+  ['wheelchair', /\b(?:wheelchair|fauteuil roulant|chez woulant)\b/],
+  ['sign_language', /\b(?:sign language|langue des signes|lang siy|asl|lsf)\b/],
+]
+/** "AC" / "A/C" in capitals on the raw text: lowercase "ac" is too common a fragment. */
+const AC_CAPS = /(?:^|[^A-Za-z])A\/?C(?![A-Za-z])/
+
 const DRESS = /^(?:dress\s?code|tenue|tenue exigee|kod abiman|abiman)\s*[:\-]?\s*(.{2,60})$/
 
 function titleCase(s: string): string {
@@ -621,6 +646,12 @@ export function parseFlyerText(input: OcrLine[], ref: Date = new Date()): FlyerR
     }
   }
 
+  // ── Venue facts ──
+  const amenities = AMENITY_WORDS.filter(([, re]) => re.test(all)).map(([k]) => k)
+  if (!amenities.includes('air_conditioning') && lines.some((l) => AC_CAPS.test(l.text))) amenities.push('air_conditioning')
+  const amenityOrder = AMENITY_WORDS.map(([k]) => k)
+  amenities.sort((a, b) => amenityOrder.indexOf(a) - amenityOrder.indexOf(b))
+
   // ── Personal details ──
   const personal_details = [
     ...new Set(lines.flatMap((l) => [...(l.text.match(PHONE) || []), ...(l.text.match(EMAIL) || [])]).map((s) => s.trim())),
@@ -655,6 +686,7 @@ export function parseFlyerText(input: OcrLine[], ref: Date = new Date()): FlyerR
     currency,
     age_policy,
     dress_code,
+    amenities,
     uncertain: FLYER_FIELDS.filter((f) => uncertain.has(f)),
     personal_details,
   }
