@@ -943,6 +943,20 @@
           "order": "ASCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "events",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "organizer_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "imported.source",
+          "order": "ASCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": [

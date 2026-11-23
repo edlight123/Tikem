@@ -364,7 +364,9 @@
     "free_tier_already_claimed": "Vous avez déjà votre billet gratuit",
     "more_dates_one": "+{{count}} autre date",
     "more_dates_other": "+{{count}} autres dates",
-    "rsvp_cta": "Réserver"
+    "rsvp_cta": "Réserver",
+    "tickets_on_eventbrite": "Billets sur Eventbrite",
+    "tickets_on_eventbrite_note": "Les billets de cet événement sont vendus sur Eventbrite."
   },
   "favorites": {
     "title": "Mes favoris",

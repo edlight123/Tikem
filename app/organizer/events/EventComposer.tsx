@@ -1795,7 +1795,14 @@ export default function EventComposer({
         // the currency of an event that has sold: firestore.rules refuses both
         // once tickets_sold > 0, and payouts value each sale in the currency it
         // was sold in. A field missing on the stored doc stays missing.
-        const editData = withStoredMoneyFields(data, event)
+        const editData: Record<string, any> = withStoredMoneyFields(data, event)
+        // A copy kept in sync from Eventbrite (lib/import/eventbrite-sync): once
+        // edited here, the sync only refreshes its time, link and publication.
+        // firestore.rules lets a client set just this one flag.
+        const imported = (event as any)?.imported
+        if (imported?.source === 'eventbrite' && imported.locally_edited !== true) {
+          editData.imported = { ...imported, locally_edited: true }
+        }
         const { error } = await (await getShim()).from('events').update(editData).eq('id', event.id)
         if (error) throw error
         const tierDocIds = tiers.map((tr) => tr.docId)
