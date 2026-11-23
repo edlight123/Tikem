@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View, KeyboardAvoidingView, Platform } from 'react-native';
+import { Modal, Pressable, StyleSheet, Text, View, KeyboardAvoidingView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X } from 'lucide-react-native';
 import { auth } from '../../config/firebase';
@@ -41,7 +41,7 @@ export default function PhoneLinkSheet({ visible, onClose, onLinked, title, subt
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={close}>
       <Pressable style={styles.backdrop} onPress={close} />
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.avoid} pointerEvents="box-none">
+      <KeyboardAvoidingView behavior="padding" style={styles.avoid} pointerEvents="box-none">
         <View style={[styles.sheet, { paddingBottom: insets.bottom + spacing.lg }]}>
           <View style={styles.header}>
             <Text style={styles.title}>{title ?? t('auth.phone.link.title')}</Text>

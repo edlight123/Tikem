@@ -402,7 +402,7 @@ export default function OrganizerPromoCodesScreen() {
   }
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView style={styles.container} behavior="padding">
       <OrganizerScreenHeader
         title={t('organizerPromoCodes.title')}
         subtitle={eventTitle || undefined}

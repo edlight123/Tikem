@@ -10,7 +10,6 @@ import React, { useCallback, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Modal,
-  Platform,
   ScrollView,
   Share,
   StyleSheet,
@@ -435,7 +434,7 @@ export default function OrganizerPromotersScreen() {
         presentationStyle="pageSheet"
         onRequestClose={() => setFormOpen(false)}
       >
-        <KeyboardAvoidingView style={styles.sheet} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <KeyboardAvoidingView style={styles.sheet} behavior="padding">
           <View style={styles.sheetHeader}>
             <Text style={styles.sheetTitle}>{t('organizerPromoters.formTitle').toLowerCase()}</Text>
             <Touchable

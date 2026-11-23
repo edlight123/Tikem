@@ -8,7 +8,6 @@ import React, { useEffect, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Modal,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -203,7 +202,7 @@ export default function AttendRequestSheet({ visible, onClose, eventId, allowedP
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={close}>
-      <KeyboardAvoidingView style={styles.overlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={styles.overlay} behavior="padding">
         <Pressable style={StyleSheet.absoluteFill} onPress={close} accessibilityRole="button" accessibilityLabel={t('attendRequests.sheet.close')} />
         <Animated.View style={[styles.sheet, swipe.sheetStyle, { paddingBottom: Math.max(insets.bottom, spacing.lg) + spacing.sm }]}>
           {/* Paints below the sheet edge so the event page never shows through. */}

@@ -183,7 +183,7 @@ export default function LineupEntrySheet({ draft, isNew, onPatch, onSave, onCanc
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onCancel}>
       <Pressable style={styles.backdrop} onPress={uploading ? undefined : onCancel} />
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior="padding"
         style={styles.avoid}
         pointerEvents="box-none"
       >

@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import {
   View,
   KeyboardAvoidingView,
-  Platform,
   Text,
   Modal,
   StyleSheet,
@@ -187,7 +186,7 @@ export default function TransferTicketModal({
           under it (owner, 2026-11-17: "fix this"). */}
       <KeyboardAvoidingView
         style={styles.overlay}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior="padding"
       >
         <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={close} accessible={false} />
         <Animated.View style={[styles.modalContainer, swipe.sheetStyle]}>
