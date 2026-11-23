@@ -32,7 +32,7 @@ import {
   Instagram,
   LogOut,
   MapPin,
-  MessageCircle,
+  Inbox,
   Phone,
   RotateCcw,
   Shield,
@@ -80,6 +80,7 @@ import { Text as UIText } from '../components/ui/Text';
 import { ListGroup, ListRow } from '../components/ui/ListRow';
 import { Switch } from '../components/ui/Switch';
 import StatusBarBackdrop from '../components/StatusBarBackdrop';
+import MessagesButton from '../components/MessagesButton';
 import { refreshAttendeeUnread, useAttendeeUnread } from '../lib/attendeeUnread';
 import { backendJson } from '../lib/api/backend';
 
@@ -450,6 +451,8 @@ export default function ProfileScreen() {
           >
             <Bell size={20} color={colors.text} strokeWidth={1.75} />
           </Touchable>
+          {/* Messages up top, not only in the list below (Tikra ef0062d4). */}
+          <MessagesButton />
         </View>
 
         {/* Identity */}
@@ -704,7 +707,7 @@ export default function ProfileScreen() {
             {/* The attendee's conversations with organizers (questions sent from
                 an event page and their answers). */}
             <ListRow
-              icon={MessageCircle}
+              icon={Inbox}
               title={t('attendeeMessages.title')}
               value={unreadMessages > 0 ? String(unreadMessages) : undefined}
               onPress={() => navigation.navigate('Messages')}

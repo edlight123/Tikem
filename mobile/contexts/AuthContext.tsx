@@ -88,6 +88,8 @@ const USER_SCOPED_KEYS = [
   'tikem:staffEventIds',
 ];
 const USER_SCOPED_PREFIXES = [
+  // Conversations swiped away in the organizer inbox (OrganizerMessagesScreen).
+  'tikem_inbox_hidden_',
   'tickets_cache_',
   'ticket_cache_',
   'event_tickets_cache_',

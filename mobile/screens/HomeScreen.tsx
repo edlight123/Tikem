@@ -22,6 +22,7 @@ import { useFilters } from '../contexts/FiltersContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useActiveLocationCopy } from '../lib/locationCopy';
 import { MapPin, ChevronDown, CloudOff } from 'lucide-react-native';
+import MessagesButton from '../components/MessagesButton';
 import LocationDetectionBanner from '../components/LocationDetectionBanner';
 import LocationPickerSheet from '../components/LocationPickerSheet';
 import ElsewhereRail from '../components/ElsewhereRail';
@@ -425,6 +426,8 @@ export default function HomeScreen({ navigation }: any) {
             </Text>
             <ChevronDown size={13} color={colors.textSecondary} />
           </Touchable>
+          {/* Messages one tap from Home; signed-in only (renders nothing otherwise). */}
+          <MessagesButton style={styles.messagesButton} />
         </View>
       </Animated.View>
 
@@ -683,6 +686,11 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     flexDirection: 'row',
     gap: 8,
     alignItems: 'center',
+  },
+  // The 40pt target overhangs the bar's right padding so the icon lines up
+  // with the edge like the location chip's text does.
+  messagesButton: {
+    marginRight: -10,
   },
   content: {
     flex: 1,
