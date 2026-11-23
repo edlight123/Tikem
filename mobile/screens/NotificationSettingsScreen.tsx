@@ -213,7 +213,7 @@ export default function NotificationSettingsScreen({ navigation, route }: any) {
       return;
     }
     try {
-      await registerForPushNotificationsIfPossible();
+      await registerForPushNotificationsIfPossible({ uid: user?.uid });
     } catch {
       // permission UI already handled by the OS
     }

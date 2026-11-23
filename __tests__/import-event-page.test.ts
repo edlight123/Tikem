@@ -100,7 +100,13 @@ describe('mapEventbriteEvent', () => {
         { name: 'Adult', price: 15, quantity: 120 },
         { name: 'Child', price: 0, quantity: 100 },
       ],
+      // No start.timezone in this fixture: the draft writer picks the market's zone.
+      timezone: null,
     })
+  })
+
+  it('keeps the zone Eventbrite gives the event', () => {
+    expect(mapEventbriteEvent({ ...ev, start: { ...ev.start, timezone: 'America/Vancouver' } })!.timezone).toBe('America/Vancouver')
   })
 
   it('an online event has no venue; an event with no tickets gets a free one; no title, no draft', () => {

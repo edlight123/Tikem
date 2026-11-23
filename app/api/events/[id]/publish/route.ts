@@ -15,7 +15,7 @@ import { resolveEmailLang } from '@/lib/email-kit/recipient'
 import { appUrl } from '@/lib/email-kit/layout'
 import { MIN_PAID_PRICE_ERROR_CODE, publishPriceBelowMinimum } from '@/lib/min-paid-price'
 import { readOrgBrandAdmin } from '@/lib/firestore/org-brand-server'
-import { isPaidEvent } from '@/lib/events/paid-event'
+import { isPaidEvent, sellsTicketsElsewhere } from '@/lib/events/paid-event'
 
 const TIER_LIMIT = 25
 
@@ -188,11 +188,14 @@ export async function POST(
       // Minimum paid price (US/CA 2.00, FR 1.00 EUR): an absorbed fixed fee
       // must never exceed the ticket price. The composers check this first;
       // this is the authoritative refusal. Free and Haiti tiers pass.
-      const belowMin = publishPriceBelowMinimum(
-        eventData,
-        tiers,
-        (await resolveEventCountry(eventData)) || eventData?.country
-      )
+      // Sold elsewhere (a synced Eventbrite copy): the price is only a label.
+      const belowMin = sellsTicketsElsewhere(eventData, tiers)
+        ? null
+        : publishPriceBelowMinimum(
+            eventData,
+            tiers,
+            (await resolveEventCountry(eventData)) || eventData?.country
+          )
       if (belowMin) {
         const currency = String(eventData?.currency || '').toUpperCase()
         return NextResponse.json(

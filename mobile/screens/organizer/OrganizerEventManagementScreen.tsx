@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useLayoutEffect, useRef } from 'react';
 import {
+  ActivityIndicator,
   View,
   Text,
   StyleSheet,
@@ -67,6 +68,7 @@ import { resolvePosterTheme } from '../../lib/posterGradient';
 import { colors as T, radius, font } from '../../theme/tokens';
 import { eventRequiresApproval, getEventRequests } from '../../lib/attendRequests';
 import { displayCapacity } from '../../lib/ticketPricing';
+import { canOfferPublish, publishFixFor } from '../../lib/publishFix';
 
 type ActionRow = { key: string; label: string; icon: LucideIcon; onPress: () => void };
 
@@ -180,7 +182,8 @@ export default function OrganizerEventManagementScreen() {
   };
 
   // Owner, or an admin granted read-only finances (the screen is read-only for them).
-  const canSeeEarnings = useActiveOrg().financeView;
+  const activeOrg = useActiveOrg();
+  const canSeeEarnings = activeOrg.financeView;
 
   const handleViewEarnings = () => {
     navigation.navigate('OrganizerEventEarnings', { eventId });
@@ -298,6 +301,42 @@ export default function OrganizerEventManagementScreen() {
         },
       ]
     );
+  };
+
+  // Publish (or put back on sale) right here. A draft, an imported one above
+  // all, had no way to go live from this screen: the editor's Save never
+  // publishes an existing event, and the only control was the pause switch.
+  // The server decides; its refusal is shown as it is, with the way out.
+  const canManagePayouts = activeOrg.can('owner_only');
+  const [publishing, setPublishing] = useState(false);
+  const handlePublish = async () => {
+    if (publishing) return;
+    setPublishing(true);
+    try {
+      await toggleEventPublication(eventId, true);
+      await loadEventData();
+      showAlert(t('organizerEventManagement.publish.successTitle'), t('organizerEventManagement.publish.successBody'));
+    } catch (error: any) {
+      const fix = publishFixFor(error?.code);
+      const message = error?.message || t('organizerEventManagement.publish.failed');
+      showAlert(
+        t('organizerEventManagement.publish.blockedTitle'),
+        message,
+        fix === 'payouts' && canManagePayouts
+          ? [
+              { text: t('common.cancel'), style: 'cancel' },
+              { text: t('organizerEarnings.openPayoutSettings'), onPress: () => navigation.navigate('OrganizerPayoutSettings') },
+            ]
+          : fix === 'edit'
+            ? [
+                { text: t('common.cancel'), style: 'cancel' },
+                { text: t('organizerEventManagement.actions.editEvent'), onPress: handleEditEvent },
+              ]
+            : undefined
+      );
+    } finally {
+      setPublishing(false);
+    }
   };
 
   const handleSendUpdate = () => {
@@ -426,6 +465,7 @@ export default function OrganizerEventManagementScreen() {
   });
 
   const canCancel = event?.status !== 'cancelled';
+  const offerPublish = canOfferPublish(event as any);
   const ctaBlockH = 56 + 16 + Math.max(insets.bottom, 16);
 
   const startMs = event?.start_datetime ? new Date(event.start_datetime as any).getTime() : NaN;
@@ -681,15 +721,35 @@ export default function OrganizerEventManagementScreen() {
           style={StyleSheet.absoluteFill}
           pointerEvents="none"
         />
-        <Touchable
-          style={styles.cta}
-          onPress={handleScanTickets}
-          accessibilityRole="button"
-          accessibilityLabel={t('organizerEventManagement.openScanner')}
-        >
-          <Ionicons name="scan-outline" size={22} color={T.black} />
-          <Text style={styles.ctaText}>{t('organizerEventManagement.openScanner')}</Text>
-        </Touchable>
+        {offerPublish ? (
+          // Not live yet: the one primary action is to publish, not to scan.
+          <Touchable
+            style={[styles.cta, publishing && { opacity: 0.7 }]}
+            onPress={handlePublish}
+            disabled={publishing}
+            accessibilityRole="button"
+            accessibilityLabel={t('organizerEventManagement.publish.cta')}
+          >
+            {publishing ? (
+              <ActivityIndicator color={T.black} />
+            ) : (
+              <>
+                <Ionicons name="rocket-outline" size={22} color={T.black} />
+                <Text style={styles.ctaText}>{t('organizerEventManagement.publish.cta')}</Text>
+              </>
+            )}
+          </Touchable>
+        ) : (
+          <Touchable
+            style={styles.cta}
+            onPress={handleScanTickets}
+            accessibilityRole="button"
+            accessibilityLabel={t('organizerEventManagement.openScanner')}
+          >
+            <Ionicons name="scan-outline" size={22} color={T.black} />
+            <Text style={styles.ctaText}>{t('organizerEventManagement.openScanner')}</Text>
+          </Touchable>
+        )}
       </View>
     </View>
   );

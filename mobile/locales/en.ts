@@ -1796,6 +1796,13 @@ export default {
 
   organizerEventManagement: {
     openScanner: 'Open door scanner',
+    publish: {
+      cta: 'Publish',
+      successTitle: 'Your event is live',
+      successBody: 'People can find it and get tickets now.',
+      blockedTitle: 'Not published yet',
+      failed: 'Could not publish. Try again.',
+    },
     stats: {
       sellThrough: 'Sell-through',
       checkedIn: 'Checked in',

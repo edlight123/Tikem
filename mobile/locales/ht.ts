@@ -1333,6 +1333,13 @@ export default {
 
   organizerEventManagement: {
     openScanner: 'Louvri eskanè pòt la',
+    publish: {
+      cta: 'Pibliye',
+      successTitle: 'Evènman ou an sou liy',
+      successBody: 'Moun ka jwenn li epi pran tikè kounye a.',
+      blockedTitle: 'Li poko pibliye',
+      failed: 'Nou pa t ka pibliye l. Eseye ankò.',
+    },
     stats: {
       sellThrough: 'Pousantaj vann',
       checkedIn: 'Antre',
