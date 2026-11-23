@@ -13,7 +13,7 @@ import {
 import { Touchable } from './ui/Touchable';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { X } from 'lucide-react-native';
+import { Accessibility, X } from 'lucide-react-native';
 import { useFilters } from '../contexts/FiltersContext';
 import { useI18n } from '../contexts/I18nContext';
 import { getCategoryLabel } from '../lib/categories';
@@ -304,6 +304,27 @@ export default function EventFiltersSheet() {
             </View>
           </View>
 
+          {/* Access: events whose venue the organizer marked step-free. */}
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>{t('venueDetails.accessLabel').toUpperCase()}</Text>
+            <View style={styles.chipsRow}>
+              <TouchableOpacity
+                style={[styles.chip, styles.chipFixed, draftFilters.stepFree && styles.chipActive]}
+                onPress={() => setDraftFilters({ ...draftFilters, stepFree: !draftFilters.stepFree })}
+                hitSlop={CHIP_HIT_SLOP}
+                accessibilityRole="button"
+                accessibilityState={{ selected: !!draftFilters.stepFree }}
+              >
+                <View style={styles.chipInline}>
+                  <Accessibility size={14} color={draftFilters.stepFree ? colors.onPrimary : colors.textSecondary} strokeWidth={1.75} />
+                  <Text style={[styles.chipText, draftFilters.stepFree && styles.chipTextActive]}>
+                    {t('venueDetails.stepFreeFilter')}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+          </View>
+
           {/* Price Filter — the custom min–max range is the standard control.
               "Any" and "Free" remain as quick shortcuts. */}
           <View style={styles.section}>
@@ -549,6 +570,15 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   // a second button rather than a chosen value.
   chipActive: {
     backgroundColor: colors.primary,
+  },
+  // A lone toggle chip sizes to its label instead of stretching the row.
+  chipFixed: {
+    flexGrow: 0,
+  },
+  chipInline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   // lineHeight is explicit so every chip is exactly the same height whatever the
   // label or the device's font metrics.

@@ -45,7 +45,10 @@ import { useActiveOrg } from '../../lib/activeOrg';
 import { useI18n } from '../../contexts/I18nContext';
 import GuestlistVisibilityPicker from '../../components/GuestlistVisibilityPicker';
 import { guestlistVisibilityFrom, type GuestlistVisibility } from '../../lib/guestlistVisibility';
-import { createEvent, updateEvent, SaveEventOptions } from '../../lib/api/events';
+import { createEvent, updateEvent, uploadEventFlyer, SaveEventOptions } from '../../lib/api/events';
+import { AGE_POLICIES, DRESS_CODE_MAX, VENUE_AMENITIES, VENUE_SETTINGS, venueDetailsOf } from '../../lib/venueDetails';
+import { flyerDraftPatch, type FlyerRead } from '../../lib/flyerFill';
+import { isDeviceOnlyImageUri } from '../../lib/localImageUri';
 import { nationalDayForEventDate, nationalDayName } from '../../lib/nationalDays';
 import { getEventById } from '../../lib/api/organizer';
 import { db } from '../../config/firebase';
@@ -221,6 +224,12 @@ export interface EventDraft {
   // FREE events only: turned off whenever a tier costs money.
   requires_approval: boolean;
   plus_ones_max: number;
+
+  // Venue details (lib/venueDetails), all optional: access, setting, age, dress code.
+  amenities: string[];
+  venue_setting: string | null;
+  age_policy: string | null;
+  dress_code: string | null;
 }
 
 const CATEGORIES = [
@@ -574,6 +583,10 @@ export default function CreateEventFlowRefactored() {
     is_online: false,
     fee_incidence: '',
     lineup: [],
+    amenities: [],
+    venue_setting: null,
+    age_policy: null,
+    dress_code: null,
   });
 
   // Track keyboard visibility AND height. The height drives the canvas's
@@ -764,6 +777,7 @@ export default function CreateEventFlowRefactored() {
               ? (event as any).fee_incidence
               : '',
           lineup: lineupFromEvent((event as any).guestlist),
+          ...venueDetailsOf(event),
         });
         // Capture the series membership so edit mode can offer "apply to series".
         setSeriesId((event as any).series_id || null);
@@ -911,6 +925,49 @@ export default function CreateEventFlowRefactored() {
       showAlert(t('common.error'), t('verification.common.failedToPickImageFromLibrary'));
     }
   };
+
+  // ── Fill from flyer ──
+  // The website reads the flyer (POST /api/flyers/read: Tesseract + rules for
+  // English, French and Kreyòl, no AI), so this needs no native module. A
+  // flyer still on the phone is uploaded first; the draft keeps the uploaded
+  // URL so saving does not upload it twice. Only empty fields are filled.
+  const [flyerReading, setFlyerReading] = useState(false);
+  const readFlyer = async () => {
+    if (flyerReading || !eventDraft.banner_image_url) return;
+    setFlyerReading(true);
+    try {
+      let url = eventDraft.banner_image_url;
+      if (isDeviceOnlyImageUri(url)) {
+        url = await uploadEventFlyer(userProfile?.id || '', url);
+        updateDraft({ banner_image_url: url });
+      }
+      const { read } = await backendJson<{ read: FlyerRead }>('/api/flyers/read', {
+        method: 'POST',
+        body: JSON.stringify({ url }),
+      });
+      const { patch, filled, check, currencyNote } = flyerDraftPatch(
+        read,
+        eventDraft,
+        currenciesForCountry(eventDraft.country || 'HT') as string[]
+      );
+      updateDraft(patch as Partial<EventDraft>);
+      const fields = (list: string[]) => list.map((f) => t(`flyerRead.fields.${f}`)).join(', ');
+      const lines = [
+        filled.length ? t('flyerRead.filled', { fields: fields(filled) }) : t('flyerRead.nothing'),
+        check.length ? t('flyerRead.check', { fields: fields(check) }) : '',
+        currencyNote ? t('flyerRead.currency', { currency: currencyNote }) : '',
+        read.personal_details.length ? t('flyerRead.personal', { items: read.personal_details.join(', ') }) : '',
+      ].filter(Boolean);
+      showAlert(t('flyerRead.button'), lines.join('\n\n'));
+    } catch (e: any) {
+      // /api/flyers/read answers { error: 'rate_limited' } at the daily cap.
+      const limited = String(e?.message || '').includes('rate_limited');
+      showAlert(t('common.error'), t(limited ? 'flyerRead.limited' : 'flyerRead.error'));
+    } finally {
+      setFlyerReading(false);
+    }
+  };
+  const flyerIsTemplate = !!eventDraft.poster_template || eventDraft.banner_image_url.includes('/posters/');
 
   // ── Location (ported from Step2Location) ──
   // The organizer's own country leads the chip row, and seeds a new draft:
@@ -2176,6 +2233,24 @@ export default function CreateEventFlowRefactored() {
                   <Ionicons name="color-palette-outline" size={16} color={colors.white} />
                   <Text style={styles.changeFlyerText}>{t('posterTemplates.title')}</Text>
                 </TouchableOpacity>
+                {!flyerIsTemplate && (
+                  <TouchableOpacity
+                    style={[styles.changeFlyerPill, styles.readFlyerPill]}
+                    onPress={readFlyer}
+                    disabled={flyerReading}
+                    accessibilityRole="button"
+                    accessibilityState={{ busy: flyerReading }}
+                  >
+                    {flyerReading ? (
+                      <ActivityIndicator size="small" color={colors.white} />
+                    ) : (
+                      <Ionicons name="scan-outline" size={16} color={colors.white} />
+                    )}
+                    <Text style={styles.changeFlyerText}>
+                      {flyerReading ? t('flyerRead.reading') : t('flyerRead.button')}
+                    </Text>
+                  </TouchableOpacity>
+                )}
               </TouchableOpacity>
             ) : (
               // Empty poster frame: a turning mirror ball the poster goes into,
@@ -2420,6 +2495,79 @@ export default function CreateEventFlowRefactored() {
                   />
                 </>
               )}
+
+              {/* Venue details: optional access, setting, age, dress code
+                  (lib/venueDetails), shown on the event page. Access and
+                  setting describe a place, so an online event keeps only the
+                  age and the dress code. */}
+              <View style={styles.chipBlock}>
+                <Text style={styles.chipLabel}>{t('venueDetails.composerTitle')}</Text>
+                {!eventDraft.is_online && (
+                  <>
+                    <View style={[styles.chipScroll, styles.chipWrap]}>
+                      {VENUE_AMENITIES.map((k) => {
+                        const selected = eventDraft.amenities.includes(k);
+                        return (
+                          <TouchableOpacity
+                            key={k}
+                            style={[styles.chip, selected && styles.chipActive]}
+                            onPress={() =>
+                              updateDraft({
+                                amenities: selected ? eventDraft.amenities.filter((a) => a !== k) : [...eventDraft.amenities, k],
+                              })
+                            }
+                            accessibilityRole="button"
+                            accessibilityState={{ selected }}
+                          >
+                            <Text style={[styles.chipText, selected && styles.chipTextActive]}>{t(`venueDetails.amenities.${k}`)}</Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                    <View style={[styles.chipScroll, styles.chipWrap]}>
+                      {VENUE_SETTINGS.map((k) => {
+                        const selected = eventDraft.venue_setting === k;
+                        return (
+                          <TouchableOpacity
+                            key={k}
+                            style={[styles.chip, selected && styles.chipActive]}
+                            onPress={() => updateDraft({ venue_setting: selected ? null : k })}
+                            accessibilityRole="button"
+                            accessibilityState={{ selected }}
+                          >
+                            <Text style={[styles.chipText, selected && styles.chipTextActive]}>{t(`venueDetails.settings.${k}`)}</Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </>
+                )}
+                <View style={[styles.chipScroll, styles.chipWrap]}>
+                  {([null, ...AGE_POLICIES] as const).map((k) => {
+                    const selected = eventDraft.age_policy === k;
+                    return (
+                      <TouchableOpacity
+                        key={k ?? 'all'}
+                        style={[styles.chip, selected && styles.chipActive]}
+                        onPress={() => updateDraft({ age_policy: k })}
+                        accessibilityRole="radio"
+                        accessibilityState={{ selected }}
+                      >
+                        <Text style={[styles.chipText, selected && styles.chipTextActive]}>
+                          {k ? k : t('venueDetails.ages.all')}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+                <InlineTextRow
+                  colors={colors}
+                  placeholder={t('venueDetails.dressCodePlaceholder')}
+                  value={eventDraft.dress_code || ''}
+                  onChangeText={(text) => updateDraft({ dress_code: text.slice(0, DRESS_CODE_MAX) || null })}
+                  maxLength={DRESS_CODE_MAX}
+                />
+              </View>
 
               {/* Category */}
               <View style={styles.chipBlock}>
@@ -3492,6 +3640,9 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   makePosterPill: {
     top: 58,
   },
+  readFlyerPill: {
+    top: 102,
+  },
   changeFlyerText: {
     fontSize: 13,
     fontWeight: '600',
@@ -3529,6 +3680,10 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   chipScroll: {
     gap: 8,
     paddingVertical: 2,
+  },
+  chipWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
   },
   payoutRegimeNote: {
     fontSize: 12,

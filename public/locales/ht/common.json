@@ -122,7 +122,9 @@
     "price_and_up": "{{price}} oswa plis",
     "free_only": "Gratis sèlman",
     "price_min": "Pri minimòm",
-    "price_max": "Pri maksimòm"
+    "price_max": "Pri maksimòm",
+    "access": "Aksè",
+    "step_free": "San mach"
   },
   "time": {
     "today": "Jodi a",
@@ -1518,6 +1520,54 @@
       "use": "Sèvi ak afich sa a",
       "failed": "Nou pa t ka fè afich la. Eseye ankò.",
       "sampleTitle": "Evènman ou"
+    },
+    "flyerRead": {
+      "button": "Ranpli ak flyer a",
+      "reading": "N ap li flyer a…",
+      "filled": "Nou ranpli sa yo ak flyer a: {{fields}}. Verifye yo anvan ou pibliye.",
+      "nothing": "Nou pa jwenn detay evènman an sou flyer sa a. Ranpli yo anba a.",
+      "check": "Verifye: {{fields}}",
+      "personal": "Flyer a gen kontak ({{items}}). Nou pa mete yo.",
+      "currency": "Pri flyer a an {{currency}}, kidonk nou pa chanje pri tikè a.",
+      "error": "Nou pa ka li flyer a. Eseye ankò.",
+      "limited": "Ou li ase flyer pou jodi a. Eseye ankò demen.",
+      "fields": {
+        "title": "tit",
+        "description": "deskripsyon",
+        "date": "dat",
+        "start_time": "lè kòmanse",
+        "end_time": "lè fini",
+        "venue_name": "kote",
+        "address": "adrès",
+        "city": "vil",
+        "price": "pri",
+        "age_policy": "laj",
+        "dress_code": "kòd abiman"
+      }
+    },
+    "venueDetails": {
+      "title": "Detay kote a",
+      "hint": "Si ou vle. Li parèt sou paj evènman an.",
+      "access": "Aksè",
+      "setting": "Anndan oswa deyò",
+      "age": "Laj",
+      "dressCode": "Kòd abiman, egz. Tout blan",
+      "amenities": {
+        "parking": "Pakin",
+        "step_free": "San mach",
+        "accessible_washrooms": "Twalèt aksesib",
+        "coat_check": "Vestyè"
+      },
+      "settings": {
+        "indoor": "Anndan",
+        "outdoor": "Deyò",
+        "mixed": "Toude"
+      },
+      "ages": {
+        "all": "Tout laj",
+        "18": "18+",
+        "21": "21+"
+      }
     }
   },
   "promoter": {
@@ -2149,5 +2199,18 @@
     "get_the_app": "Telechaje aplikasyon an",
     "after_purchase": "Kenbe tikè w sou telefòn ou, menm san entènèt.",
     "event_hint": "Peye pi vit epi jwenn tikè w san entènèt nan aplikasyon an."
+  },
+  "venue_details": {
+    "title": "bon pou konnen",
+    "step_free": "Aksè san mach",
+    "accessible_washrooms": "Twalèt aksesib",
+    "parking": "Pakin",
+    "coat_check": "Vestyè",
+    "indoor": "Anndan",
+    "outdoor": "Deyò",
+    "mixed": "Anndan ak deyò",
+    "age_18": "18 an oswa plis sèlman",
+    "age_21": "21 an oswa plis sèlman",
+    "dress_code": "Kòd abiman: {{value}}"
   }
 }

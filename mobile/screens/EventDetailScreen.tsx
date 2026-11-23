@@ -62,6 +62,7 @@ import CountdownTimer from '../components/CountdownTimer';
 import VenueStaticMap from '../components/VenueStaticMap';
 import WhosGoing from '../components/WhosGoing';
 import SectionHeader from '../components/SectionHeader';
+import VenueDetailsLines from '../components/VenueDetailsLines';
 import { guestlistVisibilityFrom } from '../lib/guestlistVisibility';
 import ContactOrganizerModal from '../components/ContactOrganizerModal';
 import { getEventPreview, primeEventPreview } from '../lib/eventPreviewCache';
@@ -1074,6 +1075,9 @@ export default function EventDetailScreen({ route, navigation }: any) {
               <Text style={styles.description}>{String(event.description).trim()}</Text>
             </View>
           )}
+
+          {/* Good to know: access, setting, age, dress code (organizer-ticked). */}
+          <VenueDetailsLines event={event} style={styles.section} />
 
           {/* Trailer: plays muted on the page when it is a YouTube/Vimeo link
               (TrailerCard); any other link keeps the plain row below. */}
