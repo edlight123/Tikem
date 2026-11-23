@@ -5,7 +5,7 @@ import { ImageResponse } from 'next/og'
 import { getEventById } from '@/lib/data/events'
 import { getPosterTheme } from '@/lib/posterGradient'
 import { isDemoMode, DEMO_EVENTS } from '@/lib/demo'
-import { isAllowedPosterUrl } from '@/lib/posters/hosts'
+import { fetchOwnPoster } from '@/lib/posters/hosts'
 
 // nodejs, not edge: getEventById reaches Firestore through firebase-admin, which
 // cannot run on the edge runtime at all. (app/icon.tsx is edge only because it
@@ -35,18 +35,25 @@ const POSTER_X = 0
 const CANVAS = '#0a0a0a'
 const INK = '#f5f4f1'
 
-// Satori renders only png/apng/jpeg/gif/svg, and it THROWS on webp/avif rather
-// than skipping — which would fail the whole route and leave the share with no
-// image at all. A HEAD first is cheaper than that outcome. Anything unreadable
-// falls through to the gradient, exactly like the in-app poster fallback.
-// Only poster hosts are fetched (SSRF guard): see lib/posters/hosts.
+// The poster is fetched HERE, never by satori: only OUR posters (our storage
+// bucket or a flyer-library Unsplash photo; lib/posters/hosts isOwnPoster),
+// redirects refused, streamed with a 15MB cap and a timeout. sharp then
+// re-encodes it to a JPEG data URL with a pixel limit (a decompression bomb
+// is refused, not decoded), which also covers webp/avif that satori would
+// throw on. Anything unreadable falls through to the gradient, exactly like
+// the in-app poster fallback.
 async function usablePoster(url: string | undefined): Promise<string | null> {
-  if (!isAllowedPosterUrl(url)) return null
   try {
-    const res = await fetch(url, { method: 'HEAD', redirect: 'error' })
-    if (!res.ok) return null
-    const type = (res.headers.get('content-type') || '').toLowerCase()
-    return /^image\/(png|apng|jpeg|jpg|gif|svg\+xml)/.test(type) ? url : null
+    const bytes = await fetchOwnPoster(url, { timeoutMs: 6000 })
+    if (!bytes) return null
+    const { default: sharp } = await import('sharp')
+    const data = await sharp(bytes, { limitInputPixels: 40_000_000 })
+      .rotate()
+      .resize({ width: POSTER_W, withoutEnlargement: true })
+      .flatten({ background: CANVAS })
+      .jpeg({ quality: 85 })
+      .toBuffer()
+    return `data:image/jpeg;base64,${data.toString('base64')}`
   } catch {
     return null
   }

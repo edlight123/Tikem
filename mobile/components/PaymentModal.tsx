@@ -8,6 +8,7 @@ import {
   ScrollView,
   Platform,
 } from 'react-native';
+import { useAndroidBottomInset } from '../hooks/useAndroidBottomInset';
 import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { useNavigation } from '@react-navigation/native';
 import { X, CreditCard, Lock, Smartphone, AlertCircle, Check } from 'lucide-react-native';
@@ -146,6 +147,8 @@ function PaymentForm({
 }: Omit<PaymentModalProps, 'visible'>) {
   const { colors } = useTheme();
   const styles = getStyles(colors);
+  // Clear of Android's system bar (edge to edge).
+  const bottomInset = useAndroidBottomInset(0, 0);
   const navigation = useNavigation<any>();
   const { t } = useI18n();
   // Only use Stripe hooks if available
@@ -524,7 +527,7 @@ function PaymentForm({
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, bottomInset]}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerContent}>

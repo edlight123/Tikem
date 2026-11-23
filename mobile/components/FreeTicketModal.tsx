@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Animated,
 } from 'react-native';
+import { useAndroidBottomInset } from '../hooks/useAndroidBottomInset';
 import { useSwipeToClose } from '../hooks/useSwipeToClose';
 import { X, Plus, Minus } from 'lucide-react-native';
 import { useTheme } from '../contexts/ThemeContext';
@@ -127,6 +128,8 @@ export default function FreeTicketModal({
   const showAlert = useAppAlert();
   const { t } = useI18n();
   const styles = getStyles(colors);
+  // Clear of Android's system bar (edge to edge).
+  const bottomInset = useAndroidBottomInset(spacing.xxl);
   const [quantity, setQuantity] = useState(1);
   const [loading, setLoading] = useState(false);
   const swipe = useSwipeToClose(onClose, visible);
@@ -379,7 +382,7 @@ export default function FreeTicketModal({
           onPress={() => !loading && onClose()}
           accessibilityLabel={t('common.cancel')}
         />
-        <Animated.View style={[styles.modalContainer, swipe.sheetStyle]}>
+        <Animated.View style={[styles.modalContainer, bottomInset, swipe.sheetStyle]}>
           {/* Paints below the sheet's edge, so the event page's sticky bar can never
               show through a gap under the sheet (see ContactOrganizerModal). */}
           <View pointerEvents="none" style={styles.bottomFill} />

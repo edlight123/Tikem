@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -12,7 +11,6 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
-import * as Haptics from 'expo-haptics';
 import { X } from 'lucide-react-native';
 import { useTheme } from '../contexts/ThemeContext';
 import { useI18n } from '../contexts/I18nContext';
@@ -81,7 +79,6 @@ export default function EventFeedbackScreen() {
         method: 'POST',
         body: JSON.stringify({ rating, comment }),
       });
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       setSent(true);
     } catch {
       setFailed(true);
@@ -95,7 +92,7 @@ export default function EventFeedbackScreen() {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior="padding"
     >
       <ScrollView
         contentContainerStyle={[styles.content, { paddingBottom: 32 + insets.bottom }]}
@@ -155,7 +152,6 @@ export default function EventFeedbackScreen() {
                         <Touchable
                           style={[styles.face, active && styles.faceActive]}
                           onPress={() => {
-                            Haptics.selectionAsync().catch(() => {});
                             setRating(f.rating);
                           }}
                           accessibilityRole="button"

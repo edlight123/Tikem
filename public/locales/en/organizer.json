@@ -970,6 +970,8 @@
     "balance_changed": "Your balance changed, please try again.",
     "free_event_nothing": "Free event, nothing to pay out.",
     "back_to_all": "← Back to all earnings",
+    "withdrawn_amount": "{{amount}} withdrawn",
+    "not_withdrawn_yet": "Not withdrawn yet",
     "paid_to_stripe": "Paid to your Stripe account",
     "paid_to_stripe_hint": "Card sales go straight to your Stripe account, so they are not part of Net or Available here."
   },

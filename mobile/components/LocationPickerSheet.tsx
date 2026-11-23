@@ -8,7 +8,6 @@ import {
   StyleSheet,
   TextInput,
   KeyboardAvoidingView,
-  Platform,
   Animated,
 } from 'react-native';
 import { useSwipeToClose } from '../hooks/useSwipeToClose';
@@ -151,7 +150,7 @@ export default function LocationPickerSheet({
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <KeyboardAvoidingView
         style={styles.overlay}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior="padding"
       >
         <Pressable style={styles.backdrop} onPress={onClose} />
         <Animated.View style={[styles.sheet, swipe.sheetStyle, { paddingBottom: insets.bottom + 16 }]}>

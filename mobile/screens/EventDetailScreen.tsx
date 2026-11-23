@@ -7,7 +7,6 @@ import {
     StyleSheet, 
     TouchableOpacity, 
   ActivityIndicator,
-  Share,
   Dimensions,
   Linking,
     Animated,
@@ -41,7 +40,8 @@ import { useI18n } from '../contexts/I18nContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { parseVideoEmbed } from '../lib/videoEmbed';
 import { colors as T, radius, withAlpha, font } from '../theme/tokens';
-import { safeFormatForLanguage } from '../lib/dates';
+import { formatEventTime } from '../lib/dates';
+import { shareLink } from '../lib/share';
 import { isValidDate } from '../lib/dates';
 import WhitePillCTA from '../components/WhitePillCTA';
 import VerifiedBadge from '../components/VerifiedBadge';
@@ -456,7 +456,6 @@ export default function EventDetailScreen({ route, navigation }: any) {
           created_at: Timestamp.now()
         });
         setIsFavorite(true);
-        haptics.success();
       }
     } catch (error) {
       console.error('Error toggling favorite:', error);
@@ -470,10 +469,13 @@ export default function EventDetailScreen({ route, navigation }: any) {
     try {
       // Minimal on purpose (owner, 2026-11-17): the link's preview card is the
       // poster, so the message is just the name, the date and the link.
-      const when = event.start_datetime ? safeFormatForLanguage(event.start_datetime, 'EEE, MMM d', language) : '';
-      await Share.share({
-        message: `${[event.title, when].filter(Boolean).join(' · ')}\nhttps://www.tikem.co/events/${eventId}`,
+      const when = event.start_datetime ? formatEventTime(event.start_datetime, event, 'EEE, MMM d', language) : '';
+      // iOS: the link travels as `url` so iMessage shows the poster preview
+      // without the link printed twice (lib/share shareLink).
+      await shareLink({
         title: event.title,
+        text: [event.title, when].filter(Boolean).join(' · '),
+        url: `https://www.tikem.co/events/${eventId}`,
       });
     } catch (error) {
       console.error('Error sharing:', error);
@@ -666,6 +668,8 @@ export default function EventDetailScreen({ route, navigation }: any) {
   };
 
   const handleFreeTicketSuccess = () => {
+    // The one moment the phone vibrates: the RSVP is confirmed (lib/haptics).
+    haptics.success();
     // Refresh event data to show updated ticket count
     fetchEventDetails();
     // Close the claim modal FIRST. Two RN modals visible at once do not stack
@@ -723,6 +727,8 @@ export default function EventDetailScreen({ route, navigation }: any) {
   };
 
   const handlePaymentSuccess = async (_paymentMethod: string, _transactionId: string) => {
+    // A ticket in hand: the one moment the phone vibrates (lib/haptics).
+    haptics.success();
     // Was a bare OS alert, which is the least celebratory way to confirm a
     // purchase and offered nothing but "OK". Same sheet as the free path.
     fetchEventDetails();
@@ -933,9 +939,9 @@ export default function EventDetailScreen({ route, navigation }: any) {
               below but similar sizing"). Tapping the place opens Maps. */}
           <View style={styles.factList}>
             <Text style={styles.whenText}>
-              {startValid && safeFormatForLanguage(startValid, 'EEE, MMM d', language)}
-              {startValid && ` · ${safeFormatForLanguage(startValid, 'h:mm a', language)}`}
-              {endValid && ` – ${safeFormatForLanguage(endValid, 'h:mm a', language)}`}
+              {startValid && formatEventTime(startValid, event, 'EEE, MMM d', language)}
+              {startValid && ` · ${formatEventTime(startValid, event, 'h:mm a', language)}`}
+              {endValid && ` – ${formatEventTime(endValid, event, 'h:mm a', language)}`}
             </Text>
 
             {/* An online event has no venue to map: say so, and don't offer a
@@ -1107,7 +1113,7 @@ export default function EventDetailScreen({ route, navigation }: any) {
             event={{
               title: event.title,
               details: [
-                startValid ? safeFormatForLanguage(startValid, 'EEE, MMM d', language) : '',
+                startValid ? formatEventTime(startValid, event, 'EEE, MMM d', language) : '',
                 (event as any).is_online && !event.venue_name ? '' : event.venue_name || event.city || '',
               ]
                 .filter(Boolean)

@@ -2,7 +2,6 @@ import React from 'react';
 import {
   KeyboardAvoidingView,
   Modal,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -57,7 +56,7 @@ export default function FormSheet({
     <Modal visible={visible} transparent animationType="slide" onRequestClose={busy ? undefined : onClose}>
       <Pressable style={styles.backdrop} onPress={busy ? undefined : onClose} accessibilityLabel={closeLabel} />
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior="padding"
         style={styles.avoid}
         pointerEvents="box-none"
       >

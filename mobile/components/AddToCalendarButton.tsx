@@ -7,6 +7,7 @@ import {
   Linking,
     Modal,
 } from 'react-native';
+import { useAndroidBottomInset } from '../hooks/useAndroidBottomInset';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { safeFormatForLanguage } from '../lib/dates';
@@ -35,6 +36,8 @@ interface AddToCalendarButtonProps {
 export default function AddToCalendarButton({ event, style, renderTrigger }: AddToCalendarButtonProps) {
   const { colors } = useTheme();
   const styles = getStyles(colors);
+  // Clear of Android's system bar (edge to edge).
+  const bottomInset = useAndroidBottomInset(40);
   const { t, language } = useI18n();
   const [showModal, setShowModal] = React.useState(false);
 
@@ -135,7 +138,7 @@ export default function AddToCalendarButton({ event, style, renderTrigger }: Add
           activeOpacity={1}
           onPress={() => setShowModal(false)}
         >
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, bottomInset]}>
             {/* Paints below the sheet's edge, so the event page's sticky bar can never
                 show through a gap under the sheet (see ContactOrganizerModal). */}
             <View pointerEvents="none" style={styles.bottomFill} />

@@ -27,6 +27,7 @@ import SegmentedTabs from '../components/organizer/SegmentedTabs';
 import { format } from 'date-fns';
 import { safeFormatForLanguage } from '../lib/dates';
 import { useFocusEffect } from '@react-navigation/native';
+import { useTabTaps } from '../hooks/useTabTaps';
 import { consumeTicketsRefreshHint } from '../lib/ticketsRefreshHint';
 import { font, radius } from '../theme/tokens';
 import { Touchable } from '../components/ui/Touchable';
@@ -402,6 +403,9 @@ export default function TicketsScreen({ navigation }: any) {
     fetchTickets();
     fetchFavorites();
   };
+  // Tap the Tickets tab again to scroll up; tap twice to refresh.
+  const ticketsScroll = useRef<any>(null);
+  useTabTaps(ticketsScroll, onRefresh);
 
   if (!user) {
     return (
@@ -499,6 +503,7 @@ export default function TicketsScreen({ navigation }: any) {
       </View>
 
       <Animated.ScrollView
+        ref={ticketsScroll}
         style={styles.content}
         contentContainerStyle={{ paddingBottom: 24 + tabBarSpace }}
         showsVerticalScrollIndicator={false}

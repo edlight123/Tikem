@@ -9,7 +9,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { CalendarDays, ChartNoAxesColumnIncreasing, Inbox, ScanLine, UserRound } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
-import * as Haptics from 'expo-haptics';
 import { useAuth } from '../contexts/AuthContext';
 import { useAppMode } from '../contexts/AppModeContext';
 import { ThemeProvider, useTheme } from '../contexts/ThemeContext';
@@ -388,7 +387,6 @@ function CustomTabBar({ state, descriptors, navigation, tabs }: TabBarProps) {
             <TouchableOpacity
               key={tab.name}
               onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                 (navigation as any).navigate('CreateEvent');
               }}
               style={tabBarStyles.tab}
@@ -420,7 +418,6 @@ function CustomTabBar({ state, descriptors, navigation, tabs }: TabBarProps) {
             const now = Date.now();
             if (now - lastProfileTapRef.current < 300) {
               lastProfileTapRef.current = 0;
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               setMode(mode === 'organizer' ? 'attendee' : 'organizer');
               return;
             }
@@ -432,11 +429,9 @@ function CustomTabBar({ state, descriptors, navigation, tabs }: TabBarProps) {
             target: route.key,
             canPreventDefault: true,
           });
+          // Tab taps are silent: the phone vibrates only when a ticket lands.
           if (!isFocused && !event.defaultPrevented) {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
             navigation.navigate(tab.name);
-          } else if (isFocused) {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
           }
         };
 

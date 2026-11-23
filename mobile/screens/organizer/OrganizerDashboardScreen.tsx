@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useTabTaps } from '../../hooks/useTabTaps';
 import OrgMark from '../../components/OrgMark';
 import {
   View,
@@ -199,6 +200,9 @@ export default function OrganizerDashboardScreen() {
     setRefreshing(true);
     loadData();
   }, [loadData]);
+  // Tap the tab again to scroll up; tap twice to refresh.
+  const dashScroll = useRef<any>(null);
+  useTabTaps(dashScroll, onRefresh);
 
   // Upcoming rail: published, not cancelled, starting later than now, and not
   // already shown in the tonight block. Soonest first.
@@ -494,6 +498,7 @@ export default function OrganizerDashboardScreen() {
     <View style={styles.container}>
       <OrgSwitcherSheet visible={showSwitcher} onClose={() => setShowSwitcher(false)} />
       <ScrollView
+        ref={dashScroll}
         style={styles.scrollContent}
         contentContainerStyle={{ paddingBottom: tabBarSpace + 24 }}
         refreshControl={

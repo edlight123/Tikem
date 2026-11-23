@@ -8,7 +8,6 @@ import {
   TextInput,
   ActivityIndicator,
   KeyboardAvoidingView,
-  Platform,
   useWindowDimensions,
   Animated,
 } from 'react-native';
@@ -94,7 +93,7 @@ export default function ContactOrganizerModal({
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.backdrop}>
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior="padding"
           style={styles.sheetWrap}
         >
           <Animated.View

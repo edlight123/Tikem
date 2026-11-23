@@ -4,7 +4,6 @@ import {
   KeyboardAvoidingView,
   Linking,
   Modal,
-  Platform,
   ScrollView,
   Share,
   StyleSheet,
@@ -356,7 +355,7 @@ export function InviteFriendsSheet({
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.backdrop}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.sheetWrap}>
+        <KeyboardAvoidingView behavior="padding" style={styles.sheetWrap}>
           <Animated.View
             style={[
               styles.sheet,
