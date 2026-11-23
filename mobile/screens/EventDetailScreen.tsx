@@ -41,7 +41,7 @@ import { useI18n } from '../contexts/I18nContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { parseVideoEmbed } from '../lib/videoEmbed';
 import { colors as T, radius, withAlpha, font } from '../theme/tokens';
-import { safeFormatForLanguage } from '../lib/dates';
+import { formatEventTime } from '../lib/dates';
 import { isValidDate } from '../lib/dates';
 import WhitePillCTA from '../components/WhitePillCTA';
 import VerifiedBadge from '../components/VerifiedBadge';
@@ -470,7 +470,7 @@ export default function EventDetailScreen({ route, navigation }: any) {
     try {
       // Minimal on purpose (owner, 2026-11-17): the link's preview card is the
       // poster, so the message is just the name, the date and the link.
-      const when = event.start_datetime ? safeFormatForLanguage(event.start_datetime, 'EEE, MMM d', language) : '';
+      const when = event.start_datetime ? formatEventTime(event.start_datetime, event, 'EEE, MMM d', language) : '';
       await Share.share({
         message: `${[event.title, when].filter(Boolean).join(' · ')}\nhttps://www.tikem.co/events/${eventId}`,
         title: event.title,
@@ -933,9 +933,9 @@ export default function EventDetailScreen({ route, navigation }: any) {
               below but similar sizing"). Tapping the place opens Maps. */}
           <View style={styles.factList}>
             <Text style={styles.whenText}>
-              {startValid && safeFormatForLanguage(startValid, 'EEE, MMM d', language)}
-              {startValid && ` · ${safeFormatForLanguage(startValid, 'h:mm a', language)}`}
-              {endValid && ` – ${safeFormatForLanguage(endValid, 'h:mm a', language)}`}
+              {startValid && formatEventTime(startValid, event, 'EEE, MMM d', language)}
+              {startValid && ` · ${formatEventTime(startValid, event, 'h:mm a', language)}`}
+              {endValid && ` – ${formatEventTime(endValid, event, 'h:mm a', language)}`}
             </Text>
 
             {/* An online event has no venue to map: say so, and don't offer a
@@ -1107,7 +1107,7 @@ export default function EventDetailScreen({ route, navigation }: any) {
             event={{
               title: event.title,
               details: [
-                startValid ? safeFormatForLanguage(startValid, 'EEE, MMM d', language) : '',
+                startValid ? formatEventTime(startValid, event, 'EEE, MMM d', language) : '',
                 (event as any).is_online && !event.venue_name ? '' : event.venue_name || event.city || '',
               ]
                 .filter(Boolean)

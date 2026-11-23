@@ -2,9 +2,11 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { format, isValid } from 'date-fns'
+import { isValid } from 'date-fns'
 import { CalendarDays, MapPin, Ticket as TicketIcon } from 'lucide-react'
 import { getPosterTheme } from '@/lib/posterGradient'
+import { eventZone } from '@/lib/home/feed'
+import { formatInZone } from '@/lib/home/format'
 
 interface TicketCardProps {
   eventId: string
@@ -13,7 +15,23 @@ interface TicketCardProps {
   startDatetime?: string
   venueName?: string
   city?: string
+  country?: string
+  timezone?: string
   ticketCount: number
+}
+
+/**
+ * The ticket card's date on the EVENT's clock (its stored zone, else its
+ * city/country), so a reader abroad sees the time the event is actually on,
+ * and the server render matches the browser's.
+ */
+export function ticketCardDateLabel(
+  startDatetime: string | undefined,
+  place: { timezone?: string; city?: string; country?: string }
+): string {
+  const d = startDatetime ? new Date(startDatetime) : null
+  if (!d || !isValid(d)) return 'Date TBA'
+  return formatInZone(d, eventZone(place), 'EEE, MMM d · h:mm a')
 }
 
 export default function TicketCard({
@@ -23,13 +41,14 @@ export default function TicketCard({
   startDatetime,
   venueName,
   city,
+  country,
+  timezone,
   ticketCount,
 }: TicketCardProps) {
   const cleanTitle = title.replace(/^\[[^\]]*\]\s*/, '')
   const hasImage = Boolean(bannerImageUrl)
   const theme = getPosterTheme(eventId || title)
-  const d = startDatetime ? new Date(startDatetime) : null
-  const dateLabel = d && isValid(d) ? format(d, 'EEE, MMM d · h:mm a') : 'Date TBA'
+  const dateLabel = ticketCardDateLabel(startDatetime, { timezone, city, country })
   const locationLabel = [venueName, city].filter(Boolean).join(', ') || 'Location TBA'
 
   return (

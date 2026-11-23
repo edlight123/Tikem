@@ -61,6 +61,8 @@ export default function TicketsListClient({ upcomingEvents, pastEvents }: Ticket
                   startDatetime={event.start_datetime}
                   venueName={event.venue_name}
                   city={event.city}
+                  country={event.country}
+                  timezone={event.timezone}
                   ticketCount={item.ticketCount}
                 />
               )
@@ -96,6 +98,8 @@ export default function TicketsListClient({ upcomingEvents, pastEvents }: Ticket
                   startDatetime={event.start_datetime}
                   venueName={event.venue_name}
                   city={event.city}
+                  country={event.country}
+                  timezone={event.timezone}
                   ticketCount={item.ticketCount}
                 />
               )
