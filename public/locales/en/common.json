@@ -122,7 +122,9 @@
     "price_and_up": "{{price}} and up",
     "free_only": "Free only",
     "price_min": "Minimum price",
-    "price_max": "Maximum price"
+    "price_max": "Maximum price",
+    "access": "Access",
+    "step_free": "Step-free"
   },
   "time": {
     "today": "Today",
@@ -1516,6 +1518,54 @@
       "use": "Use this poster",
       "failed": "Could not make the poster. Try again.",
       "sampleTitle": "Your event"
+    },
+    "flyerRead": {
+      "button": "Fill from flyer",
+      "reading": "Reading the flyer…",
+      "filled": "Filled from the flyer: {{fields}}. Check them before you publish.",
+      "nothing": "No event details found on this flyer. Fill them in below.",
+      "check": "Double-check: {{fields}}",
+      "personal": "The flyer shows contact details ({{items}}). They were not added.",
+      "currency": "The flyer’s price is in {{currency}}, so the ticket price was left as is.",
+      "error": "Couldn’t read the flyer. Try again.",
+      "limited": "That’s enough flyer reading for today. Try again tomorrow.",
+      "fields": {
+        "title": "title",
+        "description": "description",
+        "date": "date",
+        "start_time": "start time",
+        "end_time": "end time",
+        "venue_name": "venue",
+        "address": "address",
+        "city": "city",
+        "price": "price",
+        "age_policy": "age",
+        "dress_code": "dress code"
+      }
+    },
+    "venueDetails": {
+      "title": "Venue details",
+      "hint": "Optional. Shown on the event page.",
+      "access": "Access",
+      "setting": "Setting",
+      "age": "Age",
+      "dressCode": "Dress code, e.g. All white",
+      "amenities": {
+        "parking": "Parking",
+        "step_free": "Step-free",
+        "accessible_washrooms": "Accessible washrooms",
+        "coat_check": "Coat check"
+      },
+      "settings": {
+        "indoor": "Indoors",
+        "outdoor": "Outdoors",
+        "mixed": "Both"
+      },
+      "ages": {
+        "all": "All ages",
+        "18": "18+",
+        "21": "21+"
+      }
     }
   },
   "promoter": {
@@ -2147,5 +2197,18 @@
     "get_the_app": "Get the app",
     "after_purchase": "Keep your ticket on your phone, even offline.",
     "event_hint": "Faster checkout and your tickets offline in the app."
+  },
+  "venue_details": {
+    "title": "good to know",
+    "step_free": "Step-free access",
+    "accessible_washrooms": "Accessible washrooms",
+    "parking": "Parking",
+    "coat_check": "Coat check",
+    "indoor": "Indoors",
+    "outdoor": "Outdoors",
+    "mixed": "Indoors and outdoors",
+    "age_18": "18+ only",
+    "age_21": "21+ only",
+    "dress_code": "Dress code: {{value}}"
   }
 }

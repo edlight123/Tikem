@@ -3,6 +3,7 @@
  */
 
 import { EventFilters, PriceFilter } from '../types/filters';
+import { isStepFree } from '../lib/venueDetails';
 import { isBudgetFriendlyTicketPrice, isOverBudgetTicketPrice } from '../lib/pricing';
 import { findMetro, isEventInMetro, normalizePlace } from '../data/metros';
 import { 
@@ -171,6 +172,11 @@ export function applyFilters(events: any[], filters: EventFilters): any[] {
     }
   }
 
+  // Step-free: an organizer-ticked venue detail, so events that say nothing are left out.
+  if (filters.stepFree) {
+    filtered = filtered.filter((event) => isStepFree(event));
+  }
+
   // Sort
   if (filters.sortBy === 'date') {
     filtered.sort((a, b) => 
@@ -197,6 +203,7 @@ export function countActiveFilters(filters: EventFilters): number {
   if (filters.categories.length > 0) count++;
   if (filters.price !== 'any') count++;
   if (filters.eventType !== 'all') count++;
+  if (filters.stepFree) count++;
   
   return count;
 }

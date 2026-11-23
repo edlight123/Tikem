@@ -188,6 +188,8 @@ export function countActiveFilters(filters: EventFilters): number {
   
   // Event type
   if (filters.eventType !== DEFAULT_FILTERS.eventType) count++
+
+  if (filters.stepFree) count++
   
   return count
 }
@@ -235,6 +237,8 @@ export function serializeFilters(filters: EventFilters): URLSearchParams {
   if (filters.eventType !== 'all') {
     params.set('eventType', filters.eventType)
   }
+
+  if (filters.stepFree) params.set('stepFree', '1')
   
   // Sort
   if (filters.sortBy !== 'relevance') {
@@ -263,6 +267,7 @@ export function parseFiltersFromURL(searchParams?: SearchParamsLike | null): Eve
     categories: params.getAll('category'),
     price: normalizePriceFilter(params.get('price')),
     eventType: params.get('eventType') || DEFAULT_FILTERS.eventType,
+    ...(params.get('stepFree') === '1' ? { stepFree: true } : {}),
     sortBy: params.get('sort') || DEFAULT_FILTERS.sortBy,
   } as EventFilters
 }
@@ -279,6 +284,7 @@ export function filtersEqual(a: EventFilters, b: EventFilters): boolean {
     a.categories.join(',') === b.categories.join(',') &&
     a.price === b.price &&
     a.eventType === b.eventType &&
+    !!a.stepFree === !!b.stepFree &&
     a.sortBy === b.sortBy
   )
 }

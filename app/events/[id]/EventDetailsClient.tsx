@@ -34,6 +34,8 @@ import { freeClaimCap, resolveEventPricing } from '@/lib/ticketPricing'
 import { priceOrder } from '@/lib/checkout/buyer-pricing'
 import { dateLocaleFor, intlLocaleFor } from '@/lib/dateLocale'
 import { venueAddressLines } from '@/lib/events/venueLines'
+import VenueDetailsList from '@/components/events/VenueDetailsList'
+import { hasVenueDetails, venueDetailsOf } from '@/lib/events/venue-details'
 
 interface EventDetailsClientProps {
   event: any
@@ -435,6 +437,7 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
         address={event.address || ''}
         commune={event.commune || ''}
         city={event.city}
+        goodToKnow={hasVenueDetails(venueDetailsOf(event)) ? <VenueDetailsList event={event} /> : null}
         venueMap={
           <VenueMap
             event={event}
@@ -546,6 +549,16 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                 </a>
               </div>
             </div>
+            )}
+
+            {/* Good to know - Desktop: the venue details the organizer ticked. */}
+            {hasVenueDetails(venueDetailsOf(event)) && (
+              <div className="hidden md:block border-b border-line py-8">
+                <h2 className="mb-3 font-display lowercase italic !text-section !leading-snug text-fg">
+                  {t('venue_details.title')}
+                </h2>
+                <VenueDetailsList event={event} />
+              </div>
             )}
 
             {/* Date & Time Details - Desktop */}

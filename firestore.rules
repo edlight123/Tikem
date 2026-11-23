@@ -15,6 +15,22 @@ service cloud.firestore {
       return raw is string ? raw.upper() : '';
     }
 
+    // Venue details (lib/events/venue-details.ts): optional, and when present
+    // exactly the shapes the event page knows how to show. .get() so a doc
+    // without them (every event before this) passes untouched.
+    function validVenueDetails(d) {
+      let amenities = d.get('amenities', []);
+      let setting = d.get('venue_setting', null);
+      let age = d.get('age_policy', null);
+      let dress = d.get('dress_code', null);
+      return amenities is list
+        && amenities.size() <= 4
+        && amenities.hasOnly(['parking', 'step_free', 'accessible_washrooms', 'coat_check'])
+        && (setting == null || setting in ['indoor', 'outdoor', 'mixed'])
+        && (age == null || age in ['18+', '21+'])
+        && (dress == null || (dress is string && dress.size() <= 60));
+    }
+
     function isCurrencyAllowedForCountry(countryRaw, currencyRaw) {
       let c = normalizedCountry(countryRaw);
       let cur = normalizedCurrency(currencyRaw);
@@ -296,6 +312,7 @@ service cloud.firestore {
         // Approval lists are for FREE events only (docs/specs/approval-lists-and-plus-ones.md).
         && !(request.resource.data.get('requires_approval', false) == true
              && request.resource.data.get('has_paid_tiers', false) == true)
+        && validVenueDetails(request.resource.data)
         && isCurrencyAllowedForCountry(request.resource.data.country, request.resource.data.currency);
 
       allow update: if isSignedIn() && (
@@ -310,6 +327,7 @@ service cloud.firestore {
           // Approval lists are for FREE events only (see create above).
           !(request.resource.data.get('requires_approval', false) == true &&
             request.resource.data.get('has_paid_tiers', false) == true) &&
+          validVenueDetails(request.resource.data) &&
           // H3: moderation fields are client-immutable so a rejected/reported
           // organizer can't re-surface their event. Admin SDK still writes them
           // (it bypasses rules). .get() defaults keep legacy docs that predate

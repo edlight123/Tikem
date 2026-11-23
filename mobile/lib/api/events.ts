@@ -1,3 +1,4 @@
+import { venueDetailsFields, venueDetailsOf } from '../venueDetails';
 import { auth, db, storage } from '../../config/firebase';
 import {
   collection,
@@ -183,6 +184,11 @@ export interface CreateEventData {
   requires_approval?: boolean;
   /** Named plus-ones a guest may bring, 0..3 (capped again by the free limit). */
   plus_ones_max?: number;
+  /** Venue details (lib/venueDetails): access, setting, age policy, dress code. */
+  amenities?: string[];
+  venue_setting?: string | null;
+  age_policy?: string | null;
+  dress_code?: string | null;
 }
 
 /** Hard cap on how many occurrences a single recurring series may generate. */
@@ -435,6 +441,14 @@ function webParityFields(eventData: CreateEventData) {
     enable_waitlist: eventData.ticket_tiers.some((t) => !!t.waitlist),
     ...(eventData.fee_incidence ? { fee_incidence: eventData.fee_incidence } : {}),
     ...(eventData.guestlist ? { guestlist: eventData.guestlist } : {}),
+    // Venue details, cleaned to the shapes firestore.rules accepts; only when
+    // the caller set them, so a caller that never did leaves them alone.
+    ...(eventData.amenities !== undefined ||
+    eventData.venue_setting !== undefined ||
+    eventData.age_policy !== undefined ||
+    eventData.dress_code !== undefined
+      ? venueDetailsFields(venueDetailsOf(eventData), !!eventData.is_online)
+      : {}),
   };
 }
 
@@ -942,6 +956,15 @@ export async function updateEvent(
  * record carries a public https URL by the time the entry is saved.
  */
 export async function uploadLineupPhoto(ownerUid: string, localUri: string): Promise<string> {
+  return uploadEventImage(ownerUid, localUri);
+}
+
+/**
+ * Upload a flyer picked on the device ahead of saving, so "Fill from flyer"
+ * can hand the website a URL to read. The draft then keeps the https URL and
+ * the save does not upload it again.
+ */
+export async function uploadEventFlyer(ownerUid: string, localUri: string): Promise<string> {
   return uploadEventImage(ownerUid, localUri);
 }
 

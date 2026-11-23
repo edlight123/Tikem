@@ -198,6 +198,7 @@ export default async function DiscoverPage({
                           filters.categories.length > 0 || 
                           filters.price !== 'any' || 
                           filters.eventType !== 'all' ||
+                          !!filters.stepFree ||
                           (!!searchQuery && searchQuery.trim() !== '')
 
   // Serialize all event data before passing to client component

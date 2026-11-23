@@ -107,8 +107,19 @@ import { isBelowMinPaidPrice, MIN_PAID_PRICE_ERROR_CODE, minPaidPriceFor } from 
 // The sanctioned editorial section heading (font-display, lowercase, italic).
 // Hand-rolled bold sans headings read as off-brand — see EditorialRails.
 import { SectionHeader } from '@/components/ui/EditorialRails'
+import {
+  AGE_POLICIES,
+  DRESS_CODE_MAX,
+  VENUE_AMENITIES,
+  VENUE_SETTINGS,
+  venueDetailsFields,
+  venueDetailsOf,
+  type VenueDetails,
+} from '@/lib/events/venue-details'
+import type { FlyerRead } from '@/lib/flyer/parse'
 import { useOrgRole } from '@/components/organizer/OrgRoleProvider'
 import {
+  Accessibility,
   CalendarDays,
   ChevronDown,
   ChevronUp,
@@ -125,6 +136,7 @@ import {
   Pencil,
   Plus,
   Repeat,
+  ScanText,
   Settings,
   SlidersHorizontal,
   Tag,
@@ -618,6 +630,10 @@ export default function EventComposer({
   const [description, setDescription] = useState(event?.description || '')
   const [address, setAddress] = useState(event?.address || '')
   const [venueName, setVenueName] = useState(event?.venue_name || '')
+  // Venue details (parking, step-free…, age, dress code): all optional, shown
+  // on the event page under "good to know" (lib/events/venue-details).
+  const [venueDetails, setVenueDetails] = useState<VenueDetails>(() => venueDetailsOf(event))
+  const patchVenueDetails = (patch: Partial<VenueDetails>) => setVenueDetails((d) => ({ ...d, ...patch }))
   // Saved event defaults, for a NEW event in its starting country only.
   // Computed once: the defaults seed the first render and never re-apply.
   const [seed] = useState<ComposerSeed>(() =>
@@ -1013,6 +1029,7 @@ export default function EventComposer({
     if (d.requires_approval) setRequiresApproval(true)
     if (Number(d.plus_ones_max) > 0) setPlusOnesMax(Math.min(Math.floor(Number(d.plus_ones_max)), PLUS_ONES_SETTING_MAX))
     if (d.national_day) setNationalDayOn(true)
+    setVenueDetails(venueDetailsOf(d))
     if (d.fee_incidence) setPassFeesToBuyer(d.fee_incidence === 'buyer')
     // `enable_waitlist` is now per tier; the event-level value in an older
     // draft is picked up as each tier's fallback in the tier mapping above.
@@ -1041,6 +1058,98 @@ export default function EventComposer({
     // Restore is a one-time mount concern by design.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // ── Fill from flyer ──────────────────────────────────────────────────
+  // Reads the uploaded flyer on the server (POST /api/flyers/read: Tesseract
+  // + rules for English, French and Kreyòl, no AI) and fills what is still
+  // empty. Nothing is saved or published from a read; the note under the
+  // flyer says what was filled and what to double-check.
+  const [flyerReading, setFlyerReading] = useState(false)
+  const [flyerNote, setFlyerNote] = useState<
+    { filled: string[]; check: string[]; personal: string[]; currency?: string } | { error: string } | null
+  >(null)
+  const readFlyer = async () => {
+    if (!bannerUrl || flyerReading) return
+    setFlyerReading(true)
+    setFlyerNote(null)
+    try {
+      const res = await fetch('/api/flyers/read', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: bannerUrl }),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok || !body?.read) {
+        setFlyerNote({ error: res.status === 429 ? 'limited' : 'error' })
+        return
+      }
+      const r = body.read as FlyerRead
+      const filled: string[] = []
+      const fill = (field: string, empty: boolean, apply: () => void) => {
+        if (!empty) return
+        apply()
+        filled.push(field)
+      }
+      if (r.title) fill('title', !title.trim(), () => setTitle(r.title!))
+      if (r.description)
+        fill('description', !description.trim() && !summary.trim(), () => {
+          setDescription(r.description!)
+          setShowDescription(true)
+        })
+      if (r.date)
+        fill('date', !startDate, () => {
+          setStartDate(r.date!)
+          if (!endDate) setEndDate(r.date!)
+        })
+      if (r.start_time) fill('start_time', !startTime, () => setStartTime(r.start_time!))
+      if (r.end_time)
+        fill('end_time', !endTime, () => {
+          setEndTime(r.end_time!)
+          // "9PM - 3AM": the end is the next morning.
+          const day = r.date || startDate
+          if (day && r.start_time && r.end_time! <= r.start_time) {
+            const d = new Date(`${day}T12:00:00`)
+            d.setDate(d.getDate() + 1)
+            setEndDate(`${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`)
+          } else if (day) setEndDate(day)
+        })
+      if (r.venue_name || r.address || r.city) {
+        if (isOnline && !venueName.trim() && !address.trim()) setIsOnline(false)
+        if (r.venue_name) fill('venue_name', !venueName.trim(), () => setVenueName(r.venue_name!))
+        if (r.address) fill('address', !address.trim(), () => setAddress(r.address!))
+        if (r.city) fill('city', !city.trim() || isDefaultCity(city), () => setCity(r.city!))
+      }
+      // The price goes on the one ticket type, while it is still the untouched
+      // default, and only in a currency this event can sell in.
+      let currencyNote: string | undefined
+      const single = tiers.length === 1 ? tiers[0] : null
+      const untouched = !!single && !single.docId && (single.name === 'General Admission' || !single.name.trim())
+      if (r.price_type === 'free' && untouched && sellMode === 'tickets') {
+        fill('price', true, () => updateTier(single!.id, { free: true, price: '0' }))
+      } else if (r.price_type === 'paid' && r.price && untouched && sellMode === 'tickets') {
+        if (r.currency && (allowedCurrencies as string[]).includes(r.currency)) {
+          fill('price', true, () => {
+            setCurrency(r.currency as EventCurrency)
+            updateTier(single!.id, { free: false, price: String(r.price) })
+          })
+        } else if (r.currency) currencyNote = r.currency
+      }
+      if (r.age_policy) fill('age_policy', !venueDetails.age_policy, () => patchVenueDetails({ age_policy: r.age_policy }))
+      if (r.dress_code) fill('dress_code', !venueDetails.dress_code, () => patchVenueDetails({ dress_code: r.dress_code }))
+      setFlyerNote({
+        filled,
+        check: r.uncertain.filter((f) => filled.includes(f)),
+        personal: r.personal_details,
+        currency: currencyNote,
+      })
+    } catch {
+      setFlyerNote({ error: 'error' })
+    } finally {
+      setFlyerReading(false)
+    }
+  }
+  const flyerFieldList = (fields: string[]) =>
+    fields.map((f) => t(`composer.flyerRead.fields.${f}`, { defaultValue: f })).join(', ')
 
   // ── Region payout-profile nudge (tester feedback, 2026-08-12/29) ──
   // An event's country decides WHICH payout profile pays out: Haiti profile
@@ -1370,6 +1479,7 @@ export default function EventComposer({
       requires_approval:
         requiresApproval && !(!isRsvp && cleanTiers.some((t) => Number(t.price || 0) > 0)),
       plus_ones_max: plusOnesMax,
+      ...venueDetailsFields(venueDetails, isOnline),
       // The national day it is tagged for, or null when the toggle is off or
       // the date moved out of every window.
       national_day: nationalDayOn && eligibleNationalDay ? eligibleNationalDay.eventTag : null,
@@ -2587,6 +2697,80 @@ export default function EventComposer({
                 </>
               )}
 
+              {/* Venue details: optional facts people ask before they come.
+                  Chips, not switches, so seven answers fit in one quiet card.
+                  Access and setting describe a place, so an online event
+                  only keeps the age and the dress code. */}
+              <div className="space-y-3 rounded-xl bg-surface-low px-4 py-3.5">
+                <div className="flex items-center gap-2 text-meta font-medium text-fg-subtle">
+                  <Accessibility className="h-4 w-4" />{' '}
+                  {t('composer.venueDetails.title', { defaultValue: 'Venue details' })}
+                  <span className="font-normal">· {t('composer.venueDetails.hint')}</span>
+                </div>
+                {!isOnline && (
+                  <>
+                    <div className="flex flex-wrap gap-2" role="group" aria-label={t('composer.venueDetails.access')}>
+                      {VENUE_AMENITIES.map((k) => {
+                        const on = venueDetails.amenities.includes(k)
+                        return (
+                          <button
+                            key={k}
+                            type="button"
+                            aria-pressed={on}
+                            onClick={() =>
+                              patchVenueDetails({
+                                amenities: on ? venueDetails.amenities.filter((a) => a !== k) : [...venueDetails.amenities, k],
+                              })
+                            }
+                            className={chipCls(on)}
+                          >
+                            {t(`composer.venueDetails.amenities.${k}`)}
+                          </button>
+                        )
+                      })}
+                    </div>
+                    <div className="flex flex-wrap gap-2" role="group" aria-label={t('composer.venueDetails.setting')}>
+                      {VENUE_SETTINGS.map((k) => {
+                        const on = venueDetails.venue_setting === k
+                        return (
+                          <button
+                            key={k}
+                            type="button"
+                            aria-pressed={on}
+                            onClick={() => patchVenueDetails({ venue_setting: on ? null : k })}
+                            className={chipCls(on)}
+                          >
+                            {t(`composer.venueDetails.settings.${k}`)}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </>
+                )}
+                <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={t('composer.venueDetails.age')}>
+                  {([null, ...AGE_POLICIES] as const).map((k) => (
+                    <button
+                      key={k ?? 'all'}
+                      type="button"
+                      role="radio"
+                      aria-checked={venueDetails.age_policy === k}
+                      onClick={() => patchVenueDetails({ age_policy: k })}
+                      className={chipCls(venueDetails.age_policy === k)}
+                    >
+                      {t(`composer.venueDetails.ages.${k ? k.slice(0, 2) : 'all'}`)}
+                    </button>
+                  ))}
+                </div>
+                <input
+                  value={venueDetails.dress_code || ''}
+                  onChange={(e) => patchVenueDetails({ dress_code: e.target.value.slice(0, DRESS_CODE_MAX) || null })}
+                  maxLength={DRESS_CODE_MAX}
+                  placeholder={t('composer.venueDetails.dressCode')}
+                  aria-label={t('composer.venueDetails.dressCode')}
+                  className="w-full rounded bg-surface px-3 py-2.5 text-body text-fg placeholder:text-fg-subtle focus:bg-surface-raised focus:outline-none focus:ring-2 focus:ring-brand-400/50"
+                />
+              </div>
+
               {/* Category as a Posh-style row of chips */}
               <div className="rounded-xl bg-surface-low px-4 py-3.5">
                 <div className="mb-2.5 flex items-center gap-2 text-meta font-medium text-fg-subtle">
@@ -3447,6 +3631,48 @@ export default function EventComposer({
                 onClose={() => setPosterOpen(false)}
               />
             )}
+            {/* Fill from flyer: read the uploaded flyer into the empty fields. */}
+            {bannerUrl && !bannerUrl.includes('/posters/') && (
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={readFlyer}
+                  disabled={flyerReading}
+                  className="inline-flex h-10 w-full items-center justify-center gap-2 rounded bg-surface-raised px-4 text-meta font-semibold text-fg transition-colors hover:bg-surface-high disabled:opacity-60"
+                >
+                  <ScanText className="h-4 w-4" strokeWidth={1.75} aria-hidden="true" />
+                  {flyerReading
+                    ? t('composer.flyerRead.reading', { defaultValue: 'Reading the flyer…' })
+                    : t('composer.flyerRead.button', { defaultValue: 'Fill from flyer' })}
+                </button>
+                {flyerNote && (
+                  <div className="space-y-1 text-xs leading-relaxed text-fg-muted" role="status" aria-live="polite">
+                    {'error' in flyerNote ? (
+                      <p className="text-danger-soft">{t(`composer.flyerRead.${flyerNote.error}`)}</p>
+                    ) : (
+                      <>
+                        <p>
+                          {flyerNote.filled.length
+                            ? t('composer.flyerRead.filled', { fields: flyerFieldList(flyerNote.filled) })
+                            : t('composer.flyerRead.nothing')}
+                        </p>
+                        {flyerNote.check.length > 0 && (
+                          <p className="flex items-center gap-1.5 text-fg">
+                            <span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 rounded-full bg-warning" />
+                            {t('composer.flyerRead.check', { fields: flyerFieldList(flyerNote.check) })}
+                          </p>
+                        )}
+                        {flyerNote.currency && <p>{t('composer.flyerRead.currency', { currency: flyerNote.currency })}</p>}
+                        {flyerNote.personal.length > 0 && (
+                          <p>{t('composer.flyerRead.personal', { items: flyerNote.personal.join(', ') })}</p>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
             {guest && (
               <p className="-mt-1 text-center text-eyebrow text-fg-subtle">
                 {/* Short enough to hold one line at 11px in the 360px poster

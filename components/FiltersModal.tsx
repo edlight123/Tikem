@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
-import { ChevronDown, X } from 'lucide-react'
+import { Accessibility, ChevronDown, X } from 'lucide-react'
 import { EventFilters, DateFilter, EventTypeFilter } from '@/lib/filters/types'
 import { CATEGORIES, getCitiesForCountry, getPriceSliderConfig, formatPriceForCountry, getSubdivisions, getLocationTypeLabel, hasSubdivisions } from '@/lib/filters/config'
 import { buildPriceRangeFilter, countActiveFilters, filtersEqual, parsePriceRange } from '@/lib/filters/utils'
@@ -293,6 +293,22 @@ export function FiltersModal({
                   </button>
                 ))}
               </div>
+            </div>
+
+            {/* Access: events whose venue the organizer marked step-free. */}
+            <div className="space-y-3">
+              <span className="eyebrow block text-eyebrow text-fg-muted">{t('filters.access')}</span>
+              <button
+                type="button"
+                onClick={() => onDraftChange({ ...draftFilters, stepFree: !draftFilters.stepFree })}
+                aria-pressed={!!draftFilters.stepFree}
+                className={`inline-flex min-h-9 items-center gap-2 rounded px-4 text-meta leading-[18px] font-medium transition-colors ${
+                  draftFilters.stepFree ? 'bg-inverse text-on-inverse' : 'bg-surface text-fg-muted hover:bg-surface-high hover:text-fg'
+                }`}
+              >
+                <Accessibility className="h-4 w-4" strokeWidth={1.75} aria-hidden="true" />
+                {t('filters.step_free')}
+              </button>
             </div>
 
             {/* Price Filter — dual-thumb range, currency-aware */}

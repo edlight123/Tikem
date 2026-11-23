@@ -254,6 +254,7 @@ export function FiltersProvider({ children }: { children: ReactNode }) {
     if (appliedFilters.categories.length > 0) count++;
     if (appliedFilters.price !== DEFAULT_FILTERS.price) count++;
     if (appliedFilters.eventType !== DEFAULT_FILTERS.eventType) count++;
+    if (appliedFilters.stepFree) count++;
     
     return count;
   };
