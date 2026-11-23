@@ -7,6 +7,8 @@ import { useTranslation } from 'react-i18next'
 import { ArrowLeft, Loader2, MessageCircle, Send } from 'lucide-react'
 import { EmptyState } from '@/components/ui/kit'
 import type { AttendeeThreadSummary, ConversationView, OrganizerMessageReply } from '@/lib/organizer-messages'
+import type { ReactionEmoji } from '@/lib/messages/threadExtras'
+import { QuoteBlock, ReactPicker, ReactionRow, postReaction, toggleLocal } from '@/components/messages/MessageExtras'
 import { FIELD, GHOST_BTN, Panel, PanelRows, ProfileSection, WHITE_BTN } from './ui'
 
 /** Mirrors MAX_FOLLOWUP_LENGTH in lib/organizer-messages.ts; the server rejects more. */
@@ -131,6 +133,10 @@ export function MessagesCard() {
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
         const code = data?.code
+        if (code === 'blocked' || code === 'you_blocked') {
+          setThread((th) => (th ? { ...th, blocked: true, blocked_by_viewer: code === 'you_blocked' } : th))
+          return
+        }
         if (code === 'awaiting_reply') setThread((th) => (th ? { ...th, awaiting_organizer: true } : th))
         if (code === 'thread_reply_limit') setThread((th) => (th ? { ...th, closed: true } : th))
         throw new Error(
@@ -168,10 +174,38 @@ export function MessagesCard() {
     }
   }
 
+  /** Optimistic toggle; the server's counts replace it, a failure puts it back. */
+  const react = async (messageId: string, emoji: ReactionEmoji) => {
+    if (!thread || thread.blocked || messageId.startsWith('local-')) return
+    const threadId = thread.id
+    const before = thread.messages.find((m) => m.id === messageId)?.reactions
+    const setReactions = (fn: (m: OrganizerMessageReply) => OrganizerMessageReply['reactions']) =>
+      setThread((th) =>
+        th && th.id === threadId
+          ? { ...th, messages: th.messages.map((m) => (m.id === messageId ? { ...m, reactions: fn(m) } : m)) }
+          : th
+      )
+    setReactions((m) => toggleLocal(m.reactions, emoji))
+    try {
+      const next = await postReaction(threadId, messageId, emoji)
+      setReactions(() => next)
+    } catch (e: any) {
+      setReactions(() => before)
+      if (e?.code === 'blocked' || e?.code === 'you_blocked') {
+        setThread((th) => (th ? { ...th, blocked: true, blocked_by_viewer: e.code === 'you_blocked' } : th))
+      } else {
+        setError(t('dashboard.messages.reaction_failed'))
+      }
+    }
+  }
+
   // ── One conversation ──────────────────────────────────────────────────────
   if (openId) {
     const organizerLabel = thread?.organizer_name || t('dashboard.messages.organizer')
-    const blocked = thread ? thread.closed || thread.awaiting_organizer : true
+    const blocked = thread ? thread.closed || thread.awaiting_organizer || !!thread.blocked : true
+    const canReact = !!thread && !thread.blocked
+    const quoteAuthor = (role: 'attendee' | 'organizer') =>
+      role === 'attendee' ? t('dashboard.messages.you') : organizerLabel
     return (
       <ProfileSection
         title={t('dashboard.messages.title')}
@@ -216,29 +250,52 @@ export function MessagesCard() {
             <ol className="space-y-3 px-4 py-5 sm:px-5" aria-label={t('dashboard.messages.conversation')}>
               {thread.messages.map((m, i) => {
                 const mine = m.author_role === 'attendee'
+                const local = m.id.startsWith('local-')
                 return (
                   <li
                     key={m.id}
                     ref={i === thread.messages.length - 1 ? endRef : undefined}
-                    className={`flex ${mine ? 'justify-end' : 'justify-start'}`}
+                    className={`flex flex-col ${mine ? 'items-end' : 'items-start'}`}
                   >
-                    <div
-                      className={`max-w-[85%] rounded px-4 py-3 ${
-                        mine ? 'bg-surface-high text-fg' : 'bg-surface text-fg-soft'
-                      }`}
-                    >
-                      <p className="whitespace-pre-line text-body leading-relaxed">{m.body}</p>
-                      <p className="mt-1.5 text-eyebrow text-fg-subtle">
-                        {mine ? t('dashboard.messages.you') : m.author_name || organizerLabel} · {formatWhen(m.created_at)}
-                      </p>
+                    <div className={`group flex max-w-[85%] items-start gap-1 ${mine ? 'flex-row-reverse' : ''}`}>
+                      <div
+                        className={`min-w-0 rounded px-4 py-3 ${
+                          mine ? 'bg-surface-high text-fg' : 'bg-surface text-fg-soft'
+                        }`}
+                      >
+                        {m.reply_to ? <QuoteBlock quote={m.reply_to} author={quoteAuthor(m.reply_to.author_role)} /> : null}
+                        <p className="whitespace-pre-line text-body leading-relaxed">{m.body}</p>
+                        <p className="mt-1.5 text-eyebrow text-fg-subtle">
+                          {mine ? t('dashboard.messages.you') : m.author_name || organizerLabel} · {formatWhen(m.created_at)}
+                        </p>
+                      </div>
+                      {canReact && !local ? (
+                        <ReactPicker
+                          mine={m.reactions?.find((r) => r.mine)?.emoji ?? null}
+                          onPick={(emoji) => react(m.id, emoji)}
+                          label={t('dashboard.messages.react')}
+                          labelFor={(emoji) => t('dashboard.messages.react_with', { emoji })}
+                          alignEnd={mine}
+                        />
+                      ) : null}
                     </div>
+                    <ReactionRow
+                      reactions={m.reactions}
+                      alignEnd={mine}
+                      onToggle={canReact && !local ? (emoji) => react(m.id, emoji) : undefined}
+                      labelFor={(r) => t('dashboard.messages.reaction_count', { emoji: r.emoji, count: r.count })}
+                    />
                   </li>
                 )
               })}
             </ol>
 
             <div className="bg-surface-low px-4 py-4 sm:px-5">
-              {thread.closed ? (
+              {thread.blocked ? (
+                <p className="text-meta text-fg-subtle">
+                  {thread.blocked_by_viewer ? t('dashboard.messages.you_blocked') : t('dashboard.messages.blocked')}
+                </p>
+              ) : thread.closed ? (
                 <p className="text-meta text-fg-subtle">{t('dashboard.messages.closed')}</p>
               ) : thread.awaiting_organizer ? (
                 <p className="text-meta text-fg-subtle">{t('dashboard.messages.awaiting')}</p>

@@ -1569,7 +1569,13 @@
     "send": "Voye repons lan",
     "sending": "N ap voye…",
     "error_generic": "Nou pa t ka voye repons ou. Eseye ankò.",
-    "error_limit": "Konvèsasyon sa a rive nan limit mesaj li."
+    "error_limit": "Konvèsasyon sa a rive nan limit mesaj li.",
+    "react": "Ajoute yon reyaksyon",
+    "react_with": "Reyaji ak {{emoji}}",
+    "reaction_count": "{{emoji}}, {{count}}",
+    "reaction_failed": "Nou pa t ka anrejistre reyaksyon ou.",
+    "blocked": "Ou pa ka ekri moun sa a.",
+    "you_blocked": "Ou bloke moun sa a. Debloke l pou w ka ekri l."
   },
   "qr_scanner": {
     "camera_not_available": "Kamera a pa disponib",

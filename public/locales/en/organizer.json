@@ -1569,7 +1569,13 @@
     "send": "Send reply",
     "sending": "Sending…",
     "error_generic": "Could not send your reply. Try again.",
-    "error_limit": "This conversation has reached its message limit."
+    "error_limit": "This conversation has reached its message limit.",
+    "react": "Add a reaction",
+    "react_with": "React with {{emoji}}",
+    "reaction_count": "{{emoji}}, {{count}}",
+    "reaction_failed": "Couldn't save your reaction.",
+    "blocked": "You can't message this person.",
+    "you_blocked": "You blocked this person. Unblock them to send a message."
   },
   "qr_scanner": {
     "camera_not_available": "Camera Not Available",

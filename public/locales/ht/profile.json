@@ -210,7 +210,13 @@
       "retry": "Eseye ankò",
       "empty_title": "Poko gen mesaj",
       "empty_body": "Kesyon ou poze yon òganizatè sou paj yon evènman, ak repons li, ap parèt isit la.",
-      "unread": "Nouvo repons"
+      "unread": "Nouvo repons",
+      "react": "Ajoute yon reyaksyon",
+      "react_with": "Reyaji ak {{emoji}}",
+      "reaction_count": "{{emoji}}, {{count}}",
+      "reaction_failed": "Nou pa t ka anrejistre reyaksyon ou.",
+      "blocked": "Ou pa ka ekri moun sa a.",
+      "you_blocked": "Ou bloke moun sa a. Debloke l pou w ka ekri l."
     }
   },
   "privacy": {

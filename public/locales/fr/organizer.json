@@ -1569,7 +1569,13 @@
     "send": "Envoyer la réponse",
     "sending": "Envoi…",
     "error_generic": "Impossible d'envoyer votre réponse. Réessayez.",
-    "error_limit": "Cette conversation a atteint sa limite de messages."
+    "error_limit": "Cette conversation a atteint sa limite de messages.",
+    "react": "Ajouter une réaction",
+    "react_with": "Réagir avec {{emoji}}",
+    "reaction_count": "{{emoji}}, {{count}}",
+    "reaction_failed": "Impossible d'enregistrer votre réaction.",
+    "blocked": "Vous ne pouvez pas écrire à cette personne.",
+    "you_blocked": "Vous avez bloqué cette personne. Débloquez-la pour lui écrire."
   },
   "qr_scanner": {
     "camera_not_available": "Caméra indisponible",

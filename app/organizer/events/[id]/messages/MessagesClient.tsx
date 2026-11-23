@@ -6,6 +6,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { MessageSquare, Send } from 'lucide-react'
 import { OrgEmptyState, SectionHeader } from '@/components/organizer/ui'
 import type { OrganizerMessageReply, OrganizerMessageThread } from '@/lib/organizer-messages'
+import type { ReactionEmoji, ReactionSummary, ReplyTo } from '@/lib/messages/threadExtras'
+import { QuoteBlock, ReactPicker, ReactionRow, postReaction, toggleLocal } from '@/components/messages/MessageExtras'
 
 interface MessagesClientProps {
   eventTitle: string
@@ -54,6 +56,8 @@ export default function MessagesClient({
   const [reply, setReply] = useState('')
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  /** Threads a block closed this session (the server refused with blocked / you_blocked). */
+  const [blockedThreads, setBlockedThreads] = useState<Record<string, 'blocked' | 'you_blocked'>>({})
   /** Threads already acknowledged this session, so opening one twice is one write. */
   const acknowledged = useRef<Set<string>>(new Set())
 
@@ -110,6 +114,10 @@ export default function MessagesClient({
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
+        if (data?.code === 'blocked' || data?.code === 'you_blocked') {
+          setBlockedThreads((prev) => ({ ...prev, [selected.id]: data.code }))
+          return
+        }
         throw new Error(
           data?.code === 'thread_reply_limit' ? tx('messages.error_limit') : tx('messages.error_generic')
         )
@@ -148,6 +156,40 @@ export default function MessagesClient({
       setSending(false)
     }
   }
+
+  /** The opener's reactions live on the thread; a reply's on the reply. */
+  const setReactions = (threadId: string, messageId: string, fn: (cur?: ReactionSummary[]) => ReactionSummary[] | undefined) =>
+    setThreads((prev) =>
+      prev.map((t) =>
+        t.id !== threadId
+          ? t
+          : messageId === 'opening'
+            ? { ...t, opening_reactions: fn(t.opening_reactions) }
+            : { ...t, replies: t.replies.map((r) => (r.id === messageId ? { ...r, reactions: fn(r.reactions) } : r)) }
+      )
+    )
+
+  /** Optimistic toggle; the server's counts replace it, a failure puts it back. */
+  const react = async (threadId: string, messageId: string, emoji: ReactionEmoji) => {
+    if (blockedThreads[threadId] || messageId.startsWith('local-')) return
+    const thread = threads.find((t) => t.id === threadId)
+    const before =
+      messageId === 'opening' ? thread?.opening_reactions : thread?.replies.find((r) => r.id === messageId)?.reactions
+    setReactions(threadId, messageId, (cur) => toggleLocal(cur, emoji))
+    try {
+      const next = await postReaction(threadId, messageId, emoji)
+      setReactions(threadId, messageId, () => next)
+    } catch (e: any) {
+      setReactions(threadId, messageId, () => before)
+      if (e?.code === 'blocked' || e?.code === 'you_blocked') {
+        setBlockedThreads((prev) => ({ ...prev, [threadId]: e.code }))
+      } else {
+        setError(tx('messages.reaction_failed'))
+      }
+    }
+  }
+
+  const selectedBlock = selected ? blockedThreads[selected.id] : undefined
 
   return (
     <>
@@ -247,6 +289,10 @@ export default function MessagesClient({
                   mine={false}
                   body={selected.message}
                   meta={`${selected.sender_name} · ${formatWhen(selected.created_at)}`}
+                  reactions={selected.opening_reactions}
+                  onReact={selectedBlock ? undefined : (emoji) => react(selected.id, 'opening', emoji)}
+                  quoteAuthor={(role) => (role === 'organizer' ? tx('messages.you') : selected.sender_name)}
+                  tx={tx}
                 />
                 {selected.replies.map((r) => (
                   <Bubble
@@ -254,10 +300,20 @@ export default function MessagesClient({
                     mine={r.author_role === 'organizer'}
                     body={r.body}
                     meta={`${r.author_role === 'organizer' ? tx('messages.you') : selected.sender_name} · ${formatWhen(r.created_at)}`}
+                    reactions={r.reactions}
+                    quote={r.reply_to}
+                    onReact={selectedBlock || r.id.startsWith('local-') ? undefined : (emoji) => react(selected.id, r.id, emoji)}
+                    quoteAuthor={(role) => (role === 'organizer' ? tx('messages.you') : selected.sender_name)}
+                    tx={tx}
                   />
                 ))}
               </ol>
 
+              {selectedBlock ? (
+                <p className="pt-4 text-meta text-fg-subtle">
+                  {selectedBlock === 'you_blocked' ? tx('messages.you_blocked') : tx('messages.blocked')}
+                </p>
+              ) : (
               <div className="pt-4">
                 <label htmlFor="organizer-reply" className="sr-only">
                   {tx('messages.your_reply')}
@@ -293,6 +349,7 @@ export default function MessagesClient({
                 </div>
                 {error && <p className="mt-3 text-sm text-danger">{error}</p>}
               </div>
+              )}
             </div>
           )}
         </div>
@@ -301,18 +358,55 @@ export default function MessagesClient({
   )
 }
 
-/** One message. The attendee's sit left on a quiet fill; yours sit right, brighter. */
-function Bubble({ mine, body, meta }: { mine: boolean; body: string; meta: string }) {
+/**
+ * One message. The attendee's sit left on a quiet fill; yours sit right,
+ * brighter. A quote of an earlier message sits on top, reactions underneath,
+ * and a quiet react control appears beside it on hover or focus.
+ */
+function Bubble({
+  mine,
+  body,
+  meta,
+  reactions,
+  quote,
+  onReact,
+  quoteAuthor,
+  tx,
+}: {
+  mine: boolean
+  body: string
+  meta: string
+  reactions?: ReactionSummary[]
+  quote?: ReplyTo
+  /** Omitted: read-only (a blocked thread, a message still sending). */
+  onReact?: (emoji: ReactionEmoji) => void
+  quoteAuthor: (role: 'attendee' | 'organizer') => string
+  tx: (key: string, opts?: Record<string, unknown>) => string
+}) {
   return (
-    <li className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
-      <div
-        className={`max-w-prose rounded px-4 py-3 ${
-          mine ? 'bg-surface-high text-fg' : 'bg-scrim-light text-fg-soft'
-        }`}
-      >
-        <p className="whitespace-pre-line text-sm">{body}</p>
-        <p className="mt-1.5 text-eyebrow text-fg-subtle">{meta}</p>
+    <li className={`flex flex-col ${mine ? 'items-end' : 'items-start'}`}>
+      <div className={`group flex max-w-prose items-start gap-1 ${mine ? 'flex-row-reverse' : ''}`}>
+        <div className={`min-w-0 rounded px-4 py-3 ${mine ? 'bg-surface-high text-fg' : 'bg-scrim-light text-fg-soft'}`}>
+          {quote ? <QuoteBlock quote={quote} author={quoteAuthor(quote.author_role)} /> : null}
+          <p className="whitespace-pre-line text-sm">{body}</p>
+          <p className="mt-1.5 text-eyebrow text-fg-subtle">{meta}</p>
+        </div>
+        {onReact ? (
+          <ReactPicker
+            mine={reactions?.find((r) => r.mine)?.emoji ?? null}
+            onPick={onReact}
+            label={tx('messages.react')}
+            labelFor={(emoji) => tx('messages.react_with', { emoji })}
+            alignEnd={mine}
+          />
+        ) : null}
       </div>
+      <ReactionRow
+        reactions={reactions}
+        alignEnd={mine}
+        onToggle={onReact}
+        labelFor={(r) => tx('messages.reaction_count', { emoji: r.emoji, count: r.count })}
+      />
     </li>
   )
 }
