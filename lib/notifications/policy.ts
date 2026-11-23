@@ -45,7 +45,8 @@ export function isTransactional(category: NotificationCategory): boolean {
 /**
  * The user field each category reads. Absent field means opted in — existing
  * users never chose these, and defaulting them to off would ship a feature
- * nobody receives.
+ * nobody receives. The exception is discovery / weekend_digest for people in
+ * Canada or France, where they are opt-in (userPreferences CONSENT_MARKETS).
  */
 const PREFERENCE_FIELD: Record<NotificationCategory, string | null> = {
   purchase: 'notify_ticket_purchase',

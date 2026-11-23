@@ -279,7 +279,7 @@ export default function EventAnnouncements({ eventId, eventTitle }: { eventId: s
               </TouchableOpacity>
             </View>
             {editing && pv ? (
-              <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+              <ScrollView keyboardDismissMode="on-drag" keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
                 {/* The notification as it lands on a phone. */}
                 <View style={[styles.notif, { backgroundColor: colors.surfaceRaised }]}>
                   <Text style={[styles.notifApp, { color: colors.textSecondary }]}>TIKÈM</Text>

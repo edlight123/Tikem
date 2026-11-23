@@ -186,7 +186,7 @@ export default function FlyerLibrarySheet({ visible, onClose, onSelect, onUpload
             />
           </View>
 
-          <ScrollView
+          <ScrollView keyboardDismissMode="on-drag"
             style={styles.scroll}
             contentContainerStyle={styles.gridContent}
             showsVerticalScrollIndicator={false}

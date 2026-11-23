@@ -208,7 +208,7 @@ export default function LineupEntrySheet({ draft, isNew, onPatch, onSave, onCanc
           </View>
 
           {draft && (
-            <ScrollView
+            <ScrollView keyboardDismissMode="on-drag"
               style={styles.scroll}
               contentContainerStyle={styles.scrollContent}
               keyboardShouldPersistTaps="handled"

@@ -21,6 +21,7 @@ import { inboxTime } from '../../lib/messageTime';
 import { select as hapticSelect } from '../../lib/haptics';
 import { useTabBarSpace } from '../../hooks/useTabBarSpace';
 import { useTabTaps } from '../../hooks/useTabTaps';
+import { useFocusPoll } from '../../hooks/useFocusPoll';
 import EventAnnouncements, { OrgAnnouncements } from '../../components/organizer/EventAnnouncements';
 import SwipeToDismiss from '../../components/ui/SwipeToDismiss';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -71,6 +72,8 @@ type Thread = {
 
 const needsReply = (th: Thread) => (typeof th.needs_reply === 'boolean' ? th.needs_reply : th.reply_count === 0);
 
+/** Quiet refresh while the inbox is open. */
+const INBOX_POLL_MS = 15_000;
 const AVATAR = 52;
 const POSTER_W = 22;
 const POSTER_H = 28;
@@ -144,18 +147,21 @@ export default function OrganizerMessagesScreen({ asTab = false }: { asTab?: boo
   // Event page only: one-to-one questions vs one-to-many announcements.
   const [pane, setPane] = useState<'questions' | 'announcements'>('questions');
 
-  const load = useCallback(async () => {
+  // `silent`: the background poll. A failed poll keeps what is on screen.
+  const load = useCallback(async (silent = false) => {
     try {
       const qs = eventId ? `?eventId=${encodeURIComponent(eventId)}` : '';
       const res = await backendJson<{ threads: Thread[] }>(`/api/organizer/messages${qs}`);
       setThreads(res?.threads || []);
       setFailed(false);
     } catch (e) {
-      console.warn('Failed to load organizer messages', e);
-      setFailed(true);
+      if (!silent) {
+        console.warn('Failed to load organizer messages', e);
+        setFailed(true);
+      }
     } finally {
       setLoading(false);
-      setRefreshing(false);
+      if (!silent) setRefreshing(false);
     }
     // Keep the tab badge in step with what this list shows.
     refreshOrganizerUnread();
@@ -168,6 +174,8 @@ export default function OrganizerMessagesScreen({ asTab = false }: { asTab?: boo
       load();
     }, [load]),
   );
+  // While the inbox stays open, new conversations and replies arrive quietly.
+  useFocusPoll(useCallback(() => load(true), [load]), INBOX_POLL_MS);
 
   // A push or email that names a thread: go straight into it, once.
   const openedInitial = useRef(false);

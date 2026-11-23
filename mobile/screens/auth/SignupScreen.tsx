@@ -166,7 +166,7 @@ export default function SignupScreen({ navigation }: any) {
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? undefined : 'height'}
       >
-      <ScrollView
+      <ScrollView keyboardDismissMode="on-drag"
         style={styles.flex}
         contentContainerStyle={[
           styles.scrollContent,

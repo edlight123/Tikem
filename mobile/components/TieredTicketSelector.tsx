@@ -423,7 +423,7 @@ export default function TieredTicketSelector({
             <ActivityIndicator size="large" color={colors.primary} />
           </View>
         ) : (
-          <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          <ScrollView keyboardDismissMode="on-drag" keyboardShouldPersistTaps="handled" style={styles.content} showsVerticalScrollIndicator={false}>
             {/* Tier Selection with Quantities */}
             <View style={styles.section}>
               <View style={styles.sectionHeader}>

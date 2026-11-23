@@ -33,7 +33,7 @@ export function NotificationsCard({ profile, onUpdate }: NotificationsCardProps)
   // fills `notifyPrefs`, already falling back to the old nested `notify`
   // values; the fallback here only covers a profile read without it.
   const [prefs, setPrefs] = useState<UserNotifyPrefs>(
-    () => profile.notifyPrefs ?? readUserNotifyPrefs({ notify: profile.notify })
+    () => profile.notifyPrefs ?? readUserNotifyPrefs({ notify: profile.notify, default_country: profile.defaultCountry })
   )
   const [isUpdating, setIsUpdating] = useState(false)
 

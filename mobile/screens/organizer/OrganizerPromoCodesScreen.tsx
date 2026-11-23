@@ -370,7 +370,7 @@ export default function OrganizerPromoCodesScreen() {
           overlay
           onHeight={onHeight}
         />
-        <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: headerH + 16 }]}>
+        <ScrollView keyboardDismissMode="on-drag" contentContainerStyle={[styles.scrollContent, { paddingTop: headerH + 16 }]}>
           <View style={styles.section}>
             {/* Section label + "New code" pill on one row, like the loaded list. */}
             <View style={styles.sectionTitleRow}>
@@ -410,7 +410,7 @@ export default function OrganizerPromoCodesScreen() {
         overlay
         onHeight={onHeight}
       />
-      <ScrollView
+      <ScrollView keyboardDismissMode="on-drag"
         contentContainerStyle={[styles.scrollContent, { paddingTop: headerH + 16 }]}
         keyboardShouldPersistTaps="handled"
       >

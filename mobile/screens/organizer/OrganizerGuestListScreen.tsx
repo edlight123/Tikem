@@ -358,7 +358,7 @@ export default function OrganizerGuestListScreen() {
     <View style={styles.container}>
       {header}
 
-      <FlatList
+      <FlatList keyboardDismissMode="on-drag"
         data={hasGuests ? visibleGuests : []}
         keyExtractor={(g) => g.id}
         renderItem={renderGuest}

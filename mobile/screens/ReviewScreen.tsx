@@ -170,7 +170,7 @@ export default function ReviewScreen({ route, navigation }: any) {
         <View style={{ width: 40 }} />
       </OverlayHeader>
 
-      <ScrollView
+      <ScrollView keyboardDismissMode="on-drag" keyboardShouldPersistTaps="handled"
         style={styles.scrollView}
         contentContainerStyle={{ paddingTop: headerH, paddingBottom: insets.bottom + 24 }}
         showsVerticalScrollIndicator={false}

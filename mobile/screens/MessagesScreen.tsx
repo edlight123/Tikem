@@ -14,6 +14,10 @@ import { backendJson } from '../lib/api/backend';
 import { safeFormatForLanguage } from '../lib/dates';
 import { font, radius } from '../theme/tokens';
 import { Touchable } from '../components/ui/Touchable';
+import { useFocusPoll } from '../hooks/useFocusPoll';
+
+/** Quiet refresh while the list is open. */
+const INBOX_POLL_MS = 15_000;
 
 /** One row of GET /api/messages (lib/organizer-messages AttendeeThreadSummary). */
 export type AttendeeThreadSummary = {
@@ -50,7 +54,8 @@ export default function MessagesScreen({ navigation }: any) {
   const [refreshing, setRefreshing] = useState(false);
   const [failed, setFailed] = useState(false);
 
-  const load = useCallback(async () => {
+  // `silent`: the background poll. A failed poll keeps what is on screen.
+  const load = useCallback(async (silent = false) => {
     try {
       const res = await backendJson<{ threads: AttendeeThreadSummary[] }>('/api/messages');
       setThreads(res?.threads || []);
@@ -58,11 +63,13 @@ export default function MessagesScreen({ navigation }: any) {
       // Keep the Profile tab's dot in step with what this list shows.
       refreshAttendeeUnread();
     } catch (e) {
-      console.warn('Failed to load messages', e);
-      setFailed(true);
+      if (!silent) {
+        console.warn('Failed to load messages', e);
+        setFailed(true);
+      }
     } finally {
       setLoading(false);
-      setRefreshing(false);
+      if (!silent) setRefreshing(false);
     }
   }, []);
 
@@ -72,6 +79,8 @@ export default function MessagesScreen({ navigation }: any) {
       load();
     }, [load]),
   );
+  // While the list stays open, new replies arrive quietly.
+  useFocusPoll(useCallback(() => load(true), [load]), INBOX_POLL_MS);
 
   const when = (iso: string | null) => (iso ? safeFormatForLanguage(iso, 'MMM d', language) : '');
 

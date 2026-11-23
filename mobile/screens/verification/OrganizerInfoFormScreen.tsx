@@ -157,7 +157,7 @@ export default function OrganizerInfoFormScreen() {
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
+      <ScrollView keyboardDismissMode="on-drag" keyboardShouldPersistTaps="handled" style={styles.content} contentContainerStyle={styles.contentContainer}>
 
         {/* Full Name */}
         <View style={styles.fieldGroup}>

@@ -18,7 +18,8 @@ interface TicketPassCardProps {
   ticket: any;
   event: any;
   user: any;
-  ticketNumber: number;
+  /** Shown as "Ticket 2" only when there are several. */
+  ticketNumber?: number;
   onQRPress: () => void;
   onViewEvent: () => void;
   onTransferPress?: () => void;
@@ -94,7 +95,7 @@ export default function TicketPassCard({
   return (
     <View style={styles.wrapper}>
       <View style={styles.chipRow}>
-        <StatusChip status={statusKey} label={isUsed ? undefined : t('ticketPass.ticketNumber').replace('{count}', String(ticketNumber))} />
+        <StatusChip status={statusKey} label={isUsed || !ticketNumber ? undefined : t('ticketPass.ticketNumber').replace('{count}', String(ticketNumber))} />
       </View>
 
       {/* The one shared ticket identity — white inverted stub. Tap to enlarge. */}
@@ -126,7 +127,7 @@ export default function TicketPassCard({
             eventTitle={eventTitle}
             eventDate={dateLabel || ''}
             venueName={event?.venue_name || ''}
-            ticketNumber={ticketNumber}
+            ticketNumber={ticketNumber ?? 1}
             totalTickets={ticket?.quantity || 1}
           />
         )}

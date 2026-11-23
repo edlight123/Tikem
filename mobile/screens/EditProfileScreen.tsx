@@ -270,7 +270,7 @@ export default function EditProfileScreen() {
       </OverlayHeader>
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
-        <ScrollView
+        <ScrollView keyboardDismissMode="on-drag"
           contentContainerStyle={[styles.content, { paddingTop: headerH + 12 }]}
           keyboardShouldPersistTaps="handled"
         >

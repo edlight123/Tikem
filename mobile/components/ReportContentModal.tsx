@@ -150,7 +150,7 @@ export default function ReportContentModal({ visible, onClose, kind, targetId }:
                 </TouchableOpacity>
               </View>
             ) : (
-              <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+              <ScrollView keyboardDismissMode="on-drag" keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
                 <Text style={styles.intro}>{t('moderation.reportIntro')}</Text>
                 {REPORT_REASONS.map((key) => {
                   const selected = reason === key;

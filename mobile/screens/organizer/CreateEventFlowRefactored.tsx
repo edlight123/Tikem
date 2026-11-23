@@ -2233,6 +2233,9 @@ export default function CreateEventFlowRefactored() {
               paddingBottom: isKeyboardVisible ? keyboardHeight + 24 : footerHeight + 24,
             }}
             keyboardShouldPersistTaps="handled"
+            // A drag puts the keyboard away. Safe with the manual pad above: the
+            // dismiss fires keyboardWillHide, which drops keyboardHeight to 0.
+            keyboardDismissMode="on-drag"
             showsVerticalScrollIndicator={false}
             automaticallyAdjustKeyboardInsets={false}
           >

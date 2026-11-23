@@ -82,7 +82,7 @@ export default function FormSheet({
           </View>
           </View>
 
-          <ScrollView
+          <ScrollView keyboardDismissMode="on-drag"
             style={styles.scroll}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}

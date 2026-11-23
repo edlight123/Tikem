@@ -854,7 +854,7 @@ export default function OrganizerEventEarningsScreen() {
           subtitle={eventTitle || eventId}
           onBack={() => navigation.goBack()}
         />
-        <ScrollView contentContainerStyle={[styles.freeWrap, { paddingBottom: insets.bottom + 24 }]}>
+        <ScrollView keyboardDismissMode="on-drag" contentContainerStyle={[styles.freeWrap, { paddingBottom: insets.bottom + 24 }]}>
           {/* Free event: what the organizer actually has (claims, door), then
               one quiet line that there is nothing to pay out. */}
           <StatTriplet
@@ -890,7 +890,7 @@ export default function OrganizerEventEarningsScreen() {
         onBack={() => navigation.goBack()}
       />
 
-      <ScrollView style={styles.scroll} contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 24 }}>
+      <ScrollView keyboardDismissMode="on-drag" style={styles.scroll} contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 24 }}>
         <View style={styles.card}>
           <Text style={styles.cardLabel}>{t('organizerEarnings.availableToWithdraw')}</Text>
           <Text style={styles.amountText} numberOfLines={1} adjustsFontSizeToFit>{formatCurrency(availableToWithdraw, currency)}</Text>
@@ -1107,7 +1107,7 @@ export default function OrganizerEventEarningsScreen() {
               </View>
             ) : null}
 
-            <ScrollView style={{ maxHeight: 420 }}>
+            <ScrollView keyboardDismissMode="on-drag" style={{ maxHeight: 420 }}>
               {verificationRequired ? (
                 <View style={{ marginTop: 12 }}>
                   <Text style={styles.sectionTitle}>{t('organizerEarnings.otp.verifyTitle')}</Text>
