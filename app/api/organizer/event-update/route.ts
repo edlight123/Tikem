@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase/admin'
 import { requireAuth } from '@/lib/auth'
 import { canOnEvent } from '@/lib/organizer/context'
+import { reminderClaimKey, reminderFireAt, resolveEventReminders } from '@/lib/notifications/event-reminder-settings'
 import { createNotification } from '@/lib/notifications/helpers'
 import { sendPushNotification } from '@/lib/notification-triggers'
 
@@ -100,13 +101,8 @@ export async function POST(request: NextRequest) {
   }
 }
 
-const AUTOMATIC = [
-  { type: 'event_reminder_24h', offsetMs: -24 * 3600_000 },
-  { type: 'event_reminder_3h', offsetMs: -3 * 3600_000 },
-  { type: 'event_reminder_30min', offsetMs: -30 * 60_000 },
-  // The morning after (lib/postEvent/timing): no exact instant, the app labels it.
-  { type: 'post_event_followup', offsetMs: null },
-] as const
+/** The morning after (lib/postEvent/timing): no exact instant, the app labels it. Not editable. */
+const FOLLOWUP_TYPE = 'post_event_followup'
 
 function iso(v: any): string | null {
   if (!v) return null
@@ -139,12 +135,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
+    // The event's own reminders (absent = the stock three), then the follow-up.
+    const reminders = resolveEventReminders(eventData)
+    const claimKeys = [...reminders.map(reminderClaimKey), FOLLOWUP_TYPE]
+
     // Equality filter only (no composite index); sorted here.
     const [updatesSnap, claimSnaps] = await Promise.all([
       adminDb.collection('event_updates').where('event_id', '==', eventId).limit(100).get(),
-      Promise.all(
-        AUTOMATIC.map((a) => adminDb.collection('reminderClaims').doc(`${eventId}__${a.type}`).get())
-      ),
+      Promise.all(claimKeys.map((key) => adminDb.collection('reminderClaims').doc(`${eventId}__${key}`).get())),
     ])
 
     const updates = updatesSnap.docs
@@ -161,15 +159,28 @@ export async function GET(request: NextRequest) {
       .sort((a: any, b: any) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')))
 
     const startIso = iso(eventData.start_datetime)
-    const startMs = startIso ? new Date(startIso).getTime() : NaN
-    const automatic = AUTOMATIC.map((a, i) => {
+    const sentAt = (i: number) => {
       const claim = claimSnaps[i]
-      return {
-        type: a.type,
-        at: a.offsetMs !== null && Number.isFinite(startMs) ? new Date(startMs + a.offsetMs).toISOString() : null,
-        sentAt: claim.exists ? iso(claim.data()?.claimedAt) || 'sent' : null,
-      }
-    })
+      return claim.exists ? iso(claim.data()?.claimedAt) || 'sent' : null
+    }
+    // `type` stays the reminder id, so app builds from before reminders were
+    // editable keep reading this list (they ignore the extra fields).
+    const automatic = [
+      ...reminders.map((r, i) => {
+        const at = reminderFireAt(r, eventData)
+        return {
+          type: r.id,
+          id: r.id,
+          minutesBefore: r.minutes_before,
+          enabled: r.enabled,
+          message: r.message || null,
+          editable: true,
+          at: at ? at.toISOString() : null,
+          sentAt: sentAt(i),
+        }
+      }),
+      { type: FOLLOWUP_TYPE, id: FOLLOWUP_TYPE, editable: false, at: null, sentAt: sentAt(reminders.length) },
+    ]
 
     return NextResponse.json({ updates, automatic, eventStart: startIso, eventEnd: iso(eventData.end_datetime) })
   } catch (err) {
