@@ -36,6 +36,16 @@ export default {
     searchPlaceholder: 'Chèche yon zòn',
     clearSearch: 'Efase rechèch la',
     noAreasMatch: 'Pa gen zòn ki koresponn',
+    useCurrent: "Sèvi ak kote m ye kounye a",
+    locating: "N ap chèche kote w ye…",
+    follow: "Swiv kote m ye",
+    followHint: "Chanje zòn ou lè w vwayaje",
+    followingNear: "N ap swiv ou, toupre {city}",
+    denied: "Lokalizasyon fèmen pou Tikèm.",
+    openSettings: "Louvri Paramèt",
+    unavailable: "Nou pa jwenn kote w ye. Eseye ankò, oswa chwazi yon zòn anba a.",
+    unsupported: "Tikèm poko toupre w. Chwazi yon zòn anba a.",
+    distanceAway: "a {distance}",
   },
   // Kat « ou la a? » anlè paj Akèy la. {inCountry} gen prepozisyon pa l.
   locationBanner: {

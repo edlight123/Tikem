@@ -24,6 +24,7 @@ import { ticketScarcity, scarcityCopy, isUrgent } from '@/lib/ticketScarcity'
 import { guestlistVisibilityFrom } from '@/lib/guestlistVisibility'
 import SpotifyEmbed from '@/components/events/SpotifyEmbed'
 import VenueMap from '@/components/events/VenueMap'
+import { useVenueDistance } from '@/components/location/useVenueDistance'
 import EventLineup from '@/components/events/EventLineup'
 import { Shield } from 'lucide-react'
 import { formatInZone } from '@/lib/home/format'
@@ -54,6 +55,8 @@ interface EventDetailsClientProps {
 
 export default function EventDetailsClient({ event, user, isFavorite, isFollowing, relatedEvents, invitesEnabled = false, heldFreeTickets = 0 }: EventDetailsClientProps) {
   const { t, i18n } = useTranslation('common')
+  // "2.4 km away", only when this site already has the location permission.
+  const venueDistance = useVenueDistance(event)
   const dfLocale = dateLocaleFor(i18n.language)
   const numLocale = intlLocaleFor(i18n.language)
   // Every date on this page prints in the EVENT's zone. Formatting in the
@@ -412,6 +415,7 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
         city={event.city}
         address={event.address || ''}
         commune={event.commune || ''}
+        distance={venueDistance}
         isFree={isFree}
         hasFreeOption={pricing.kind === 'mixed'}
         // The all-in per-ticket price, for the same reason the sidebar shows it.
@@ -549,6 +553,7 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                   {line}
                 </p>
               ))}
+              {venueDistance && <p className="mt-1 text-meta text-fg-subtle">{venueDistance}</p>}
               {/* The venue, as a picture. Sits between the address and the two
                   map links: the tile shows where, the links are the actions.
                   Renders nothing at all until a static-maps key exists, which

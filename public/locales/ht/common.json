@@ -1760,6 +1760,14 @@
     "not_now_aria": "Pa kounye a",
     "region_aria": "Sijesyon kote ou ye"
   },
+  "current_location": {
+    "use_current": "Sèvi ak kote m ye kounye a",
+    "locating": "N ap chèche kote w ye…",
+    "denied": "Lokalizasyon bloke pou sit sa a. Pèmèt li nan paramèt navigatè w, oswa chwazi yon vil.",
+    "unavailable": "Nou pa jwenn kote w ye. Eseye ankò, oswa chwazi yon vil.",
+    "unsupported": "Tikèm poko toupre w. Chwazi yon vil.",
+    "distance_away": "a {{distance}}"
+  },
   "invite": {
     "title": "Envitasyon evènman",
     "loading": "Chajman…",

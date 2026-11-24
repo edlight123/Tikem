@@ -1,9 +1,12 @@
 import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
+import { AppState } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { EventFilters, DEFAULT_FILTERS } from '../types/filters';
 import { useAuth } from './AuthContext';
 import { getDeviceLocationInfo, getSupportedCountry, isSupportedCountry } from '../utils/deviceLocation';
 import { findMetro, locationLabel, type Metro } from '../data/metros';
+import { detectCurrentArea, locationSupported } from '../lib/currentLocation';
+import type { ResolvedArea } from '../lib/areaResolve';
 
 // Last country the app actually resolved to (profile or explicit user choice).
 // Hydrated on launch so the header/fetch never start from a locale guess the
@@ -12,6 +15,12 @@ const RESOLVED_COUNTRY_KEY = 'resolved_user_country';
 // The town the user is browsing. Persisted separately from the country because
 // it survives filter resets: the location is the browsing SCOPE, not a filter.
 const BROWSE_CITY_KEY = 'browse_city';
+// "Follow my location": turned on by "Use my current location", off by any
+// manual pick. While on, the area quietly follows the phone, re-checked on app
+// foreground at most every 6 h. Only the flag and a timestamp are stored.
+const FOLLOW_LOCATION_KEY = 'tikem:followLocation';
+const FOLLOW_CHECKED_AT_KEY = 'tikem:followLocationCheckedAt';
+export const FOLLOW_INTERVAL_MS = 6 * 60 * 60 * 1000;
 
 interface FiltersContextType {
   // Current applied filters
@@ -44,6 +53,21 @@ interface FiltersContextType {
   /** Change the browse location. Explicit, persisted, never automatic. */
   setActiveCity: (city: string) => void;
 
+  // ---- Current location (opt-in; hidden on builds without expo-location) ---
+  /** This build has the location native module ("Use my current location" is offered). */
+  locationAvailable: boolean;
+  /** The area follows the phone ("Use my current location" was the last pick). */
+  followLocation: boolean;
+  /** Turn following on/off. Off keeps the current area as it is. */
+  setFollowLocation: (on: boolean) => void;
+  /**
+   * Detect where the phone is and browse there (country + metro), saved like a
+   * manual pick. `ask` shows the permission prompt; `follow` turns following
+   * on. An `unsupported` area is returned without applying anything.
+   * Throws LocationError (denied / unavailable / timeout).
+   */
+  applyCurrentLocation: (opts?: { ask?: boolean; follow?: boolean }) => Promise<ResolvedArea>;
+
   // Actions
   setDraftFilters: (filters: EventFilters) => void;
   openFiltersModal: () => void;
@@ -61,7 +85,7 @@ interface FiltersContextType {
 const FiltersContext = createContext<FiltersContextType | undefined>(undefined);
 
 export function FiltersProvider({ children }: { children: ReactNode }) {
-  const { userProfile } = useAuth();
+  const { user, userProfile, updateUserProfile } = useAuth();
   
   // Start from the product's home market, NOT the device locale. A phone that
   // is physically in Haiti but set to English (US) reports region "US", which
@@ -85,6 +109,15 @@ export function FiltersProvider({ children }: { children: ReactNode }) {
   // Once the user has picked a town themselves, no hydration (profile, storage)
   // may quietly move them somewhere else.
   const explicitCityRef = useRef(false);
+  // Checked once: the native module cannot appear mid-session.
+  const [locationAvailable] = useState(() => locationSupported());
+  const [followLocation, setFollowLocationState] = useState(false);
+  const followRef = useRef(false);
+  const setFollow = (on: boolean) => {
+    followRef.current = on;
+    setFollowLocationState(on);
+    (on ? AsyncStorage.setItem(FOLLOW_LOCATION_KEY, '1') : AsyncStorage.removeItem(FOLLOW_LOCATION_KEY)).catch(() => {});
+  };
 
   const applyCountry = (country: string) => {
     setUserCountryState(country);
@@ -172,6 +205,7 @@ export function FiltersProvider({ children }: { children: ReactNode }) {
   // sticks across launches.
   const setUserCountry = (country: string) => {
     const supported = getSupportedCountry(country);
+    if (followRef.current && supported !== userCountry) setFollow(false);
     explicitCountryRef.current = true;
     setUserCountryState(supported);
     if (supported !== userCountry) {
@@ -188,11 +222,104 @@ export function FiltersProvider({ children }: { children: ReactNode }) {
 
   // Changing where you are browsing. The ONLY way another market appears.
   const setActiveCity = (city: string) => {
+    if (followRef.current) setFollow(false);
     explicitCityRef.current = true;
     applyCity(city);
     if (city) AsyncStorage.setItem(BROWSE_CITY_KEY, city).catch(() => {});
     else AsyncStorage.removeItem(BROWSE_CITY_KEY).catch(() => {});
   };
+
+  // Latest values for the AppState listener below (it outlives renders).
+  const latest = useRef({ userCountry, city: appliedFilters.city || '', user, userProfile });
+  latest.current = { userCountry, city: appliedFilters.city || '', user, userProfile };
+
+  /**
+   * Browse a detected area, saved exactly like a manual pick (device + profile).
+   * PRIVACY: only the country and the metro name are kept, never coordinates.
+   */
+  const applyArea = (area: ResolvedArea) => {
+    const { userCountry: current, user: u, userProfile: profile } = latest.current;
+    const country = getSupportedCountry(area.country);
+    if (country !== current) {
+      explicitCountryRef.current = true;
+      applyCountry(country);
+      AsyncStorage.setItem(RESOLVED_COUNTRY_KEY, country).catch(() => {});
+    }
+    explicitCityRef.current = true;
+    applyCity(area.city);
+    if (area.city) AsyncStorage.setItem(BROWSE_CITY_KEY, area.city).catch(() => {});
+    else AsyncStorage.removeItem(BROWSE_CITY_KEY).catch(() => {});
+    if (
+      u?.uid &&
+      profile &&
+      (country !== (profile.default_country || '') || area.city !== (profile.default_city || ''))
+    ) {
+      updateUserProfile({ default_country: country, default_city: area.city }).catch((e) =>
+        console.warn('[FiltersContext] Could not save location', e),
+      );
+    }
+  };
+
+  const applyCurrentLocation = async ({ ask = true, follow = true }: { ask?: boolean; follow?: boolean } = {}) => {
+    const area = await detectCurrentArea({ ask });
+    if (area.unsupported) return area;
+    applyArea(area);
+    if (follow) {
+      setFollow(true);
+      AsyncStorage.setItem(FOLLOW_CHECKED_AT_KEY, String(Date.now())).catch(() => {});
+    }
+    return area;
+  };
+
+  // Following: on foreground, at most every 6 h, re-detect quietly (never
+  // prompts) and move the area only when the phone is somewhere else now.
+  const refreshing = useRef(false);
+  const refreshFollowedLocation = async () => {
+    if (!followRef.current || refreshing.current) return;
+    refreshing.current = true;
+    try {
+      const last = Number(await AsyncStorage.getItem(FOLLOW_CHECKED_AT_KEY).catch(() => '0')) || 0;
+      if (Date.now() - last < FOLLOW_INTERVAL_MS) return;
+      await AsyncStorage.setItem(FOLLOW_CHECKED_AT_KEY, String(Date.now())).catch(() => {});
+      const area = await detectCurrentArea({ ask: false });
+      if (area.unsupported || !followRef.current) return;
+      const { userCountry: country, city } = latest.current;
+      const before = city ? findMetro(city, country) : null;
+      const after = area.city ? findMetro(area.city, area.country) : null;
+      const same =
+        getSupportedCountry(area.country) === country &&
+        (before && after ? before.id === after.id : (city || '') === area.city);
+      if (!same) applyArea(area);
+    } catch {
+      // Permission revoked or no fix: keep the area as it is, silently.
+    } finally {
+      refreshing.current = false;
+    }
+  };
+
+  // Hydrate "follow my location" and listen for foregrounds. Nothing at all on
+  // a build without the native module.
+  useEffect(() => {
+    if (!locationAvailable) return;
+    let launchTimer: ReturnType<typeof setTimeout> | null = null;
+    AsyncStorage.getItem(FOLLOW_LOCATION_KEY)
+      .then((v) => {
+        followRef.current = v === '1';
+        setFollowLocationState(v === '1');
+        // After launch hydration has restored the saved area, so the
+        // comparison is against the real one, not the 'HT' placeholder.
+        if (v === '1') launchTimer = setTimeout(refreshFollowedLocation, 4000);
+      })
+      .catch(() => {});
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') refreshFollowedLocation();
+    });
+    return () => {
+      sub.remove();
+      if (launchTimer) clearTimeout(launchTimer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const openFiltersModal = () => {
     // Copy current applied filters to draft when opening
@@ -212,6 +339,7 @@ export function FiltersProvider({ children }: { children: ReactNode }) {
     // it takes the explicit path: remembered across launches, and never
     // overwritten later by profile hydration.
     if ((draftFilters.city || '') !== (appliedFilters.city || '')) {
+      if (followRef.current) setFollow(false);
       explicitCityRef.current = true;
       const nextCity = draftFilters.city || '';
       if (nextCity) AsyncStorage.setItem(BROWSE_CITY_KEY, nextCity).catch(() => {});
@@ -275,6 +403,10 @@ export function FiltersProvider({ children }: { children: ReactNode }) {
         activeMetro,
         activeLocationLabel,
         setActiveCity,
+        locationAvailable,
+        followLocation: locationAvailable && followLocation,
+        setFollowLocation: setFollow,
+        applyCurrentLocation,
         setDraftFilters,
         openFiltersModal,
         closeFiltersModal,

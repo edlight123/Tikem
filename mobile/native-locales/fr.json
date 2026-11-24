@@ -1,0 +1,5 @@
+{
+  "ios": {
+    "NSLocationWhenInUseUsageDescription": "Tikèm utilise votre position approximative, uniquement quand vous le demandez, pour afficher les événements de la zone la plus proche et la distance d’un événement. Votre position reste sur votre téléphone et n’est jamais enregistrée."
+  }
+}

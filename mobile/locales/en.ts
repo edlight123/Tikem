@@ -36,6 +36,16 @@ export default {
     searchPlaceholder: 'Search areas',
     clearSearch: 'Clear search',
     noAreasMatch: 'No areas match',
+    useCurrent: "Use my current location",
+    locating: "Finding where you are…",
+    follow: "Follow my location",
+    followHint: "Updates your area when you travel",
+    followingNear: "Following you, near {city}",
+    denied: "Location is off for Tikèm.",
+    openSettings: "Open Settings",
+    unavailable: "We couldn’t find your location. Try again, or pick an area below.",
+    unsupported: "Tikèm isn’t near you yet. Pick an area below.",
+    distanceAway: "{distance} away",
   },
   // The "are you here?" card at the top of Home when the device region and
   // the saved country disagree. {inCountry} carries its own preposition.

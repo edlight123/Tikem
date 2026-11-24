@@ -1760,6 +1760,14 @@
     "not_now_aria": "Pas maintenant",
     "region_aria": "Suggestion de lieu"
   },
+  "current_location": {
+    "use_current": "Utiliser ma position actuelle",
+    "locating": "Recherche de votre position…",
+    "denied": "La localisation est bloquée pour ce site. Autorisez-la dans les réglages du navigateur, ou choisissez une ville.",
+    "unavailable": "Impossible de trouver votre position. Réessayez ou choisissez une ville.",
+    "unsupported": "Tikèm n’est pas encore près de chez vous. Choisissez une ville.",
+    "distance_away": "à {{distance}}"
+  },
   "invite": {
     "title": "Invitation à un événement",
     "loading": "Chargement…",

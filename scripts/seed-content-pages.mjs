@@ -347,7 +347,7 @@ const privacy = {
   translations: {
     en: {
       title: 'Privacy Policy',
-      updated: 'November 23, 2025',
+      updated: 'November 23, 2026',
       blocks: [
         { type: 'heading', level: 2, text: '1. Information We Collect' },
         { type: 'heading', level: 3, text: 'Personal Information' },
@@ -367,6 +367,8 @@ const privacy = {
           'Event searches and purchases',
           'Interaction with emails and notifications',
         ] },
+        { type: 'heading', level: 3, text: 'Your Location (Optional)' },
+        { type: 'paragraph', text: 'Only if you tap "Use my current location" and allow it, your device shares its approximate position with Tikèm. It is used on your device to pick the nearest area (country and city) and to show how far an event is. Your coordinates are never sent to our servers or stored; we keep only the area you browse, the same as picking it yourself. You can turn location off at any time in your device or browser settings.' },
         { type: 'heading', level: 2, text: '2. How We Use Your Information' },
         { type: 'paragraph', text: 'We use collected information to:' },
         { type: 'list', items: [
@@ -450,7 +452,7 @@ const privacy = {
     fr: {
       draft: true,
       title: 'Politique de confidentialité',
-      updated: '23 novembre 2025',
+      updated: '23 novembre 2026',
       blocks: [
         { type: 'heading', level: 2, text: '1. Informations que nous collectons' },
         { type: 'heading', level: 3, text: 'Informations personnelles' },
@@ -470,6 +472,8 @@ const privacy = {
           'Recherches et achats d\'événements',
           'Interactions avec les e-mails et les notifications',
         ] },
+        { type: 'heading', level: 3, text: 'Votre position (facultatif)' },
+        { type: 'paragraph', text: 'Uniquement si vous touchez « Utiliser ma position actuelle » et l\'autorisez, votre appareil partage sa position approximative avec Tikèm. Elle sert, sur votre appareil, à choisir la zone la plus proche (pays et ville) et à afficher la distance d\'un événement. Vos coordonnées ne sont jamais envoyées à nos serveurs ni enregistrées ; nous gardons seulement la zone que vous consultez, comme si vous l\'aviez choisie vous-même. Vous pouvez désactiver la localisation à tout moment dans les réglages de votre appareil ou de votre navigateur.' },
         { type: 'heading', level: 2, text: '2. Comment nous utilisons vos informations' },
         { type: 'paragraph', text: 'Nous utilisons les informations collectées pour :' },
         { type: 'list', items: [
@@ -553,7 +557,7 @@ const privacy = {
     ht: {
       draft: true,
       title: 'Règleman sou konfidansyalite',
-      updated: '23 novanm 2025',
+      updated: '23 novanm 2026',
       blocks: [
         { type: 'heading', level: 2, text: '1. Enfòmasyon nou kolekte' },
         { type: 'heading', level: 3, text: 'Enfòmasyon pèsonèl' },
@@ -573,6 +577,8 @@ const privacy = {
           'Rechèch ak acha evènman',
           'Entèraksyon ak imèl ak notifikasyon',
         ] },
+        { type: 'heading', level: 3, text: 'Kote ou ye (si ou vle)' },
+        { type: 'paragraph', text: 'Se sèlman si ou peze « Sèvi ak kote m ye kounye a » epi ou bay otorizasyon, aparèy ou pataje pozisyon apwoksimatif li ak Tikèm. Li sèvi sou aparèy ou pou chwazi zòn ki pi pre a (peyi ak vil) epi pou montre ki distans yon evènman ye. Kowòdone ou yo pa janm voye bay sèvè nou yo ni anrejistre; nou kenbe sèlman zòn w ap gade a, menm jan ak si se ou ki te chwazi l. Ou ka fèmen lokalizasyon nenpòt ki lè nan paramèt aparèy ou oswa navigatè ou.' },
         { type: 'heading', level: 2, text: '2. Kijan nou itilize enfòmasyon ou' },
         { type: 'paragraph', text: 'Nou itilize enfòmasyon nou kolekte pou :' },
         { type: 'list', items: [

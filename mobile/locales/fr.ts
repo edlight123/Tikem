@@ -63,6 +63,16 @@ export default {
     searchPlaceholder: 'Rechercher une zone',
     clearSearch: 'Effacer la recherche',
     noAreasMatch: 'Aucune zone ne correspond',
+    useCurrent: "Utiliser ma position actuelle",
+    locating: "Recherche de votre position…",
+    follow: "Suivre ma position",
+    followHint: "Met à jour votre zone quand vous voyagez",
+    followingNear: "Suit votre position, près de {city}",
+    denied: "La localisation est désactivée pour Tikèm.",
+    openSettings: "Ouvrir les réglages",
+    unavailable: "Impossible de trouver votre position. Réessayez ou choisissez une zone ci-dessous.",
+    unsupported: "Tikèm n’est pas encore près de chez vous. Choisissez une zone ci-dessous.",
+    distanceAway: "à {distance}",
   },
   // La carte « vous êtes ici ? » en haut de l'accueil. {inCountry} porte sa
   // propre préposition.
