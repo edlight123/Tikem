@@ -266,7 +266,7 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                   {showCategory && isTrending && <span className="text-fg-faint"> · </span>}
                   {isTrending && <span>{t('events.trending')}</span>}
                   {(event as any).occasion && (showCategory || isTrending) && <span className="text-fg-faint"> · </span>}
-                  <OccasionTag occasion={(event as any).occasion} className="normal-case tracking-normal" />
+                  <OccasionTag occasion={(event as any).occasion} className="normal-case tracking-normal text-meta font-normal" />
                 </p>
                 {/* Save + share as one cluster, mirroring the mobile buy row.
                     The heart previously hung in a `mt-4` block under the

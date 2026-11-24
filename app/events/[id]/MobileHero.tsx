@@ -133,7 +133,7 @@ export default function MobileHero({
           <p className="mb-2.5 flex flex-wrap items-center gap-x-2 text-eyebrow font-medium uppercase tracking-[0.14em] text-fg-subtle">
             {category && category.toLowerCase() !== 'other' && <span>{category}</span>}
             {/* Mixed case: an occasion is a name (Fèt Manman), not a label. */}
-            <OccasionTag occasion={occasion} className="normal-case tracking-normal" />
+            <OccasionTag occasion={occasion} className="normal-case tracking-normal text-meta font-normal" />
           </p>
         )}
         <h1 className="font-display italic !text-display text-fg !leading-[1.02] break-words">
