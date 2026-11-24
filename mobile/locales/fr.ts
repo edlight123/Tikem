@@ -1379,6 +1379,9 @@ export default {
       errorBody: 'Impossible de synchroniser les contacts. Veuillez réessayer.',
       noContactMatches: 'Aucun de vos contacts n’est encore sur Tikèm. Invitez-les !',
       onTikem: '{count} sur Tikèm',
+      permissionDeniedBody: "L’accès aux contacts est désactivé pour Tikèm. Activez-le dans Réglages pour trouver vos amis déjà inscrits. Vos contacts servent uniquement à la correspondance et ne sont jamais enregistrés.",
+      openSettings: "Ouvrir les Réglages",
+      notNow: "Pas maintenant",
     },
   },
 
@@ -3681,6 +3684,9 @@ export default {
   },
 
   ticketPass: {
+    calendarShort: "Agenda",
+    directionsShort: "Itinéraire",
+    eventShort: "Événement",
     ticketNumber: 'Billet {count}',
     admit: 'Admis :',
     tapHint: 'Touchez le billet pour l’agrandir · à présenter à l’entrée',

@@ -10,8 +10,7 @@ import {
   ActivityIndicator,
   RefreshControl,
   Platform,
-  Share,
-} from 'react-native';
+  Share, Linking } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronLeft, Users, Search, Phone, Inbox, Send, Share2, UserPlus } from 'lucide-react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -374,10 +373,12 @@ function FindTab({ colors, onOpen, onChange, onRequireAuth, insets, autoSync, in
   const syncContacts = useCallback(async () => {
     try {
       if (!(await requestContactsPermission())) {
-        showAlert(
-          t('connections.find.permissionTitle'),
-          t('connections.find.permissionBody')
-        );
+        // iOS shows its own prompt only once: after a "Don't Allow" the only
+        // way back is Settings, so offer it (ported from Tikra).
+        showAlert(t('connections.find.permissionTitle'), t('connections.find.permissionDeniedBody'), [
+          { text: t('connections.find.notNow'), style: 'cancel' },
+          { text: t('connections.find.openSettings'), onPress: () => Linking.openSettings().catch(() => {}) },
+        ]);
         return;
       }
       setContactLoading(true);

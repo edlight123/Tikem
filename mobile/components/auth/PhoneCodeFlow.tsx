@@ -24,6 +24,7 @@ import {
   type PhoneAuthCountry,
 } from '../../lib/phoneAuthGate';
 import type { CodeSent } from '../../lib/phoneAuth';
+import Flag from '../Flag';
 
 const CODE_LENGTH = 6;
 
@@ -219,7 +220,7 @@ export function PhoneCodeFlow({ onRequestCode, onVerify, ctaLabel, onBusyChange,
           accessibilityRole="button"
           accessibilityLabel={t('auth.phone.countryPickerTitle')}
         >
-          <Text style={styles.flag}>{country.flag}</Text>
+          <Flag code={country.iso} size={20} />
           <Text style={styles.dial}>+{country.dial}</Text>
           <ChevronDown size={16} color={colors.textTertiary} />
         </Pressable>
@@ -267,7 +268,7 @@ export function PhoneCodeFlow({ onRequestCode, onVerify, ctaLabel, onBusyChange,
                 accessibilityRole="button"
                 accessibilityState={{ selected: active }}
               >
-                <Text style={styles.flag}>{c.flag}</Text>
+                <Flag code={c.iso} size={24} />
                 <Text style={styles.countryName}>{t(`countries.${c.iso}`)}</Text>
                 <Text style={styles.muted}>+{c.dial}</Text>
               </Pressable>

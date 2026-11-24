@@ -25,7 +25,7 @@ import OverlayHeader, { useOverlayHeaderInset } from '../components/OverlayHeade
 import StatusChip from '../components/StatusChip';
 import SegmentedTabs from '../components/organizer/SegmentedTabs';
 import { format } from 'date-fns';
-import { safeFormatForLanguage } from '../lib/dates';
+import { safeFormatForLanguage, formatEventTime } from '../lib/dates';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTabTaps } from '../hooks/useTabTaps';
 import { consumeTicketsRefreshHint } from '../lib/ticketsRefreshHint';
@@ -592,12 +592,17 @@ export default function TicketsScreen({ navigation }: any) {
                           activeTab === 'past',
                           t,
                         );
+                        // The event's own clock, not the phone's.
                         const timeLabel = event.start_datetime
-                          ? safeFormatForLanguage(event.start_datetime, 'h:mm a', language)
+                          ? formatEventTime(event.start_datetime, event as any, 'h:mm a', language)
                           : '';
-                        const placeLabel = [event.venue_name, event.city]
-                          .filter(Boolean)
-                          .join(', ');
+                        // The venue only: no city, no full address (ported from
+                        // Tikra). Its first part before a comma, brackets
+                        // removed, so an imported address stays one short line.
+                        const placeLabel =
+                          [event.venue_name, (event as any).address]
+                            .map((c) => String(c || '').split(',')[0].replace(/\s*[([].*?[)\]]\s*/g, ' ').replace(/\s+/g, ' ').trim())
+                            .find(Boolean) || '';
                         // One quiet line: time · venue (no per-line icons — the
                         // type carries it).
                         const metaLabel = [timeLabel, placeLabel].filter(Boolean).join('  ·  ');
@@ -654,7 +659,7 @@ export default function TicketsScreen({ navigation }: any) {
                             </View>
 
                             <View style={styles.body}>
-                              <Text style={styles.rowTitle} numberOfLines={2}>
+                              <Text style={styles.rowTitle} numberOfLines={1}>
                                 {event.title}
                               </Text>
                               {!!metaLabel && (

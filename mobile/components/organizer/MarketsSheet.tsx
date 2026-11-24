@@ -13,6 +13,7 @@ import { DECLARABLE_MARKETS, railsForMarkets } from '../../lib/organizerMarkets'
 import WhitePillCTA from '../WhitePillCTA';
 import { Touchable } from '../ui/Touchable';
 import { select } from '../../lib/haptics';
+import Flag from '../Flag';
 
 interface MarketsSheetProps {
   visible: boolean;
@@ -23,64 +24,9 @@ interface MarketsSheetProps {
   onSave: (next: string[]) => void;
 }
 
-/**
- * A simple colour-square flag: a few flat bands, no artwork. Enough to find
- * your country at a glance without importing flag images.
- */
+/** A market's flag: the shared round flag (components/Flag, ported from Tikra). */
 export function FlagSquare({ code, size = 24 }: { code: string; size?: number }) {
-  const box = { width: size, height: size, borderRadius: RADIUS.sm, overflow: 'hidden' as const };
-  const col = (c: string) => ({ flex: 1, backgroundColor: c });
-  switch (code) {
-    case 'HT':
-      return (
-        <View style={box}>
-          <View style={col('#00209F')} />
-          <View style={col('#D21034')} />
-        </View>
-      );
-    case 'US':
-      return (
-        <View style={box}>
-          {['#B22234', '#FFFFFF', '#B22234', '#FFFFFF', '#B22234'].map((c, i) => (
-            <View key={i} style={col(c)} />
-          ))}
-          <View style={{ position: 'absolute', top: 0, left: 0, width: size * 0.45, height: size * 0.5, backgroundColor: '#3C3B6E' }} />
-        </View>
-      );
-    case 'CA':
-      return (
-        <View style={[box, { flexDirection: 'row' }]}>
-          <View style={col('#D80621')} />
-          <View style={[col('#FFFFFF'), { flex: 2, alignItems: 'center', justifyContent: 'center' }]}>
-            <View style={{ width: size * 0.28, height: size * 0.28, backgroundColor: '#D80621', transform: [{ rotate: '45deg' }] }} />
-          </View>
-          <View style={col('#D80621')} />
-        </View>
-      );
-    case 'FR':
-      return (
-        <View style={[box, { flexDirection: 'row' }]}>
-          <View style={col('#002395')} />
-          <View style={col('#FFFFFF')} />
-          <View style={col('#ED2939')} />
-        </View>
-      );
-    case 'DO':
-      return (
-        <View style={box}>
-          <View style={{ flex: 1, flexDirection: 'row' }}>
-            <View style={col('#002D62')} />
-            <View style={col('#CE1126')} />
-          </View>
-          <View style={{ flex: 1, flexDirection: 'row' }}>
-            <View style={col('#CE1126')} />
-            <View style={col('#002D62')} />
-          </View>
-        </View>
-      );
-    default:
-      return <View style={[box, { backgroundColor: 'rgba(255,255,255,0.12)' }]} />;
-  }
+  return <Flag code={code} size={size} />;
 }
 
 interface MarketsPickerProps {

@@ -12,7 +12,7 @@ import StatusChip from './StatusChip';
 import AddToWalletButton from './AddToWalletButton';
 import { ticketOrderRef, ticketTierLabel, ticketQrValue, ticketStatusKey } from '../lib/ticket';
 import { addToCalendar, openDirections } from '../lib/postPurchaseActions';
-import { radius } from '../theme/tokens';
+import { colors as T, radius } from '../theme/tokens';
 import { isLiveTicket } from '../lib/orderDisplay';
 
 interface TicketPassCardProps {
@@ -139,27 +139,26 @@ export default function TicketPassCard({
           />
         )}
 
-        <View style={styles.secondaryRow}>
-          <TouchableOpacity style={styles.secondaryButton} onPress={handleCalendar} activeOpacity={0.8}>
-            <CalendarPlus size={18} color={colors.text} />
-            <Text style={styles.secondaryButtonText}>{t('ticketPass.addToCalendar')}</Text>
+        {/* One quiet row of square white actions, short labels underneath
+            (ported from Tikra, TestFlight 2026-11-24: "more premium"). */}
+        <View style={styles.quickRow}>
+          <TouchableOpacity style={styles.quick} onPress={handleCalendar} activeOpacity={0.8} accessibilityRole="button" accessibilityLabel={t('ticketPass.addToCalendar')}>
+            <View style={styles.quickIcon}><CalendarPlus size={20} color={T.onWhite} strokeWidth={1.8} /></View>
+            <Text style={styles.quickText} numberOfLines={1}>{t('ticketPass.calendarShort')}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.secondaryButton} onPress={handleDirections} activeOpacity={0.8}>
-            <MapPin size={18} color={colors.text} />
-            <Text style={styles.secondaryButtonText}>{t('ticketPass.getDirections')}</Text>
+          <TouchableOpacity style={styles.quick} onPress={handleDirections} activeOpacity={0.8} accessibilityRole="button" accessibilityLabel={t('ticketPass.getDirections')}>
+            <View style={styles.quickIcon}><MapPin size={20} color={T.onWhite} strokeWidth={1.8} /></View>
+            <Text style={styles.quickText} numberOfLines={1}>{t('ticketPass.directionsShort')}</Text>
           </TouchableOpacity>
-        </View>
-
-        <View style={styles.secondaryRow}>
           {onTransferPress && !isUsed && isLive && (
-            <TouchableOpacity style={styles.secondaryButton} onPress={onTransferPress} activeOpacity={0.8}>
-              <Send size={18} color={colors.text} />
-              <Text style={styles.secondaryButtonText}>{t('ticketPass.transfer')}</Text>
+            <TouchableOpacity style={styles.quick} onPress={onTransferPress} activeOpacity={0.8} accessibilityRole="button" accessibilityLabel={t('ticketPass.transfer')}>
+              <View style={styles.quickIcon}><Send size={20} color={T.onWhite} strokeWidth={1.8} /></View>
+              <Text style={styles.quickText} numberOfLines={1}>{t('ticketPass.transfer')}</Text>
             </TouchableOpacity>
           )}
-          <TouchableOpacity style={styles.secondaryButton} onPress={onViewEvent} activeOpacity={0.8}>
-            <ExternalLink size={18} color={colors.text} />
-            <Text style={styles.secondaryButtonText}>{t('ticketPass.viewEvent')}</Text>
+          <TouchableOpacity style={styles.quick} onPress={onViewEvent} activeOpacity={0.8} accessibilityRole="button" accessibilityLabel={t('ticketPass.viewEvent')}>
+            <View style={styles.quickIcon}><ExternalLink size={20} color={T.onWhite} strokeWidth={1.8} /></View>
+            <Text style={styles.quickText} numberOfLines={1}>{t('ticketPass.eventShort')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -193,24 +192,9 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       marginTop: 20,
       gap: 12,
     },
-    secondaryRow: {
-      flexDirection: 'row',
-      gap: 12,
-    },
-    // Dark-grey secondary pill (POSH §2.2): elevation step, no teal.
-    secondaryButton: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 8,
-      paddingVertical: 14,
-      borderRadius: radius.button,
-      backgroundColor: colors.surfaceRaised,
-    },
-    secondaryButtonText: {
-      fontSize: 13,
-      fontWeight: '600',
-      color: colors.text,
-    },
+    quickRow: { flexDirection: 'row', justifyContent: 'space-around', marginTop: 8 },
+    quick: { alignItems: 'center', gap: 6, minWidth: 64 },
+    // Square white tiles (the 4px rule), black line icons.
+    quickIcon: { width: 48, height: 48, borderRadius: radius.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.white },
+    quickText: { fontSize: 12, fontWeight: '600', color: colors.text },
   });

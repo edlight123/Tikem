@@ -192,7 +192,7 @@ export function artForWorld(world: string | null | undefined, seed?: string | nu
  * that read genuine"). These carry the world tiles, the world page heroes and
  * the org banner templates. Re-cut 2026-11-24 from the full-size Unsplash
  * originals at 1290px on the short side (mozjpeg) so they stay sharp on a 3x
- * screen; the sign-in backdrop has its own portrait crops (authPhotos). The illustrations stay for flyers and empty states.
+ * screen. The illustrations stay for flyers and empty states.
  *
  * Source: Unsplash (Unsplash License: free to use, no attribution required).
  * Photo ids, for swapping one later: mizik UFlO384euRI, lavi-lannwit
@@ -211,30 +211,6 @@ export const WORLD_PHOTOS: Record<WorldKey, ArtPiece> = {
   'fanmi':        { key: 'photo-fanmi',        source: require('../assets/photos/fanmi.jpg'),        alt: 'A family in white holding their children on a bridge', worlds: ['fanmi'] },
   'eksperyans':   { key: 'photo-eksperyans',   source: require('../assets/photos/eksperyans.jpg'),   alt: 'A group of friends cheering on a dune under a blue sky', worlds: ['eksperyans'] },
 };
-
-/**
- * The sign-in rotation: the photos with a crowd or a moment in them.
- *
- * The sign-in backdrop fills the whole phone, so it gets its own portrait
- * crops (assets/photos/auth, 1290x2796, the 3x iPhone screen) cut from the
- * full-resolution originals. Stretching the 1290px-short-side tiles to a
- * 2600px-tall screen is what read as blurry (TestFlight 2026-11-24). The
- * family photo is left out: cropped to the full screen it is mostly trees,
- * with the people hidden behind the form.
- */
-// prettier-ignore
-const AUTH_PHOTO_SOURCES: Partial<Record<WorldKey, number>> = {
-  'mizik':        require('../assets/photos/auth/mizik.jpg'),
-  'lavi-lannwit': require('../assets/photos/auth/lavi-lannwit.jpg'),
-  'gastronomi':   require('../assets/photos/auth/gastronomi.jpg'),
-  'eksperyans':   require('../assets/photos/auth/eksperyans.jpg'),
-};
-export function authPhotos(): ArtPiece[] {
-  return (Object.keys(AUTH_PHOTO_SOURCES) as WorldKey[]).map((w) => ({
-    ...WORLD_PHOTOS[w],
-    source: AUTH_PHOTO_SOURCES[w] as number,
-  }));
-}
 
 /**
  * A world's page hero and home tile: its photograph. An unknown world (or

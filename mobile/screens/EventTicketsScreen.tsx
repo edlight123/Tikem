@@ -324,16 +324,17 @@ export default function EventTicketsScreen({ route, navigation }: any) {
       <StatusBar barStyle="light-content" />
 
       <SafeAreaView edges={['top', 'bottom']} style={styles.safeArea}>
-        {/* Event Info Section */}
-        <View style={styles.eventInfoSection}>
-          <Text style={styles.eventTitle} numberOfLines={2}>{event.title}</Text>
-          {/* "Ticket 1 of 1" says nothing: only count when there are several. */}
-          {tickets.length > 1 ? (
+        {/* The pass already names the event: no second title (ported from
+            Tikra). With several tickets, only which one you're looking at. */}
+        {tickets.length > 1 ? (
+          <View style={styles.eventInfoSection}>
             <Text style={styles.currentTicketIndicator}>
               {t('tickets.ticketSingular')} {currentIndex + 1} {t('common.of')} {tickets.length}
             </Text>
-          ) : null}
-        </View>
+          </View>
+        ) : (
+          <View style={{ height: 8 }} />
+        )}
 
         {/* Horizontal Pager */}
         <Animated.View

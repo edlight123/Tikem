@@ -17,7 +17,7 @@ import { auth } from '../../config/firebase';
 import { GOOGLE_NOT_CONFIGURED, useAuth } from '../../contexts/AuthContext';
 import { useI18n } from '../../contexts/I18nContext';
 import { AuthBackground } from '../../components/auth/AuthBackground';
-import { TikemWordmark } from '../../components/TikemWordmark';
+import { AuthWordmark } from '../../components/auth/AuthWordmark';
 import { AuthInput } from '../../components/auth/AuthInput';
 import { SocialSignInRow } from '../../components/auth/SocialSignInRow';
 import { TermsAgreement } from '../../components/auth/TermsAgreement';
@@ -178,7 +178,7 @@ export default function LoginScreen({ navigation }: any) {
       >
           {/* Brand wordmark, centered in the upper band above the form */}
           <Animated.View style={[styles.brand, { opacity: headlineOpacity, transform: [{ translateY: headlineTranslate }] }]}>
-            <TikemWordmark fontSize={64} />
+            <AuthWordmark size={44} />
           </Animated.View>
 
           {/* Lower cluster — form + auth buttons grouped tight, left-aligned */}
@@ -312,7 +312,6 @@ export default function LoginScreen({ navigation }: any) {
           </Animated.View>
       </ScrollView>
       </KeyboardAvoidingView>
-      <AuthDismiss navigation={navigation} variant="close" disabled={loading} />
     </AuthBackground>
   );
 }

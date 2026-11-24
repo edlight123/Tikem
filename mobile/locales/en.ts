@@ -1811,6 +1811,9 @@ export default {
       errorBody: 'Could not sync contacts. Please try again.',
       noContactMatches: 'None of your contacts are on Tikèm yet. Invite them!',
       onTikem: '{count} on Tikèm',
+      permissionDeniedBody: "Contacts are off for Tikèm. Turn them on in Settings to find friends already here. Your contacts are only used to match and are never stored.",
+      openSettings: "Open Settings",
+      notNow: "Not now",
     },
   },
 
@@ -3719,6 +3722,9 @@ export default {
   },
 
   ticketPass: {
+    calendarShort: "Calendar",
+    directionsShort: "Directions",
+    eventShort: "Event",
     ticketNumber: 'Ticket {count}',
     admit: 'Admit:',
     tapHint: 'Tap ticket to enlarge · show at entry',
