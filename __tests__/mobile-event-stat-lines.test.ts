@@ -51,12 +51,13 @@ describe('organizer event stat lines', () => {
 })
 
 describe('poster fit', () => {
-  it('fills with photos and near-frame images, shows square/Stories flyers whole', () => {
+  it('fills the frame with everything except tall Stories flyers (owner 2026-11-23)', () => {
     expect(posterFit(undefined, 0.8)).toBe('cover')
     expect(posterFit(0.8, 0.8)).toBe('cover')
     expect(posterFit(4 / 3, 0.8)).toBe('cover') // landscape photo (TestFlight 2026-11-23)
     expect(posterFit(16 / 9, 0.8)).toBe('cover')
-    expect(posterFit(1, 0.8)).toBe('contain') // Instagram square flyer
+    expect(posterFit(1, 0.8)).toBe('cover') // Instagram square flyer fills too
+    expect(posterFit(2 / 3, 0.8)).toBe('cover') // 2:3 portrait photo
     expect(posterFit(9 / 16, 0.8)).toBe('contain') // Stories flyer
   })
 })
