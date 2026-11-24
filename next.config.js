@@ -30,6 +30,24 @@ const HONEYPOT_DECOY_PATHS = [
   '/cgi-bin/luci',
 ]
 
+// Our own Storage bucket(s): the production bucket, its legacy appspot name,
+// and whatever the environment configures. An audit of every image URL in
+// prod (scripts/audit-image-hosts.mjs, 2026-11-24) found only two hosts:
+// firebasestorage.googleapis.com on event-haiti.firebasestorage.app, and
+// images.unsplash.com (flyer library and template photos).
+const STORAGE_BUCKETS = Array.from(
+  new Set(
+    [
+      process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+      process.env.FIREBASE_STORAGE_BUCKET,
+      'event-haiti.firebasestorage.app',
+      'event-haiti.appspot.com',
+    ]
+      .map((b) => String(b || '').trim().replace(/^gs:\/\//, '').replace(/\/+$/, ''))
+      .filter((b) => /^[a-z0-9][a-z0-9._-]{1,220}$/.test(b))
+  )
+)
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Force new build ID to invalidate Vercel cache
@@ -336,20 +354,20 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'images.unsplash.com',
       },
-      {
-        protocol: 'https',
-        hostname: 'storage.googleapis.com',
-      },
-      {
-        protocol: 'https',
-        hostname: 'firebasestorage.googleapis.com',
-      },
+      // Our own Storage bucket(s) only: an open GCS pattern made /_next/image a
+      // free resizing proxy for any public bucket on the internet.
+      ...STORAGE_BUCKETS.flatMap((bucket) => [
+        { protocol: 'https', hostname: 'storage.googleapis.com', pathname: `/${bucket}/**` },
+        { protocol: 'https', hostname: 'firebasestorage.googleapis.com', pathname: `/v0/b/${bucket}/o/**` },
+      ]),
     ],
     formats: ['image/avif', 'image/webp'],
     deviceSizes: [640, 750, 828, 1080, 1200],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
     minimumCacheTTL: 60,
-    dangerouslyAllowSVG: true,
+    // No next/image renders an SVG (a .svg src is served unoptimized anyway),
+    // so the optimizer never needs to pass one through.
+    dangerouslyAllowSVG: false,
     contentDispositionType: 'attachment',
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
   },

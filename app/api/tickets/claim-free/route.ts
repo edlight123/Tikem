@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase/admin'
+import { clientIpKey, consumeRateLimit } from '@/lib/rate-limit'
 import { getCurrentUser } from '@/lib/auth'
 import { hasEventAccess } from '@/lib/events/access-guard'
 import { promoCanCoverOrder, promoBuyerKey, resolvePromoCode, type PromoDoc } from '@/lib/promo-codes'
@@ -182,15 +183,37 @@ export async function POST(request: Request) {
     if (user) {
       identity = identityFromUser(user)
     } else {
+      // Unauthenticated claims are capped per network address (an IPv6 /64
+      // counts as one) and per event, so a script can neither drain an event's
+      // free capacity nor make us mail tickets to arbitrary addresses.
+      //  - Per address: 30 an hour, failing closed. Generous on purpose: in
+      //    Haiti many phones share one carrier address.
+      //  - Per event: counted only AFTER the guest record validates, so junk
+      //    requests cannot burn an event's budget and lock real guests out,
+      //    and it fails OPEN: the per-person free cap and seat holds already
+      //    stop capacity drain, and a counter hiccup must not shut the door.
+      const HOUR = 60 * 60 * 1000
+      const perIp = await consumeRateLimit({ key: `guest-free-claim:ip:${clientIpKey(request)}`, limit: 30, windowMs: HOUR })
+      if (perIp.limited) return fail('Too many requests. Please try again later.', 'rate_limited', 429)
       const guestOutcome = await beginGuestCheckout({
         guestInput: guest,
         event,
         eventId: String(eventId),
-        ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip'),
+        // The normalised client address (first hop; IPv6 as its /64), so the
+        // access-code throttle can't be dodged by appending forwarded-for
+        // entries or rotating within a /64.
+        ipAddress: clientIpKey(request),
         accessCode,
         errorBody: (error, code) => ({ error, code }),
       })
       if (!guestOutcome.ok) return guestOutcome.response
+      const perEvent = await consumeRateLimit({
+        key: `guest-free-claim:event:${String(eventId)}`,
+        limit: 1000,
+        windowMs: HOUR,
+        failOpen: true,
+      })
+      if (perEvent.limited) return fail('Too many requests. Please try again later.', 'rate_limited', 429)
       identity = guestOutcome.identity
     }
 

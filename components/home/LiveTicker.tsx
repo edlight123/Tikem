@@ -54,7 +54,7 @@ export default function LiveTicker({ signals }: { signals: TickerSignal[] }) {
               prefetch={false}
               aria-hidden={dup || undefined}
               tabIndex={dup ? -1 : undefined}
-              className={`${dup ? 'ticker-dup ' : ''}group flex shrink-0 items-center gap-2.5 px-5 font-mono text-eyebrow uppercase tracking-[0.08em] text-fg-subtle outline-none transition-colors hover:text-fg focus-visible:text-fg focus-visible:underline`}
+              className={`${dup ? 'ticker-dup ' : ''}group flex shrink-0 items-center gap-2.5 px-5 font-sans text-caption font-medium tabular-nums text-fg-subtle outline-none transition-colors hover:text-fg focus-visible:text-fg focus-visible:underline`}
             >
               <span
                 aria-hidden

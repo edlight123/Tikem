@@ -1,5 +1,5 @@
 import type { Config } from 'tailwindcss'
-import { color as tokenColor, fontSize as tokenFontSize } from './lib/design/tokens'
+import { color as tokenColor, fontFamily as tokenFontFamily, fontSize as tokenFontSize } from './lib/design/tokens'
 
 const config: Config = {
   content: [
@@ -15,11 +15,18 @@ const config: Config = {
         ...tokenColor,
       },
       fontFamily: {
-        sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
-        display: ['var(--font-serif-display)', 'Instrument Serif', 'Georgia', 'serif'],
-        serif: ['var(--font-serif-display)', 'Instrument Serif', 'Georgia', 'serif'],
-        grotesk: ['var(--font-grotesk)', 'Space Grotesk', 'system-ui', 'sans-serif'],
-        mono: ['var(--font-mono)', 'JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'monospace'],
+        // Two faces only (lib/design/tokens.ts fontFamily): the sans for every
+        // word and number, Instrument Serif for the editorial voice.
+        sans: [...tokenFontFamily.sans],
+        display: [...tokenFontFamily.serif],
+        serif: [...tokenFontFamily.serif],
+        // Retired faces, kept as aliases so the ~400 existing uses read in the
+        // sans: `font-mono` (numbers get tabular figures in globals.css) and
+        // `font-grotesk`. New code writes `font-sans` (+ `tabular-nums`).
+        grotesk: [...tokenFontFamily.sans],
+        mono: [...tokenFontFamily.sans],
+        // A real code: ticket/order ids, promo codes, scanner strings, keys.
+        code: [...tokenFontFamily.code],
       },
       fontSize: {
         // The app's text ladder (lib/design/tokens.ts).

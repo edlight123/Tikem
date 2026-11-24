@@ -4,6 +4,7 @@ import { createClient } from '@/lib/firebase-db/server'
 import { adminDb } from '@/lib/firebase/admin'
 import { isBelowMinPaidPrice, MIN_PAID_PRICE_ERROR_CODE, minPaidPriceFor } from '@/lib/min-paid-price'
 import { canOnEvent } from '@/lib/organizer/context'
+import { eventOfRow } from '@/lib/organizer/event-of-row'
 
 /**
  * Create ticket tier for an event
@@ -182,14 +183,18 @@ export async function PATCH(req: NextRequest) {
 
     const supabase = await createClient()
 
-    // Verify tier belongs to user's event
+    // Verify tier belongs to an event the caller may manage. Authorize against
+    // the real event document: the Firestore shim never resolves the
+    // `events(organizer_id)` join, so `tier.events` was undefined and every
+    // organizer (and their team) was refused; only platform admins passed.
     const { data: tier } = await supabase
       .from('ticket_tiers')
-      .select('*, events(organizer_id)')
+      .select('*')
       .eq('id', tierId)
       .single()
+    const tierEvent = tier ? await eventOfRow(tier) : null
 
-    if (!tier || !(await canOnEvent(user, tier.events, 'manage_events')).allowed) {
+    if (!tier || !tierEvent || !(await canOnEvent(user, tierEvent, 'manage_events')).allowed) {
       return NextResponse.json(
         { error: 'Ticket tier not found or unauthorized' },
         { status: 404 }
@@ -200,9 +205,8 @@ export async function PATCH(req: NextRequest) {
     const priceInDollars = price !== undefined ? price / 100 : tier.price
 
     // Minimum paid price (US/CA 2.00, FR 1.00 EUR); free and Haiti pass.
-    if (price !== undefined && tier.event_id) {
-      const eventSnap = await adminDb.collection('events').doc(String(tier.event_id)).get()
-      const eventCountry = eventSnap.exists ? eventSnap.data()?.country : null
+    if (price !== undefined) {
+      const eventCountry = tierEvent.country ?? null
       if (isBelowMinPaidPrice(priceInDollars, eventCountry)) {
         const minimum = minPaidPriceFor(eventCountry) as number
         return NextResponse.json(

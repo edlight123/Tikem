@@ -430,7 +430,7 @@ function AttendeeDetail({ ticket }: { ticket: Ticket }) {
         </p>
         <div className="space-y-3">
           <InfoRow icon={<QrCode className="h-4 w-4" />} label={tx('attendees.ticket_id')}>
-            <span className="font-mono text-sm">{ticket.id}</span>
+            <span className="font-code text-sm">{ticket.id}</span>
           </InfoRow>
           <InfoRow icon={<Check className="h-4 w-4" />} label={tx('event_tools.col_status')}>
             <TicketStatus t={ticket} tx={tx} />

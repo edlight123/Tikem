@@ -773,7 +773,12 @@ export async function issueFreeClaim(
         // from an address the request body could name for someone else's order.
         email: identity.email,
         name: identity.name,
-        phone: identity.phone,
+        // An unauthenticated guest's free claim is not SMSed: the number is
+        // unverified, so anyone could make us text any phone (abroad, at our
+        // cost). The email carries the ticket (email is required for guests),
+        // and the guest ticket link shows it; an organizer-approved guest
+        // still gets the text.
+        phone: identity.isGuest && options.approved !== true ? null : identity.phone,
         isGuest: identity.isGuest,
       },
       quantity: ticketQuantity,

@@ -27,7 +27,7 @@ jest.mock('@/lib/auth', () => ({
   requireAdmin: jest.fn(async () => ({ user: admin ? user : null })),
 }))
 jest.mock('@/lib/rate-limit', () => ({
-  clientIp: () => '203.0.113.9',
+  clientIp: () => '203.0.113.9', clientIpKey: () => '203.0.113.9',
   consumeRateLimit: jest.fn(async (o: any) => {
     rateKeys.push(o.key)
     return { limited: !!limited[o.key.split(':').slice(0, 2).join(':')] }

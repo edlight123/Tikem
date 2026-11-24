@@ -16,13 +16,13 @@ import PosterImage from '@/components/ui/PosterImage'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { HomeEvent } from '@/lib/home/feed'
-import { metroOf } from '@/lib/home/feed'
+import { eventZone, metroOf } from '@/lib/home/feed'
 import { eventWhen } from '@/lib/home/format'
 import { getEventPriceLabel } from '@/lib/discover/helpers'
 
 const pad = (n: number) => String(n).padStart(2, '0')
 
-export default function FeaturedHero({ events, zone }: { events: HomeEvent[]; zone: string }) {
+export default function FeaturedHero({ events }: { events: HomeEvent[]; zone?: string }) {
   const { t, i18n } = useTranslation('common')
   const posterAlt = usePosterAlt()
   const [index, setIndex] = useState(0)
@@ -115,12 +115,12 @@ export default function FeaturedHero({ events, zone }: { events: HomeEvent[]; zo
                 <h2 className="break-words font-display italic text-fg text-balance !text-[clamp(44px,6vw,92px)] !leading-[0.95] tracking-[-0.01em]">
                   {ev.title}
                 </h2>
-                <p className="mt-5 truncate whitespace-nowrap font-mono !text-eyebrow uppercase !leading-relaxed tracking-[0.04em] text-fg-subtle sm:!text-eyebrow sm:tracking-[0.08em]">
-                  {eventWhen(ev.start_datetime, zone, i18n.language)}
+                <p className="mt-5 truncate whitespace-nowrap font-sans !text-meta !leading-relaxed text-fg-muted">
+                  {eventWhen(ev.start_datetime, eventZone(ev), i18n.language)}
                   {venue && <> · {venue}</>}
                 </p>
                 {lineup && (
-                  <p className="mt-1 truncate whitespace-nowrap font-mono !text-eyebrow uppercase !leading-relaxed tracking-[0.04em] text-fg-faint sm:!text-eyebrow sm:tracking-[0.08em]">
+                  <p className="mt-1 truncate whitespace-nowrap font-sans !text-meta !leading-relaxed text-fg-subtle">
                     {t('home.hero.lineup', { defaultValue: 'Lineup' })}: {lineup}
                   </p>
                 )}
@@ -130,11 +130,11 @@ export default function FeaturedHero({ events, zone }: { events: HomeEvent[]; zo
             <div className={`${ev.posterHasText ? 'mt-4' : 'mt-8'} flex flex-wrap items-center gap-x-5 gap-y-3`}>
               <Link
                 href={href}
-                className="inline-flex h-12 items-center rounded bg-inverse px-6 font-grotesk text-body font-semibold text-on-inverse outline-none transition-colors hover:bg-inverse-hover focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+                className="inline-flex h-12 items-center rounded bg-inverse px-6 font-sans text-body font-semibold text-on-inverse outline-none transition-colors hover:bg-inverse-hover focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black"
               >
                 {t('events.get_tickets', { defaultValue: 'Get tickets' })}
               </Link>
-              <span className="font-mono text-meta uppercase tracking-[0.06em] text-fg-soft">{price}</span>
+              <span className="font-sans text-body font-semibold tabular-nums text-fg-soft">{price}</span>
             </div>
           </div>
 
@@ -142,7 +142,7 @@ export default function FeaturedHero({ events, zone }: { events: HomeEvent[]; zo
             {count > 1 ? (
               <div className="flex items-center gap-4">
                 <p
-                  className="font-mono text-caption tabular-nums tracking-[0.08em] text-fg"
+                  className="font-sans text-meta font-semibold tabular-nums text-fg"
                   aria-label={t('home.hero.slide', { i: index + 1, n: count, defaultValue: `${index + 1} of ${count}` })}
                 >
                   {pad(index + 1)} <span className="text-fg-faint">/ {pad(count)}</span>

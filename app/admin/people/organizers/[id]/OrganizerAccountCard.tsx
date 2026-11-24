@@ -23,7 +23,7 @@ export default function OrganizerAccountCard({
       <dl className="space-y-3">
         <div>
           <dt className="text-xs text-console-mut">User ID</dt>
-          <dd className="text-sm text-console-text font-mono break-all">{id}</dd>
+          <dd className="text-sm text-console-text font-code break-all">{id}</dd>
         </div>
         <div>
           <dt className="text-xs text-console-mut">Phone</dt>

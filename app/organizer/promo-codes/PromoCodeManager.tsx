@@ -190,7 +190,7 @@ export default function PromoCodeManager({
       sortAccessor: (p) => p.code,
       render: (p) => (
         <div className="min-w-0">
-          <div className="font-mono font-bold tracking-tight text-fg">{p.code}</div>
+          <div className="font-code font-bold tracking-tight text-fg">{p.code}</div>
           <div className="text-xs text-fg-subtle truncate">{p.event?.title || 'Event not found'}</div>
         </div>
       ),
@@ -249,7 +249,7 @@ export default function PromoCodeManager({
     return (
       <div className="p-4 space-y-2">
         <div className="flex items-center justify-between gap-2">
-          <span className="font-mono text-lg font-bold tracking-tight text-fg">{p.code}</span>
+          <span className="font-code text-lg font-bold tracking-tight text-fg">{p.code}</span>
           <StatusChip tone={s.tone}>{s.label}</StatusChip>
         </div>
         <p className="text-sm text-fg-muted truncate">{p.event?.title || 'Event not found'}</p>

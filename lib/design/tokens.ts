@@ -114,8 +114,20 @@ export const fontSize = {
   hero: '44px', // wordmarks and page heroes on wide screens
 } as const
 
+/**
+ * Typefaces. Two voices: Plus Jakarta Sans for every word and number a person
+ * reads, Instrument Serif (self-hosted, app/fonts) for the editorial titles.
+ * `code` is the system monospace, only for strings that ARE codes: ticket and
+ * order ids, promo codes, scanner output, keys. It downloads nothing.
+ */
+export const fontFamily = {
+  sans: ['var(--font-sans)', 'Plus Jakarta Sans', 'system-ui', 'sans-serif'],
+  serif: ['var(--font-serif-display)', 'Instrument Serif', 'Georgia', 'serif'],
+  code: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Consolas', 'monospace'],
+} as const
+
 /** One corner everywhere: the poster's 4px. Circles only for avatars/dots. */
 export const radius = { DEFAULT: '0.25rem', full: '9999px' } as const
 
-export const tokens = { color, fontSize, radius }
+export const tokens = { color, fontSize, fontFamily, radius }
 export default tokens

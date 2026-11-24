@@ -180,7 +180,7 @@ export default async function PromoterStatsPage({
         {/* The link — the promoter's whole toolkit. */}
         <div className="rounded-2xl bg-surface p-5">
           <h2 className="font-display lowercase italic !text-section !leading-snug text-fg">{copy.yourLinkTitle}</h2>
-          <p className="mt-2 truncate rounded-xl bg-surface-raised px-4 py-3 text-sm text-fg-muted font-mono">
+          <p className="mt-2 truncate rounded-xl bg-surface-raised px-4 py-3 text-sm text-fg-muted font-code">
             {shareUrl}
           </p>
           <PromoterShareActions shareUrl={shareUrl} eventTitle={String(event?.title || copy.defaultEventTitle)} />

@@ -213,7 +213,7 @@ export default async function GuestTicketsPage({
                       <Ticket className="h-10 w-10 text-fg-subtle" strokeWidth={1.5} aria-hidden />
                     </div>
                   )}
-                  <p className="mt-4 font-mono text-lg tracking-[0.2em] text-fg">
+                  <p className="mt-4 font-code text-lg tracking-[0.2em] text-fg">
                     {String(ticket.id).slice(0, 12).toUpperCase()}
                   </p>
                   <p className="text-xs text-fg-subtle mt-1">{t('guest_tickets.show_code_fallback', "Show this code if the QR won't scan")}</p>

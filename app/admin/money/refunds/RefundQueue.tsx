@@ -220,7 +220,7 @@ function ItemBody({ item }: { item: Item }) {
         <p className="mt-1 text-sm text-console-faint">No paying wallet recorded: this is the buyer&apos;s profile phone. Confirm it before paying.</p>
       )}
       {item.note && <p className="mt-1 text-sm text-console-mut">Note: {item.note}</p>}
-      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 font-mono text-eyebrow text-console-faint">
+      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 font-code text-eyebrow text-console-faint">
         {item.ticketId && <span>ticket {item.ticketId}</span>}
         {item.orderId && <span>order {item.orderId}</span>}
         {item.transactionId && <span>tx {item.transactionId}</span>}
@@ -644,7 +644,7 @@ export default function RefundQueue() {
                     {item.lastError && (
                       <p className="mt-1 text-sm text-console-red">Last approval failed: {item.lastError}</p>
                     )}
-                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 font-mono text-eyebrow text-console-faint">
+                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 font-code text-eyebrow text-console-faint">
                       <span>ticket {item.ticketId}</span>
                       {item.ticketRefundStatus && <span>ticket now {item.ticketRefundStatus}</span>}
                       <span>held {shortDate(item.createdAt)}</span>
@@ -765,7 +765,7 @@ export default function RefundQueue() {
                       {item.ticketRefundStatus ? ` / ${item.ticketRefundStatus}` : ''}
                       {item.error ? ` · write failed: ${item.error}` : ''}
                     </p>
-                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 font-mono text-eyebrow text-console-faint">
+                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 font-code text-eyebrow text-console-faint">
                       <span>ticket {item.ticketId}</span>
                       {item.refundId && <span>refund {item.refundId}</span>}
                       <span>flagged {shortDate(item.createdAt)}</span>
@@ -843,7 +843,7 @@ export default function RefundQueue() {
                     {item.refundError && (
                       <p className="mt-1 text-sm text-console-faint">Stripe said: {item.refundError}</p>
                     )}
-                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 font-mono text-eyebrow text-console-faint">
+                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 font-code text-eyebrow text-console-faint">
                       <span>order {item.paymentId}</span>
                       {item.paymentIntentId && item.paymentIntentId !== item.paymentId && <span>pi {item.paymentIntentId}</span>}
                       <span>updated {shortDate(item.updatedAt)}</span>

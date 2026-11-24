@@ -93,7 +93,7 @@ jest.mock('@/lib/auth', () => ({
 }))
 
 jest.mock('next/server', () => ({ ...jest.requireActual('next/server'), after: jest.fn() }))
-jest.mock('@/lib/rate-limit', () => ({ clientIp: () => '127.0.0.1', consumeRateLimit: async () => ({ limited: false }) }))
+jest.mock('@/lib/rate-limit', () => ({ clientIp: () => '127.0.0.1', clientIpKey: () => '127.0.0.1', consumeRateLimit: async () => ({ limited: false }) }))
 jest.mock('@/lib/email', () => ({ sendEmail: jest.fn(async () => undefined) }))
 jest.mock('@/lib/notifications/helpers', () => ({ createNotification: jest.fn(async () => undefined) }))
 jest.mock('@/lib/notification-triggers', () => ({ sendPushNotification: async () => undefined }))

@@ -14,7 +14,7 @@ jest.mock('@/lib/email', () => ({
   }),
 }))
 jest.mock('@/lib/rate-limit', () => ({
-  clientIp: () => '1.2.3.4',
+  clientIp: () => '1.2.3.4', clientIpKey: () => '1.2.3.4',
   consumeRateLimit: jest.fn(async () => ({ limited })),
 }))
 jest.mock('@/lib/auth', () => ({ getCurrentUser: jest.fn(async () => null) }))

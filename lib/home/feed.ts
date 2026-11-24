@@ -28,6 +28,8 @@ export interface HomeEvent {
   venue_name: string
   city: string
   country: string
+  /** The event's own IANA zone when it stored one (eventZone falls back to city, then country). */
+  timezone?: string
   start_datetime: string
   end_datetime: string | null
   banner_image_url: string | null
@@ -129,6 +131,7 @@ export function toHomeEvent(e: any): HomeEvent | null {
     venue_name: str(e.venue_name).trim(),
     city: str(e.city).trim(),
     country: str(e.country) || 'HT',
+    ...(validZone(typeof e.timezone === 'string' ? e.timezone : null) ? { timezone: String(e.timezone) } : {}),
     start_datetime: start,
     end_datetime: toIso(e.end_datetime),
     banner_image_url: e.banner_image_url ? str(e.banner_image_url) : null,
@@ -156,12 +159,11 @@ export function toHomeEvent(e: any): HomeEvent | null {
 /* -------------------------------------------------------------------------- */
 
 /**
- * The clock the homepage reads in. Times show in the READER's zone — the
- * convention every other surface (cards, the event page) follows, and the
- * zone the organizer's browser stored them from. The server learns it from
- * the request (Vercel's x-vercel-ip-timezone) and hands the same zone to the
- * client, so the server render and hydration print identical strings. The
- * country table is the fallback when the request carries no zone.
+ * The clocks. An event's own time prints in the EVENT's zone (eventZone below),
+ * like the event page and the discover cards, so a 10 PM show in
+ * Port-au-Prince reads 10 PM for every reader. The homepage's calendar (which
+ * day, this week) runs in the browsed market's zone (zoneFor), never the
+ * visitor's IP zone, which shifted times for readers abroad.
  */
 const ZONE_BY_COUNTRY: Record<string, string> = {
   HT: 'America/Port-au-Prince',
@@ -473,7 +475,9 @@ export function buildWeek(
   const daySeries = new Map<string, Set<string>>()
   for (const e of events) {
     if (hasEnded(e, now)) continue
-    const day = index.get(dayKey(e.start_datetime, zone))
+    // The event's own calendar day, the day its card prints: a Friday 10 PM
+    // show in Los Angeles is a Friday event, even on a New York calendar.
+    const day = index.get(dayKey(e.start_datetime, eventZone(e)))
     if (!day) continue
     day.count += 1
     daySeries.set(day.date, (daySeries.get(day.date) || new Set()).add(seriesKey(e)))

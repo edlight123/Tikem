@@ -350,7 +350,7 @@ export function AdminOrdersClient() {
         const ticketType = order.ticket_type || order.ticketType || 'General'
         return (
           <div>
-            <div className="font-mono text-sm font-medium tabular-nums text-console-text">{order.id.slice(0, 8)}…</div>
+            <div className="font-code text-sm font-medium tabular-nums text-console-text">{order.id.slice(0, 8)}…</div>
             <div className="text-xs text-console-mut">{ticketType}</div>
           </div>
         )
@@ -462,7 +462,7 @@ export function AdminOrdersClient() {
       <div className="p-4" onClick={() => setSelectedOrder(order)}>
         <div className="flex items-start justify-between mb-2">
           <div>
-            <div className="font-mono text-sm font-medium tabular-nums text-console-text">Order {order.id.slice(0, 8)}…</div>
+            <div className="font-code text-sm font-medium tabular-nums text-console-text">Order {order.id.slice(0, 8)}…</div>
             <div className="text-xs text-console-mut truncate max-w-[200px]">{order.event_name}</div>
           </div>
           <StatusBadge status={order.status || ''} />
@@ -733,7 +733,7 @@ export function AdminOrdersClient() {
                   <Ticket className="w-4 h-4" />
                   <span>Order ID</span>
                 </div>
-                <div className="font-mono text-sm tabular-nums bg-console-ground text-console-text px-3 py-2 rounded break-all">
+                <div className="font-code text-sm tabular-nums bg-console-ground text-console-text px-3 py-2 rounded break-all">
                   {selectedOrder.id}
                 </div>
               </div>

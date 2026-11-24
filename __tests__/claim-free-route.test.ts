@@ -83,6 +83,15 @@ jest.mock('@/lib/events/access-guard', () => ({
  * with what. (Left real, it would hit Resend with the key in .env.local and actually
  * mail somebody every time the suite runs.)
  */
+// Guest claims are rate limited per IP and per event (lib/rate-limit, backed
+// by Firestore transactions this fake db doesn't model): allowed unless a test
+// says otherwise.
+const rateLimited = { value: false }
+jest.mock('@/lib/rate-limit', () => ({
+  consumeRateLimit: jest.fn(async () => ({ limited: rateLimited.value })),
+  clientIp: () => '203.0.113.9',
+  clientIpKey: () => '203.0.113.9',
+}))
 jest.mock('@/lib/tickets/confirmation', () => ({
   sendTicketConfirmation: jest.fn(async () => ({ emailSent: true, smsSent: false, whatsappSent: false })),
 }))
@@ -853,6 +862,15 @@ describe('guest claim — no account required', () => {
     expect(state.added).toHaveLength(0)
   })
 
+  it('junk guest requests never spend the event-wide budget (no lockout of real guests)', async () => {
+    const { consumeRateLimit } = jest.requireMock('@/lib/rate-limit') as { consumeRateLimit: jest.Mock }
+    consumeRateLimit.mockClear()
+    asGuest()
+    await POST(req({ eventId: 'evt1', tierId: 'freeA', guest: { name: 'X', email: 'not-an-email' } }))
+    const keys = consumeRateLimit.mock.calls.map((c: any[]) => c[0].key)
+    expect(keys.some((k: string) => k.startsWith('guest-free-claim:event:'))).toBe(false)
+  })
+
   it('requires a phone number for a Haiti event — it is the identifier that reaches people', async () => {
     state.event.country = 'HT'
     asGuest()
@@ -873,6 +891,36 @@ describe('guest claim — no account required', () => {
     )
     expect(ok.status).toBe(200)
     expect(state.added[0].guest_phone).toBe('+50934123456')
+    // The ticket still records the number, but an unverified guest phone is
+    // never texted: the ticket goes by email only.
+    const recipient = (sendTicketConfirmation as jest.Mock).mock.calls.at(-1)?.[0]?.recipient
+    expect(recipient?.phone ?? null).toBeNull()
+    expect(recipient?.email).toBe('x@y.com')
+  })
+
+  it('caps unauthenticated claims per network address (429, nothing issued)', async () => {
+    rateLimited.value = true
+    try {
+      asGuest()
+      const res = await POST(
+        req({ eventId: 'evt1', tierId: 'freeA', guest: { name: 'X', email: 'x@y.com' } })
+      )
+      expect(res.status).toBe(429)
+      expect((await res.json()).code).toBe('rate_limited')
+      expect(state.added).toHaveLength(0)
+    } finally {
+      rateLimited.value = false
+    }
+  })
+
+  it('never rate limits a signed-in claim', async () => {
+    rateLimited.value = true
+    try {
+      const res = await POST(req({ eventId: 'evt1', tierId: 'freeA', quantity: 1 }))
+      expect(res.status).not.toBe(429)
+    } finally {
+      rateLimited.value = false
+    }
   })
 
   it('refuses a guest who brings NO code to a password-protected event', async () => {

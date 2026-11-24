@@ -410,7 +410,7 @@ export default function PayoutReviewQueue() {
                         <span className="text-console-faint"> · {item.organizerEmail}</span>
                       ) : null}
                     </p>
-                    <p className="mt-1 font-mono text-eyebrow text-console-faint">{item.eventId}</p>
+                    <p className="mt-1 font-code text-eyebrow text-console-faint">{item.eventId}</p>
                   </div>
 
                   <div className="text-right">

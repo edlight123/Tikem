@@ -3,6 +3,7 @@ import { getCurrentUser } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
 import { friendshipStateFrom, mapConnectionsForViewer } from '@/lib/firestore/connections'
 import { consumeRateLimit } from '@/lib/rate-limit'
+import { isFindableInSearch } from '@/lib/social/suggestions'
 
 export const runtime = 'nodejs'
 
@@ -50,7 +51,7 @@ export async function GET(request: Request) {
         .orderBy('full_name')
         .startAt(qRaw)
         .endAt(end)
-        .limit(15)
+        .limit(40)
         .get()
       snap.docs.forEach((doc: any) => results.set(doc.id, doc.data()))
 
@@ -61,7 +62,7 @@ export async function GET(request: Request) {
           .orderBy('full_name')
           .startAt(cap)
           .endAt(cap + '\uf8ff')
-          .limit(15)
+          .limit(40)
           .get()
         snap2.docs.forEach((doc: any) => results.set(doc.id, doc.data()))
       }
@@ -72,7 +73,19 @@ export async function GET(request: Request) {
     const ids = Array.from(results.keys())
     const connectionsByOther = await mapConnectionsForViewer(user.id)
 
-    const payload = ids.slice(0, 20).map((id) => {
+    // People who keep their profile private or opted out of being found are
+    // not offered to strangers. Only a real tie still finds them: an accepted
+    // friendship, or a request THEY sent the viewer. A request the viewer sent
+    // that was never answered grants nothing (it would let anyone keep finding
+    // a person who went private after ignoring them).
+    const knows = (id: string) => {
+      const conn = connectionsByOther.get(id)
+      return Boolean(conn && (conn.status === 'accepted' || conn.requester_id === id))
+    }
+    const payload = ids
+      .filter((id) => isFindableInSearch(results.get(id), knows(id)))
+      .slice(0, 20)
+      .map((id) => {
       const data = results.get(id)
       const conn = connectionsByOther.get(id) || null
       return {

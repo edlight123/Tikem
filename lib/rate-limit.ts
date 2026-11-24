@@ -59,3 +59,25 @@ export function clientIp(request: Request): string {
   }
   return request.headers.get('x-real-ip')?.trim() || 'unknown'
 }
+
+/**
+ * The rate-limit key for a client address. IPv4 as is; IPv6 reduced to its
+ * /64, because one connection is routinely handed a whole /64 and keying on
+ * the full address lets a single client rotate through endless "addresses".
+ */
+export function clientIpKey(request: Request): string {
+  return ipLimitKey(clientIp(request))
+}
+
+export function ipLimitKey(ip: string): string {
+  if (!ip.includes(':')) return ip
+  // IPv4-mapped IPv6 (::ffff:1.2.3.4) is really IPv4.
+  const mapped = ip.match(/::ffff:(\d+\.\d+\.\d+\.\d+)$/i)
+  if (mapped) return mapped[1]
+  const [head, tail] = ip.toLowerCase().split('::')
+  const left = head ? head.split(':') : []
+  const right = tail !== undefined && tail !== '' ? tail.split(':') : []
+  const fill = tail !== undefined ? Array(Math.max(0, 8 - left.length - right.length)).fill('0') : []
+  const groups = [...left, ...fill, ...right].slice(0, 4).map((g) => g.replace(/^0+(?=.)/, ''))
+  return `${groups.join(':')}::/64`
+}

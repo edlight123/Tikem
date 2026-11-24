@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 import webpush from 'web-push'
 import { adminDb } from '@/lib/firebase/admin'
 import { requireAdmin } from '@/lib/auth'
-import { createHash } from 'crypto'
+import { createHash, timingSafeEqual } from 'crypto'
 
 function encodeEndpoint(endpoint: string): string {
   return createHash('sha256').update(endpoint).digest('hex')
@@ -47,18 +47,28 @@ async function runTestSend() {
   return NextResponse.json({ sent: results, pruned: expired.map((e: SendResult) => e.endpoint) })
 }
 
-export async function POST() {
+/** The PUSH_TEST_SECRET header matches (constant time); false when it is unset. */
+function secretMatches(request: Request): boolean {
+  const secret = process.env.PUSH_TEST_SECRET
+  const given = request.headers.get('x-push-test-secret')
+  if (!secret || !given) return false
+  const a = Buffer.from(secret)
+  const b = Buffer.from(given)
+  return a.length === b.length && timingSafeEqual(a, b)
+}
+
+/**
+ * Broadcast a test notification to every subscription. POST only: a signed-in
+ * admin, or a script sending the PUSH_TEST_SECRET in the x-push-test-secret
+ * header. There is no GET: a link (or a link preview, a prefetch, a crawler)
+ * must never be able to fire a broadcast, and a secret in a query string ends
+ * up in logs and browser history.
+ */
+export async function POST(request: Request) {
+  if (secretMatches(request)) return runTestSend()
   const { user, error: authError } = await requireAdmin()
   if (authError || !user) {
     return NextResponse.json({ error: 'Admin access required' }, { status: 401 })
   }
-  return runTestSend()
-}
-
-export async function GET(request: Request) {
-  const secret = process.env.PUSH_TEST_SECRET
-  if (!secret) return NextResponse.json({ error: 'PUSH_TEST_SECRET not configured' }, { status: 501 })
-  const token = new URL(request.url).searchParams.get('secret')
-  if (token !== secret) return NextResponse.json({ error: 'Invalid secret' }, { status: 401 })
   return runTestSend()
 }

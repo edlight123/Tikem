@@ -91,7 +91,7 @@ jest.mock('@/lib/capacity', () => ({
   capacityFromEvent: () => ({ available: true }),
   checkEventCapacity: async () => ({ available: true }),
 }))
-jest.mock('@/lib/rate-limit', () => ({ clientIp: () => '1.1.1.1', consumeRateLimit: async () => ({ limited: false }) }))
+jest.mock('@/lib/rate-limit', () => ({ clientIp: () => '1.1.1.1', clientIpKey: () => '1.1.1.1', consumeRateLimit: async () => ({ limited: false }) }))
 jest.mock('@/lib/event-country', () => ({
   inferCountryFromEventText: () => 'HT',
   resolveEventCountry: async () => 'HT',

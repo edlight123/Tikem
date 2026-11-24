@@ -26,7 +26,6 @@ import { serializeJsonLd } from '@/app/events/[id]/eventJsonLd'
 import {
   type HomeEvent,
   DEFAULT_ZONE,
-  validZone,
   buildCityIndex,
   buildTickerSignals,
   buildWeek,
@@ -166,10 +165,11 @@ export default async function HomePage({
   )
   const scoped = inCountry.filter((e) => inCity(e, active?.key ?? null))
 
-  // Every date prints in the reader's zone, as on the event page and cards:
-  // Vercel's per-request zone, else the browsing country's, else Haiti's.
-  // Resolved once here so server render and hydration agree.
-  const zone = validZone(headerList.get('x-vercel-ip-timezone')) || zoneFor(country) || DEFAULT_ZONE
+  // The page's calendar runs in the browsed market's zone, never the
+  // visitor's IP zone (which printed a 9 PM Port-au-Prince show as 6 PM for a
+  // reader in Los Angeles). Each event's own time prints in its zone
+  // (eventZone). Resolved once here so server render and hydration agree.
+  const zone = zoneFor(country) || DEFAULT_ZONE
 
   // The hero: the scope's own events, never a template listing (pickHeroEvents).
   // A scope that only has samples borrows from the country, then from

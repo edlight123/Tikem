@@ -370,12 +370,12 @@ select:-webkit-autofill {
 }
 
 @layer components {
-  /* Eyebrow / kicker label — JetBrains Mono technical layer, uppercase, tracked */
+  /* Eyebrow / kicker label — the sans, small, uppercase, tracked */
   /* Small-caps utility label. Mono is for IDENTIFIERS only (ticket codes,
      order refs) — anything a person reads as language takes the sans, the same
      narrowing the mobile app made on 2026-08-09. */
   .eyebrow {
-    font-family: var(--font-inter), 'Inter', system-ui, sans-serif;
+    font-family: var(--font-sans), 'Plus Jakarta Sans', system-ui, sans-serif;
     font-weight: 500;
     font-size: 0.7rem;
     line-height: 1;
@@ -385,9 +385,14 @@ select:-webkit-autofill {
 
   /* Technical metadata — dates, prices-as-data, ticket IDs, counts */
   .label-mono {
-    font-family: var(--font-mono), 'JetBrains Mono', ui-monospace, monospace;
+    font-family: var(--font-sans), 'Plus Jakarta Sans', system-ui, sans-serif;
     font-weight: 500;
-    letter-spacing: 0.02em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* `font-mono` is an alias of the sans now (tailwind.config.ts): it marked
+     numbers, prices, dates and counts, so those keep even-width figures. */
+  .font-mono {
     font-variant-numeric: tabular-nums;
   }
 

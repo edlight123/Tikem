@@ -348,7 +348,7 @@ export function CameraQRScanner({
           {error || 'Please allow camera access to scan QR codes'}
         </p>
         {debugInfo && (
-          <p className="mt-2 text-xs text-danger-strong font-mono">{debugInfo}</p>
+          <p className="mt-2 text-xs text-danger-strong font-code">{debugInfo}</p>
         )}
         <button
           onClick={startCamera}
@@ -408,7 +408,7 @@ export function CameraQRScanner({
               Tap the button below to enable camera scanning
             </p>
             {debugInfo && (
-              <p className="mt-2 text-xs text-brand-400 font-mono">{debugInfo}</p>
+              <p className="mt-2 text-xs text-brand-400 font-code">{debugInfo}</p>
             )}
             <button
               onClick={startCamera}
@@ -427,7 +427,7 @@ export function CameraQRScanner({
             <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 border-white"></div>
             <p className="mt-4 text-sm">Requesting camera access...</p>
             {debugInfo && (
-              <p className="mt-2 text-xs font-mono opacity-70">{debugInfo}</p>
+              <p className="mt-2 text-xs font-code opacity-70">{debugInfo}</p>
             )}
           </div>
         </div>
@@ -466,7 +466,7 @@ export function CameraQRScanner({
           </div>
           {debugInfo && (
             <div className="rounded-lg bg-brand-600/80 px-3 py-2 text-center backdrop-blur-sm">
-              <p className="text-xs font-mono text-fg">
+              <p className="text-xs font-code text-fg">
                 {debugInfo} | Frames: {frameCount}
               </p>
             </div>
@@ -475,7 +475,7 @@ export function CameraQRScanner({
           {consoleLog.length > 0 && (
             <div className="rounded-lg bg-brand-700/90 px-2 py-2 backdrop-blur-sm">
               {consoleLog.map((log, i) => (
-                <p key={i} className="text-xs font-mono text-fg">
+                <p key={i} className="text-xs font-code text-fg">
                   {log}
                 </p>
               ))}

@@ -6,7 +6,7 @@
  */
 const consumeRateLimit = jest.fn(async (_opts: any) => ({ limited: false }))
 jest.mock('@/lib/rate-limit', () => ({
-  clientIp: () => '203.0.113.9',
+  clientIp: () => '203.0.113.9', clientIpKey: () => '203.0.113.9',
   consumeRateLimit: (opts: any) => consumeRateLimit(opts),
 }))
 const getCurrentUser = jest.fn(async (): Promise<any> => ({ id: 'org-1' }))
