@@ -16,6 +16,7 @@ import { GOOGLE_NOT_CONFIGURED, useAuth } from '../../contexts/AuthContext';
 import { useI18n } from '../../contexts/I18nContext';
 import { AuthBackground } from '../../components/auth/AuthBackground';
 import { AuthWordmark } from '../../components/auth/AuthWordmark';
+import { AuthDismiss } from '../../components/auth/AuthDismiss';
 import { AuthInput } from '../../components/auth/AuthInput';
 import { TermsAgreement } from '../../components/auth/TermsAgreement';
 import { SocialSignInRow } from '../../components/auth/SocialSignInRow';
@@ -311,11 +312,14 @@ export default function SignupScreen({ navigation }: any) {
                   <Text style={styles.linkTextBold}>{t('auth.signup.signIn')}</Text>
                 </Text>
               </Pressable>
+
+              {/* A guest who came from browsing goes back to it (lib/authGate):
+                  the quiet "Not now" link, no X (ported from Tikra). */}
+              <AuthDismiss navigation={navigation} variant="link" disabled={loading} />
             </View>
           </Animated.View>
       </ScrollView>
       </KeyboardAvoidingView>
-      {/* A guest who came from browsing can close the sheet (lib/authGate). */}
     </AuthBackground>
   );
 }

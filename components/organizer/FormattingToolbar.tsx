@@ -77,7 +77,7 @@ export default function FormattingToolbar({
           // Keep the textarea's selection: a mousedown on the button would blur it first.
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => applyEdit(textareaRef.current, value, onChange, edit)}
-          className="flex h-8 w-8 items-center justify-center rounded-[4px] text-white/60 transition-colors hover:bg-white/[0.08] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
+          className="flex h-8 w-8 items-center justify-center rounded-[4px] text-fg-muted transition-colors hover:bg-surface-raised hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fg/70"
         >
           <Icon className="h-4 w-4" strokeWidth={2.25} />
         </button>

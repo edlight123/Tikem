@@ -177,10 +177,10 @@ describe('deep links for a guest', () => {
 
 describe('the sign-in sheet', () => {
   it('Login and Sign-up offer a way back to browsing', () => {
+    // A quiet "Not now" link on both (2026-11-24, ported from Tikra: no X).
     for (const f of ['mobile/screens/auth/LoginScreen.tsx', 'mobile/screens/auth/SignupScreen.tsx']) {
-      expect(read(f)).toMatch(/<AuthDismiss navigation=\{navigation\} variant="close"/)
+      expect(read(f)).toMatch(/<AuthDismiss navigation=\{navigation\} variant="link"/)
     }
-    expect(read('mobile/screens/auth/LoginScreen.tsx')).toMatch(/<AuthDismiss navigation=\{navigation\} variant="link"/)
   })
 
   it('the event page reopens what the guest tapped once they are signed in', () => {
