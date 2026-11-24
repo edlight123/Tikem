@@ -48,6 +48,7 @@ import WhitePillCTA from '../components/WhitePillCTA';
 import VerifiedBadge from '../components/VerifiedBadge';
 import PaymentModal from '../components/PaymentModal';
 import { externalTicketsUrl } from '../lib/integrationWeb';
+import { communityTicketsUrl, isCommunityEvent, isSafeHttpUrl } from '../lib/community';
 import TieredTicketSelector, { PurchaseSelectionMeta } from '../components/TieredTicketSelector';
 import { resolveEventPricing } from '../lib/ticketPricing';
 import { doorPriceLabel, isDoorEvent, isDoorTier, lowestDoorPrice } from '../lib/payAtDoor';
@@ -616,6 +617,13 @@ export default function EventDetailScreen({ route, navigation }: any) {
   };
 
   const handlePurchaseTicket = async () => {
+    // Shared by the community (lib/community): nothing is sold here. The CTA
+    // links out to the organizer's own tickets when the share carried a link.
+    if (isCommunityEvent(event)) {
+      const url = communityTicketsUrl(event);
+      if (url && !isPastEvent) Linking.openURL(url).catch(() => undefined);
+      return;
+    }
     // Tickets sold on Eventbrite (a synced event): no account needed here.
     if (outsideTicketsUrl && !isPastEvent) {
       Linking.openURL(outsideTicketsUrl).catch(() => undefined);
@@ -831,6 +839,11 @@ export default function EventDetailScreen({ route, navigation }: any) {
   const requiresApproval = eventNeedsApproval && freeOnly;
   // Kept in sync from Eventbrite: tickets are sold there, so the CTA links out.
   const outsideTicketsUrl = externalTicketsUrl(event);
+  // Shared by the community, not posted by its organizer (lib/community): no
+  // sales on Tikèm, a credit with the source link, and "Claim it".
+  const communityShared = isCommunityEvent(event);
+  const communityTickets = communityTicketsUrl(event);
+  const communitySource = communityShared ? isSafeHttpUrl((event as any).source_url) : null;
   const allowedPlusOnesHere = attendAllowedPlusOnes ?? eventAllowedPlusOnes(event);
 
   // Prevent purchase only after the event has ended (not after it has started).
@@ -1052,7 +1065,7 @@ export default function EventDetailScreen({ route, navigation }: any) {
                   (owner, 2026-11-17: the full-width "Message the organizer"
                   button was "too prominent ... maybe just an icon"). Hidden on
                   the organizer's own event and when signed out. */}
-              {!!event.organizer_id && event.organizer_id !== user?.uid && !!user && (
+              {!!event.organizer_id && event.organizer_id !== user?.uid && !!user && !communityShared && (
                 <TouchableOpacity
                   style={styles.orgMessageIcon}
                   onPress={() => setShowContactOrganizer(true)}
@@ -1068,6 +1081,35 @@ export default function EventDetailScreen({ route, navigation }: any) {
                 <FollowButton organizerId={event.organizer_id} style={styles.orgFollow} />
               )}
             </View>
+            {communityShared ? (
+              <View style={styles.communityCredit}>
+                <Text style={styles.communityCreditText}>
+                  {(event as any).source_name
+                    ? t('community.event.sharedFrom', { name: String((event as any).source_name) })
+                    : t('community.event.shared')}
+                </Text>
+                <View style={styles.communityLinks}>
+                  {communitySource ? (
+                    <TouchableOpacity
+                      onPress={() => Linking.openURL(communitySource).catch(() => undefined)}
+                      accessibilityRole="link"
+                      hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+                    >
+                      <Text style={styles.communityLink}>{t('community.event.seeOriginal')}</Text>
+                    </TouchableOpacity>
+                  ) : null}
+                  {(event as any).claimable === true ? (
+                    <TouchableOpacity
+                      onPress={() => navigation.navigate('ClaimEvent', { eventId, eventTitle: event.title })}
+                      accessibilityRole="button"
+                      hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+                    >
+                      <Text style={styles.communityLink}>{t('community.event.claim')}</Text>
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+              </View>
+            ) : null}
           </View>
 
           {/* Waitlist (Add to Calendar moved to the header as an icon). Only
@@ -1279,6 +1321,18 @@ export default function EventDetailScreen({ route, navigation }: any) {
               {isCancelled ? t('eventDetail.floating.eventCancelled') : t('eventDetail.floating.notOnSale')}
             </Text>
           </View>
+        ) : communityShared ? (
+          communityTickets ? (
+            <WhitePillCTA
+              label={t('community.event.ticketsOnSite')}
+              onPress={() => Linking.openURL(communityTickets).catch(() => undefined)}
+              style={styles.floatingCtaPill}
+            />
+          ) : (
+            <View style={[styles.ctaDisabled, styles.floatingCtaPill]}>
+              <Text style={styles.ctaDisabledText}>{t('community.event.notSoldHere')}</Text>
+            </View>
+          )
         ) : freeOnly && !requiresApproval && heldFreeTickets > 0 ? (
           // Already holds this free-only event's claim: no claim sheet to open.
           // Dot + label status (never a pill badge) and one way to the tickets.
@@ -1853,6 +1907,11 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     borderColor: colors.border,
   },
   orgLine: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  // Community credit under the host line: quiet meta, two text links.
+  communityCredit: { gap: 6 },
+  communityCreditText: { fontSize: 13, lineHeight: 18, color: colors.textSecondary },
+  communityLinks: { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
+  communityLink: { fontSize: 13, fontWeight: '600', color: colors.text, textDecorationLine: 'underline' },
   // Follow at the end of the identity line: its own white / "Following"
   // fills (FollowButton), sized to sit level with the 44pt avatar.
   orgFollow: { height: 36, minWidth: 96, paddingHorizontal: 16 },

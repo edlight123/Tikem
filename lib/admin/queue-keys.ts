@@ -17,6 +17,9 @@ export const QUEUE_KEYS = [
   'disputes',
   'pendingEvents',
   'reportedEvents',
+  // Community shares and event claims (lib/community, /admin/community).
+  'communityShares',
+  'eventClaims',
 ] as const
 
 export type QueueKey = (typeof QUEUE_KEYS)[number]
@@ -27,7 +30,7 @@ export type QueueStat = { count: number; oldestAt: string | null } | null
 export type QueueSummary = Record<QueueKey, QueueStat>
 
 export interface RailGroup {
-  key: 'verifications' | 'payouts' | 'reported' | 'disputes'
+  key: 'verifications' | 'payouts' | 'reported' | 'disputes' | 'community'
   label: string
   href: string
   sources: QueueKey[]
@@ -53,6 +56,7 @@ export const RAIL_GROUPS: RailGroup[] = [
   },
   { key: 'reported', label: 'Reported', href: '/admin/events', sources: ['reportedEvents', 'pendingEvents'] },
   { key: 'disputes', label: 'Disputes', href: '/admin/money/disputes', sources: ['disputes'] },
+  { key: 'community', label: 'Community', href: '/admin/community', sources: ['communityShares', 'eventClaims'] },
 ]
 
 /**

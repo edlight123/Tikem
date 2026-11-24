@@ -319,6 +319,19 @@ service cloud.firestore {
         && request.resource.data.get('imported', null) == null
         && request.resource.data.get('external_url', null) == null
         && request.resource.data.get('stats', null) == null
+        // Community-shared credit and claims (lib/community/submissions) are
+        // set only by the admin routes (Admin SDK): a client must not credit
+        // its event to another organizer, plant a source link, or open its
+        // event to claims.
+        && request.resource.data.get('community_shared', false) == false
+        && request.resource.data.get('claimable', false) == false
+        && request.resource.data.get('source_name', null) == null
+        && request.resource.data.get('source_handle', null) == null
+        && request.resource.data.get('source_url', null) == null
+        && request.resource.data.get('submission_id', null) == null
+        && request.resource.data.get('claimed_at', null) == null
+        && request.resource.data.get('claimed_by', null) == null
+        && request.resource.data.get('community_free', null) == null
         // Approval lists are for FREE events only (docs/specs/approval-lists-and-plus-ones.md).
         && !(request.resource.data.get('requires_approval', false) == true
              && request.resource.data.get('has_paid_tiers', false) == true)
@@ -378,6 +391,16 @@ service cloud.firestore {
              request.resource.data.imported.locally_edited == true)) &&
           request.resource.data.get('external_url', null) == resource.data.get('external_url', null) &&
           request.resource.data.get('stats', null) == resource.data.get('stats', null) &&
+          // Community-shared credit and claims (lib/community/submissions): Admin SDK only.
+          request.resource.data.get('community_shared', false) == resource.data.get('community_shared', false) &&
+          request.resource.data.get('claimable', false) == resource.data.get('claimable', false) &&
+          request.resource.data.get('source_name', null) == resource.data.get('source_name', null) &&
+          request.resource.data.get('source_handle', null) == resource.data.get('source_handle', null) &&
+          request.resource.data.get('source_url', null) == resource.data.get('source_url', null) &&
+          request.resource.data.get('submission_id', null) == resource.data.get('submission_id', null) &&
+          request.resource.data.get('claimed_at', null) == resource.data.get('claimed_at', null) &&
+          request.resource.data.get('claimed_by', null) == resource.data.get('claimed_by', null) &&
+          request.resource.data.get('community_free', null) == resource.data.get('community_free', null) &&
           // Payout safety (lib/payouts/availability.ts): a cancellation and its
           // payout freeze are set by lib/events/cancel.ts on the Admin SDK and
           // must not be undone from a client — un-cancelling would re-open money

@@ -2233,5 +2233,104 @@
     "age_18": "18+ only",
     "age_21": "21+ only",
     "dress_code": "Dress code: {{value}}"
+  },
+  "community": {
+    "event": {
+      "shared": "Shared by the community",
+      "from": "From {{name}}",
+      "source": "See the original",
+      "claim": "Is this your event? Claim it",
+      "not_sold": "Tickets aren't sold on Tikèm for this event.",
+      "tickets_elsewhere": "Tickets on the organizer's site",
+      "tickets_elsewhere_note": "Tikèm doesn't sell tickets for this event. You'll buy them from the organizer.",
+      "price_unknown": "Price not listed",
+      "price_note": "As listed by the organizer"
+    },
+    "share": {
+      "entry": "Share an event",
+      "empty_entry": "Saw a flyer? Share an event",
+      "title": "share an event",
+      "steps": {
+        "flyer": "The flyer",
+        "when_where": "When and where",
+        "tickets": "Tickets",
+        "source": "Where you saw it"
+      },
+      "reading": "Reading the flyer…",
+      "filled": "We filled in what we could read. Check it.",
+      "nothing_read": "We couldn't read this flyer. Add what you know.",
+      "fields": {
+        "title": "Event name",
+        "date": "Date",
+        "start": "Starts",
+        "end": "Ends",
+        "venue": "Venue",
+        "city": "City",
+        "country": "Country",
+        "price": "Price",
+        "currency": "Currency",
+        "ticket_url": "Ticket link",
+        "category": "Category",
+        "source_url": "Link to the post or website",
+        "organizer": "Organizer",
+        "handle": "Instagram",
+        "note": "Anything else"
+      },
+      "not_sure": "Not sure",
+      "countries": {
+        "HT": "Haiti",
+        "US": "United States",
+        "CA": "Canada",
+        "FR": "France"
+      },
+      "free": "Free",
+      "paid": "Paid",
+      "send": "Send",
+      "sending": "Sending…",
+      "sent": "Thanks. We'll check it and add it to Tikèm.",
+      "another": "Share another",
+      "done": "Done",
+      "footnote": "We check every event before it goes up and credit its organizer.",
+      "errors": {
+        "rate_limited": "You've shared a lot today. Try again tomorrow.",
+        "bad_image": "Add the flyer first.",
+        "forbidden": "This account can't share events.",
+        "generic": "Couldn't send. Try again."
+      }
+    },
+    "claim": {
+      "title": "claim this event",
+      "how": "Show us it's yours",
+      "methods": {
+        "instagram": "Instagram",
+        "link": "A link",
+        "upload": "A document"
+      },
+      "handle": "Your Instagram handle",
+      "handle_hint": "The account that posted the event.",
+      "link": "A link that shows it's yours",
+      "upload": "Upload a screenshot or document",
+      "uploading": "Uploading…",
+      "upload_hint": "Only the Tikèm team sees it. Image or PDF, 10 MB max.",
+      "upload_errors": {
+        "type": "Use an image or a PDF.",
+        "size": "That file is over 10 MB.",
+        "auth": "Sign in again, then retry.",
+        "failed": "Upload failed. Try again."
+      },
+      "message": "Note for our team (optional)",
+      "send": "Send claim",
+      "sending": "Sending…",
+      "sent": "Claim sent. We'll get back to you soon.",
+      "back": "Back to the event",
+      "footnote": "Once approved, the event moves to your organizer account and you can edit it and sell tickets.",
+      "errors": {
+        "invalid_proof": "Check your proof and try again.",
+        "not_claimable": "This event can't be claimed.",
+        "rate_limited": "Too many claims today. Try again tomorrow.",
+        "forbidden": "This account can't claim events.",
+        "generic": "Couldn't send. Try again."
+      }
+    }
   }
 }
