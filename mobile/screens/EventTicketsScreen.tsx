@@ -324,15 +324,26 @@ export default function EventTicketsScreen({ route, navigation }: any) {
       <StatusBar barStyle="light-content" />
 
       <SafeAreaView edges={['top', 'bottom']} style={styles.safeArea}>
-        {/* Event Info Section */}
-        <View style={styles.eventInfoSection}>
-          <Text style={styles.eventTitle} numberOfLines={2}>{event.title}</Text>
-          {/* "Ticket 1 of 1" says nothing: only count when there are several. */}
+        {/* A quiet back arrow, then (several tickets only) which one you're
+            on. The pass already names the event: no second title (ported
+            from Tikra). There was no visible way out before, only the edge
+            swipe. */}
+        <View style={styles.topBar}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.backButton}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={t('common.back')}
+          >
+            <ArrowLeft size={24} color={colors.white} />
+          </TouchableOpacity>
           {tickets.length > 1 ? (
             <Text style={styles.currentTicketIndicator}>
               {t('tickets.ticketSingular')} {currentIndex + 1} {t('common.of')} {tickets.length}
             </Text>
           ) : null}
+          <View style={{ width: 40 }} />
         </View>
 
         {/* Horizontal Pager */}
@@ -397,6 +408,13 @@ export default function EventTicketsScreen({ route, navigation }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    height: 44,
   },
   header: {
     paddingHorizontal: 16,

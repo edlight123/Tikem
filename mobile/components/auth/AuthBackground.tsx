@@ -1,67 +1,62 @@
 import React, { useState } from 'react';
-import { View, Image, StyleSheet } from 'react-native';
+import { View, StyleSheet, useWindowDimensions } from 'react-native';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { authPhotos } from '../../lib/artLibrary';
 import { themedArt } from '../../lib/nationalDaysRemote';
+import { colors as T } from '../../theme/tokens';
 
 /**
- * The auth (login / sign-up) backdrop is a rotating real photograph of people
- * out together: a concert, a party, a dinner, a family, friends on a trip
- * (2026-11-14: the illustrated backdrops "read very AI"). A different photo
- * shows each time the auth screen mounts.
+ * The auth (login / sign-up) backdrop: a rotating photograph of happy people
+ * (friends, a party, a dinner, a crowd on a dune), a different one each time the
+ * screen opens.
  *
- * The art keeps its own colours (each piece is different), unified by:
- *  1. a top+bottom darkening scrim so the wordmark (top) and form (bottom) stay
- *     legible over any image, and
- *  2. a faint upper-left teal wash — the POSH brand accent, sparing.
+ * The photo fills the TOP of the screen only and fades into the black canvas
+ * behind the form (owner 2026-11-24: keep a photo, make it better quality,
+ * make it people happy). Stretched over the whole phone the people sat behind
+ * the form and one crop read as just a hand; this way the faces sit above it.
+ * The photos are cut at 1290x1740 from the full-resolution originals
+ * (assets/photos/auth), so they stay sharp on a 3x screen.
  *
  * All photos are BUNDLED assets, so the screen works offline and on first
- * launch; nothing streams. The rotation is authPhotos() in lib/artLibrary.ts.
+ * launch. While a national day is active (lib/nationalDays) its art takes the
+ * slot.
  */
 const ART = authPhotos();
 
 export function AuthBackground({ children }: { children?: React.ReactNode }) {
-  // Pick one piece per mount so users see the collection rotate across opens.
-  // While a national day is active (lib/nationalDays) its art takes the slot.
+  const { height } = useWindowDimensions();
   const [art] = useState(() => themedArt(ART[Math.floor(Math.random() * ART.length)]));
+  // The photo band: about the top two thirds, fading out before the form.
+  const bandH = Math.round(height * 0.66);
 
   return (
     <View style={styles.root}>
-      <Image
-        source={art.source}
-        style={StyleSheet.absoluteFill}
-        resizeMode="cover"
-        accessibilityIgnoresInvertColors
-      />
-
-      {/* 1 — legibility scrim: darker at top (wordmark) and bottom (form),
-             letting the art breathe through the middle. */}
-      <LinearGradient
-        colors={['rgba(10,10,10,0.66)', 'rgba(10,10,10,0.12)', 'rgba(10,10,10,0.58)', '#0A0A0A']}
-        locations={[0, 0.30, 0.66, 1]}
-        style={StyleSheet.absoluteFill}
-        pointerEvents="none"
-      />
-
-      {/* 2 — sparing brand teal wash, anchored to the upper-left headline corner. */}
-      <LinearGradient
-        colors={['rgba(20,184,166,0.16)', 'transparent']}
-        start={{ x: 0.08, y: 0 }}
-        end={{ x: 0.9, y: 0.55 }}
-        style={StyleSheet.absoluteFill}
-        pointerEvents="none"
-      />
-
+      <View style={[styles.band, { height: bandH }]} pointerEvents="none">
+        <Image
+          source={art.source}
+          style={StyleSheet.absoluteFill}
+          contentFit="cover"
+          contentPosition="top"
+          transition={200}
+          accessibilityIgnoresInvertColors
+        />
+        {/* Darker at the very top for the close button and wordmark, clear
+            through the faces, then into the canvas well before the form. */}
+        <LinearGradient
+          colors={['rgba(10,10,10,0.55)', 'rgba(10,10,10,0.05)', 'rgba(10,10,10,0.35)', T.bg]}
+          locations={[0, 0.3, 0.62, 1]}
+          style={StyleSheet.absoluteFill}
+        />
+      </View>
       {children}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: '#0A0A0A',
-  },
+  root: { flex: 1, backgroundColor: T.bg },
+  band: { position: 'absolute', top: 0, left: 0, right: 0, overflow: 'hidden' },
 });
 
 export default AuthBackground;

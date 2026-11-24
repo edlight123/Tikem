@@ -1348,6 +1348,9 @@ export default {
       errorBody: 'Nou pa t kapab senkronize kontak yo. Tanpri eseye ankò.',
       noContactMatches: 'Okenn nan kontak ou yo poko sou Tikèm. Envite yo!',
       onTikem: '{count} sou Tikèm',
+      permissionDeniedBody: "Kontak yo fèmen pou Tikèm. Louvri yo nan Paramèt pou jwenn zanmi ki deja la. Nou sèvi ak kontak ou yo sèlman pou konpare, nou pa janm kenbe yo.",
+      openSettings: "Louvri Paramèt",
+      notNow: "Pa kounye a",
     },
   },
 
@@ -3648,6 +3651,9 @@ export default {
   },
 
   ticketPass: {
+    calendarShort: "Kalandriye",
+    directionsShort: "Direksyon",
+    eventShort: "Evènman",
     ticketNumber: 'Biyè {count}',
     admit: 'Admèt:',
     tapHint: 'Peze biyè a pou agrandi l · montre l nan antre a',
@@ -4529,5 +4535,12 @@ export default {
     flashlight: "Flach",
     qrCode: "Kòd QR tikè a",
     qrCodeHint: "Louvri kòd la sou tout ekran an pou pòt la",
+  },
+  richText: {
+    bold: "Gra",
+    italic: "Italik",
+    bulletList: "Lis ak pwen",
+    numberedList: "Lis nimewote",
+    toolbar: "Fòma tèks la",
   },
 } as const;

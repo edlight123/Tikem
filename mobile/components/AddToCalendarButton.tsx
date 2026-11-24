@@ -13,6 +13,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { safeFormatForLanguage } from '../lib/dates';
 import { useI18n } from '../contexts/I18nContext';
 import { radius } from '../theme/tokens';
+import { stripRichText } from '../lib/richText';
 
 interface AddToCalendarButtonProps {
   event: {
@@ -56,7 +57,7 @@ export default function AddToCalendarButton({ event, style, renderTrigger }: Add
       action: 'TEMPLATE',
       text: event.title,
       dates: `${formatDateForCalendar(startDate)}/${formatDateForCalendar(endDate)}`,
-      details: event.description || '',
+      details: stripRichText(event.description),
       location: location,
       sf: 'true',
     });
@@ -71,7 +72,7 @@ export default function AddToCalendarButton({ event, style, renderTrigger }: Add
       subject: event.title,
       startdt: startDate.toISOString(),
       enddt: endDate.toISOString(),
-      body: event.description || '',
+      body: stripRichText(event.description),
       location: location,
       path: '/calendar/action/compose',
       rru: 'addevent',

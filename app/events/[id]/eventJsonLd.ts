@@ -8,6 +8,7 @@
 
 import { eventZone } from '@/lib/home/feed'
 import { isoWithOffset } from '@/lib/home/format'
+import { stripRichText } from '@/lib/richText'
 
 const str = (v: unknown) => (typeof v === 'string' ? v.trim() : '')
 
@@ -64,7 +65,7 @@ export function buildEventJsonLd(event: any, siteUrl: string): Record<string, un
     str(event?.users?.organization_name) || str(event?.users?.full_name) || 'Event Organizer'
 
   const image = str(event?.banner_image_url) || str(event?.image_url)
-  const description = str(event?.description)
+  const description = stripRichText(str(event?.description))
   const status = str(event?.status).toLowerCase()
 
   const country = str(event?.country).toUpperCase() || 'HT'

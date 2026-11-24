@@ -11,6 +11,7 @@ import { AdminReportsPanel } from './AdminReportsPanel'
 import { EMPTY_VALUE } from '@/lib/format'
 import { ExportButtons } from '@/components/exports/ExportButtons'
 import { downloadExport } from '@/lib/exports/download'
+import { stripRichText } from '@/lib/richText'
 
 // Guard against missing/malformed dates: date-fns `format` throws
 // "RangeError: Invalid time value" on an Invalid Date, which would crash the
@@ -207,7 +208,7 @@ export function AdminEventDetailSheet({ event, isOpen, onClose, onAction, onRepo
               <div>
                 <h4 className={`${SECTION_LABEL} mb-2`}>Description</h4>
                 <p className="text-sm text-console-mut whitespace-pre-wrap">
-                  {event.description}
+                  {stripRichText(event.description)}
                 </p>
               </div>
             )}

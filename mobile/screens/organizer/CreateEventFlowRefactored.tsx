@@ -78,7 +78,7 @@ import {
 } from '../../data/haitiGeo';
 import WhitePillCTA from '../../components/WhitePillCTA';
 import SpotifySongPicker from '../../components/SpotifySongPicker';
-import OverlayHeader, { useOverlayHeaderInset } from '../../components/OverlayHeader';
+import RichTextEditor from '../../components/RichTextEditor';
 import { font, radius, withAlpha } from '../../theme/tokens';
 import { POSTER_THEME_KEYS, resolvePosterTheme } from '../../lib/posterGradient';
 import {
@@ -472,9 +472,6 @@ export default function CreateEventFlowRefactored() {
   const navigation = useNavigation();
   const route = useRoute<RouteProp<RouteParams, 'EditEvent'>>();
   const insets = useSafeAreaInsets();
-  // 48 = the header's own paddingTop 12 + 24pt glyph + paddingBottom 12; it
-  // carries no safe-area inset (the SafeAreaView above already does).
-  const { height: headerH, onHeight } = useOverlayHeaderInset(48);
   const { user, userProfile, refreshUserProfile } = useAuth();
   const { mode, setMode } = useAppMode();
   // New events belong to the org being acted for (own, or a team the person
@@ -2304,11 +2301,14 @@ export default function CreateEventFlowRefactored() {
     <View style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.wrapper}>
-          {/* Header — floats over the canvas so the form scrolls under the
-              app's blurred chrome. It sits INSIDE the SafeAreaView, which has
-              already paid the notch inset, so `styles.header` keeps its own
-              paddingTop and deliberately overrides OverlayHeader's. */}
-          <OverlayHeader style={styles.header} onHeight={onHeight}>
+          {/* Header: a solid canvas bar, in flow (TestFlight 2026-11-24, the
+              owner circled the top). It used to float over the form on the
+              blurred chrome, but inside the SafeAreaView that read as a second,
+              lighter band under the status bar, and a teal chip scrolling
+              beneath it smeared into a teal glow. Solid and in flow, the top is
+              one clean black from the notch down and the form simply passes
+              out of view under it. */}
+          <View style={styles.header}>
             <TouchableOpacity
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               onPress={confirmExit}
@@ -2321,7 +2321,7 @@ export default function CreateEventFlowRefactored() {
               {isEditMode ? t('organizerCreateEventFlow.headerEdit') : t('organizerCreateEventFlow.headerCreate')}
             </Text>
             <View style={{ width: 24 }} />
-          </OverlayHeader>
+          </View>
 
           {/* Single scrolling canvas */}
           <ScrollView
@@ -2337,7 +2337,7 @@ export default function CreateEventFlowRefactored() {
             contentContainerStyle={{
               // Reserve the overlay header's measured height so the first row
               // (the validation banner / flyer hero) doesn't start life hidden.
-              paddingTop: headerH,
+              paddingTop: 4,
               paddingBottom: isKeyboardVisible ? keyboardHeight + 24 : footerHeight + 24,
             }}
             keyboardShouldPersistTaps="handled"
@@ -2837,12 +2837,11 @@ export default function CreateEventFlowRefactored() {
             {/* Additional Details */}
             <View style={styles.canvasPad}>
               <Text style={styles.sectionHeader}>{t('organizerCreateEventFlow.canvas.additionalDetails')}</Text>
-              <InlineTextRow
-                colors={colors}
+              {/* Bold, italic and lists (lib/richText), saved as light markdown. */}
+              <RichTextEditor
                 placeholder={t('organizerCreateEventFlow.canvas.eventSummary')}
                 value={eventDraft.description}
                 onChangeText={(text) => updateDraft({ description: text })}
-                multiline
                 maxLength={2000}
               />
             </View>
@@ -3873,8 +3872,11 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 12,
+    paddingTop: 8,
+    paddingBottom: 8,
+    minHeight: 48,
+    backgroundColor: colors.background,
+    zIndex: 2,
   },
   headerTitle: {
     // Serif screen title — the flow's screens speak in the same editorial

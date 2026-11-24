@@ -44,6 +44,7 @@ import { dateLocaleFor, intlLocaleFor } from '@/lib/dateLocale'
 import { venueAddressLines } from '@/lib/events/venueLines'
 import VenueDetailsList from '@/components/events/VenueDetailsList'
 import { hasVenueDetails, venueDetailsOf } from '@/lib/events/venue-details'
+import RichText from '@/components/RichText'
 
 interface EventDetailsClientProps {
   event: any
@@ -537,9 +538,7 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                   <h2 className="mb-3 font-display lowercase italic !text-section !leading-snug text-fg">
                     {t('events.about_event')}
                   </h2>
-                  <p className="max-w-[65ch] text-body leading-relaxed text-fg-muted whitespace-pre-wrap">
-                    {event.description}
-                  </p>
+                  <RichText text={event.description} className="max-w-[65ch] break-words text-body leading-relaxed text-fg-muted [&_strong]:text-fg" />
                 </>
               )}
               {/* The trailer, then the song — both under the about text. */}

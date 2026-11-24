@@ -154,48 +154,32 @@ describe('isDeviceOnlyImageUri (what the poster upload must upload)', () => {
   })
 })
 
-describe('artForPlace (real photos since 2026-11-16)', () => {
+describe('artForPlace (people only since 2026-11-24)', () => {
   const { findMetro } = require('../mobile/data/metros')
-  const PAP = ['photo-negmawon', 'photo-dessalines']
-  const OKAP = ['photo-citadelle', 'photo-cap-cathedral', 'photo-cap-haitien']
-  it('gives each city its landmark', () => {
-    expect(PAP).toContain(artForPlace(findMetro('Port-au-Prince', 'HT')).key)
-    expect(OKAP).toContain(artForPlace(findMetro('Cap-Haïtien', 'HT')).key)
-    expect(['photo-jacmel', 'photo-bassinbleu']).toContain(artForPlace(findMetro('Jacmel', 'HT')).key)
-    expect(['photo-lescayes', 'photo-ileavache']).toContain(artForPlace(findMetro('Les Cayes', 'HT')).key)
-    expect(artForPlace(findMetro('Brooklyn', 'US')).key).toBe('photo-flatbush')
-  })
-  it('lets the town beat its metro', () => {
-    const pap = findMetro('Port-au-Prince', 'HT')
-    expect(artForPlace(pap, 'Pétion-Ville').key).toBe('photo-petionville')
-    expect(PAP).toContain(artForPlace(pap, 'Delmas 33').key)
-    expect(artForPlace(pap, 'Kenscoff').key).toBe('photo-kenscoff')
-  })
-  it('rotates a list by day, stably within a day', () => {
-    const pap = findMetro('Port-au-Prince', 'HT')
-    const seen = new Set(['2026-10-01', '2026-10-02', '2026-10-03', '2026-10-04', '2026-10-05', '2026-10-06'].map((d) => artForPlace(pap, null, d).key))
-    expect(seen).toEqual(new Set(PAP))
-    expect(artForPlace(pap, null, '2026-10-04').key).toBe(artForPlace(pap, null, '2026-10-04').key)
-  })
-  it('matches loose strings and aliases', () => {
-    expect(OKAP).toContain(artForPlace('Okap').key)
-    expect(artForPlace('PETION-VILLE, Ouest').key).toBe('photo-petionville')
-    expect(['photo-sanssouci', 'photo-citadelle']).toContain(artForPlace('Milot').key)
-    expect(artForPlace("Saut-d'Eau").key).toBe('photo-sautdeau')
-    expect(['photo-labadee', 'photo-labadee-coast']).toContain(artForPlace('Labadee').key)
-  })
-  it('gives other Haitian towns a Haiti photo and names no wrong landmark abroad', () => {
-    expect(artForPlace(findMetro('Gonaïves', 'HT')).key).toBe('photo-haiti-coast')
-    for (const c of ['Atlanta, GA', 'Toronto', 'Chicago']) {
-      expect(artForPlace(c).key).toBe('photo-flag-crowd')
+  const { photoByKey } = require('../mobile/lib/photoLibrary')
+  const NO_PEOPLE = ['photo-citadelle', 'photo-sanssouci', 'photo-cap-cathedral', 'photo-negmawon', 'photo-dessalines', 'photo-haiti-coast', 'photo-labadee']
+  const places: any[] = [
+    findMetro('Port-au-Prince', 'HT'), findMetro('Cap-Haïtien', 'HT'), findMetro('Jacmel', 'HT'), findMetro('Gonaïves', 'HT'),
+    findMetro('Miami', 'US'), 'Okap', 'Milot', "Saut-d'Eau", 'Toronto', null, '',
+  ]
+  it('never shows a landmark, scenery or a caption naming a place', () => {
+    for (const p of places) {
+      const art = artForPlace(p)
+      expect(art).toBeTruthy()
+      expect(NO_PEOPLE).not.toContain(art.key)
+      expect(art.key.startsWith('photo-')).toBe(true)
+      expect(art.place).toBeFalsy()
     }
-    expect(artForPlace(findMetro('Miami', 'US')).key).toBe('photo-miami')
-    expect(artForPlace(findMetro('Boston', 'US')).key).toBe('photo-boston')
-    expect(artForPlace('Montréal').key).toBe('photo-montreal')
-    expect(artForPlace('Saint-Denis').key).toBe('photo-saintdenis')
-    expect(artForPlace(null, 'Flatbush').key).toBe('photo-flatbush')
-    expect(artForPlace(null).key).toBe('photo-citadelle')
-    expect(artForPlace('').key).toBe('photo-citadelle')
+    for (const k of NO_PEOPLE) expect(photoByKey(k)).toBeUndefined()
+  })
+  it('keeps Montréal on its own stage photo', () => {
+    expect(artForPlace(findMetro('Montréal', 'CA')).key).toBe('photo-montreal')
+  })
+  it('rotates by day, stably within a day', () => {
+    const pap = findMetro('Port-au-Prince', 'HT')
+    const days = ['2026-10-01', '2026-10-02', '2026-10-03', '2026-10-04', '2026-10-05', '2026-10-06']
+    expect(new Set(days.map((d) => artForPlace(pap, null, d).key)).size).toBeGreaterThan(1)
+    expect(artForPlace(pap, null, '2026-10-04').key).toBe(artForPlace(pap, null, '2026-10-04').key)
   })
   it('captions every illustrated landmark piece (still used by the flyer picker)', () => {
     for (const k of ['champdemars', 'tour2004', 'viaducdelmas', 'saintpierre', 'fortjacques', 'fortalexandre', 'sautdeau', 'foretdespins', 'sanssouci', 'jacmel', 'portsalut', 'labadeenight', 'bassinbleunight']) {

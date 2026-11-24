@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { EventFormData, TicketTier } from '@/lib/event-validation'
 import { Calendar, MapPin, DollarSign, Users, Tag, Clock, Globe } from 'lucide-react'
 import Image from 'next/image'
+import { stripRichText } from '@/lib/richText'
 
 interface EventLivePreviewProps {
   data: EventFormData
@@ -200,7 +201,7 @@ export function EventLivePreview({ data, tiers }: EventLivePreviewProps) {
             <div className="pt-4 border-t border-line">
               <h3 className="text-sm font-bold text-fg mb-2">{t('actions.about')}</h3>
               <p className="text-sm text-fg-muted line-clamp-4 leading-relaxed">
-                {data.description}
+                {stripRichText(data.description)}
               </p>
               <p className="text-xs text-fg-subtle mt-2">
                 {data.description.length} characters

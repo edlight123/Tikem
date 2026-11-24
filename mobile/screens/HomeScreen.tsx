@@ -88,6 +88,8 @@ export default function HomeScreen({ navigation }: any) {
   // skeleton to content was a single-frame hard cut (measured on a tester's
   // screen recording), which combined with any layout delta reads as the
   // page "sliding in" rather than the placeholders becoming the posters.
+  // Bumped per feed load; only the newest load may paint or end the skeleton.
+  const feedRequest = useRef(0);
   const contentFade = useRef(new Animated.Value(0)).current;
   const skeletonFade = useRef(new Animated.Value(1)).current;
   // Keeps the skeleton MOUNTED (fading out, on top) while the content fades
@@ -196,6 +198,7 @@ export default function HomeScreen({ navigation }: any) {
   };
 
   const fetchEvents = async () => {
+    const request = ++feedRequest.current;
     // The country is a query predicate now, so a fetch before it hydrates would
     // pull the WRONG market (a Haiti phone in English (US) reports "US"). Pull
     // to refresh / double tab press can fire early, so guard here too, not only
@@ -216,6 +219,9 @@ export default function HomeScreen({ navigation }: any) {
       const { events: eventsData, fromCache } = await fetchPublishedEventsForCountryWithMeta(
         userCountry,
       );
+      // A newer load started meanwhile (the saved area hydrated, a pull to
+      // refresh): this result is for the wrong place, drop it (ported from Tikra).
+      if (request !== feedRequest.current) return;
 
       // Already soonest-first from the fetch (upcoming window, both
       // start_datetime types merged). Re-sorting is cheap and keeps this screen
@@ -266,6 +272,7 @@ export default function HomeScreen({ navigation }: any) {
         // if we saved one; otherwise the honest "can't load, retry" state —
         // never a bare "no events in <place>".
         const restored = await restoreFeedCache(userCountry);
+        if (request !== feedRequest.current) return;
         if (restored && restored.length) {
           applyEventLists(restored);
           setOffline(true);
@@ -282,11 +289,17 @@ export default function HomeScreen({ navigation }: any) {
       // Persist the last good online feed so the next offline open has events.
       if (!fromCache) persistFeedCache(userCountry, countryFiltered);
     } catch (err) {
+      if (request !== feedRequest.current) return;
       console.error('Error fetching events:', err);
       setError(true);
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      // Only the newest load ends the skeleton: on a cold start the saved area
+      // hydrates after the first fetch began, and letting that superseded fetch
+      // clear `loading` flashed the empty state before the real feed.
+      if (request === feedRequest.current) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
   };
 

@@ -29,20 +29,13 @@ import { locationLabel } from '../data/metros';
 import { useTheme } from '../contexts/ThemeContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { radius } from '../theme/tokens';
+import Flag from './Flag';
 
 const BANNER_DISMISSED_KEY = 'location_banner_dismissed';
 const BANNER_DISMISSED_EXPIRY = 7 * 24 * 60 * 60 * 1000; // 7 days
 const BANNER_ACCEPTED_KEY = 'location_banner_accepted';
 // Written by FiltersContext; the country the user last browsed.
 const RESOLVED_COUNTRY_KEY = 'resolved_user_country';
-
-/** ISO-2 country code to its flag emoji ("US" -> regional indicators U+S). */
-function flagFor(code: string | null): string {
-  if (!code || !/^[A-Za-z]{2}$/.test(code)) return '';
-  return code
-    .toUpperCase()
-    .replace(/./g, (c) => String.fromCodePoint(0x1f1e6 + c.charCodeAt(0) - 65));
-}
 
 export default function LocationDetectionBanner() {
   const { colors } = useTheme();
@@ -172,7 +165,6 @@ export default function LocationDetectionBanner() {
   if (!visible || !detectedCountry) return null;
 
   const city = locationLabel(DEFAULT_CITIES[detectedCountry] || '', detectedCountry);
-  const flag = flagFor(detectedCountry);
   // A short per-country question; a country without one falls back to the
   // longer "Looks like you're in …".
   const askKey = `locationBanner.ask.${detectedCountry}`;
@@ -194,7 +186,7 @@ export default function LocationDetectionBanner() {
       ]}
     >
       <View style={styles.bar} accessibilityRole="alert">
-        <Text style={styles.flagText} allowFontScaling={false}>{flag}</Text>
+        {detectedCountry ? <Flag code={detectedCountry} size={18} style={styles.flagRound} /> : null}
         <Text style={styles.question} numberOfLines={1}>
           {question}
         </Text>
@@ -247,9 +239,8 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     borderRadius: radius.sm,
     backgroundColor: colors.surface,
   },
-  flagText: {
-    fontSize: 14,
-    marginRight: 8,
+  flagRound: {
+    marginRight: 10,
   },
   question: {
     flex: 1,

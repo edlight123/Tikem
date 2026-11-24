@@ -190,7 +190,9 @@ export function artForWorld(world: string | null | undefined, seed?: string | nu
  * Real photographs for the eight worlds (2026-11-14 feedback: the illustrated
  * tiles "read very AI"; the owner asked for "actual pictures of black people
  * that read genuine"). These carry the world tiles, the world page heroes and
- * the sign-in backdrop. The illustrations stay for flyers and empty states.
+ * the org banner templates. Re-cut 2026-11-24 from the full-size Unsplash
+ * originals at 1290px on the short side (mozjpeg) so they stay sharp on a 3x
+ * screen. The illustrations stay for flyers and empty states.
  *
  * Source: Unsplash (Unsplash License: free to use, no attribution required).
  * Photo ids, for swapping one later: mizik UFlO384euRI, lavi-lannwit
@@ -210,11 +212,26 @@ export const WORLD_PHOTOS: Record<WorldKey, ArtPiece> = {
   'eksperyans':   { key: 'photo-eksperyans',   source: require('../assets/photos/eksperyans.jpg'),   alt: 'A group of friends cheering on a dune under a blue sky', worlds: ['eksperyans'] },
 };
 
-/** The sign-in rotation: the photos with a crowd or a moment in them. */
-const AUTH_PHOTO_WORLDS: WorldKey[] = ['mizik', 'lavi-lannwit', 'gastronomi', 'fanmi', 'eksperyans'];
+/**
+ * The sign-in backdrop: happy groups of people (owner 2026-11-24: "make it fit
+ * more people happy and all"). Cut from the full-resolution Unsplash originals
+ * at 1290x1740, faces in the upper part, because the photo fills only the top
+ * of the screen and fades into the canvas behind the form. Credits: the same
+ * photos as photo-lavi-friends, photo-lavi-confetti, gastronomi, lavi-lannwit
+ * and eksperyans in lib/photoCredits.
+ */
+// prettier-ignore
+const AUTH_PHOTOS: ArtPiece[] = [
+  { key: 'auth-friends',  source: require('../assets/photos/auth/friends.jpg'),  alt: 'Four friends laughing together in front of a mural', worlds: [] },
+  { key: 'auth-confetti', source: require('../assets/photos/auth/confetti.jpg'), alt: 'Friends celebrating under confetti at a party', worlds: [] },
+  { key: 'auth-dinner',   source: require('../assets/photos/auth/dinner.jpg'),   alt: 'Friends laughing around a dinner table', worlds: [] },
+  { key: 'auth-party',    source: require('../assets/photos/auth/party.jpg'),    alt: 'Women dancing and singing at a packed party', worlds: [] },
+  { key: 'auth-dune',     source: require('../assets/photos/auth/dune.jpg'),     alt: 'A group of friends cheering on a dune under a blue sky', worlds: [] },
+];
 export function authPhotos(): ArtPiece[] {
-  return AUTH_PHOTO_WORLDS.map((w) => WORLD_PHOTOS[w]);
+  return AUTH_PHOTOS.slice();
 }
+
 
 /**
  * A world's page hero and home tile: its photograph. An unknown world (or
@@ -314,122 +331,49 @@ export function artForPicker(category: string | null | undefined): ArtPiece[] {
 // ---------------------------------------------------------------------------
 
 /**
- * Which picture fits the active metro / city, so an empty feed shows a landmark
- * of the place you are browsing (2026-10-04 feedback: "i like the citadelle -
- * but that is more okap ... and so for each of the cities"). Since 2026-11-16
- * these are real PHOTOS (lib/photoLibrary keys), captioned with the place.
+ * The picture for an empty Home / Discover feed. PEOPLE ONLY (owner,
+ * 2026-11-24: "removing all the citadelle laferriere pics and all that, we
+ * want pictures of people, not objects"). The landmark and scenery photos the
+ * place map used to show (Citadelle, Sans-Souci, cathedrals, beaches,
+ * skylines, statues) are gone; every place now gets a crowd, a stage, a
+ * carnival or friends, rotating once a day and seeded by the place so two
+ * cities do not show the same photo on the same day. Montréal keeps Tabou
+ * Combo on its Nuits d'Afrique stage, the one place photo that is people.
  *
- * A town name (Pétion-Ville, Kenscoff, Jacmel…) wins over its metro. A list
- * rotates once a day. A Haitian place with no photo of its own gets an
- * uncaptioned Haitian coast; a place elsewhere with none gets the flag in a
- * crowd, which names no landmark, so it is never wrong. No place at all keeps
- * the Citadelle.
- *
- * STILL WANTED (one line here once a good photo exists): Gonaïves (Place
- * d'Armes), Port-Salut, Jérémie, Saint-Marc, Delmas, Mattapan, Santo Domingo,
- * Toronto, Atlanta.
+ * Uncaptioned on purpose: these photos are not OF the place, so they never
+ * name one.
  */
-const PLACE_ART_DEFAULT = 'photo-citadelle';
-const PLACE_ART_GENERAL = 'photo-flag-crowd';
-const PLACE_ART_HAITI = 'photo-haiti-coast';
-const PAP = ['photo-negmawon', 'photo-dessalines'];
-const OKAP = ['photo-citadelle', 'photo-cap-cathedral', 'photo-cap-haitien'];
-const LABADEE = ['photo-labadee', 'photo-labadee-coast'];
-const ARCADINS = ['photo-arcadins', 'photo-wahoo'];
-
 // prettier-ignore
-const PLACE_ART_BY_METRO: Record<string, string | string[]> = {
-  'ht-port-au-prince': PAP,
-  'ht-cap-haitien':    OKAP,
-  'ht-jacmel':         ['photo-jacmel', 'photo-bassinbleu'],
-  'ht-les-cayes':      ['photo-lescayes', 'photo-ileavache'],
-  'us-new-york':       'photo-flatbush',
-  'us-miami':          'photo-miami',
-  'us-boston':         'photo-boston',
-  'ca-montreal':       'photo-montreal',
-  'fr-paris':          'photo-saintdenis',
-};
-
-// Normalised town names and nicknames. Checked before the metro.
+const PLACE_PEOPLE = [
+  'photo-lavi-crowd', 'photo-flag-crowd', 'photo-kilti-parade', 'photo-mizik-tabou',
+  'photo-lavi-confetti', 'photo-kilti-pap', 'photo-mizik-flag', 'photo-lavi-friends',
+  'photo-kilti-drum', 'photo-espo-sand',
+];
 // prettier-ignore
-const PLACE_ART_BY_NAME: Record<string, string | string[]> = {
-  'okap': OKAP, 'au cap': OKAP, 'le cap': OKAP, 'cap haitien': OKAP,
-  'milot': ['photo-sanssouci', 'photo-citadelle'], 'labadee': LABADEE, 'labadie': LABADEE,
-  'jacmel': 'photo-jacmel', 'jakmel': 'photo-jacmel', 'bassin bleu': 'photo-bassinbleu',
-  'port au prince': PAP, 'potoprens': PAP, 'pap': PAP, 'delmas': PAP,
-  'champ de mars': PAP,
-  'petion ville': 'photo-petionville', 'petionville': 'photo-petionville', 'petyonvil': 'photo-petionville',
-  'kenscoff': 'photo-kenscoff', 'kenskof': 'photo-kenscoff', 'fermathe': 'photo-kenscoff',
-  'saut d eau': 'photo-sautdeau', 'sodo': 'photo-sautdeau', 'ville bonheur': 'photo-sautdeau', 'mirebalais': 'photo-sautdeau',
-  'foret des pins': 'photo-foretdespins', 'fonds verrettes': 'photo-foretdespins',
-  'les cayes': 'photo-lescayes', 'okay': 'photo-lescayes', 'ile a vache': 'photo-ileavache', 'port salut': 'photo-sud-beach',
-  'montrouis': ARCADINS, 'arcahaie': ARCADINS, 'carries': 'photo-wahoo', 'cote des arcadins': ARCADINS,
-  'new york': 'photo-flatbush', 'nyc': 'photo-flatbush', 'brooklyn': 'photo-flatbush',
-  'flatbush': 'photo-flatbush', 'nostrand': 'photo-flatbush',
-  'miami': 'photo-miami', 'little haiti': 'photo-miami', 'north miami': 'photo-miami',
-  'boston': 'photo-boston',
-  'montreal': 'photo-montreal', 'saint michel': 'photo-montreal', 'st michel': 'photo-montreal',
-  'paris': 'photo-saintdenis', 'saint denis': 'photo-saintdenis',
+const PLACE_ART_BY_METRO: Record<string, string> = {
+  'ca-montreal': 'photo-montreal',
 };
 
 /** Today as a seed, so a rotating place changes once a day, not per render. */
 const daySeed = () => new Date().toISOString().slice(0, 10);
 
-const normPlace = (value: unknown): string =>
-  fold(String(value ?? '').split(',')[0])
-    .replace(/[^a-z0-9]+/g, ' ')
-    .trim();
-
 /**
- * The photo (else art) for the active place. Accepts a Metro (or anything with an `id`,
- * `label` and `cities`), a city string, or nothing. Always returns a piece.
+ * The photo for the active place. Accepts a Metro (or anything with an `id`
+ * and `label`), a city string, or nothing. Always returns a piece of people.
  */
 export function artForPlace(
   place: { id?: string; label?: string; cities?: string[]; country?: string } | string | null | undefined,
   city?: string | null,
   seed: string = daySeed()
 ): ArtPiece {
-  const pick = (entry: string | string[] | undefined): ArtPiece | undefined => {
-    if (!entry) return undefined;
-    const key = Array.isArray(entry) ? entry[hashSeed(seed) % entry.length] : entry;
-    return artByKey(key);
-  };
-  const byName = (n: string): ArtPiece | undefined => {
-    const exact = pick(PLACE_ART_BY_NAME[n]);
-    if (exact) return exact;
-    // "Delmas 33", "Brooklyn NY": a known name followed by more words.
-    for (const [name, entry] of Object.entries(PLACE_ART_BY_NAME)) {
-      if (n.startsWith(`${name} `)) return pick(entry);
-    }
-    return undefined;
-  };
-
-  // The town you picked beats the metro it belongs to.
-  const town = city ? normPlace(city) : '';
-  const byTown = town ? byName(town) : undefined;
-  if (byTown) return byTown;
-
-  const names: string[] = [];
-  let haiti = false;
-  if (place && typeof place === 'object') {
-    const byMetro = pick(place.id ? PLACE_ART_BY_METRO[place.id] : undefined);
-    if (byMetro) return byMetro;
-    haiti = place.country === 'HT' || !!place.id?.startsWith('ht-');
-    if (place.label) names.push(place.label);
-    if (Array.isArray(place.cities)) names.push(...place.cities);
-  } else if (typeof place === 'string') {
-    names.push(place);
-  }
-
-  const normalised = names.map(normPlace).filter(Boolean);
-  for (const n of normalised) {
-    const found = byName(n);
-    if (found) return found;
-  }
-
-  if (haiti) return artByKey(PLACE_ART_HAITI)!;
-  if (!town && !normalised.length) return artByKey(PLACE_ART_DEFAULT)!;
-  return artByKey(PLACE_ART_GENERAL)!;
+  const metroId = place && typeof place === 'object' ? place.id : undefined;
+  const own = metroId ? PLACE_ART_BY_METRO[metroId] : undefined;
+  if (own && !city) return artByKey(own)!;
+  const placeName = city || (typeof place === 'string' ? place : place?.label || metroId || '');
+  const key = PLACE_PEOPLE[hashSeed(`${seed}|${placeName}`) % PLACE_PEOPLE.length];
+  // Drop any caption: the photo is not of this place.
+  const piece = artByKey(key)!;
+  return piece.place ? { ...piece, place: undefined } : piece;
 }
 
 const fold = (s: string) =>

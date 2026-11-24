@@ -90,7 +90,7 @@ export interface Occasion {
 export const OCCASIONS: Occasion[] = [
   {
     key: 'kanaval', icon: 'Drama', rule: { kind: 'kanaval' }, nationalDay: 'kanaval',
-    photo: 'photo-kanaval-mask', webPhoto: '/art/national-days/photos/kanaval.jpg',
+    photo: 'photo-kilti-parade', webPhoto: '/art/national-days/photos/kanaval.jpg',
     name: { en: 'Kanaval', fr: 'Carnaval', ht: 'Kanaval' },
     blurb: {
       en: 'Dimanch gra, lendi gra, madi gra, and the pre-kanaval Sundays before them.',
@@ -110,7 +110,7 @@ export const OCCASIONS: Occasion[] = [
   },
   {
     key: 'fet-endepandans', icon: 'Soup', rule: { kind: 'fixed', from: [1, 1], to: [1, 2] }, nationalDay: 'independence',
-    photo: 'photo-soupjoumou', webPhoto: '/art/national-days/photos/independence.jpg',
+    photo: 'photo-mizik-flag', webPhoto: '/art/national-days/photos/independence.jpg',
     name: { en: 'Independence Day', fr: 'Fête de l’Indépendance', ht: 'Fèt Endepandans' },
     blurb: {
       en: 'Jou de lan: 1 January 1804, and a bowl of soup joumou.',
@@ -150,7 +150,7 @@ export const OCCASIONS: Occasion[] = [
   },
   {
     key: 'fet-gede', icon: 'Flame', rule: { kind: 'fixed', from: [11, 1], to: [11, 2] },
-    photo: 'photo-cap-cathedral', webPhoto: '/art/national-days/photos/morts.jpg',
+    photo: 'photo-kilti-drum', webPhoto: '/art/national-days/photos/morts.jpg',
     name: { en: 'Fèt Gede', fr: 'Fête des Guédés', ht: 'Fèt Gede' },
     blurb: {
       en: 'All Saints and the Day of the Dead, 1 and 2 November.',
@@ -160,7 +160,7 @@ export const OCCASIONS: Occasion[] = [
   },
   {
     key: 'vertieres', icon: 'Landmark', rule: { kind: 'fixed', from: [11, 18], to: [11, 18] }, nationalDay: 'vertieres',
-    photo: 'photo-vertieres', webPhoto: '/art/national-days/photos/vertieres.jpg',
+    photo: 'photo-flag-crowd', webPhoto: '/art/national-days/photos/vertieres.jpg',
     name: { en: 'Vertières', fr: 'Vertières', ht: 'Vètyè' },
     blurb: {
       en: 'The battle of 18 November 1803 that led to independence.',
@@ -190,7 +190,7 @@ export const OCCASIONS: Occasion[] = [
   },
   {
     key: 'heritage-month', icon: 'Globe', rule: { kind: 'fixed', from: [5, 1], to: [5, 31] },
-    photo: 'photo-miami', webPhoto: '/art/occasions/heritage-month.jpg',
+    photo: 'photo-lavi-friends', webPhoto: '/art/occasions/heritage-month.jpg',
     name: { en: 'Haitian Heritage Month', fr: 'Mois du patrimoine haïtien', ht: 'Mwa Eritaj Ayisyen' },
     blurb: {
       en: 'May in the diaspora: Miami, New York, Boston, Montréal.',
@@ -200,7 +200,7 @@ export const OCCASIONS: Occasion[] = [
   },
   {
     key: 'fet-chanpet', icon: 'Sun', rule: { kind: 'fixed', from: [7, 1], to: [8, 31] },
-    photo: 'photo-sautdeau', webPhoto: '/art/occasions/fet-chanpet.jpg',
+    photo: 'photo-kilti-dancers', webPhoto: '/art/occasions/fet-chanpet.jpg',
     name: { en: 'Fèt chanpèt season', fr: 'Saison des fêtes champêtres', ht: 'Sezon fèt chanpèt' },
     blurb: {
       en: 'Summer patron saint festivals, from Saut-d’Eau to Plaine-du-Nord.',

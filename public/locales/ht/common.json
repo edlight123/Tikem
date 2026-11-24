@@ -1633,6 +1633,13 @@
       "label": "Dekri afich la",
       "placeholder": "Sa ki sou li, pou moun k ap itilize yon lektè ekran",
       "hint": "Si ou vle. Si ou kite l vid, n ap dekri l ak tit la, dat la ak kote a."
+    },
+    "format": {
+      "bold": "Gra",
+      "italic": "Italik",
+      "bullets": "Lis ak pwen",
+      "numbers": "Lis nimewote",
+      "toolbar": "Fòma tèks la"
     }
   },
   "promoter": {

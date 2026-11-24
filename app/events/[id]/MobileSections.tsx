@@ -20,6 +20,7 @@ import { useTranslation } from 'react-i18next'
 import { venueAddressLines } from '@/lib/events/venueLines'
 import Badge from '@/components/ui/Badge'
 import PromoVideo from '@/components/events/PromoVideo'
+import RichText from '@/components/RichText'
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -78,7 +79,7 @@ export default function MobileSections({
       {(description?.trim() || videoUrl || (tags && tags.length > 0)) && (
       <Section title={t('events.about_event')}>
         {description && description.trim() && (
-          <p className="whitespace-pre-wrap text-body leading-relaxed text-fg-muted">{description}</p>
+          <RichText text={description} className="break-words text-body leading-relaxed text-fg-muted [&_strong]:text-fg" />
         )}
         {/* Under the description, exactly where the app puts it. */}
         <PromoVideo url={videoUrl} className="mt-4" />
