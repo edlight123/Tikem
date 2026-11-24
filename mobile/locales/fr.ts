@@ -1126,10 +1126,12 @@ export default {
     subtotal: 'Sous-total',
     serviceFee: 'Frais de service',
     serviceFeeNonRefundable: 'Les frais de service ne sont pas remboursables, sauf si l’événement est annulé.',
+    cardChargedUsd: 'Votre carte est débitée en dollars US, au taux du jour.',
     selectMethod: 'Choisissez un moyen de paiement',
     methods: {
       card: 'Carte bancaire',
       cardBrands: 'Visa, Mastercard, AmEx',
+      cardBrandsUsd: 'Visa, Mastercard · débité en USD',
       sogepay: 'Sogebank (Sogepay)',
       haitiMobileMoney: 'Mobile Money Haïti',
       moncash: 'MonCash',

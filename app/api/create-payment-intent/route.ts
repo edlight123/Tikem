@@ -14,7 +14,8 @@ import {
   logSuspiciousActivity 
 } from '@/lib/security'
 import { adminDb } from '@/lib/firebase/admin'
-import { getPaymentProviderForEventCountry } from '@/lib/payment-provider'
+import { cardChargeRailForEventCountry, haitiCardEnabled } from '@/lib/payment-provider'
+import { fundsRailForPaymentMethod } from '@/lib/payouts/funds-rail'
 import { applicationFeeFor, applyPromoToLines, priceTierLinesCents } from '@/lib/checkout/buyer-pricing'
 import {
   CARD_ORDER_LINES_KEY,
@@ -68,6 +69,9 @@ import {
   // Pay-at-the-door tiers never ride in a card cart.
   doorTierInPaidOrderRefusal,
 } from '@/lib/tickets/purchasable'
+
+/** Stripe's minimum charge in USD, in cents. */
+const STRIPE_MIN_USD_CENTS = 50
 
 /** The event's own currency, or its country's default. */
 function eventCurrencyFor(event: any): string {
@@ -267,12 +271,18 @@ export async function POST(request: Request) {
       )
     }
 
-    const provider = getPaymentProviderForEventCountry(event.country)
-    if (provider === 'sogepay') {
+    // How the card is charged: a destination charge (US/CA/FR), or — for Haiti,
+    // whose organizers cannot hold Stripe accounts — a plain PLATFORM charge in
+    // USD that Tikèm holds and pays out over MonCash / bank (lib/payment-provider).
+    const provider = cardChargeRailForEventCountry(event.country)
+    if (provider === 'stripe_platform' && !haitiCardEnabled()) {
       await logPurchaseAttempt({ userId: attemptUserId, eventId, ipAddress, quantity, fingerprint }, false)
       return NextResponse.json(
-        { error: 'Card payments for Haiti events use Sogepay. Please use the Sogepay checkout flow.' },
-        { status: 400 }
+        {
+          error: 'Card payments for this event are paused right now. Please pay with MonCash.',
+          code: 'haiti_card_unavailable',
+        },
+        { status: 409 }
       )
     }
 
@@ -557,6 +567,38 @@ export async function POST(request: Request) {
       : singleLine.tierName
 
     const amountCents = buyerPricing.chargeAmount
+
+    // Stripe's smallest USD charge is $0.50. A cheap HTG ticket converted at the
+    // day's rate can fall under it; say so plainly instead of surfacing
+    // Stripe's developer error, and point the buyer at MonCash.
+    if (stripeCurrency === 'usd' && amountCents < STRIPE_MIN_USD_CENTS) {
+      return refuse(
+        {
+          error: 'This order is too small to pay by card. Please pay with MonCash.',
+          code: 'card_amount_too_small',
+        },
+        400
+      )
+    }
+
+    // What the buyer sees on a converted (HTG → USD) order: the event-currency
+    // face and total, beside the USD figure the card is charged. Display only.
+    const localFaceMajor = pricedLines.reduce(
+      (sum, l) => sum + Math.max(0, Number(l.unitPrice) || 0) * l.quantity,
+      0
+    )
+    const localDisplay =
+      exchangeRateUsed && exchangeRateUsed > 0
+        ? {
+            currency: originalCurrency,
+            faceValue: Math.round(localFaceMajor * 100) / 100,
+            buyerFee: Math.round(fromCents(buyerPricing.buyerFee) / exchangeRateUsed),
+            total: Math.round(localFaceMajor * 100) / 100 + Math.round(fromCents(buyerPricing.buyerFee) / exchangeRateUsed),
+            // HTG per 1 USD, the way a buyer reads a rate.
+            ratePerUsd: Math.round((1 / exchangeRateUsed) * 100) / 100,
+          }
+        : null
+    const fundsRail = fundsRailForPaymentMethod('stripe', { destinationCharge: provider === 'stripe_connect' })
     let stripeConnectAccountId: string | null = null
     let applicationFeeAmount: number | null = null
 
@@ -694,13 +736,29 @@ export async function POST(request: Request) {
           exchangeRate: exchangeRateUsed?.toString() || '',
           payoutProvider: provider,
           stripeConnectAccountId: stripeConnectAccountId || '',
+          // Where the money sits (lib/payouts/funds-rail): stamped on every ticket
+          // and on the order at fulfillment.
+          fundsRail: fundsRail || '',
+          // Event-currency face total of a converted order, for reconciliation.
+          ...(localDisplay ? { localFaceTotal: String(localDisplay.faceValue) } : {}),
           // The seat hold fulfillment converts into a sale (empty: nothing was held).
           seatHoldId: clientHold ? clientHold.id : '',
         },
-        description: isMultiLine ? `${event.title} - ${tierName}` : `${quantity}x ${event.title} - ${tierName}`,
+        // A converted order names the event-currency total too, so the Stripe
+        // receipt the buyer gets (in USD) still shows the price they were quoted.
+        description:
+          (isMultiLine ? `${event.title} - ${tierName}` : `${quantity}x ${event.title} - ${tierName}`) +
+          (localDisplay ? ` (${localDisplay.total.toLocaleString('en-US')} ${localDisplay.currency})` : ''),
         receipt_email: identity.email || undefined,
         automatic_payment_methods: {
           enabled: true,
+        },
+        // 3D Secure whenever the issuer or Radar asks for it. Haiti card sales are
+        // international cards charged by a Canadian platform: liability shifts to
+        // the issuer on an authenticated charge, which is the main defence
+        // against card-testing and stolen-card chargebacks on this rail.
+        payment_method_options: {
+          card: { request_three_d_secure: 'automatic' },
         },
       })
     } catch (createError) {
@@ -725,6 +783,9 @@ export async function POST(request: Request) {
         buyerFee: fromCents(buyerPricing.buyerFee),
         total: fromCents(amountCents),
         quantity,
+        // Set when the event is priced in another currency (HTG) than the card is
+        // charged in (USD): what the buyer was quoted, and the rate used.
+        ...(localDisplay ? { local: localDisplay } : {}),
       },
       // How long the seats are held, and the id that releases them when the sheet closes.
       ...(clientHold ? { seatHold: clientHold } : {}),

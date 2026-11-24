@@ -54,6 +54,11 @@ interface ServerPricing {
   faceValue: number
   buyerFee: number
   total: number
+  /**
+   * A Haiti event priced in HTG and charged in USD: the HTG figures the buyer was
+   * quoted, and the rate (HTG per USD) the card charge was converted at.
+   */
+  local?: { currency: string; faceValue: number; buyerFee: number; total: number; ratePerUsd: number }
 }
 
 interface CheckoutFormProps {
@@ -93,12 +98,17 @@ function CheckoutForm({ eventId, eventTitle, quantity, totalAmount, currency, co
     { country, currency, fee_incidence: feeIncidence },
     { quantity: paidQuantity, currency }
   )
-  const faceValue = pricing ? pricing.faceValue : local.faceValue
-  const buyerFee = pricing ? pricing.buyerFee : local.buyerFee
+  // A converted order (HTG event, USD card) is summarised in the currency the
+  // buyer was quoted; the USD charge is stated once, under the total.
+  const converted = pricing?.local || null
+  const faceValue = converted ? converted.faceValue : pricing ? pricing.faceValue : local.faceValue
+  const buyerFee = converted ? converted.buyerFee : pricing ? pricing.buyerFee : local.buyerFee
   const chargeTotal = pricing ? pricing.total : local.total
+  const shownTotal = converted ? converted.total : chargeTotal
   const chargeCurrency = pricing?.currency || currency
+  const shownCurrency = converted ? converted.currency : chargeCurrency
   const showFeeLine = buyerFee > 0
-  const formatAmount = (amount: number) => `${amount.toLocaleString()} ${chargeCurrency}`
+  const formatAmount = (amount: number) => `${amount.toLocaleString()} ${shownCurrency}`
 
   const stripe = useStripe()
   const elements = useElements()
@@ -221,8 +231,17 @@ function CheckoutForm({ eventId, eventTitle, quantity, totalAmount, currency, co
           )}
           <div className="flex justify-between items-center pt-2 border-t border-line">
             <span className="font-semibold text-fg">{t('events.total')}</span>
-            <span className="text-lg font-bold text-fg">{formatAmount(chargeTotal)}</span>
+            <span className="text-lg font-bold text-fg">{formatAmount(shownTotal)}</span>
           </div>
+          {converted && (
+            <p className="text-xs text-fg-muted">
+              {t('checkout.card_charged_usd', {
+                amount: chargeTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+                rate: converted.ratePerUsd.toLocaleString(undefined, { maximumFractionDigits: 2 }),
+                defaultValue: 'Your card is charged {{amount}} USD, at {{rate}} HTG per dollar.',
+              })}
+            </p>
+          )}
           {showFeeLine && (
             <p className="text-xs text-fg-subtle">
               {t('checkout.service_fee_nonrefundable', {
@@ -269,7 +288,7 @@ function CheckoutForm({ eventId, eventTitle, quantity, totalAmount, currency, co
           disabled={!stripe || processing}
           className="flex-1 h-12 px-4 rounded bg-inverse text-on-inverse font-semibold hover:bg-inverse-hover disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {processing ? t('events.processing') : `${t('events.pay')} ${formatAmount(chargeTotal)}`}
+          {processing ? t('events.processing') : `${t('events.pay')} ${chargeTotal.toLocaleString()} ${chargeCurrency}`}
         </button>
       </div>
     </form>

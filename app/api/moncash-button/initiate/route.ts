@@ -421,6 +421,8 @@ export async function POST(request: Request) {
       buyer_fee: buyerFeeCharged || 0,
       buyer_fee_original: buyerFeeOriginal || 0,
       payment_method: normalizedProvider,
+      // NatCash over the MonCash Button gateway lands in the same MonCash account.
+      funds_rail: 'moncash',
       status: 'pending',
       currency: chargeCurrency,
       original_currency: originalCurrency,

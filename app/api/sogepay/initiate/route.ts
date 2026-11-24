@@ -460,6 +460,7 @@ export async function POST(request: Request) {
         buyer_fee: buyerFee || 0,
         buyer_fee_original: buyerFee || 0,
         payment_method: 'sogepay',
+        funds_rail: 'sogepay',
         status: 'pending',
         currency: originalCurrency,
         original_currency: originalCurrency,

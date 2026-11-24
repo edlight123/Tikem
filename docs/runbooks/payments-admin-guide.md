@@ -28,6 +28,38 @@ Nobody can approve a payout to, or send a prefunded transfer to, their own accou
   (`refunded_capacity`). A refund that fails is flagged `needs_refund` and shows
   in Money → Refunds; retries keep refunding, never issue.
 
+### Card on a Haiti event (Stripe platform charge)
+- Haitian buyers pay with an international Visa/Mastercard. Haitian organizers
+  cannot hold Stripe accounts, so this is a plain charge on Tikèm's own Stripe
+  balance (no Connect destination). The buyer is quoted in HTG and charged USD
+  at the day's rate (`create-payment-intent`); 3D Secure is requested whenever
+  the issuer or Radar asks.
+- The ticket records both sides: `price_paid` (HTG face, what the organizer's
+  balance counts) and `charged_amount` / `charged_currency` (USD). Refunds go
+  back in USD through Stripe; the HTG face leaves the organizer's balance.
+- Tikèm pays the organizer later over MonCash prefunding or a bank wire, like
+  any MonCash sale. Stripe converts the USD to CAD on payout unless a USD bank
+  account is attached to the Stripe account.
+- Kill switch: set `HAITI_CARD_DISABLED=true` (Vercel env, redeploy) to pause it.
+  MonCash is unaffected.
+
+### Where the money sits (`funds_rail`)
+Every order and ticket carries `funds_rail`: `moncash` (NatCash too),
+`sogepay`, `stripe_platform` (Tikèm's Stripe balance, every Haiti card sale),
+`stripe_connect` (the organizer's own account), `paypal`, `cash` (door) or
+`free`. Older docs are placed by `resolveFundsRail` (lib/payouts/funds-rail.ts);
+`scripts/backfill-funds-rail.mjs` stores it (dry run unless `--write`).
+
+**Money → Money map** shows, per currency and rail, what was collected, refunded
+and charged back, the movements recorded, and the balance that should be there.
+It also shows what Haiti organizers are owed against the MonCash prefunded pool
+(the shortfall to move into Digicel prefunding) and what is owed by bank wire.
+Record every movement there (Stripe payout → bank, bank → Digicel prefunding),
+and every international wire to an organizer, linked to their bank withdrawal
+request: the withdrawal is what took the money out of their balance, and a wire
+with no withdrawal linked is flagged because the same money could be withdrawn
+again. Entries cannot be edited; record the reverse movement to correct one.
+
 ### MonCash / NatCash / SogePay
 - Seats are held for **12 minutes** while the buyer is on the wallet's page.
 - Ticket ids are derived from the order (`mm_…`), so a retry after a crash fills

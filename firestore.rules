@@ -993,6 +993,13 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Money map ledger (lib/payouts/fund-transfers.ts): admin-recorded movements
+    // between Tikèm's accounts and organizer wires. Server-only (Admin SDK via
+    // /api/admin/fund-transfers); explicit for documentation.
+    match /fund_transfers/{transferId} {
+      allow read, write: if false;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

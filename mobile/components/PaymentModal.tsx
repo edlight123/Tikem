@@ -251,13 +251,13 @@ function PaymentForm({
     };
   }, [isHaitiEvent]);
 
+  // Card on a Haiti event: an international Visa/Mastercard charged in USD as a
+  // Tikèm platform charge (the server converts the HTG price at the day's rate).
+  // Only offered where the Stripe SDK and key are present; MonCash never needs them.
+  const cardAvailable = !isExpoGo && Boolean(StripeProvider) && Boolean(STRIPE_PUBLISHABLE_KEY);
+
   // Stripe Payment
   const handleStripePayment = async () => {
-    if (isHaitiEvent) {
-      setError(t('paymentModal.errors.haitiUseSogepay'));
-      return;
-    }
-
     if (!initPaymentSheet || !presentPaymentSheet) {
       setError(t('paymentModal.errors.stripeUnavailable'));
       return;
@@ -552,8 +552,8 @@ function PaymentForm({
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t('paymentModal.selectMethod')}</Text>
 
-          {/* Stripe Card Payment - Only show if Stripe is available and not Haiti */}
-          {!isHaitiEvent && !isExpoGo && StripeProvider && (
+          {/* Card (Stripe). On a Haiti event: Visa/Mastercard, charged in USD. */}
+          {cardAvailable && (
             <TouchableOpacity
               style={styles.methodRow}
               onPress={() => setPaymentMethod('stripe')}
@@ -580,7 +580,9 @@ function PaymentForm({
                 >
                   {cardUnavailable
                     ? t('paymentModal.methods.cardUnavailable')
-                    : walletAvailable
+                    : isHaitiEvent
+                      ? t('paymentModal.methods.cardBrandsUsd')
+                      : walletAvailable
                       ? `${WALLET_NAME} · ${t('paymentModal.methods.cardBrands')}`
                       : t('paymentModal.methods.cardBrands')}
                 </Text>
@@ -756,6 +758,10 @@ function PaymentForm({
           <Text style={styles.totalLabel}>{t('paymentModal.totalAmount')}</Text>
           <MoneyText amount={orderPricing.total} currency={currency as any} style={styles.totalAmount} splitCode />
         </View>
+        {/* Haiti card: the total above is the HTG price; the card is charged in USD. */}
+        {isHaitiEvent && paymentMethod === 'stripe' && (
+          <Text style={styles.infoText}>{t('paymentModal.cardChargedUsd')}</Text>
+        )}
         {/* USD event paid over MonCash: what MonCash will actually take, in HTG,
             with the rate and Tikèm's spread disclosed. */}
         {needsHtgQuote && htgQuote && (
@@ -811,14 +817,15 @@ export default function PaymentModal(props: PaymentModalProps) {
   const { colors } = useTheme();
   const styles = getStyles(colors);
 
-  // Haiti events pay via MonCash/NatCash and never touch Stripe, so they must
-  // render the plain form even when the Stripe SDK/key is absent — otherwise a
-  // missing publishable key would wrongly block Haitian checkout below.
+  // Haiti events can pay by MonCash without Stripe, so they must render the plain
+  // form when the Stripe SDK/key is absent — a missing publishable key must never
+  // block Haitian checkout. With the key present they get the provider, for the
+  // Visa/Mastercard option.
   const isHaitiEvent = ['HT', 'HAITI'].includes(String(props.country || '').toUpperCase());
 
-  // If it's a Haiti event, we're in Expo Go, or Stripe isn't available, render
+  // In Expo Go, without the Stripe SDK, or (Haiti only) without a key: render
   // without StripeProvider.
-  if (isHaitiEvent || isExpoGo || !StripeProvider) {
+  if (isExpoGo || !StripeProvider || (isHaitiEvent && !STRIPE_PUBLISHABLE_KEY)) {
     return (
       <Modal
         visible={props.visible}

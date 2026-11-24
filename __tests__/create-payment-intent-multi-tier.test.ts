@@ -57,7 +57,10 @@ jest.mock('@/lib/promo-codes', () => ({
 }))
 jest.mock('@/lib/promoters', () => ({ resolvePromoterCode: jest.fn(async () => null) }))
 jest.mock('@/lib/tracking-links', () => ({ resolveOrderAttribution: jest.fn(async () => null) }))
-jest.mock('@/lib/payment-provider', () => ({ getPaymentProviderForEventCountry: jest.fn(() => 'stripe') }))
+jest.mock('@/lib/payment-provider', () => ({
+  cardChargeRailForEventCountry: jest.fn(() => 'stripe'),
+  haitiCardEnabled: jest.fn(() => true),
+}))
 jest.mock('@/lib/admin/platform-settings', () => ({
   getPlatformSettings: jest.fn(async () => require('@/types/platform-settings').DEFAULT_PLATFORM_SETTINGS),
 }))
@@ -293,7 +296,7 @@ describe('minimum paid price at checkout', () => {
     expect((await post({ tiers: [{ tierId: 'free', quantity: 1 }, { tierId: 'ga', quantity: 1 }] })).status).toBe(200)
     Object.assign(mockEvent, { country: 'HT', currency: 'HTG' })
     tier('htcheap', 1)
-    jest.requireMock('@/lib/payment-provider').getPaymentProviderForEventCountry.mockReturnValueOnce('stripe')
+    jest.requireMock('@/lib/payment-provider').cardChargeRailForEventCountry.mockReturnValueOnce('stripe')
     const res = await post({ tierId: 'htcheap', quantity: 1 })
     expect(res.data.code).not.toBe('tier_price_below_minimum')
   })

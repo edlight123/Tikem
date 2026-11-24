@@ -1559,9 +1559,11 @@ export default {
     subtotal: 'Subtotal',
     serviceFee: 'Service fee',
     serviceFeeNonRefundable: 'Service fee is non-refundable unless the event is cancelled.',
+    cardChargedUsd: "Your card is charged in US dollars at today's rate.",
     methods: {
       card: 'Credit/Debit Card',
       cardBrands: 'Visa, Mastercard, AmEx',
+      cardBrandsUsd: 'Visa, Mastercard · charged in USD',
       sogepay: 'Sogebank (Sogepay)',
       haitiMobileMoney: 'Haiti Mobile Money',
       moncash: 'MonCash',

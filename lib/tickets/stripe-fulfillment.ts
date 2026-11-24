@@ -578,6 +578,10 @@ export async function fulfillStripeOrder(input: StripeOrderInput): Promise<Strip
   const isConnect =
     String(m.payoutProvider || '').toLowerCase() === 'stripe_connect' || input.destinationCharge === true
   const paymentMethod = isConnect ? 'stripe_connect' : 'stripe'
+  // Where the money sits (lib/payouts/funds-rail): the organizer's connected
+  // account for a destination charge, Tikèm's own Stripe balance otherwise
+  // (every Haiti card sale). Decided from the charge, never from the event.
+  const fundsRail = isConnect ? 'stripe_connect' : 'stripe_platform'
   const feeIncidence = m.feeIncidence === 'buyer' ? 'buyer' : 'organizer'
   const attribution = attributionFromStripeMetadata(m)
   const guest = input.guestRecipient
@@ -709,6 +713,7 @@ export async function fulfillStripeOrder(input: StripeOrderInput): Promise<Strip
     // A destination charge is 'stripe_connect' so a refund knows to pull the
     // money back from the organizer's connected account.
     payment_method: paymentMethod,
+    funds_rail: fundsRail,
     payment_id: input.paymentId,
     // The inventory reservation this seat is counted under, so a refund can
     // give the seat back (lib/tickets/seatReturn).
@@ -752,6 +757,14 @@ export async function fulfillStripeOrder(input: StripeOrderInput): Promise<Strip
         quantity,
         ...(orderLines ? { tier_lines: orderLines } : {}),
         payment_method: paymentMethod,
+        funds_rail: fundsRail,
+        // The money, both sides of a converted order: what the card was charged
+        // (charged currency, minor units) and the event-currency face it bought.
+        charged_amount_minor: Number(input.amountTotalCents) || 0,
+        charged_currency: chargedCurrency,
+        face_amount_minor: orderGrossCents,
+        currency: eventCurrency,
+        exchange_rate_used: exchangeRateUsed,
         ticket_ids: ticketIds,
         tickets_issued_at: nowIso,
         // A retry after a failed sell-out refund can land here once capacity
@@ -999,9 +1012,11 @@ export async function fulfillStripeOrder(input: StripeOrderInput): Promise<Strip
           eventId,
           eventDetails.title,
           quantity,
-          (Number(input.amountTotalCents) || 0) / 100,
+          // The organizer is paid in the EVENT currency: a Haiti card sale
+          // (charged in USD) is announced at its HTG face value.
+          chargeRate !== 1 ? orderGrossCents / 100 : (Number(input.amountTotalCents) || 0) / 100,
           attendee?.full_name,
-          chargedCurrency,
+          chargeRate !== 1 ? eventCurrency : chargedCurrency,
           input.buyerId ? String(input.buyerId) : null
         )
         await onSaleCompleted({ eventId, buyerId: attendee?.id ? String(attendee.id) : null })

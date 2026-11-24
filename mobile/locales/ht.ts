@@ -1095,10 +1095,12 @@ export default {
     subtotal: 'Sou-total',
     serviceFee: 'Frè sèvis',
     serviceFeeNonRefundable: 'Frè sèvis la pa ranbousab, sof si evènman an anile.',
+    cardChargedUsd: 'Kat ou ap peye an dola ameriken, nan to jodi a.',
     selectMethod: 'Chwazi yon metòd peman',
     methods: {
       card: 'Kat kredi/debi',
       cardBrands: 'Visa, Mastercard, AmEx',
+      cardBrandsUsd: 'Visa, Mastercard · peye an USD',
       sogepay: 'Sogebank (Sogepay)',
       haitiMobileMoney: 'Mobile Money Ayiti',
       moncash: 'MonCash',
