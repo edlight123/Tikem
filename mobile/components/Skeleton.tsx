@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Animated, StyleSheet, View, ViewStyle, DimensionValue, Dimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
+import { withAlpha } from '../theme/tokens';
 import { useTheme } from '../contexts/ThemeContext';
 import { useReducedMotion } from '../lib/a11y';
 
@@ -337,6 +339,14 @@ export function EventDetailSkeleton() {
         </View>
       </View>
       <View style={[styles.eventFloatingCta, { bottom: insets.bottom + 8 }]}>
+        {/* Same scrim as the loaded page, so the placeholder rows fade out
+            under the pill instead of overlapping it. */}
+        <LinearGradient
+          colors={[withAlpha(colors.background, 0), withAlpha(colors.background, 0.85), colors.background]}
+          locations={[0, 0.55, 1]}
+          style={styles.eventCtaScrim}
+          pointerEvents="none"
+        />
         <Skeleton height={50} radius={4} />
       </View>
     </View>
@@ -840,6 +850,13 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 20,
     right: 20,
+  },
+  eventCtaScrim: {
+    position: 'absolute',
+    left: -20,
+    right: -20,
+    top: -56,
+    bottom: -40,
   },
 
   // TicketDetailScreen: content padding 20; header row then centred blocks.

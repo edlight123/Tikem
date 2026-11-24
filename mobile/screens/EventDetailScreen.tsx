@@ -843,7 +843,10 @@ export default function EventDetailScreen({ route, navigation }: any) {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container} edges={['bottom']}>
+      // A plain View: the skeleton insets its own floating CTA by the bottom
+      // safe area, as the loaded page does. A bottom-edge SafeAreaView here
+      // counted it twice and lifted the placeholder ~34pt above the real pill.
+      <View style={styles.container}>
         <EventDetailSkeleton />
         {/* The real back button, where the loaded page puts it: a slow fetch
             must never leave the placeholder with no way out. */}
@@ -858,7 +861,7 @@ export default function EventDetailScreen({ route, navigation }: any) {
             <ChevronLeft size={22} color="#FFF" />
           </TouchableOpacity>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
