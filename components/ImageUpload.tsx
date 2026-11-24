@@ -226,6 +226,9 @@ export default function ImageUpload({
                 alt="Preview"
                 fill
                 sizes="(max-width: 1024px) 100vw, 360px"
+                // A holiday template's live preview (/api/posters/preview?…)
+                // is already a sized JPEG; the optimizer refuses local query strings.
+                unoptimized={preview.startsWith('/api/')}
                 className="rounded-2xl  object-cover"
               />
             </div>

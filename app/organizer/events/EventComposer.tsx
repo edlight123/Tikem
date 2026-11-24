@@ -59,7 +59,8 @@ import {
 import { isRsvpEvent, rsvpTierFields, rsvpTierToKeep } from '@/lib/tickets/rsvp-tier'
 import { useToast } from '@/components/ui/Toast'
 import ImageUpload from '@/components/ImageUpload'
-import PosterTemplatePicker, { makePoster, type PosterFacts, type PosterSpec } from '@/components/organizer/PosterTemplatePicker'
+import PosterTemplatePicker, { holidayPreviewSrc, makePoster, type PosterFacts, type PosterSpec } from '@/components/organizer/PosterTemplatePicker'
+import { holidayDate, holidayPosterSpec, holidayTemplateById, holidayText, occasionsWithTemplates } from '@/lib/holidayTemplates'
 import SpotifySongPicker from '@/components/organizer/SpotifySongPicker'
 import { usePosterAccent, POSTER_ACCENT_FALLBACK } from '@/components/ui/usePosterAccent'
 import GuestEditorSheet from '@/components/organizer/GuestEditorSheet'
@@ -104,7 +105,7 @@ import { incidenceForEvent, priceOrder } from '@/lib/checkout/buyer-pricing'
 import { fromCents, MAX_FREE_TICKETS_PER_PERSON } from '@/lib/ticketPricing'
 import { allowedPlusOnes, PLUS_ONES_SETTING_MAX } from '@/lib/events/approval'
 import { nationalDayForEventDate, nationalDayName } from '@/lib/nationalDays'
-import { ideaById, ideaDate, ideaText, parseOccasion, type OccasionKey } from '@/lib/occasions'
+import { ideaById, ideaDate, ideaText, parseOccasion, posterOccasion, type OccasionKey } from '@/lib/occasions'
 import OccasionPicker from '@/components/occasions/OccasionPicker'
 import { isBelowMinPaidPrice, MIN_PAID_PRICE_ERROR_CODE, minPaidPriceFor } from '@/lib/min-paid-price'
 import { canLeaveDoorMode, composerModeOf, doorTierSaveFields, lowestDoorPrice, tierEditorPrice, type ComposerMode } from '@/lib/events/door-mode'
@@ -260,6 +261,13 @@ interface EventComposerProps {
    * and a date inside it.
    */
   initialIdea?: string | null
+  /**
+   * CREATE only: a holiday poster template (lib/holidayTemplates id,
+   * ?holiday=) to start from: its poster applied (photo, layout, colour) and,
+   * without an idea, its title, line, category, occasion and date. An idea
+   * that names a template (OccasionIdea.poster) applies it the same way.
+   */
+  initialHoliday?: string | null
 }
 
 /** Where a signed-out composition survives the trip through sign-up. */
@@ -591,6 +599,7 @@ export default function EventComposer({
   orgDefaults,
   initialOccasion,
   initialIdea,
+  initialHoliday,
 }: EventComposerProps) {
   // Payout and verification links are the org owner's to follow (owner_only);
   // a team member sees the notice without a link to a page that would bounce them.
@@ -621,9 +630,19 @@ export default function EventComposer({
     const lang = (i18n.language || 'en').slice(0, 2)
     return { ...ideaText(idea, lang), category: idea.category, occasion: idea.occasion, date: ideaDate(idea), time: idea.time }
   })
-  const [title, setTitle] = useState(event?.title || ideaSeed?.title || '')
-  const [summary, setSummary] = useState(event?.summary || '')
-  const [showSummary, setShowSummary] = useState(!!event?.summary)
+  // A holiday poster template to start from (create only): ?holiday=, or the
+  // one the idea names. Without an idea it also fills the facts.
+  const [holidaySeed] = useState(() => {
+    if (event) return null
+    const tpl = holidayTemplateById(initialHoliday) || holidayTemplateById(ideaById(initialIdea)?.poster)
+    if (!tpl) return null
+    const lang = (i18n.language || 'en').slice(0, 2)
+    return { tpl, ...holidayText(tpl, lang), category: tpl.category, occasion: tpl.occasion, date: holidayDate(tpl), time: tpl.time }
+  })
+  const factSeed = ideaSeed ? null : holidaySeed
+  const [title, setTitle] = useState(event?.title || ideaSeed?.title || factSeed?.title || '')
+  const [summary, setSummary] = useState(event?.summary || factSeed?.subtitle || '')
+  const [showSummary, setShowSummary] = useState(!!(event?.summary || factSeed?.subtitle))
   const [bannerUrl, setBannerUrl] = useState(event?.banner_image_url || '')
   // "Make a poster": the photo a template is drawn on. Kept apart from
   // bannerUrl so re-opening the picker after applying a template starts from
@@ -635,7 +654,16 @@ export default function EventComposer({
   // otherwise advertise the wrong day.
   const [posterSpec, setPosterSpec] = useState<PosterSpec | null>(() => {
     const p = event?.poster_template
-    return p && typeof p.template === 'string' ? { template: p.template, palette: Number(p.palette) || 0, photo: p.photo || null } : null
+    if (p && typeof p.template === 'string') {
+      return {
+        template: p.template,
+        palette: Number(p.palette) || 0,
+        photo: p.photo || null,
+        ...(p.treatment ? { treatment: p.treatment } : {}),
+        ...(p.holiday ? { holiday: p.holiday } : {}),
+      }
+    }
+    return holidaySeed ? holidayPosterSpec(holidaySeed.tpl) : null
   })
   const [posterPhoto, setPosterPhoto] = useState<string>(() => {
     const b = event?.banner_image_url || ''
@@ -643,8 +671,8 @@ export default function EventComposer({
   })
 
   // Dates
-  const [startDate, setStartDate] = useState(start0.date || ideaSeed?.date || '')
-  const [startTime, setStartTime] = useState(start0.time || ideaSeed?.time || '')
+  const [startDate, setStartDate] = useState(start0.date || ideaSeed?.date || factSeed?.date || '')
+  const [startTime, setStartTime] = useState(start0.time || ideaSeed?.time || factSeed?.time || '')
   const [endDate, setEndDate] = useState(end0.date)
   const [endTime, setEndTime] = useState(end0.time)
   // Recurrence is create-only; editing never regenerates a series, so the
@@ -676,7 +704,7 @@ export default function EventComposer({
       : composerSeedFromDefaults(orgDefaults, pickDefaultComposerCountry(defaultCountry), CATEGORIES)
   )
   const seedCountry = pickDefaultComposerCountry(defaultCountry)
-  const [category, setCategory] = useState(event?.category || ideaSeed?.category || seed.category || 'Concert')
+  const [category, setCategory] = useState(event?.category || ideaSeed?.category || factSeed?.category || seed.category || 'Concert')
   const [isOnline, setIsOnline] = useState(!!event?.is_online)
 
   // Country — decides the currency, the default fee incidence, the timezone
@@ -855,6 +883,27 @@ export default function EventComposer({
     lineup: guests.map((g) => g.name).filter(Boolean),
   })
 
+  // Started from a holiday template: show its live preview straight away,
+  // then store it as a real poster (a save redraws it from posterSpec anyway).
+  useEffect(() => {
+    if (!holidaySeed || isEdit) return
+    const lang = (i18n.language || 'ht').slice(0, 2)
+    setBannerUrl(holidayPreviewSrc(posterFacts(), holidaySeed.tpl, lang))
+    let alive = true
+    makePoster(posterFacts(), holidayPosterSpec(holidaySeed.tpl), lang)
+      .then((url) => {
+        if (alive) setBannerUrl((cur: string) => (cur.startsWith('/api/posters/preview') ? url : cur))
+      })
+      .catch(() => {
+        /* the preview stays; the save draws it */
+      })
+    return () => {
+      alive = false
+    }
+    // Once, on open.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // The entry currently open in the editor sheet — a fresh one when adding, a
   // copy of an existing one when editing. Editing works on a COPY so Cancel
   // genuinely discards: mutating the row in place would leave half-typed edits
@@ -933,7 +982,7 @@ export default function EventComposer({
   // The occasion it belongs to (lib/occasions), or null. Saved as `occasion`;
   // the occasion pages and Home's occasion row read it.
   const [occasion, setOccasion] = useState<OccasionKey | null>(() =>
-    event ? parseOccasion(event.occasion) : ideaSeed?.occasion ?? parseOccasion(initialOccasion)
+    event ? parseOccasion(event.occasion) : ideaSeed?.occasion ?? factSeed?.occasion ?? parseOccasion(initialOccasion)
   )
 
   // WHO PAYS THE SERVICE FEE for this event. The default follows the country
@@ -1011,6 +1060,9 @@ export default function EventComposer({
   // (fresh organizer arriving from the sign-up trip).
   useEffect(() => {
     if (isEdit) return
+    // Opened from an occasion page's idea or poster: that start wins over an
+    // older unsaved draft.
+    if (ideaSeed || holidaySeed) return
     let d: any = null
     try {
       d = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null')
@@ -1953,6 +2005,11 @@ export default function EventComposer({
         } catch {
           /* keep the poster already on the event */
         }
+      }
+      // Never save the live preview a holiday template opened with: it is a
+      // picture of the poster, not a stored one.
+      if (typeof data.banner_image_url === 'string' && data.banner_image_url.startsWith('/api/posters/preview')) {
+        data.banner_image_url = null
       }
 
       // A poster uploaded while signed out lives under guest-uploads/ with a
@@ -3859,6 +3916,7 @@ export default function EventComposer({
               <PosterTemplatePicker
                 facts={posterFacts()}
                 photo={posterPhoto || null}
+                occasion={posterOccasion(occasion, startDate, occasionsWithTemplates())}
                 onPick={(url, spec) => {
                   setBannerUrl(url)
                   setPosterSpec(spec)

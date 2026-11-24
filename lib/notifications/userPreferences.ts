@@ -50,11 +50,14 @@ export const CONSENT_MARKETS: ReadonlySet<string> = new Set(['CA', 'FR'])
 /**
  * The switches that start OFF in a consent market: "events near you" and the
  * Thursday "this weekend in your city" digest that replaced its Thursday send
- * (lib/notifications/weekly-digest.ts). Both are about other organizers' events.
+ * (lib/notifications/weekly-digest.ts), both about other organizers' events,
+ * and the organizer season nudge ("Kanaval is in 3 weeks", a promotional
+ * note from Tikèm, lib/notifications/seasonNudge.ts).
  */
 export const CONSENT_MARKET_OPT_IN_FIELDS: ReadonlySet<string> = new Set([
   'notify_discovery',
   'notify_weekend_digest',
+  'notify_organizer_season',
 ])
 
 /**

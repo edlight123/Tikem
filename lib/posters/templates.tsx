@@ -12,7 +12,7 @@
  * display:flex, and there are no filters — photo treatments (darken, mono,
  * duotone) happen in sharp before the photo reaches the template.
  *
- * So two events never look alike: 18 layouts, each with three colourways, and
+ * So two events never look alike: 19 layouts, each with three colourways, and
  * an event lands on a colourway picked from its id unless the organizer
  * chooses one.
  */
@@ -75,7 +75,7 @@ const GLYPH: Record<string, number> = {
   'Bebas Neue': 0.4,
   'Archivo Black': 0.78,
   Unbounded: 1.0,
-  Syne: 0.86,
+  Syne: 0.95,
   /** Syne set in capitals (neon). */
   'Syne Caps': 1.18,
   'Space Grotesk': 0.66,
@@ -153,6 +153,38 @@ const serifCenter: TemplateDef = {
           <div style={{ width: 80, height: 3, backgroundColor: d.palette.accent, opacity: 0.8, marginBottom: 40 }} />
           <div style={{ fontFamily: 'Inter', fontWeight: 600, fontSize: 32, letterSpacing: 5, textTransform: 'uppercase' }}>{`${d.dateShort} · ${d.time}`}</div>
           <div style={{ fontFamily: 'Inter', fontWeight: 500, fontSize: 30, letterSpacing: 5, textTransform: 'uppercase', opacity: 0.7, marginTop: 14 }}>{place(d)}</div>
+        </div>
+      </Frame>
+    )
+  },
+}
+
+// The photo first, the type calm: serif-center's lowercase italic, but over a
+// soft fall-off at the foot instead of a scrim across the whole picture, so a
+// night photo (a piano by the tree, candles, a parade at dusk) stays visible.
+// Made for the holiday templates (lib/holidayTemplates); open to every event.
+const serifPhoto: TemplateDef = {
+  id: 'serif-photo',
+  family: 'minimal',
+  usesPhoto: true,
+  treatment: 'none',
+  palettes: [P('#0A0A0A', '#FFFFFF', '#FFFFFF', '#0A0A0A'), P('#0A0A0A', '#F3E9D2', '#E8C77A', '#0A0A0A'), P('#0A0A0A', '#FFFFFF', TEAL, '#04201C')],
+  render: (d) => {
+    const lines = wrap(d.title.toLowerCase(), 12, 2)
+    const size = fit(lines, 'Instrument Serif', 920, 190, 380)
+    return (
+      <Frame d={d}>
+        <Photo d={d} />
+        <div style={{ ...abs, backgroundImage: 'linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.62) 30%, rgba(0,0,0,0) 58%)' }} />
+        <div style={{ ...abs, backgroundImage: 'linear-gradient(to bottom, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0) 18%)' }} />
+        <div style={{ ...abs, ...col({ alignItems: 'center', justifyContent: 'flex-end', padding: '72px 80px 84px', textAlign: 'center' }) }}>
+          {d.presenter ? <div style={{ fontFamily: 'Inter', fontWeight: 600, fontSize: 24, letterSpacing: 9, textTransform: 'uppercase', opacity: 0.8, marginBottom: 20 }}>{d.presenter}</div> : <div />}
+          <div style={col({ alignItems: 'center', fontFamily: 'Instrument Serif', fontStyle: 'italic', fontSize: size, lineHeight: 0.95, color: d.palette.ink })}>
+            {lines.map((l, i) => <div key={i}>{l}</div>)}
+          </div>
+          <div style={{ width: 64, height: 3, backgroundColor: d.palette.accent, opacity: 0.85, margin: '36px 0 30px' }} />
+          <div style={{ fontFamily: 'Inter', fontWeight: 600, fontSize: 30, letterSpacing: 5, textTransform: 'uppercase' }}>{`${d.dateShort} · ${d.time}`}</div>
+          <div style={{ fontFamily: 'Inter', fontWeight: 500, fontSize: 28, letterSpacing: 5, textTransform: 'uppercase', opacity: 0.72, marginTop: 12 }}>{place(d)}</div>
         </div>
       </Frame>
     )
@@ -377,7 +409,7 @@ const dateRail: TemplateDef = {
   palettes: [P('#F5F0E6', '#FFFFFF', '#F5F0E6', '#111111'), P(TEAL, '#FFFFFF', TEAL, '#04201C'), P('#FFE14D', '#FFFFFF', '#FFE14D', '#141414')],
   render: (d) => {
     const lines = wrap(d.title, 9, 3)
-    const size = fit(lines, 'Syne', 760, 150, 480, 0.95)
+    const size = fit(lines, 'Syne', 720, 150, 480, 0.95)
     return (
       <Frame d={d}>
         <Photo d={d} />
@@ -678,7 +710,7 @@ const repeatPattern: TemplateDef = {
 }
 
 export const TEMPLATES: TemplateDef[] = [
-  serifCenter, serifDuotone, serifPaper,
+  serifCenter, serifPhoto, serifDuotone, serifPaper,
   stackBar, tiltPop, outlineBlock,
   giantDate, calendarTile, dateRail,
   billCenter, setTimes, twoToneList,

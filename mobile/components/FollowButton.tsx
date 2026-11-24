@@ -8,6 +8,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useNavigation } from '@react-navigation/native';
+import { requireAuth, takePendingAuthIntent } from '../lib/authGate';
 import { useI18n } from '../contexts/I18nContext';
 import { backendFetch } from '../lib/api/backend';
 import { collection, query, where, getDocs } from 'firebase/firestore';
@@ -33,6 +35,7 @@ export default function FollowButton({ organizerId, style, compact = false, onFo
   const styles = getStyles(colors);
   const { user, userProfile } = useAuth();
   const { t } = useI18n();
+  const navigation = useNavigation<any>();
   const cacheKey = `${user?.uid || ''}:${organizerId}`;
   const [isFollowing, setIsFollowing] = useState(() => followCache.get(cacheKey) ?? false);
   const [loading, setLoading] = useState(() => !followCache.has(cacheKey));
@@ -63,6 +66,10 @@ export default function FollowButton({ organizerId, style, compact = false, onFo
       const snapshot = await getDocs(followsQuery);
       followCache.set(cacheKey, !snapshot.empty);
       setIsFollowing(!snapshot.empty);
+      // A guest tapped Follow, signed in, and is back: follow now (once).
+      // Taken either way, so an already-followed organizer leaves nothing behind.
+      const wanted = takePendingAuthIntent('follow', organizerId);
+      if (snapshot.empty && wanted) handleToggleFollow();
     } catch (error) {
       console.error('Error checking follow status:', error);
     } finally {
@@ -71,13 +78,8 @@ export default function FollowButton({ organizerId, style, compact = false, onFo
   };
 
   const handleToggleFollow = async () => {
-    if (!user) {
-      showAlert(
-        t('auth.loginRequiredTitle') || 'Login Required',
-        t('follow.loginBody') || 'Please log in to follow organizers'
-      );
-      return;
-    }
+    // A guest signs in (sheet) and the follow happens when they are back.
+    if (!requireAuth(user, navigation, { kind: 'follow', key: organizerId })) return;
 
     if (user.uid === organizerId) {
       return; // Can't follow yourself

@@ -1551,7 +1551,8 @@
       "colour": "Koulè {{n}}",
       "use": "Sèvi ak afich sa a",
       "failed": "Nou pa t ka fè afich la. Eseye ankò.",
-      "sampleTitle": "Evènman ou"
+      "sampleTitle": "Evènman ou",
+      "forOccasion": "Pou {{name}}"
     },
     "flyerRead": {
       "button": "Ranpli ak flyer a",
@@ -2417,6 +2418,7 @@
     "empty": "Poko gen anyen ki anonse.",
     "ideas_title": "lide pou òganize",
     "use_idea": "Kreye evènman sa a",
+    "posters_title": "afich",
     "part_of": "Pou {{name}}"
   },
   "a11y": {

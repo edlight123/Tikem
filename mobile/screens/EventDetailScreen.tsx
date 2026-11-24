@@ -37,6 +37,7 @@ import { backendJson } from '../lib/api/backend';
 import { getPromoterRef, setPromoterRef } from '../lib/promoterRef';
 import { Attribution, attributionFromParams, sendClickOnce } from '../lib/attribution';
 import { pingEventView } from '../lib/eventViews';
+import { requireAuth, takePendingAuthIntent } from '../lib/authGate';
 import { goBackOrHome } from '../lib/goBackOrHome';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
@@ -249,6 +250,33 @@ export default function EventDetailScreen({ route, navigation }: any) {
     checkFavoriteStatus();
   }, [eventId]);
 
+  // Signed in from this page (lib/authGate): the sign-in sheet has gone and
+  // the guest is back here. Pick up what they tapped. The latest handlers are
+  // read through a ref, since the ones in this closure predate the account.
+  const resumeRef = useRef<() => void>(() => undefined);
+  resumeRef.current = () => {
+    if (takePendingAuthIntent('purchase', eventId)) {
+      if (event) handlePurchaseTicket();
+    } else if (takePendingAuthIntent('message', eventId)) {
+      if (event?.organizer_id && event.organizer_id !== user?.uid) setShowContactOrganizer(true);
+    } else if (takePendingAuthIntent('favorite', eventId)) {
+      saveFavoriteAfterSignIn();
+    }
+  };
+  const resumeUidRef = useRef(user?.uid);
+  useEffect(() => {
+    const prevUid = resumeUidRef.current;
+    resumeUidRef.current = user?.uid;
+    // Only on the guest -> signed-in change, not on every open.
+    if (!user?.uid || prevUid === user.uid) return;
+    // Their heart state, now that there is an account to read it for.
+    checkFavoriteStatus();
+    // After the sheet's slide-down: two modals at once do not stack on iOS.
+    const timer = setTimeout(() => resumeRef.current(), 700);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.uid]);
+
   // Animate floating bar entrance
   useEffect(() => {
     if (event && fresh) {
@@ -394,7 +422,11 @@ export default function EventDetailScreen({ route, navigation }: any) {
       // follows, but the event paints first instead of waiting for both.
       const knownOrganizer: string | undefined = getEventPreview(eventId)?.organizer_id;
       const readProfile = (uid: string) =>
-        // H4: cross-user read of the organizer's SAFE public projection (not users/{uid}).
+        // public_profiles is signed-in only (firestore.rules): a guest keeps
+        // the organizer fields the event itself carries.
+        !user
+          ? Promise.resolve(null)
+          : // H4: cross-user read of the organizer's SAFE public projection (not users/{uid}).
         getDoc(doc(db, 'public_profiles', uid))
           .then((d) => (d.exists() ? d.data() : null))
           .catch((err) => {
@@ -445,10 +477,8 @@ export default function EventDetailScreen({ route, navigation }: any) {
   };
 
   const toggleFavorite = async () => {
-    if (!user) {
-      showAlert(t('auth.loginRequiredTitle'), t('eventDetail.favorites.loginBody'));
-      return;
-    }
+    // A guest signs in first; the heart is filled once they are back here.
+    if (!requireAuth(user, navigation, { kind: 'favorite', key: eventId })) return;
 
     setFavoriteLoading(true);
     try {
@@ -482,6 +512,28 @@ export default function EventDetailScreen({ route, navigation }: any) {
     }
   };
 
+  // The heart a guest tapped before signing in: saved once, never toggled off
+  // (they may already have had this event saved on another device).
+  const saveFavoriteAfterSignIn = async () => {
+    if (!user) return;
+    try {
+      const existing = await getDocs(
+        query(collection(db, 'event_favorites'), where('user_id', '==', user.uid), where('event_id', '==', eventId))
+      );
+      if (existing.empty) {
+        await addDoc(collection(db, 'event_favorites'), {
+          user_id: user.uid,
+          event_id: eventId,
+          created_at: Timestamp.now(),
+        });
+      }
+      setIsFavorite(true);
+      haptics.select();
+    } catch (error) {
+      console.warn('[EventDetail] save after sign-in failed', (error as any)?.code);
+    }
+  };
+
   const shareEventSheet = async () => {
     try {
       // Minimal on purpose (owner, 2026-11-17): the link's preview card is the
@@ -510,10 +562,7 @@ export default function EventDetailScreen({ route, navigation }: any) {
 
   // "…" menu: report the event, block its organizer (App Store 1.2).
   const handleMore = () => {
-    if (!user) {
-      showAlert(t('auth.loginRequiredTitle'), t('moderation.signInToReport'));
-      return;
-    }
+    if (!requireAuth(user, navigation)) return;
     const organizerId: string = event?.organizer_id || '';
     const isOwn = !!organizerId && organizerId === user.uid;
     if (isOwn) {
@@ -635,13 +684,9 @@ export default function EventDetailScreen({ route, navigation }: any) {
       Linking.openURL(outsideTicketsUrl).catch(() => undefined);
       return;
     }
-    if (!user) {
-      showAlert(
-        t('auth.loginRequiredTitle'),
-        requiresApproval ? t('attendRequests.state.loginBody') : t('eventDetail.purchase.loginBody')
-      );
-      return;
-    }
+    // A guest signs in (sheet over this page) and comes back to the ticket
+    // sheet: see the resume effect below.
+    if (!requireAuth(user, navigation, { kind: 'purchase', key: eventId })) return;
 
     // Prevent purchase for past events
     if (isPastEvent) {
@@ -1076,10 +1121,14 @@ export default function EventDetailScreen({ route, navigation }: any) {
                   (owner, 2026-11-17: the full-width "Message the organizer"
                   button was "too prominent ... maybe just an icon"). Hidden on
                   the organizer's own event and when signed out. */}
-              {!!event.organizer_id && event.organizer_id !== user?.uid && !!user && !communityShared && (
+              {!!event.organizer_id && event.organizer_id !== user?.uid && !communityShared && (
                 <TouchableOpacity
                   style={styles.orgMessageIcon}
-                  onPress={() => setShowContactOrganizer(true)}
+                  onPress={() => {
+                    // A guest signs in first, then the message sheet opens.
+                    if (!requireAuth(user, navigation, { kind: 'message', key: eventId })) return;
+                    setShowContactOrganizer(true);
+                  }}
                   activeOpacity={0.75}
                   accessibilityRole="button"
                   accessibilityLabel={t('contactOrganizer.open')}

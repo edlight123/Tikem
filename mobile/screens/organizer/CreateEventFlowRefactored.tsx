@@ -91,14 +91,21 @@ import {
   countrySupport,
 } from '../../lib/countrySupport';
 import { orderCountriesByMarkets, useDeclaredMarkets } from '../../lib/organizerMarkets';
-import { backendFetch, backendJson } from '../../lib/api/backend';
+import { API_BASE_URL, backendFetch, backendJson } from '../../lib/api/backend';
 import { useAppMode } from '../../contexts/AppModeContext';
 import StatusChip from '../../components/StatusChip';
 import FeeIncidenceCard from '../../components/organizer/FeeIncidenceCard';
 import LineupEditor from '../../components/organizer/LineupEditor';
 import MirrorBallDropzone from '../../components/organizer/MirrorBallDropzone';
 import { POSTER_ALT_MAX } from '../../lib/posterAlt';
-import PosterTemplateSheet, { makePoster, type PosterFacts, type PosterSpec } from '../../components/organizer/PosterTemplateSheet';
+import PosterTemplateSheet, {
+  holidaySpec,
+  loadHolidayTemplates,
+  makePoster,
+  posterQuery,
+  type PosterFacts,
+  type PosterSpec,
+} from '../../components/organizer/PosterTemplateSheet';
 import { incidenceForEvent, type FeeIncidence } from '../../lib/buyerPricing';
 import { isBelowMinPaidPrice, minPaidPriceFor } from '../../lib/minPaidPrice';
 import { lineupFromEvent, lineupEntryToRecord, type LineupEntry } from '../../lib/lineup';
@@ -929,9 +936,12 @@ export default function CreateEventFlowRefactored() {
   }, [eventDraft.country, eventDraft.is_rsvp, eventDraft.pay_at_door]);
 
   // From an occasion page (OccasionScreen): tagged for it, or filled in from
-  // one of its ideas (title, a line, category, a date inside it). Once.
+  // one of its ideas (title, a line, category, a date inside it), or from one
+  // of its holiday posters (holiday=<id>). An idea that names a poster, and a
+  // poster on its own, open with that poster applied, photo and all. Once.
   const occasionParam = (route.params as any)?.occasion as string | undefined;
   const ideaParam = (route.params as any)?.idea as string | undefined;
+  const holidayParam = (route.params as any)?.holiday as string | undefined;
   useEffect(() => {
     if (isEditMode) return;
     const idea = ideaById(ideaParam);
@@ -948,8 +958,45 @@ export default function CreateEventFlowRefactored() {
     } else if (parseOccasion(occasionParam)) {
       updateDraft({ occasion: parseOccasion(occasionParam)! });
     }
+    const posterId = holidayParam || idea?.poster;
+    if (!posterId) return;
+    let alive = true;
+    loadHolidayTemplates()
+      .then(async (all) => {
+        const h = all.find((x) => x.id === posterId);
+        if (!h || !alive) return;
+        const spec = holidaySpec(h);
+        // The poster's own facts when it opened Create Event without an idea.
+        const own = idea
+          ? null
+          : {
+              title: h.title[(['en', 'fr', 'ht'].includes(language) ? language : 'en') as 'en' | 'fr' | 'ht'],
+              occasion: h.occasion,
+              category: CATEGORIES.includes(h.appCategory) ? h.appCategory : 'Other',
+              start_date: ideaDate({ occasion: h.occasion, day: 0 } as any),
+              start_time: h.time,
+            };
+        if (own) updateDraft(own);
+        const facts: PosterFacts = {
+          title: own?.title || (idea ? ideaText(idea, language).title : t('posterTemplates.sampleTitle')),
+          date: own?.start_date || (idea ? ideaDate(idea) : new Date().toISOString().slice(0, 10)),
+          time: own?.start_time || idea?.time || '20:00',
+        };
+        // The live preview straight away, then the stored poster.
+        updateDraft({ poster_template: spec, banner_image_url: `${API_BASE_URL}/api/posters/preview?${posterQuery(facts, spec, language)}` });
+        try {
+          const url = await makePoster(facts, spec, language);
+          if (alive) updateDraft({ banner_image_url: url });
+        } catch {
+          /* the preview stays; the save draws it */
+        }
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [occasionParam, ideaParam]);
+  }, [occasionParam, ideaParam, holidayParam]);
   const [occasionsOpen, setOccasionsOpen] = useState(false);
 
   // Choose the entry mode (sell tickets vs free RSVP) and enter the canvas.
@@ -1803,6 +1850,10 @@ export default function CreateEventFlowRefactored() {
       } catch {
         /* keep the poster already on the draft */
       }
+    }
+    // Never save a holiday poster's live preview: it is a picture, not a stored poster.
+    if (typeof eventData.banner_image_url === 'string' && eventData.banner_image_url.includes('/api/posters/preview')) {
+      eventData.banner_image_url = '';
     }
 
     // Paid events in Stripe Connect markets need a payout account that can
@@ -3761,7 +3812,13 @@ export default function CreateEventFlowRefactored() {
       <PosterTemplateSheet
         visible={showPosterTemplates}
         facts={posterFacts()}
-        photo={eventDraft.poster_template?.photo || (eventDraft.poster_template ? null : eventDraft.banner_image_url)}
+        occasion={eventDraft.occasion}
+        photo={
+          // A holiday poster's photo is the template's, not the organizer's own.
+          eventDraft.poster_template?.holiday
+            ? null
+            : eventDraft.poster_template?.photo || (eventDraft.poster_template ? null : eventDraft.banner_image_url)
+        }
         onClose={() => setShowPosterTemplates(false)}
         onPick={(url, spec) => {
           updateDraft({ banner_image_url: url, poster_template: spec });

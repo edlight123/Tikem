@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { Check, Search, X } from 'lucide-react'
 import {
-  FLYER_LIBRARY,
+  seasonalFlyerLibrary,
   flyerLibraryFullUrl,
   flyerLibraryThumbUrl,
   type FlyerLibraryItem,
@@ -36,7 +36,7 @@ export default function FlyerLibraryPicker({
   onPick: (url: string) => void
   onClose: () => void
 }) {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
   const [q, setQ] = useState('')
 
   // A placeholder that clips is worse than a short one. At a 402px viewport the
@@ -67,17 +67,19 @@ export default function FlyerLibraryPicker({
    * Accents are folded because the tags an organizer types are Kreyòl and
    * French — "fete" has to reach "fèt", and nobody types the grave on a phone.
    */
+  // The season's photos lead for the month before an occasion (lib/flyerLibrary).
+  const library = useMemo(() => seasonalFlyerLibrary(), [])
   const { items, matchCount } = useMemo(() => {
     const needle = fold(q)
-    if (!needle) return { items: [...FLYER_LIBRARY], matchCount: 0 }
+    if (!needle) return { items: [...library], matchCount: 0 }
     const hits: FlyerLibraryItem[] = []
     const rest: FlyerLibraryItem[] = []
-    for (const i of FLYER_LIBRARY) {
+    for (const i of library) {
       const hay = fold([i.label, i.id, ...i.tags].join(' '))
       ;(hay.includes(needle) ? hits : rest).push(i)
     }
     return { items: [...hits, ...rest], matchCount: hits.length }
-  }, [q])
+  }, [q, library])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -97,7 +99,9 @@ export default function FlyerLibraryPicker({
   }, [])
 
   const labelFor = (item: FlyerLibraryItem) =>
-    t(`composer.flyerLib.${item.id}`, { defaultValue: item.label })
+    t(`composer.flyerLib.${item.id}`, {
+      defaultValue: item.labels?.[(i18n.language || 'en').slice(0, 2) as 'en' | 'fr' | 'ht'] || item.label,
+    })
 
   /**
    * Portalled to <body>, and full-height rather than tucked under the chrome.

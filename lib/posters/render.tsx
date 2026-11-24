@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 import { ImageResponse } from 'next/og'
 import { fetchOwnPoster } from './hosts'
-import { H, W, defaultPalette, getTemplate, type PosterData, type TemplateDef } from './templates'
+import { H, W, defaultPalette, getTemplate, type PhotoTreatment, type PosterData, type TemplateDef } from './templates'
 
 /**
  * Draws a poster template as a JPEG. Shared by the picker's live previews
@@ -25,7 +25,14 @@ export interface PosterInput {
   locale?: 'ht' | 'fr' | 'en'
   /** Background photo (our bucket or an Unsplash photo). */
   photo?: string
+  /**
+   * Overrides the layout's own photo treatment (a holiday template pairs a
+   * layout with the treatment its photo needs). Omitted → the layout's.
+   */
+  treatment?: PhotoTreatment
 }
+
+const TREATMENTS: PhotoTreatment[] = ['darken', 'mono', 'duotone', 'none']
 
 // Caps so a public preview can't be asked to draw a novel.
 export const LIMITS = { title: 60, venue: 60, city: 40, presenter: 40, lineupItems: 9, lineupItem: 32 }
@@ -51,6 +58,7 @@ export function cleanInput(raw: Partial<Record<keyof PosterInput, unknown>>): Po
     lineup: lineupRaw.map((x) => s(x, LIMITS.lineupItem)).filter(Boolean).slice(0, LIMITS.lineupItems),
     locale,
     photo: s(raw.photo, 1000) || undefined,
+    treatment: TREATMENTS.includes(raw.treatment as PhotoTreatment) ? (raw.treatment as PhotoTreatment) : undefined,
   }
 }
 
@@ -138,16 +146,20 @@ function hexRgb(hex: string) {
   return { r: (v >> 16) & 255, g: (v >> 8) & 255, b: v & 255 }
 }
 
-async function preparePhoto(url: string | undefined, t: TemplateDef, tint: string): Promise<string | null> {
+async function preparePhoto(url: string | undefined, t: TemplateDef, tint: string, override?: PhotoTreatment): Promise<string | null> {
   if (!t.usesPhoto || !url) return null
-  const buf = await fetchOwnPoster(url).catch(() => null)
+  const treatment = override ?? t.treatment
+  // One retry: a poster saved without its photo stays that way.
+  const buf = await fetchOwnPoster(url)
+    .catch(() => fetchOwnPoster(url))
+    .catch(() => null)
   if (!buf) return null
   const { default: sharp } = await import('sharp')
   let img = sharp(buf, { limitInputPixels: 50_000_000, failOn: 'error' }).rotate().resize(W, H, { fit: 'cover' })
-  if (t.treatment === 'mono') img = img.grayscale().linear(1.15, -12)
+  if (treatment === 'mono') img = img.grayscale().linear(1.15, -12)
   // No grayscale(): sharp applies it last, after tint, which greys the tint out.
-  if (t.treatment === 'duotone') img = img.linear(1.1, -10).tint(hexRgb(tint))
-  if (t.treatment === 'darken') img = img.modulate({ brightness: 0.92 })
+  if (treatment === 'duotone') img = img.linear(1.1, -10).tint(hexRgb(tint))
+  if (treatment === 'darken') img = img.modulate({ brightness: 0.92 })
   const out = await img.jpeg({ quality: 82 }).toBuffer()
   return `data:image/jpeg;base64,${out.toString('base64')}`
 }
@@ -158,7 +170,7 @@ export async function renderPoster(input: PosterInput): Promise<Buffer> {
   if (!t) throw new Error('unknown template')
   const paletteIdx = input.palette ?? defaultPalette(input.seed || input.title)
   const palette = t.palettes[paletteIdx]
-  const [fonts, photo] = await Promise.all([loadFonts(), preparePhoto(input.photo, t, palette.accent)])
+  const [fonts, photo] = await Promise.all([loadFonts(), preparePhoto(input.photo, t, palette.accent, input.treatment)])
   const data: PosterData = {
     title: input.title,
     ...dateParts(input.start, input.locale || 'ht'),

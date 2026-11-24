@@ -15,6 +15,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { font } from '../theme/tokens';
 import WhitePillCTA from './WhitePillCTA';
+import { signedInForAnAction } from '../lib/authGate';
 
 const SEEN_KEY = 'tikem_welcome_seen_v1';
 const { width: SCREEN_W } = Dimensions.get('window');
@@ -46,6 +47,9 @@ export default function FirstRunWelcome({ onCreateEvent }: FirstRunWelcomeProps)
     let alive = true;
     (async () => {
       if (!user) return;
+      // A guest who just signed in to buy, save or open something gets that,
+      // not a welcome on top of it; the welcome waits for the next launch.
+      if (signedInForAnAction()) return;
       try {
         const seen = await AsyncStorage.getItem(SEEN_KEY);
         if (alive && !seen) setVisible(true);

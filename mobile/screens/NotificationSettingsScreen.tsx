@@ -45,8 +45,10 @@ import { Switch as UISwitch } from '../components/ui/Switch';
  * switches write the same
  * organizers/{uid}/notificationPreferences/main document as the web's
  * NotificationsForm, through the same PUT /api/organizer/settings/notifications,
- * plus the two organizer-side discretionary fields on users/{uid}
- * (notify_organizer_milestones, notify_organizer_nudges).
+ * plus the organizer-side discretionary fields on users/{uid}
+ * (notify_organizer_milestones, notify_organizer_nudges, and
+ * notify_organizer_season: "Kanaval is in 3 weeks", off by default in Canada
+ * and France).
  */
 
 // users/{uid} fields — absent means opted in (policy.ts isCategoryEnabled).
@@ -57,7 +59,8 @@ type UserPrefKey =
   | 'notify_national_day'
   | 'notify_friend_invites'
   | 'notify_organizer_milestones'
-  | 'notify_organizer_nudges';
+  | 'notify_organizer_nudges'
+  | 'notify_organizer_season';
 
 // organizers/{uid}/notificationPreferences/main — same keys and defaults as
 // the web (lib/organizer/notificationPreferences.ts).
@@ -98,6 +101,7 @@ export default function NotificationSettingsScreen({ navigation, route }: any) {
     notify_friend_invites: true,
     notify_organizer_milestones: true,
     notify_organizer_nudges: true,
+    notify_organizer_season: true,
   });
   const [orgPrefs, setOrgPrefs] = useState<OrganizerPrefs | null>(null);
   const [orgUnavailable, setOrgUnavailable] = useState(false);
@@ -143,13 +147,14 @@ export default function NotificationSettingsScreen({ navigation, route }: any) {
             notify_friend_invites: data.notify_friend_invites ?? true,
             notify_organizer_milestones: data.notify_organizer_milestones ?? true,
             notify_organizer_nudges: data.notify_organizer_nudges ?? true,
+            notify_organizer_season: readNotifyPref(data, 'notify_organizer_season'),
           });
         }
       } catch {
         // Unread: fall back to the profile's country so the two discovery
         // switches show what the server assumes for a missing field.
         if (!cancelled && inConsentMarket(userProfile)) {
-          setUserPrefs((p) => ({ ...p, notify_discovery: false, notify_weekend_digest: false }));
+          setUserPrefs((p) => ({ ...p, notify_discovery: false, notify_weekend_digest: false, notify_organizer_season: false }));
         }
       }
       if (isOrganizer) {
@@ -408,6 +413,12 @@ export default function NotificationSettingsScreen({ navigation, route }: any) {
                       title={t('notificationSettings.organizer.nudges')}
                       value={userPrefs.notify_organizer_nudges}
                       onChange={(v) => toggleUserPref('notify_organizer_nudges', v)}
+                    />
+                    <PrefRow
+                      divided
+                      title={t('notificationSettings.organizer.season')}
+                      value={userPrefs.notify_organizer_season}
+                      onChange={(v) => toggleUserPref('notify_organizer_season', v)}
                     />
                   </View>
                 </>

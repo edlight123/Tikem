@@ -74,6 +74,10 @@
       "schedule": "0 14 * * *"
     },
     {
+      "path": "/api/cron/organizer-season",
+      "schedule": "0 15 * * *"
+    },
+    {
       "path": "/api/cron/connect-health-sweep",
       "schedule": "0 6 * * *"
     },

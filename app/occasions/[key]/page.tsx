@@ -1,7 +1,9 @@
 // An occasion's page (lib/occasions): /occasions/kanaval, /occasions/fet-manman…
 // A real photo with the name and dates on it, the events tagged for it (plus
 // untagged ones on the main days of a short occasion), and a few ideas that
-// open Create Event filled in. The app opens the same path natively
+// open Create Event filled in (with the poster an idea names already applied),
+// and a strip of the occasion's holiday posters (lib/holidayTemplates), each
+// opening Create Event with that poster. The app opens the same path natively
 // (OccasionScreen; tikem://occasions/<key> and the universal link).
 
 import type { Metadata } from 'next'
@@ -35,6 +37,7 @@ import {
   parseOccasion,
 } from '@/lib/occasions'
 import { formatOccasionDay, formatOccasionRange } from '@/lib/occasionFormat'
+import { holidaySamplePath, holidayTemplatesFor, holidayText } from '@/lib/holidayTemplates'
 import { resolveServerLanguage, tServer } from '@/lib/serverT'
 
 export const dynamic = 'force-dynamic'
@@ -90,6 +93,7 @@ export default async function OccasionPage({ params }: { params: Promise<{ key: 
   )
   const events = occasionEvents(upcoming, key, range)
   const ideas = occasionIdeas(key)
+  const posters = holidayTemplatesFor(key)
   const name = occasionName(key, lang)
   const adminFlag = isAdmin((user as any)?.email_verified ? user?.email : null)
 
@@ -164,6 +168,35 @@ export default async function OccasionPage({ params }: { params: Promise<{ key: 
             <p className="rounded bg-surface-low px-4 py-5 text-body text-fg-muted">{t('empty', 'Nothing listed for it yet.')}</p>
           )}
         </section>
+
+        {posters.length > 0 && (
+          <section className="mt-14">
+            <SectionHeader title={t('posters_title', 'posters')} />
+            {/* Drawn with each poster's own suggested title; a tap opens Create Event with it. */}
+            <ul className="scrollbar-hide -mx-4 flex gap-3 overflow-x-auto px-4 pb-1 sm:-mx-6 sm:px-6 lg:mx-0 lg:grid lg:grid-cols-6 lg:gap-4 lg:overflow-visible lg:px-0">
+              {posters.map((p) => {
+                const copy = holidayText(p, lang)
+                return (
+                  <li key={p.id} className="w-[38vw] max-w-[180px] shrink-0 lg:w-auto lg:max-w-none">
+                    <Link
+                      href={`/create?occasion=${key}&holiday=${p.id}`}
+                      aria-label={`${copy.title}, ${t('use_idea', 'Create this event')}`}
+                      className="group block overflow-hidden rounded bg-surface-low outline-none focus-visible:ring-2 focus-visible:ring-fg/70"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={holidaySamplePath(p, lang, now)}
+                        alt=""
+                        loading="lazy"
+                        className="aspect-[4/5] w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                      />
+                    </Link>
+                  </li>
+                )
+              })}
+            </ul>
+          </section>
+        )}
 
         {ideas.length > 0 && (
           <section className="mt-14">

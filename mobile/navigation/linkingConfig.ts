@@ -8,9 +8,13 @@
 // route — [EventDetail] — so there is nothing underneath: the in-screen back
 // chevron's goBack() is a no-op and the iOS edge swipe has nowhere to go
 // (tester report, TestFlight 2026-09-23). With it, React Navigation seeds the
-// stack as [Main, EventDetail], so back lands on the home tabs. When the user
-// is signed out the stack has no `Main` route and the router drops both
-// unknown routes, falling back to Auth exactly as before.
+// stack as [Main, EventDetail], so back lands on the home tabs.
+//
+// Signed out (guest browsing, 2026-11-23) the stack has `Main` too, so an
+// event, organizer or occasion link opens that screen for a guest. A link to
+// something that needs an account (a ticket, messages, an organizer page) is
+// a SignInGate there (navigation/guestRoutes): the sign-in sheet opens, and
+// the app carries on to the linked screen once signed in.
 export const LINKING_CONFIG = {
   initialRouteName: 'Main',
   screens: {

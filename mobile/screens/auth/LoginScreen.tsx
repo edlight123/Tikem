@@ -21,6 +21,7 @@ import { TikemWordmark } from '../../components/TikemWordmark';
 import { AuthInput } from '../../components/auth/AuthInput';
 import { SocialSignInRow } from '../../components/auth/SocialSignInRow';
 import { TermsAgreement } from '../../components/auth/TermsAgreement';
+import { AuthDismiss } from '../../components/auth/AuthDismiss';
 import WhitePillCTA from '../../components/WhitePillCTA';
 import { colors, spacing } from '../../theme/tokens';
 import { useAppAlert } from '../../components/AppAlert';
@@ -292,6 +293,9 @@ export default function LoginScreen({ navigation }: any) {
                 </Text>
               </Pressable>
 
+              {/* A guest who came from browsing goes back to it (lib/authGate). */}
+              <AuthDismiss navigation={navigation} variant="link" disabled={loading} />
+
               {phoneAuthOn ? (
                 <Pressable
                   onPress={() => setPreferEmail(false)}
@@ -308,6 +312,7 @@ export default function LoginScreen({ navigation }: any) {
           </Animated.View>
       </ScrollView>
       </KeyboardAvoidingView>
+      <AuthDismiss navigation={navigation} variant="close" disabled={loading} />
     </AuthBackground>
   );
 }

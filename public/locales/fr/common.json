@@ -1551,7 +1551,8 @@
       "colour": "Couleur {{n}}",
       "use": "Utiliser cette affiche",
       "failed": "Impossible de créer l’affiche. Réessayez.",
-      "sampleTitle": "Votre événement"
+      "sampleTitle": "Votre événement",
+      "forOccasion": "Pour {{name}}"
     },
     "flyerRead": {
       "button": "Remplir depuis le flyer",
@@ -2417,6 +2418,7 @@
     "empty": "Rien n’est encore annoncé.",
     "ideas_title": "idées à organiser",
     "use_idea": "Créer cet événement",
+    "posters_title": "affiches",
     "part_of": "Pour {{name}}"
   },
   "a11y": {

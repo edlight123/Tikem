@@ -11,12 +11,20 @@
  * should never fail to show it because a token was slow to refresh.
  */
 import { NextResponse } from 'next/server'
-import { FLYER_LIBRARY, flyerLibraryFullUrl, flyerLibraryThumbUrl } from '@/lib/flyerLibrary'
+import { flyerLibraryFullUrl, flyerLibraryThumbUrl, seasonalFlyerLibrary } from '@/lib/flyerLibrary'
+
+/**
+ * Seasonal: for the 30 days before an occasion with holiday templates (and
+ * while it is on), its photos lead (lib/flyerLibrary seasonalFlyerLibrary).
+ * `labels` carries a seasonal piece's caption in en/fr/ht.
+ */
+export const dynamic = 'force-dynamic'
 
 export function GET() {
-  const items = FLYER_LIBRARY.map((item) => ({
+  const items = seasonalFlyerLibrary(Date.now()).map((item) => ({
     id: item.id,
     label: item.label,
+    ...(item.labels ? { labels: item.labels } : {}),
     tags: item.tags,
     thumbUrl: flyerLibraryThumbUrl(item),
     fullUrl: flyerLibraryFullUrl(item),

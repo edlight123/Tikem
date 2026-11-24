@@ -64,6 +64,11 @@ export interface DiscretionarySend {
   body: string
   url: string
   data?: Record<string, any>
+  /**
+   * Per-recipient wording (their language), from the user doc this send
+   * already reads. Overrides title/body when given.
+   */
+  copy?: (user: Record<string, any> | null) => { title: string; body: string }
 }
 
 /**
@@ -73,7 +78,7 @@ export interface DiscretionarySend {
  * assuming everything they queued was delivered.
  */
 export async function sendDiscretionary(send: DiscretionarySend): Promise<boolean> {
-  const { userId, category, capKey, type, title, body, url, data } = send
+  const { userId, category, capKey, type, url, data } = send
 
   let user: Record<string, any> | null = null
   try {
@@ -95,6 +100,8 @@ export async function sendDiscretionary(send: DiscretionarySend): Promise<boolea
   // the failure mode of recording after would be a retry storm re-notifying the
   // same people.
   await recordSent(userId, capKey)
+
+  const { title, body } = send.copy ? send.copy(user) : send
 
   try {
     await createNotification(userId, type, title, body, url, data)

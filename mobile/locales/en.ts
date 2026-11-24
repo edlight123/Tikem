@@ -16,6 +16,7 @@ export default {
     emptyTitle: 'nothing listed yet',
     emptyBody: 'Events tagged for it will show here.',
     ideasTitle: 'ideas to host',
+    postersTitle: 'posters',
     useIdea: 'create this event',
     partOf: 'Part of {name}',
     notFound: 'This occasion does not exist',
@@ -233,6 +234,13 @@ export default {
     continue: 'Continue',
     done: 'Done',
   },
+  // A signed-out guest on an account tab (components/GuestPanel).
+  guest: {
+    signIn: "Sign in",
+    createAccount: "Create an account",
+    ticketsTitle: "Sign in to see your tickets",
+    profileTitle: "Sign in to see your profile",
+  },
   auth: {
     // Terms acceptance line on Signup + Login (App Store 1.2).
     terms: {
@@ -243,6 +251,8 @@ export default {
       suffix: ". There is no tolerance for objectionable content or abusive users.",
     },
     loginRequiredTitle: 'Login Required',
+    // The sign-in sheet's way back to browsing (lib/authGate).
+    notNow: "Not now",
     apple: {
       title: 'Sign in with Apple',
       genericError: 'Could not sign in with Apple.',
@@ -3422,6 +3432,7 @@ export default {
     use: 'Use this poster',
     failed: 'Could not make the poster. Try again.',
     sampleTitle: 'Your event',
+    forOccasion: 'For {name}',
   },
   flyerLibrary: {
     title: 'Select a flyer',
@@ -3986,6 +3997,7 @@ export default {
       milestones: 'Sales milestones',
       milestonesBody: 'When an event passes half sold or sells out.',
       nudges: 'Sales tips',
+      season: 'Season reminders',
       nudgesBody: 'A nudge with your promoter link when sales are slow.',
     },
   },

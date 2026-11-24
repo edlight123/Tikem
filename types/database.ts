@@ -13,6 +13,8 @@ export type NotificationType =
   | 'weekend_digest'
   | 'organizer_milestone'
   | 'organizer_nudge'
+  // About three weeks before an occasion: make your poster (app/api/cron/organizer-season).
+  | 'organizer_season'
   // The one 09:00 note on a Haitian holiday (app/api/cron/national-day-push).
   | 'national_day'
   // A connection invited you to an event, or someone joined from your invite

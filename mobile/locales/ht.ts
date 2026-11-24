@@ -16,6 +16,7 @@ export default {
     emptyTitle: 'poko gen anyen',
     emptyBody: 'Evènman ki pou okazyon sa a ap parèt la a.',
     ideasTitle: 'lide pou òganize',
+    postersTitle: 'afich',
     useIdea: 'kreye evènman sa a',
     partOf: 'Pou {name}',
     notFound: 'Okazyon sa a pa egziste',
@@ -232,6 +233,13 @@ export default {
     continue: 'Kontinye',
     done: 'Fini',
   },
+  // A signed-out guest on an account tab (components/GuestPanel).
+  guest: {
+    signIn: "Konekte",
+    createAccount: "Kreye yon kont",
+    ticketsTitle: "Konekte pou w wè tikè w yo",
+    profileTitle: "Konekte pou w wè pwofil ou",
+  },
   auth: {
     // Terms acceptance line on Signup + Login (App Store 1.2).
     terms: {
@@ -242,6 +250,8 @@ export default {
       suffix: " nou yo. Nou pa tolere okenn kontni ki choke ni itilizatè ki abize lòt moun.",
     },
     loginRequiredTitle: 'Ou dwe konekte',
+    // The sign-in sheet's way back to browsing (lib/authGate).
+    notNow: "Pa kounye a",
     apple: {
       title: 'Konekte ak Apple',
       genericError: 'Nou pa t kapab konekte ak Apple.',
@@ -3352,6 +3362,7 @@ export default {
     use: 'Sèvi ak afich sa a',
     failed: 'Nou pa t ka fè afich la. Eseye ankò.',
     sampleTitle: 'Evènman ou',
+    forOccasion: 'Pou {name}',
   },
   flyerLibrary: {
     title: 'Chwazi yon flayè',
@@ -3973,6 +3984,7 @@ export default {
       milestones: 'Etap vant',
       milestonesBody: 'Lè yon evènman depase mwatye vann oswa fin vann.',
       nudges: 'Konsèy vant',
+      season: 'Rapèl sezon',
       nudgesBody: 'Yon ti rapèl ak lyen pwomotè ou lè vant yo ralanti.',
     },
   },

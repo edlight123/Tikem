@@ -18,6 +18,7 @@ import { AuthBackground } from '../../components/auth/AuthBackground';
 import { AuthHeadline } from '../../components/auth/AuthHeadline';
 import { AuthInput } from '../../components/auth/AuthInput';
 import { TermsAgreement } from '../../components/auth/TermsAgreement';
+import { AuthDismiss } from '../../components/auth/AuthDismiss';
 import { SocialSignInRow } from '../../components/auth/SocialSignInRow';
 import WhitePillCTA from '../../components/WhitePillCTA';
 import { colors, radius, spacing } from '../../theme/tokens';
@@ -319,6 +320,8 @@ export default function SignupScreen({ navigation }: any) {
           </Animated.View>
       </ScrollView>
       </KeyboardAvoidingView>
+      {/* A guest who came from browsing can close the sheet (lib/authGate). */}
+      <AuthDismiss navigation={navigation} variant="close" disabled={loading} />
     </AuthBackground>
   );
 }
