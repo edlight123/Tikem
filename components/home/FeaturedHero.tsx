@@ -54,9 +54,11 @@ export default function FeaturedHero({ events }: { events: HomeEvent[]; zone?: s
       }}
       className="relative isolate overflow-hidden bg-black"
     >
-      {/* The room: the poster itself, blurred to colour and pushed down to
-          near-black so the type above it always wins. A tiny source image is
-          enough — the blur discards the detail anyway. */}
+      {/* The room: the poster itself, blurred to colour, so the whole hero
+          is lit by the event's own palette instead of a black half. A light
+          veil keeps the type side readable, a faint teal light sits under
+          the caption, and fine grain stops the blur reading as flat digital
+          smear. A tiny source image is enough — the blur discards detail. */}
       <div key={`bg-${ev.id}`} aria-hidden className="hero-arrive-bg absolute inset-0 -z-10">
         {ev.banner_image_url && (
           <Image
@@ -66,32 +68,50 @@ export default function FeaturedHero({ events }: { events: HomeEvent[]; zone?: s
             sizes="96px"
             quality={40}
             priority={index === 0}
-            className="scale-125 object-cover opacity-70 blur-3xl saturate-150"
+            className="scale-125 object-cover opacity-100 blur-[70px] saturate-[1.8] brightness-110"
           />
         )}
-        <div className="absolute inset-0 bg-scrim-light" />
-        <div className="absolute inset-0 bg-gradient-to-r from-black via-scrim-strong to-shade/20" />
-        <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black to-transparent" />
-        <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black to-transparent" />
+        <div className="absolute inset-0 bg-shade/20" />
+        <div className="absolute inset-0 bg-gradient-to-r from-shade/70 via-shade/15 to-transparent" />
+        <div className="absolute inset-0 bg-[radial-gradient(60%_70%_at_12%_95%,rgba(20,184,166,0.22),transparent_70%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(120%_90%_at_50%_40%,transparent_50%,rgba(0,0,0,0.45)_100%)]" />
+        <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black to-transparent" />
+        <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black to-transparent" />
+        <div className="hero-grain absolute inset-0" />
       </div>
 
       <div className="mx-auto grid max-w-7xl grid-cols-1 gap-8 px-4 pb-12 pt-6 sm:px-6 sm:pt-10 lg:grid-cols-12 lg:items-center lg:gap-12 lg:px-8 lg:pb-20 lg:pt-14">
         {/* Poster — first on a phone, right on a desktop. */}
         <div key={`poster-${ev.id}`} className="hero-arrive lg:order-2 lg:col-span-6">
-          <Link
-            href={href}
-            tabIndex={-1}
-            className="relative block aspect-[4/5] w-full max-w-[440px] overflow-hidden rounded bg-surface shadow-[0_40px_120px_-30px_rgba(0,0,0,0.9)] sm:w-[70%] lg:ml-auto lg:w-full lg:max-w-[560px]"
-          >
+          <div className="relative aspect-[4/5] w-full max-w-[440px] sm:w-[70%] lg:ml-auto lg:w-full lg:max-w-[560px]">
+            {/* A halo: the poster again, blurred, glowing from behind it. */}
             {ev.banner_image_url && (
-              <PosterImage
-                src={ev.banner_image_url}
-                alt={posterAlt(ev)}
-                priority={index === 0}
-                sizes="(min-width: 1024px) 560px, (min-width: 640px) 70vw, 100vw"
-              />
+              <div aria-hidden className="pointer-events-none absolute -inset-10 -z-10">
+                <Image
+                  src={ev.banner_image_url}
+                  alt=""
+                  fill
+                  sizes="96px"
+                  quality={40}
+                  className="translate-y-6 object-cover opacity-90 blur-[56px] saturate-[2] brightness-125"
+                />
+              </div>
             )}
-          </Link>
+            <Link
+              href={href}
+              tabIndex={-1}
+              className="relative block h-full w-full overflow-hidden rounded bg-surface shadow-[0_40px_120px_-30px_rgba(0,0,0,0.9),0_0_0_1px_rgba(255,255,255,0.06)]"
+            >
+              {ev.banner_image_url && (
+                <PosterImage
+                  src={ev.banner_image_url}
+                  alt={posterAlt(ev)}
+                  priority={index === 0}
+                  sizes="(min-width: 1024px) 560px, (min-width: 640px) 70vw, 100vw"
+                />
+              )}
+            </Link>
+          </div>
         </div>
 
         {/* The facts. */}
