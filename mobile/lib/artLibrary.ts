@@ -213,6 +213,27 @@ export const WORLD_PHOTOS: Record<WorldKey, ArtPiece> = {
 };
 
 /**
+ * The sign-in backdrop: happy groups of people (owner 2026-11-24: "make it fit
+ * more people happy and all"). Cut from the full-resolution Unsplash originals
+ * at 1290x1740, faces in the upper part, because the photo fills only the top
+ * of the screen and fades into the canvas behind the form. Credits: the same
+ * photos as photo-lavi-friends, photo-lavi-confetti, gastronomi, lavi-lannwit
+ * and eksperyans in lib/photoCredits.
+ */
+// prettier-ignore
+const AUTH_PHOTOS: ArtPiece[] = [
+  { key: 'auth-friends',  source: require('../assets/photos/auth/friends.jpg'),  alt: 'Four friends laughing together in front of a mural', worlds: [] },
+  { key: 'auth-confetti', source: require('../assets/photos/auth/confetti.jpg'), alt: 'Friends celebrating under confetti at a party', worlds: [] },
+  { key: 'auth-dinner',   source: require('../assets/photos/auth/dinner.jpg'),   alt: 'Friends laughing around a dinner table', worlds: [] },
+  { key: 'auth-party',    source: require('../assets/photos/auth/party.jpg'),    alt: 'Women dancing and singing at a packed party', worlds: [] },
+  { key: 'auth-dune',     source: require('../assets/photos/auth/dune.jpg'),     alt: 'A group of friends cheering on a dune under a blue sky', worlds: [] },
+];
+export function authPhotos(): ArtPiece[] {
+  return AUTH_PHOTOS.slice();
+}
+
+
+/**
  * A world's page hero and home tile: its photograph. An unknown world (or
  * none) falls back to the seeded illustration, so this always returns a piece.
  */
