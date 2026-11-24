@@ -13,6 +13,8 @@ import { teamRoleIn } from '@/lib/organizer/context'
 import { resolveOrgCover } from '@/lib/organizer/cover'
 import { orgPagePrefix, ownStorageUrl, readGallery, storageBucketName } from '@/lib/gallery'
 import PreviewBanner from '@/components/organizer/page/PreviewBanner'
+import { DEMO_EVENTS, DEMO_ORG_PAGE, isDemoMode } from '@/lib/demo'
+import { coverTemplatePath } from '@/lib/organizer/cover'
 import type { Metadata } from 'next'
 
 export const runtime = 'nodejs'
@@ -62,6 +64,7 @@ export async function generateMetadata({
   searchParams?: Promise<{ view?: string }>
 }): Promise<Metadata> {
   const { organizerId } = await params
+  if (isDemoMode()) return { title: `${DEMO_ORG_PAGE.name} | Tikèm Organizer` }
   // The personal page is titled with the personal name, never the brand.
   if ((await searchParams)?.view === 'person') {
     const snap = await adminDb.collection('public_profiles').doc(organizerId).get().catch(() => null)
@@ -105,12 +108,53 @@ export default async function OrganizerProfilePage({
   searchParams,
 }: {
   params: Promise<{ organizerId: string }>
-  searchParams?: Promise<{ preview?: string; view?: string }>
+  // nobanner / nophotos: demo-mode review switches only.
+  searchParams?: Promise<{ preview?: string; view?: string; nobanner?: string; nophotos?: string }>
 }) {
   const user = await getCurrentUser()
   const { organizerId } = await params
   const query = (await searchParams) || {}
   const isSelf = !!user && user.id === organizerId
+
+  // Demo mode (local review only, no Firestore): the demo organizer's page.
+  if (isDemoMode()) {
+    if (organizerId !== DEMO_ORG_PAGE.id) notFound()
+    const d = DEMO_ORG_PAGE
+    const demoPreview = query.preview === '1' && isSelf
+    const person = query.view === 'person'
+    const nowIso = new Date().toISOString()
+    const events = DEMO_EVENTS.filter((e: any) => e.organizer_id === d.id)
+    return (
+      <div className="min-h-screen bg-canvas pb-mobile-nav">
+        <Navbar user={user} />
+        {demoPreview && <PreviewBanner exitHref={`/profile/organizer/${d.id}`} />}
+        <OrganizerProfileClient
+          organizer={{ id: d.id, name: person ? d.personalName : d.name, logo: '', is_verified: true, created_at: d.created_at }}
+          upcomingEvents={person ? [] : events.filter((e: any) => e.start_datetime >= nowIso)}
+          pastEvents={person ? [] : events.filter((e: any) => e.start_datetime < nowIso)}
+          followerCount={d.followers}
+          totalEvents={events.length}
+          totalTicketsSold={0}
+          isFollowing={false}
+          userId={demoPreview ? undefined : user?.id}
+          details={
+            person
+              ? { kind: 'person', view: 'person', person: { bio: '', socials: { instagram: '', tiktok: '', twitter: '', facebook: '' } } }
+              : { kind: 'org', org: { description: d.description, website: d.website, instagram: d.instagram, facebook: d.facebook, twitter: '', linkedin: '', tiktok: '' } }
+          }
+          isAuthenticated={!!user && !demoPreview}
+          isHost={!person}
+          cover={person || query.nobanner === '1' ? null : { kind: 'template', key: d.coverTemplate, src: coverTemplatePath(d.coverTemplate) }}
+          gallery={person || query.nophotos === '1' ? [] : d.gallery}
+          canEdit={isSelf && !demoPreview && !person}
+          preview={demoPreview}
+          alsoRuns={person ? { name: d.name, logo: '', href: `/profile/organizer/${d.id}` } : null}
+        />
+        <MobileNavWrapper user={user} />
+      </div>
+    )
+  }
+
   const editor = await canEditOrgPage(user?.id, organizerId)
   // ?preview=1 ("Preview my page"): exactly what a visitor sees, with no
   // owner tools and a bar saying so. Only for someone who can edit the page.
