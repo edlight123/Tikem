@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { clientIpKey } from '@/lib/rate-limit'
 import { setOrderProofCookies } from '@/lib/tickets/orderAccess'
 import { createClient } from '@/lib/firebase-db/server'
 import { getCurrentUser } from '@/lib/auth'
@@ -112,7 +113,7 @@ export async function POST(request: Request) {
         guestInput: guest,
         event,
         eventId: String(eventId),
-        ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip'),
+        ipAddress: clientIpKey(request),
         accessCode,
       })
       if (!guestOutcome.ok) return guestOutcome.response

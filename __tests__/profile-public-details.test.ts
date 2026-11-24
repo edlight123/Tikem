@@ -47,7 +47,7 @@ jest.mock('@/lib/auth', () => ({ getCurrentUser: async () => mockViewer }))
 const mockRateLimit = jest.fn(async (_opts: any) => ({ limited: false }))
 jest.mock('@/lib/rate-limit', () => ({
   consumeRateLimit: (opts: any) => mockRateLimit(opts),
-  clientIp: () => '203.0.113.9',
+  clientIp: () => '203.0.113.9', clientIpKey: () => '203.0.113.9',
 }))
 
 import { GET } from '@/app/api/profiles/[uid]/public-details/route'

@@ -7,6 +7,7 @@
 // otherwise a validated guest contact record" — and nothing else changes. When a
 // session exists the returned identity is byte-for-byte the old behavior.
 
+import { consumeRateLimit } from '@/lib/rate-limit'
 import { NextResponse } from 'next/server'
 import { normalizeCountryCode } from '@/lib/payment-provider'
 import {
@@ -166,6 +167,24 @@ export async function beginGuestCheckout(params: {
         response: NextResponse.json(
           body('This event needs an access code.', 'access_code_required'),
           { status: 403 }
+        ),
+      }
+    }
+
+    // Event-wide cap on guest access-code attempts, on top of the per-address
+    // throttle below: rotating addresses cannot buy unlimited guesses at one
+    // event's code. Generous for real guests; fails closed.
+    const eventWide = await consumeRateLimit({
+      key: `guest-access-code:event:${params.eventId}`,
+      limit: 300,
+      windowMs: 60 * 60 * 1000,
+    })
+    if (eventWide.limited) {
+      return {
+        ok: false,
+        response: NextResponse.json(
+          body('Too many attempts. Please try again later.', 'access_throttled'),
+          { status: 429 }
         ),
       }
     }

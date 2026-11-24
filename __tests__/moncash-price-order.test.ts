@@ -8,7 +8,7 @@
 
 jest.mock('@/lib/firebase/admin', () => ({ adminDb: {}, adminAuth: {} }))
 jest.mock('@/lib/rate-limit', () => ({
-  clientIp: () => '127.0.0.1',
+  clientIp: () => '127.0.0.1', clientIpKey: () => '127.0.0.1',
   consumeRateLimit: jest.fn(async () => ({ limited: false })),
 }))
 

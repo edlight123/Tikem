@@ -41,7 +41,7 @@ const rateLimited = { value: false }
 const consumeRateLimit = jest.fn(async (_o: any) => ({ limited: rateLimited.value }))
 jest.mock('@/lib/rate-limit', () => ({
   consumeRateLimit: (o: any) => consumeRateLimit(o),
-  clientIp: () => '203.0.113.9',
+  clientIp: () => '203.0.113.9', clientIpKey: () => '203.0.113.9',
 }))
 
 import { POST as sessionPOST } from '@/app/api/auth/session/route'

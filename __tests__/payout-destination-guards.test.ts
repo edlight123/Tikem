@@ -42,7 +42,7 @@ jest.mock('@/lib/firebase/admin', () => {
 jest.mock('next/headers', () => ({ cookies: async () => ({ get: () => ({ value: 'session' }) }) }))
 jest.mock('@/lib/rate-limit', () => ({
   consumeRateLimit: async () => ({ limited: rateLimited.current }),
-  clientIp: () => '1.2.3.4',
+  clientIp: () => '1.2.3.4', clientIpKey: () => '1.2.3.4',
 }))
 jest.mock('@/lib/moncash', () => ({}))
 

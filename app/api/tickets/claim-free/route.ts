@@ -199,7 +199,10 @@ export async function POST(request: Request) {
         guestInput: guest,
         event,
         eventId: String(eventId),
-        ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip'),
+        // The normalised client address (first hop; IPv6 as its /64), so the
+        // access-code throttle can't be dodged by appending forwarded-for
+        // entries or rotating within a /64.
+        ipAddress: clientIpKey(request),
         accessCode,
         errorBody: (error, code) => ({ error, code }),
       })
