@@ -1493,7 +1493,14 @@
     "drafts_free_note": "Drafts are free. Publishing paid events requires verification.",
     "setup_once_note": "Set up your organization once, then create events, sell tickets, and get paid.",
     "brand_visible_note": "This is the brand attendees will see. You can change it anytime in settings.",
-    "what_is_org_called": "What is your organization called?"
+    "what_is_org_called": "What is your organization called?",
+    "optional": "optional",
+    "logo_label": "Logo",
+    "one_line": "In one line",
+    "one_line_placeholder": "Konpa nights and day parties in Port-au-Prince",
+    "links_label": "Where people can find you",
+    "website": "Website",
+    "website_placeholder": "yourwebsite.com"
   },
   "verification_review": {
     "business_details": "Business Details",
@@ -1867,5 +1874,27 @@
     "eb_sync_done_other": "Synced. {{count}} events up to date.",
     "eb_none": "No upcoming Eventbrite events to bring over.",
     "eb_drafts_body": "Or bring events over as drafts, with their ticket types, to sell on Tikèm."
+  },
+  "org_page": {
+    "error_title": "Not saved",
+    "error_body": "Something went wrong. Please try again.",
+    "too_large": "Photos must be under 4 MB.",
+    "banner_title": "banner",
+    "preview": "Preview my page",
+    "no_banner": "No banner",
+    "template_label": "Photo {{n}}",
+    "upload_banner": "Upload a photo",
+    "remove_banner": "Remove",
+    "photos_title": "photos",
+    "photos_empty_title": "show the room",
+    "photos_empty_line": "Up to 12 photos from your events. They appear on your page.",
+    "add_photos": "Add photos",
+    "photos_full": "12 photos, the most",
+    "photo_menu": "Photo {{n}} options",
+    "move_first": "Move to first",
+    "move_up": "Move up",
+    "move_down": "Move down",
+    "move_last": "Move to last",
+    "remove_photo": "Remove"
   }
 }

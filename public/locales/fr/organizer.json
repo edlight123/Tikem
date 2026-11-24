@@ -1493,7 +1493,14 @@
     "drafts_free_note": "Les brouillons sont gratuits. La publication d'événements payants nécessite une vérification.",
     "setup_once_note": "Configurez votre organisation une fois, puis créez des événements, vendez des billets et soyez payé.",
     "brand_visible_note": "C'est la marque que verront les participants. Vous pouvez la modifier à tout moment dans les paramètres.",
-    "what_is_org_called": "Comment s'appelle votre organisation ?"
+    "what_is_org_called": "Comment s'appelle votre organisation ?",
+    "optional": "facultatif",
+    "logo_label": "Logo",
+    "one_line": "En une ligne",
+    "one_line_placeholder": "Soirées konpa et day parties à Port-au-Prince",
+    "links_label": "Où vous trouver",
+    "website": "Site web",
+    "website_placeholder": "votresite.com"
   },
   "verification_review": {
     "business_details": "Informations sur l'entreprise",
@@ -1867,5 +1874,27 @@
     "eb_sync_done_other": "Synchronisé. {{count}} événements à jour.",
     "eb_none": "Aucun événement Eventbrite à venir à importer.",
     "eb_drafts_body": "Ou importez des événements en brouillon, avec leurs types de billets, pour les vendre sur Tikèm."
+  },
+  "org_page": {
+    "error_title": "Non enregistré",
+    "error_body": "Un problème est survenu. Veuillez réessayer.",
+    "too_large": "Les photos doivent faire moins de 4 Mo.",
+    "banner_title": "bannière",
+    "preview": "Voir ma page",
+    "no_banner": "Pas de bannière",
+    "template_label": "Photo {{n}}",
+    "upload_banner": "Importer une photo",
+    "remove_banner": "Retirer",
+    "photos_title": "photos",
+    "photos_empty_title": "montrez l'ambiance",
+    "photos_empty_line": "Jusqu'à 12 photos de vos événements. Elles s'affichent sur votre page.",
+    "add_photos": "Ajouter des photos",
+    "photos_full": "12 photos, le maximum",
+    "photo_menu": "Options de la photo {{n}}",
+    "move_first": "Mettre en premier",
+    "move_up": "Monter",
+    "move_down": "Descendre",
+    "move_last": "Mettre en dernier",
+    "remove_photo": "Retirer"
   }
 }

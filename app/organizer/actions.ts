@@ -7,6 +7,11 @@ import { revalidatePath } from 'next/cache'
 export async function becomeOrganizer(details?: {
   organizationName?: string
   organizationLogo?: string
+  /** Optional, on the same step: one line, website, Instagram, Facebook (lib/organizer/setupDetails.ts). */
+  description?: string
+  website?: string
+  instagram?: string
+  facebook?: string
 }) {
   const { user, error } = await requireAuth()
 
@@ -38,6 +43,10 @@ export async function becomeOrganizer(details?: {
       console.error('Failed to save organization details on upgrade:', e)
     }
   }
+
+  // The rest of the page, where organization settings read it. https links only.
+  const { saveOrgSetupDetails } = await import('@/lib/organizer/setupDetails')
+  await saveOrgSetupDetails(user.id, details)
 
   revalidatePath('/organizer')
   revalidatePath('/organizer/events')
