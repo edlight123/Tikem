@@ -161,7 +161,7 @@ export default function EventMarketingClient({
               <div key={code.id} className="flex items-center gap-4 px-5 py-4">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <span className="font-mono font-semibold text-fg">{code.code}</span>
+                    <span className="font-code font-semibold text-fg">{code.code}</span>
                     <StatusChip tone={code.is_active ? 'success' : 'neutral'}>
                       {code.is_active ? 'Active' : 'Inactive'}
                     </StatusChip>

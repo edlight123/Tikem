@@ -106,7 +106,7 @@ export function ManualLookupSheet({ isOpen, onClose, attendees, onSelect }: Manu
                           <Ticket className="w-3 h-3" />
                           <span>{attendee.ticketType}</span>
                         </div>
-                        <span className="font-mono">{attendee.ticketId.slice(0, 8)}...</span>
+                        <span className="font-code">{attendee.ticketId.slice(0, 8)}...</span>
                       </div>
                     </div>
                   </div>

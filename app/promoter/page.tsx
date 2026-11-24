@@ -239,7 +239,7 @@ export default async function PromoterPortalPage() {
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <p className="text-fg font-semibold truncate">{r.eventTitle}</p>
-                          <p className="text-xs text-fg-subtle mt-0.5 font-mono">{r.code}</p>
+                          <p className="text-xs text-fg-subtle mt-0.5 font-code">{r.code}</p>
                         </div>
                         <span className="inline-flex items-center gap-1.5 text-eyebrow uppercase tracking-wider text-fg-subtle shrink-0">
                           <span

@@ -313,7 +313,7 @@ export default function EventTicketsContent({ event, tickets }: EventTicketsCont
                         <span className="text-eyebrow font-medium uppercase tracking-[0.13em] text-on-inverse/45">
                           {t('event_tickets.reference')}
                         </span>
-                        <span className="font-mono text-sm font-semibold tracking-wider text-on-inverse">
+                        <span className="font-code text-sm font-semibold tracking-wider text-on-inverse">
                           {shortReference(ticket.id)}
                         </span>
                       </div>

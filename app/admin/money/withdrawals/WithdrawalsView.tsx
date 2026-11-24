@@ -476,7 +476,7 @@ export default function WithdrawalsView({ embedded = false, showHeader = true }:
                     {selectedWithdrawal.bankDetails.swiftCode && (
                       <div className="flex justify-between">
                         <span className="text-console-mut">SWIFT:</span>
-                        <span className="font-mono font-medium tabular-nums text-console-text">{selectedWithdrawal.bankDetails.swiftCode}</span>
+                        <span className="font-code font-medium tabular-nums text-console-text">{selectedWithdrawal.bankDetails.swiftCode}</span>
                       </div>
                     )}
                   </>
@@ -518,7 +518,7 @@ export default function WithdrawalsView({ embedded = false, showHeader = true }:
               <div className="mb-6 rounded-lg bg-console-ground p-4">
                 <div className="font-bold text-console-red mb-1">Needs reconciliation: do not fail blindly</div>
                 <div className="text-sm text-console-mut">
-                  An instant MonCash transfer was sent (reference <span className="font-mono">{selectedWithdrawal.id}</span>) but its outcome
+                  An instant MonCash transfer was sent (reference <span className="font-code">{selectedWithdrawal.id}</span>) but its outcome
                   is unknown, so the organizer&apos;s balance is still reserved. Check this reference in the MonCash
                   prefunded portal (or POST /api/admin/moncash-prefunded/status). If it was paid, Complete it; only
                   Fail it (which restores the balance) if MonCash confirms no money moved.

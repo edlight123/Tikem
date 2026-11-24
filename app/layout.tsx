@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from 'next'
-import { Inter, Space_Grotesk, JetBrains_Mono } from 'next/font/google'
 import localFont from 'next/font/local'
 import './globals.css'
 import { BRAND } from '@/config/brand'
@@ -29,11 +28,19 @@ async function resolveLanguage(): Promise<'en' | 'fr' | 'ht'> {
   return 'en'
 }
 
-// Body / UI typeface
-const inter = Inter({
-  subsets: ['latin'],
-  variable: '--font-inter',
+// Body / UI typeface: Plus Jakarta Sans, the one sans for every word a person
+// reads (owner, 2026-11-24: Instrument Serif stays, the "robotic" faces go).
+// Self-hosted variable font (SIL OFL 1.1, app/fonts/PlusJakartaSans-OFL.txt;
+// files from @fontsource-variable/plus-jakarta-sans): weights 200-800 from one
+// file, and no build ever waits on Google Fonts.
+const jakarta = localFont({
+  src: [
+    { path: './fonts/plus-jakarta-sans-latin-wght-normal.woff2', weight: '200 800', style: 'normal' },
+    { path: './fonts/plus-jakarta-sans-latin-wght-italic.woff2', weight: '200 800', style: 'italic' },
+  ],
+  variable: '--font-sans',
   display: 'swap',
+  fallback: ['system-ui', 'sans-serif'],
 })
 
 // Editorial display typeface (headlines, wordmark) — gives the public site its
@@ -52,21 +59,10 @@ const instrumentSerif = localFont({
   fallback: ['Georgia', 'serif'],
 })
 
-// Mono-ish grotesk for buttons, nav and dense UI
-const spaceGrotesk = Space_Grotesk({
-  subsets: ['latin'],
-  weight: ['500', '600', '700'],
-  variable: '--font-grotesk',
-  display: 'swap',
-})
-
-// Technical layer — monospace for eyebrows, dates, prices-as-data and ticket IDs
-const jetBrainsMono = JetBrains_Mono({
-  subsets: ['latin'],
-  weight: ['500', '600'],
-  variable: '--font-mono',
-  display: 'swap',
-})
+// No Space Grotesk and no JetBrains Mono any more: `font-grotesk` and
+// `font-mono` now resolve to the sans (tailwind.config.ts), and the few true
+// codes (ticket and order ids, promo codes, scanner output) use `font-code`,
+// the system monospace, which downloads nothing.
 
 const siteUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://tikem.co'
 const siteDescription = `Discover and buy tickets for events in Haiti - ${BRAND.name}`
@@ -150,7 +146,7 @@ export default async function RootLayout({
   const lng = await resolveLanguage()
 
   return (
-    <html lang={lng} className={`${inter.variable} ${instrumentSerif.variable} ${spaceGrotesk.variable} ${jetBrainsMono.variable}`}>
+    <html lang={lng} className={`${jakarta.variable} ${instrumentSerif.variable}`}>
       <head>
         {/* DNS Prefetch for faster external resource loading */}
         <link rel="dns-prefetch" href="https://firebasestorage.googleapis.com" />
@@ -168,7 +164,7 @@ export default async function RootLayout({
         makes vh taller than the visible area) plus flex-1 on the content pushes
         the footer to the bottom where it belongs.
       */}
-      <body className={inter.className + ' mobile-typography min-h-dvh flex flex-col'}>
+      <body className={jakarta.className + ' mobile-typography min-h-dvh flex flex-col'}>
         {/* Lenis inertial scroll on public surfaces (no-op on consoles/flows). */}
         <SmoothScroll />
         <FeeConfigProvider config={feeConfig}>

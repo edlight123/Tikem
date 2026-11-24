@@ -213,7 +213,7 @@ export default function PromotersClient({
               <div>
                 <label className="label-mono text-eyebrow uppercase text-fg-subtle">{t('promoters.link_code')}</label>
                 <input
-                  className={`mt-1.5 ${inputClass} font-mono`}
+                  className={`mt-1.5 ${inputClass} font-code`}
                   value={code}
                   onChange={(e) => {
                     setCodeTouched(true)
@@ -291,7 +291,7 @@ export default function PromotersClient({
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2.5">
                       <span className="font-semibold text-fg">{p.name}</span>
-                      <span className="font-mono text-xs text-fg-subtle">{p.code}</span>
+                      <span className="font-code text-xs text-fg-subtle">{p.code}</span>
                       <span className="inline-flex items-center gap-1.5 text-eyebrow uppercase tracking-wider text-fg-subtle">
                         <span className={`h-1.5 w-1.5 rounded-full ${p.isActive ? 'bg-success' : 'bg-fg/30'}`} />
                         {p.isActive ? t('promoters.active') : t('promoters.paused')}

@@ -89,7 +89,7 @@ export default function PurchaseSuccessContentClient(props: Props) {
           <div className="p-4 md:p-6 space-y-3 md:space-y-4">
             <div className="flex justify-between items-center pb-3 border-b border-line-soft">
               <span className="text-meta font-medium text-fg-muted">{t('tickets:purchase_success.ticket_id_label')}</span>
-              <span className="font-mono text-sm text-fg">{props.ticketIdShort || empty}</span>
+              <span className="font-code text-sm text-fg">{props.ticketIdShort || empty}</span>
             </div>
 
             <div className="flex justify-between items-center pb-3 border-b border-line-soft">
