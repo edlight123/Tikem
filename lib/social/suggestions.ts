@@ -222,3 +222,20 @@ export function selectFriendsGoing(input: FriendsGoingInput): { count: number; f
   })
   return { count: eligible.length, friendIds: eligible.slice(0, input.limit ?? MAX_FRIENDS_GOING) }
 }
+
+/**
+ * May a person appear in someone else's person search (/api/users/search)?
+ * An existing connection always finds them. Otherwise people who opted out of
+ * being found (`discoverable === false`) or keep their profile private
+ * (`privacy.profile_visibility === 'private'`) are not offered to strangers.
+ */
+export function isFindableInSearch(
+  data: { discoverable?: unknown; privacy?: { profile_visibility?: unknown } | null } | null | undefined,
+  hasConnection: boolean
+): boolean {
+  if (hasConnection) return true
+  if (!data) return false
+  if (data.discoverable === false) return false
+  if (data.privacy?.profile_visibility === 'private') return false
+  return true
+}

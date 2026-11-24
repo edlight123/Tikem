@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase/admin'
+import { clientIp, consumeRateLimit } from '@/lib/rate-limit'
 import { getCurrentUser } from '@/lib/auth'
 import { hasEventAccess } from '@/lib/events/access-guard'
 import { promoCanCoverOrder, promoBuyerKey, resolvePromoCode, type PromoDoc } from '@/lib/promo-codes'
@@ -182,6 +183,14 @@ export async function POST(request: Request) {
     if (user) {
       identity = identityFromUser(user)
     } else {
+      // Unauthenticated claims are capped per network address and per event, so
+      // a script can neither drain an event's free capacity nor make us mail
+      // tickets to arbitrary addresses. Both fail closed.
+      const HOUR = 60 * 60 * 1000
+      const perIp = await consumeRateLimit({ key: `guest-free-claim:ip:${clientIp(request)}`, limit: 10, windowMs: HOUR })
+      if (perIp.limited) return fail('Too many requests. Please try again later.', 'rate_limited', 429)
+      const perEvent = await consumeRateLimit({ key: `guest-free-claim:event:${String(eventId)}`, limit: 200, windowMs: HOUR })
+      if (perEvent.limited) return fail('Too many requests. Please try again later.', 'rate_limited', 429)
       const guestOutcome = await beginGuestCheckout({
         guestInput: guest,
         event,

@@ -73,6 +73,14 @@ function isAllowedOrigin(request: NextRequest): boolean {
   return false
 }
 
+/**
+ * How long a bridged (older app sign-in) session may live: until its ID token
+ * expires, never more than an hour, never under Firebase's 5-minute minimum.
+ */
+function bridgeSessionSeconds(exp: number | undefined, nowSeconds: number): number {
+  return Math.max(5 * 60, Math.min(60 * 60, (Number(exp) || 0) - nowSeconds))
+}
+
 export async function POST(request: NextRequest) {
   try {
     // JSON only: a form POST from another site cannot set this content type
@@ -104,11 +112,21 @@ export async function POST(request: NextRequest) {
     // check). Otherwise a leaked 1-hour ID token could be upgraded into a
     // 5-day session.
     const nowSeconds = Math.floor(Date.now() / 1000)
-    if (!decoded.auth_time || nowSeconds - decoded.auth_time > MAX_AUTH_AGE_SECONDS) {
+    const recent = !!decoded.auth_time && nowSeconds - decoded.auth_time <= MAX_AUTH_AGE_SECONDS
+    // The app's in-app pages (body.bridge === true) carry an app sign-in that
+    // may be days old. They get a session that lives no longer than the ID
+    // token itself (at most an hour; Firebase's floor is 5 minutes), so a
+    // leaked token gains nothing it didn't already have: the token alone is
+    // already good until it expires. The app re-bridges with a fresh token
+    // whenever it opens a page. Same JSON-only + same-origin gates as above.
+    const bridge = body?.bridge === true
+    if (!recent && !bridge) {
       return NextResponse.json({ error: 'Recent sign-in required' }, { status: 401 })
     }
 
-    const expiresIn = 60 * 60 * 24 * 5 * 1000 // 5 days
+    const expiresIn = recent
+      ? 60 * 60 * 24 * 5 * 1000 // 5 days
+      : bridgeSessionSeconds(decoded.exp, nowSeconds) * 1000
 
     const sessionCookie = await adminAuth.createSessionCookie(idToken, { expiresIn })
 

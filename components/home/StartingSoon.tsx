@@ -13,7 +13,7 @@ import { ArrowRight } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { SectionHeader } from '@/components/ui/EditorialRails'
 import type { HomeEvent } from '@/lib/home/feed'
-import { metroOf } from '@/lib/home/feed'
+import { eventZone, metroOf } from '@/lib/home/feed'
 import { eventWhen } from '@/lib/home/format'
 
 const pad = (n: number) => String(n).padStart(2, '0')
@@ -55,7 +55,7 @@ function Countdown({ start, now }: { start: string; now: number }) {
   )
 }
 
-export default function StartingSoon({ events, now: serverNow, zone }: { events: HomeEvent[]; now: number; zone: string }) {
+export default function StartingSoon({ events, now: serverNow }: { events: HomeEvent[]; now: number; zone?: string }) {
   const { t, i18n } = useTranslation('common')
   const posterAlt = usePosterAlt()
   const now = useNow(serverNow)
@@ -84,7 +84,7 @@ export default function StartingSoon({ events, now: serverNow, zone }: { events:
                     {ev.title}
                   </span>
                   <span className="mt-1.5 block truncate font-mono text-eyebrow uppercase tracking-[0.08em] text-fg-subtle">
-                    {eventWhen(ev.start_datetime, zone, i18n.language)}
+                    {eventWhen(ev.start_datetime, eventZone(ev), i18n.language)}
                     {venue && <> · {venue}</>}
                   </span>
                   <span className="mt-3 block sm:hidden">

@@ -494,12 +494,12 @@ Generate with the `web-push` library or existing tooling.
    - `PUSH_TEST_SECRET` (any long random string; enables secure remote tests)
    Redeploy after saving.
 2. Visit your deployed domain, sign in, and open `/settings/notifications` to subscribe. Use the **Send Test** button for an end-to-end check (it issues a POST to `/api/push/test`).
-3. For quick smoke tests without loading the UI, call the secured GET helper: `https://<your-app>.vercel.app/api/push/test?secret=<PUSH_TEST_SECRET>`.
+3. For quick smoke tests without loading the UI, POST to `/api/push/test` with the secret in the `x-push-test-secret` header. There is no GET form any more: a link must never be able to fire a broadcast, and a secret in a URL ends up in logs.
 4. Example curl command:
    ```bash
-   curl "https://tikem.co/api/push/test?secret=$PUSH_TEST_SECRET"
+   curl -X POST -H "x-push-test-secret: $PUSH_TEST_SECRET" https://www.tikem.co/api/push/test
    ```
-   Successful responses include `sent` and `pruned` arrays. A `401 Invalid secret` error means the query parameter or Vercel env is incorrect; `404 No valid subscriptions` means nobody is currently subscribed on that environment.
+   Successful responses include `sent` and `pruned` arrays. A `401 Admin access required` error means the header or the Vercel env is wrong (or you are not a signed-in admin); `404 No valid subscriptions` means nobody is currently subscribed on that environment.
 
 ### Sending Notifications
 - Topic broadcast: POST `/api/push/send` body:
@@ -514,7 +514,7 @@ Omit `topics` to broadcast to all.
 ```
 Applies per-user rate limit (default: 20 notifications/hour) and prunes expired endpoints.
 
-- Test broadcast: POST `/api/push/test` (no body) for system validation.
+- Test broadcast: POST `/api/push/test` (no body) for system validation, as a signed-in admin or with the `x-push-test-secret` header.
 
 ### Dispatch Logging
 All send/test/user endpoints append a document to `pushDispatchLogs` with:

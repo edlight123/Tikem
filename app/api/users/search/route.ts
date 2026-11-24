@@ -3,6 +3,7 @@ import { getCurrentUser } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
 import { friendshipStateFrom, mapConnectionsForViewer } from '@/lib/firestore/connections'
 import { consumeRateLimit } from '@/lib/rate-limit'
+import { isFindableInSearch } from '@/lib/social/suggestions'
 
 export const runtime = 'nodejs'
 
@@ -72,7 +73,12 @@ export async function GET(request: Request) {
     const ids = Array.from(results.keys())
     const connectionsByOther = await mapConnectionsForViewer(user.id)
 
-    const payload = ids.slice(0, 20).map((id) => {
+    // People who keep their profile private or opted out of being found are
+    // not offered to strangers; an existing connection still finds them.
+    const payload = ids
+      .filter((id) => isFindableInSearch(results.get(id), Boolean(connectionsByOther.get(id))))
+      .slice(0, 20)
+      .map((id) => {
       const data = results.get(id)
       const conn = connectionsByOther.get(id) || null
       return {

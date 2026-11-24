@@ -27,7 +27,7 @@ interface StripEvent {
 export interface HomePageContentProps {
   /** Server time the derivations used; the client islands start from it. */
   now: number
-  /** The reader's IANA zone; every date on the page prints in it. */
+  /** The browsed market's IANA zone: the page's calendar (days, this week) runs in it. */
   zone: string
   /** The country being browsed. */
   country: string

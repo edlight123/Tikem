@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
-import { Inter, Instrument_Serif, Space_Grotesk, JetBrains_Mono } from 'next/font/google'
+import { Inter, Space_Grotesk, JetBrains_Mono } from 'next/font/google'
+import localFont from 'next/font/local'
 import './globals.css'
 import { BRAND } from '@/config/brand'
 import { ToastProvider } from '@/components/ui/Toast'
@@ -35,15 +36,20 @@ const inter = Inter({
   display: 'swap',
 })
 
-// Editorial display typeface (headlines, wordmark) — gives the public site its poster feel
-const instrumentSerif = Instrument_Serif({
-  subsets: ['latin'],
-  weight: '400',
-  // Headings are set in the italic (the editorial voice, same as mobile). Without
-  // the real italic cut the browser slants the roman instead.
-  style: ['normal', 'italic'],
+// Editorial display typeface (headlines, wordmark) — gives the public site its
+// poster feel. Self-hosted (SIL OFL 1.1, app/fonts/InstrumentSerif-OFL.txt;
+// files from @fontsource/instrument-serif 5.3.0, latin subset) so a build never
+// depends on reaching Google Fonts (the intermittent next/font build failure).
+// Headings are set in the italic (the editorial voice, same as mobile): without
+// the real italic cut the browser slants the roman instead.
+const instrumentSerif = localFont({
+  src: [
+    { path: './fonts/instrument-serif-latin-400-normal.woff2', weight: '400', style: 'normal' },
+    { path: './fonts/instrument-serif-latin-400-italic.woff2', weight: '400', style: 'italic' },
+  ],
   variable: '--font-serif-display',
   display: 'swap',
+  fallback: ['Georgia', 'serif'],
 })
 
 // Mono-ish grotesk for buttons, nav and dense UI
