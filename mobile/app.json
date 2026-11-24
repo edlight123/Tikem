@@ -23,6 +23,7 @@
       ],
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
+        "CFBundleName": "Tikèm",
         "CFBundleURLTypes": [
           {
             "CFBundleURLSchemes": [
