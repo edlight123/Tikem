@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth } from '@/lib/firebase/admin'
 import { cookies } from 'next/headers'
+import { clientIp, consumeRateLimit } from '@/lib/rate-limit'
 
 export async function GET() {
   try {
@@ -73,12 +74,24 @@ function isAllowedOrigin(request: NextRequest): boolean {
   return false
 }
 
+/** A bridged session never lives longer than this, even for a fresh token. */
+const BRIDGE_MAX_SECONDS = 60 * 60
 /**
- * How long a bridged (older app sign-in) session may live: until its ID token
- * expires, never more than an hour, never under Firebase's 5-minute minimum.
+ * Firebase refuses a session cookie shorter than 5 minutes, and a bridged
+ * session must never outlive its ID token, so a token with less than this left
+ * is refused (the app retries with a fresh one) rather than stretched.
  */
-function bridgeSessionSeconds(exp: number | undefined, nowSeconds: number): number {
-  return Math.max(5 * 60, Math.min(60 * 60, (Number(exp) || 0) - nowSeconds))
+const BRIDGE_MIN_REMAINING_SECONDS = 5 * 60
+
+/**
+ * Seconds a bridged session may live: exactly the ID token's remaining life,
+ * capped at an hour, or null when too little is left to mint one without
+ * outliving the token.
+ */
+function bridgeSessionSeconds(exp: number | undefined, nowSeconds: number): number | null {
+  const remaining = Math.floor((Number(exp) || 0) - nowSeconds)
+  if (remaining < BRIDGE_MIN_REMAINING_SECONDS) return null
+  return Math.min(BRIDGE_MAX_SECONDS, remaining)
 }
 
 export async function POST(request: NextRequest) {
@@ -114,19 +127,35 @@ export async function POST(request: NextRequest) {
     const nowSeconds = Math.floor(Date.now() / 1000)
     const recent = !!decoded.auth_time && nowSeconds - decoded.auth_time <= MAX_AUTH_AGE_SECONDS
     // The app's in-app pages (body.bridge === true) carry an app sign-in that
-    // may be days old. They get a session that lives no longer than the ID
-    // token itself (at most an hour; Firebase's floor is 5 minutes), so a
-    // leaked token gains nothing it didn't already have: the token alone is
-    // already good until it expires. The app re-bridges with a fresh token
-    // whenever it opens a page. Same JSON-only + same-origin gates as above.
+    // may be days old. They get a session that ends when the ID token itself
+    // expires (at most an hour), so a leaked token gains nothing it didn't
+    // already have: the token alone is good until then. The token was checked
+    // for revocation above; the same JSON-only + same-origin gates apply; the
+    // path is rate limited per account and per address. The app re-bridges
+    // with a fresh token whenever it opens a page.
+    // Remaining risk: a bridge session is no stronger than the ID token it
+    // came from.
     const bridge = body?.bridge === true
     if (!recent && !bridge) {
       return NextResponse.json({ error: 'Recent sign-in required' }, { status: 401 })
     }
 
-    const expiresIn = recent
-      ? 60 * 60 * 24 * 5 * 1000 // 5 days
-      : bridgeSessionSeconds(decoded.exp, nowSeconds) * 1000
+    let expiresIn = 60 * 60 * 24 * 5 * 1000 // 5 days
+    if (!recent) {
+      const HOUR = 60 * 60 * 1000
+      const perUid = await consumeRateLimit({ key: `session-bridge:uid:${decoded.uid}`, limit: 60, windowMs: HOUR })
+      const perIp = perUid.limited
+        ? perUid
+        : await consumeRateLimit({ key: `session-bridge:ip:${clientIp(request)}`, limit: 120, windowMs: HOUR })
+      if (perUid.limited || perIp.limited) {
+        return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
+      }
+      const seconds = bridgeSessionSeconds(decoded.exp, nowSeconds)
+      if (seconds === null) {
+        return NextResponse.json({ error: 'ID token about to expire' }, { status: 401 })
+      }
+      expiresIn = seconds * 1000
+    }
 
     const sessionCookie = await adminAuth.createSessionCookie(idToken, { expiresIn })
 
