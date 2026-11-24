@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
 import { createClient } from '@/lib/firebase-db/server'
 import { canOnEvent } from '@/lib/organizer/context'
+import { eventOfRow } from '@/lib/organizer/event-of-row'
 
 /**
  * Create event session
@@ -155,17 +156,39 @@ export async function PATCH(req: NextRequest) {
       .eq('id', sessionId)
       .single()
 
-    if (!session || !(await canOnEvent(user, session.events, 'manage_events')).allowed) {
+    if (!session || !(await canOnEvent(user, await eventOfRow(session), 'manage_events')).allowed) {
       return NextResponse.json(
         { error: 'Unauthorized to modify this session' },
         { status: 403 }
       )
     }
 
+    // Only the session's own fields: never event_id (moving it onto another
+    // organizer's event), id or timestamps.
+    const ALLOWED: Record<string, string> = {
+      sessionName: 'session_name',
+      session_name: 'session_name',
+      sessionDate: 'session_date',
+      session_date: 'session_date',
+      startTime: 'start_time',
+      start_time: 'start_time',
+      endTime: 'end_time',
+      end_time: 'end_time',
+      location: 'location',
+      capacity: 'capacity',
+      description: 'description',
+      speakers: 'speakers',
+    }
+    const safeUpdates: Record<string, any> = {}
+    for (const [key, value] of Object.entries(updates || {})) {
+      const field = ALLOWED[key]
+      if (field) safeUpdates[field] = value
+    }
+
     const { error: updateError } = await supabase
       .from('event_sessions')
       .update({
-        ...updates,
+        ...safeUpdates,
         updated_at: new Date().toISOString(),
       })
       .eq('id', sessionId)
@@ -217,7 +240,7 @@ export async function DELETE(req: NextRequest) {
       .eq('id', sessionId)
       .single()
 
-    if (!session || !(await canOnEvent(user, session.events, 'manage_events')).allowed) {
+    if (!session || !(await canOnEvent(user, await eventOfRow(session), 'manage_events')).allowed) {
       return NextResponse.json(
         { error: 'Unauthorized to delete this session' },
         { status: 403 }

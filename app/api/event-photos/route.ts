@@ -3,6 +3,7 @@ import { getCurrentUser } from '@/lib/auth'
 import { adminStorage } from '@/lib/firebase/admin'
 import { createClient } from '@/lib/firebase-db/server'
 import { canOnEvent } from '@/lib/organizer/context'
+import { eventOfRow } from '@/lib/organizer/event-of-row'
 import { storagePathFromUrl } from '@/lib/firebase/downloadUrl'
 
 /**
@@ -82,7 +83,7 @@ export async function DELETE(req: NextRequest) {
       )
     }
 
-    const isOrganizer = (await canOnEvent(user, photo.events, 'manage_events')).allowed
+    const isOrganizer = (await canOnEvent(user, await eventOfRow(photo), 'manage_events')).allowed
     const isUploader = photo.uploaded_by === user.id
 
     if (!isOrganizer && !isUploader) {

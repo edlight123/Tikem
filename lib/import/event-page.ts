@@ -6,6 +6,8 @@
  * fetches the page safely and passes the HTML in.
  */
 
+import { capHtml, ldJsonBlocks, metaContent, stripTagsLinear } from '@/lib/html-scan'
+
 export interface ImportedEvent {
   /** Stable within the page: the event's own URL or id. */
   uid: string
@@ -27,8 +29,7 @@ export interface ImportedEvent {
 }
 
 const strip = (s: unknown) =>
-  String(s ?? '')
-    .replace(/<[^>]+>/g, ' ')
+  stripTagsLinear(String(s ?? ''), ' ')
     .replace(/&nbsp;/g, ' ')
     .replace(/&#39;|&#x27;|&apos;|&rsquo;/g, '’')
     .replace(/&quot;/g, '"')
@@ -79,7 +80,10 @@ function countryOf(a: any): string | null {
 }
 
 /** Every schema.org Event on the page (also inside @graph and ItemLists), soonest first. */
-export function parseImportedEvents(html: string, pageUrl: string): ImportedEvent[] {
+export function parseImportedEvents(rawHtml: string, pageUrl: string): ImportedEvent[] {
+  // Linear scans over a capped page (lib/html-scan): the old regexes backtracked
+  // quadratically on adversarial HTML and could stall the server.
+  const html = capHtml(rawHtml)
   const found: any[] = []
   const visit = (x: any) => {
     if (!x || typeof x !== 'object') return
@@ -89,14 +93,14 @@ export function parseImportedEvents(html: string, pageUrl: string): ImportedEven
     const t = x['@type']
     if ((Array.isArray(t) ? t : [t]).some((v: any) => typeof v === 'string' && /Event$/.test(v))) found.push(x)
   }
-  for (const m of html.matchAll(/<script[^>]+application\/ld\+json[^>]*>([\s\S]*?)<\/script>/gi)) {
+  for (const block of ldJsonBlocks(html)) {
     try {
-      visit(JSON.parse(m[1].trim()))
+      visit(JSON.parse(block.trim()))
     } catch {
       // A broken block on the page: skip it.
     }
   }
-  const ogImage = (html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)/i) || [])[1]
+  const ogImage = metaContent(html, 'og:image') || undefined
   const seen = new Set<string>()
   const out: ImportedEvent[] = []
   for (const e of found) {

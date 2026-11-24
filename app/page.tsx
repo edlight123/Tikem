@@ -6,7 +6,6 @@ import Navbar from '@/components/Navbar'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
 import HomePageContent from '@/components/HomePageContent'
 import LiveTicker from '@/components/home/LiveTicker'
-import CityRow from '@/components/home/CityRow'
 import { isDemoMode, DEMO_EVENTS } from '@/lib/demo'
 import { isAdmin } from '@/lib/admin'
 import { parseFiltersFromURL } from '@/lib/filters/utils'
@@ -94,6 +93,15 @@ export default async function HomePage({
     urlParams.has('sort')
   if (isListingQuery) redirect(`/discover?${urlParams.toString()}`)
 
+  // The feed, the national day and the film-strip artwork don't depend on the
+  // viewer, so they start now and overlap the user and profile reads.
+  const rawEventsPromise = isDemoMode() ? Promise.resolve(DEMO_EVENTS as any[]) : getDiscoverEvents({}, 50)
+  const nationalDayPromise = getActiveNationalDay(new Date(), nationalDayPreviewKey(params.nd))
+  const archivePromise = isDemoMode() ? Promise.resolve([] as any[]) : getCinemaArtworkEvents(40)
+  rawEventsPromise.catch(() => {})
+  nationalDayPromise.catch(() => {})
+  archivePromise.catch(() => {})
+
   const [user, headerList, cookieStore] = await Promise.all([getCurrentUser(), headers(), cookies()])
 
   let profileCountry: string | undefined
@@ -133,9 +141,9 @@ export default async function HomePage({
   // The national day (if any) is read alongside: a cached, time-boxed config
   // read that falls back to the built-in calendar, so it never holds the page.
   const [rawEvents, blockedOrganizers, nationalDay] = await Promise.all([
-    isDemoMode() ? (DEMO_EVENTS as any[]) : getDiscoverEvents({}, 50),
+    rawEventsPromise,
     getBlockedOrganizerIds(user?.id),
-    getActiveNationalDay(new Date(), nationalDayPreviewKey(params.nd)),
+    nationalDayPromise,
   ])
 
   const now = Date.now()
@@ -207,7 +215,7 @@ export default async function HomePage({
   // posters first, then recent past ones. The chosen city's art when it has
   // enough to fill the strip, else the country's; never another country's,
   // and never a picture another section already shows.
-  const archive = isDemoMode() ? [] : filterBlockedEvents(await getCinemaArtworkEvents(40), blockedOrganizers)
+  const archive = isDemoMode() ? [] : filterBlockedEvents(await archivePromise, blockedOrganizers)
   const stripShape = (e: any) => ({
     id: String(e.id),
     title: String(e.title || ''),
@@ -272,10 +280,15 @@ export default async function HomePage({
   return (
     <div className="min-h-screen bg-black pb-mobile-nav">
       <LiveTicker signals={buildTickerSignals(inCountry, now)} />
-      {/* flush + solid: one black band with the city row, no hairline, and
-          nothing showing through the bar as the page scrolls under it. */}
-      <Navbar user={user} isAdmin={isAdmin(((user as any)?.email_verified) ? user?.email : null)} flush solid />
-      <CityRow country={country} cities={cities} active={active?.key ?? null} total={inCountry.length} />
+      {/* The place being browsed lives in the nav's search bar now (no city
+          row under it: owner 2026-11-24, it read as an empty strip). */}
+      <Navbar
+        user={user}
+        isAdmin={isAdmin(((user as any)?.email_verified) ? user?.email : null)}
+        flush
+        solid
+        location={{ country, cities, active: active?.key ?? null, total: inCountry.length }}
+      />
 
       <LocationBannerWrapper userId={user?.id} currentCountry={country} currentCity={profileCity} />
 

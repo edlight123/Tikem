@@ -73,7 +73,7 @@ export default function Footer() {
             <p className="mt-3 font-display lowercase italic text-lead text-fg-muted">
               {t('footer.tagline_short', { defaultValue: 'where Haiti goes out.' })}
             </p>
-            <p className="mt-4 max-w-sm text-eyebrow font-medium uppercase tracking-[0.16em] leading-relaxed text-fg-faint">
+            <p className="mt-4 max-w-sm text-caption leading-relaxed text-fg-subtle">
               Port-au-Prince · Cap-Haïtien · Miami · New York · Montréal · Paris
             </p>
             {/* Language sits here, under the cities, rather than in the bottom
@@ -83,7 +83,7 @@ export default function Footer() {
                 exactly the first-time visitor most likely to need it. Beside
                 the places we cover is also simply where a reader looks. */}
             <LanguageSwitcher className="mt-6" />
-            <p className="mt-6 text-eyebrow font-medium uppercase tracking-[0.16em] text-fg-faint">
+            <p className="mt-6 text-caption font-semibold text-fg-soft">
               {t('store_badges.get_the_app', { defaultValue: 'Get the app' })}
             </p>
             <StoreBadges className="mt-3" />
@@ -91,7 +91,7 @@ export default function Footer() {
 
           {/* Discover column */}
           <nav aria-label={t('footer.discover', { defaultValue: 'Discover' })}>
-            <h2 className="text-xs font-semibold uppercase tracking-widest text-fg-subtle">
+            <h2 className="!text-meta !leading-5 font-semibold !tracking-normal text-fg-soft">
               {t('footer.discover', { defaultValue: 'Discover' })}
             </h2>
             <ul className="mt-4 space-y-3">
@@ -107,7 +107,7 @@ export default function Footer() {
 
           {/* Company / legal column */}
           <nav aria-label={t('footer.company', { defaultValue: 'Company' })}>
-            <h2 className="text-xs font-semibold uppercase tracking-widest text-fg-subtle">
+            <h2 className="!text-meta !leading-5 font-semibold !tracking-normal text-fg-soft">
               {t('footer.company', { defaultValue: 'Company' })}
             </h2>
             <ul className="mt-4 space-y-3">
@@ -124,10 +124,10 @@ export default function Footer() {
 
         {/* Bottom row: copyright, then where to follow us and who builds it. */}
         <div className="mt-14 flex flex-col gap-4 pt-2 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-xs text-fg-subtle">
+          <p className="text-xs text-fg-muted">
             {t('footer.copyright', { year, defaultValue: '© {{year}} Tikèm' })}
           </p>
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-xs text-fg-subtle">
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-xs text-fg-muted">
             <a
               href={INSTAGRAM_URL}
               onClick={openInstagram}

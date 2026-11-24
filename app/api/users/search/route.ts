@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
 import { friendshipStateFrom, mapConnectionsForViewer } from '@/lib/firestore/connections'
+import { consumeRateLimit } from '@/lib/rate-limit'
 
 export const runtime = 'nodejs'
 
@@ -15,6 +16,17 @@ export async function GET(request: Request) {
     const user = await getCurrentUser()
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // An exact-email lookup answers "does this address have an account": cap
+    // it per user so it can't be used to enumerate addresses. Fails closed.
+    const MIN = 60_000
+    const perMinute = await consumeRateLimit({ key: `user-search:min:${user.id}`, limit: 30, windowMs: MIN })
+    const perDay = perMinute.limited
+      ? perMinute
+      : await consumeRateLimit({ key: `user-search:day:${user.id}`, limit: 300, windowMs: 24 * 60 * MIN })
+    if (perMinute.limited || perDay.limited) {
+      return NextResponse.json({ results: [], error: 'Too many searches. Try again later.' }, { status: 429 })
     }
 
     const { searchParams } = new URL(request.url)
