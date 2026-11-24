@@ -71,13 +71,13 @@ export default function RichTextEditor({ value, onChangeText, placeholder, maxLe
         {buttons.map(({ key, Icon, label, edit }) => (
           <Touchable
             key={key}
-            style={[styles.btn, { backgroundColor: focused ? T.tealMuted : colors.surface }]}
+            style={[styles.btn, { backgroundColor: focused ? T.surfaceRaised : colors.surface }]}
             onPress={() => run(edit)}
             scale={0.92}
             accessibilityRole="button"
             accessibilityLabel={label}
           >
-            <Icon size={17} strokeWidth={2.4} color={T.teal} />
+            <Icon size={17} strokeWidth={2} color={focused ? colors.text : colors.textSecondary} />
           </Touchable>
         ))}
       </View>

@@ -295,7 +295,7 @@ export default function AddToWalletButton({
           {isDownloading ? (
             <ActivityIndicator size="small" color={colors.text} />
           ) : (
-            <Download size={18} color={colors.text} />
+            <Download size={16} color={colors.textSecondary} />
           )}
           <Text style={styles.downloadButtonText}>{t('addToWallet.saveImage')}</Text>
         </View>
@@ -328,12 +328,11 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     borderRadius: radius.md,
     padding: 16,
   },
+  // A quiet text action under the wallet button: no box around empty space
+  // (the fill-not-hairline rule), so the white Wallet button stays the one CTA.
   downloadButton: {
-    backgroundColor: 'transparent',
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 16,
+    height: 40,
+    justifyContent: 'center',
   },
   buttonContent: {
     flexDirection: 'row',
@@ -357,8 +356,8 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     color: colors.background,
   },
   downloadButtonText: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600',
-    color: colors.text,
+    color: colors.textSecondary,
   },
 });
