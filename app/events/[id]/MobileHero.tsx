@@ -22,6 +22,8 @@ interface MobileHeroProps {
   actions?: React.ReactNode
   /** The occasion it is tagged for (lib/occasions), linked in the eyebrow line. */
   occasion?: string | null
+  /** The poster's alt text (lib/posterAlt.ts); defaults to the title. */
+  posterAlt?: string
 }
 
 export default function MobileHero({
@@ -37,6 +39,7 @@ export default function MobileHero({
   selloutSoon,
   actions,
   occasion,
+  posterAlt,
 }: MobileHeroProps) {
   const { t } = useTranslation('common')
   const posterTheme = getPosterTheme(title, category)
@@ -99,7 +102,7 @@ export default function MobileHero({
               {/* No scrim over the art: nothing is laid on its lower half, and a
                   bottom gradient dimmed the date and venue a designed flyer
                   carries there. The status chips bring their own backing. */}
-              <PosterImage src={bannerUrl} alt={title} sizes="100vw" priority />
+              <PosterImage src={bannerUrl} alt={posterAlt || title} sizes="100vw" priority />
             </>
           ) : (
             <div className="poster-vignette absolute inset-0" style={{ backgroundImage: posterTheme.bg }}>

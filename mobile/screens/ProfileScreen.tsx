@@ -18,6 +18,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useTabBarSpace } from '../hooks/useTabBarSpace';
 import {
+  Accessibility,
   Bell,
   Pencil,
   BookOpen,
@@ -732,6 +733,11 @@ export default function ProfileScreen() {
               icon={Bell}
               title={t('notificationSettings.title')}
               onPress={() => navigation.navigate('NotificationSettings', { organizer: canUseOrganizerMode })}
+            />
+            <ListRow
+              icon={Accessibility}
+              title={t('a11y.title')}
+              onPress={() => navigation.navigate('AccessibilitySettings')}
             />
             {canAddPhone ? (
               <ListRow icon={Phone} title={t('auth.phone.link.row')} onPress={() => setShowPhoneLink(true)} />

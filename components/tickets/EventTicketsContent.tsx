@@ -15,6 +15,7 @@
  * dashed edge of the empty state.
  */
 
+import { usePosterAlt } from '@/lib/usePosterAlt'
 import { EMPTY_VALUE } from '@/lib/format'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -79,6 +80,7 @@ const STACK_ACTION =
 
 export default function EventTicketsContent({ event, tickets }: EventTicketsContentProps) {
   const { t, i18n } = useTranslation('tickets')
+  const posterAlt = usePosterAlt()
   const [showUsed, setShowUsed] = useState(false)
 
   const cleanTitle = String(event.title || 'Event').replace(/^\[[^\]]*\]\s*/, '')
@@ -146,7 +148,7 @@ export default function EventTicketsContent({ event, tickets }: EventTicketsCont
           {event.banner_image_url ? (
             <Image
               src={event.banner_image_url}
-              alt={cleanTitle}
+              alt={posterAlt({ ...event, title: cleanTitle })}
               fill
               sizes="220px"
               className="object-cover"

@@ -247,6 +247,8 @@ async function getEventByIdUncached(eventId: string): Promise<Event | null> {
         // or every reader of this object would see it as absent.
         poster_template:
           data?.poster_template && typeof data?.poster_template === 'object' ? data?.poster_template : undefined,
+        // The organizer's flyer description (lib/posterAlt.ts), read aloud for the poster.
+        poster_alt: typeof data?.poster_alt === 'string' && data?.poster_alt.trim() ? data?.poster_alt : undefined,
 
         // Recurring occurrences share it; lists show a series once (lib/events/series).
 
@@ -445,6 +447,8 @@ const readPublishedEvents = unstable_cache(
         // or every reader of this object would see it as absent.
         poster_template:
           data.poster_template && typeof data.poster_template === 'object' ? data.poster_template : undefined,
+        // The organizer's flyer description (lib/posterAlt.ts), read aloud for the poster.
+        poster_alt: typeof data.poster_alt === 'string' && data.poster_alt.trim() ? data.poster_alt : undefined,
 
         // Recurring occurrences share it; lists show a series once (lib/events/series).
 
@@ -650,6 +654,8 @@ export async function getOrganizerEvents(
         // or every reader of this object would see it as absent.
         poster_template:
           data.poster_template && typeof data.poster_template === 'object' ? data.poster_template : undefined,
+        // The organizer's flyer description (lib/posterAlt.ts), read aloud for the poster.
+        poster_alt: typeof data.poster_alt === 'string' && data.poster_alt.trim() ? data.poster_alt : undefined,
 
         // Recurring occurrences share it; lists show a series once (lib/events/series).
 
@@ -788,6 +794,8 @@ export async function getAdminEvents(
         // or every reader of this object would see it as absent.
         poster_template:
           data.poster_template && typeof data.poster_template === 'object' ? data.poster_template : undefined,
+        // The organizer's flyer description (lib/posterAlt.ts), read aloud for the poster.
+        poster_alt: typeof data.poster_alt === 'string' && data.poster_alt.trim() ? data.poster_alt : undefined,
 
         // Recurring occurrences share it; lists show a series once (lib/events/series).
 
@@ -889,6 +897,8 @@ export async function getOrganizerEventsClient(
         // or every reader of this object would see it as absent.
         poster_template:
           data.poster_template && typeof data.poster_template === 'object' ? data.poster_template : undefined,
+        // The organizer's flyer description (lib/posterAlt.ts), read aloud for the poster.
+        poster_alt: typeof data.poster_alt === 'string' && data.poster_alt.trim() ? data.poster_alt : undefined,
 
         // Recurring occurrences share it; lists show a series once (lib/events/series).
 

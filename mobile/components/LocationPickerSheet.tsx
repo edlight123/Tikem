@@ -193,7 +193,12 @@ export default function LocationPickerSheet({
         style={styles.overlay}
         behavior="padding"
       >
-        <Pressable style={styles.backdrop} onPress={onClose} />
+        <Pressable
+          style={styles.backdrop}
+          onPress={onClose}
+          accessibilityRole="button"
+          accessibilityLabel={t('common.close')}
+        />
         <Animated.View style={[styles.sheet, swipe.sheetStyle, { paddingBottom: insets.bottom + 16 }]}>
           <View {...swipe.panHandlers}>
           <View style={styles.handle} />

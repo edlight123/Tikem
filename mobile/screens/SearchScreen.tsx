@@ -307,7 +307,13 @@ export default function SearchScreen({ navigation }: any) {
     <View style={styles.container}>
       {/* Header: back + focused search field + clear. */}
       <OverlayHeader onHeight={onHeaderHeight} style={styles.header} scrollY={scrollY}>
-        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backBtn}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          hitSlop={10}
+          style={styles.backBtn}
+          accessibilityRole="button"
+          accessibilityLabel={t('common.back')}
+        >
           <ArrowLeft size={24} color={colors.text} />
         </TouchableOpacity>
         <View style={styles.searchField}>
@@ -316,6 +322,7 @@ export default function SearchScreen({ navigation }: any) {
             ref={inputRef}
             style={styles.input}
             placeholder={t('discover.searchPlaceholder')}
+            accessibilityLabel={t('a11y.search')}
             placeholderTextColor={colors.textSecondary}
             selectionColor={colors.primary}
             value={queryText}
@@ -325,7 +332,12 @@ export default function SearchScreen({ navigation }: any) {
             autoCorrect={false}
           />
           {queryText.length > 0 && (
-            <TouchableOpacity onPress={() => setQueryText('')} hitSlop={8}>
+            <TouchableOpacity
+              onPress={() => setQueryText('')}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={t('a11y.clearSearch')}
+            >
               <X size={18} color={colors.textSecondary} />
             </TouchableOpacity>
           )}

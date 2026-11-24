@@ -41,6 +41,8 @@ interface PosterCardProps {
    * On by default for public surfaces; pass false in dense admin lists.
    */
   glow?: boolean
+  /** The poster's alt text (lib/posterAlt.ts); defaults to the title. */
+  imageAlt?: string
 }
 
 /**
@@ -72,6 +74,7 @@ export function PosterCard({
   onClick,
   className = '',
   glow = true,
+  imageAlt,
 }: PosterCardProps) {
   // Fall back to the gradient title-card not just when the URL is absent, but
   // also when the image fails to load (broken/missing banner) — otherwise a dead
@@ -100,7 +103,7 @@ export function PosterCard({
         {hasImage ? (
           <PosterImage
             src={imageUrl as string}
-            alt={title}
+            alt={imageAlt || title}
             className="transition-transform duration-200 ease-out group-hover:scale-[1.03] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
             quality={78}

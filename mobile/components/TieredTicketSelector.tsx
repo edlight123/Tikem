@@ -413,7 +413,13 @@ export default function TieredTicketSelector({
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>{t('ticketSelector.title')}</Text>
-          <TouchableOpacity onPress={onClose} style={styles.closeButton} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+          <TouchableOpacity
+            onPress={onClose}
+            style={styles.closeButton}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            accessibilityRole="button"
+            accessibilityLabel={t('common.close')}
+          >
             <X size={24} color={colors.text} />
           </TouchableOpacity>
         </View>
@@ -569,6 +575,9 @@ export default function TieredTicketSelector({
                             onPress={() => updateTierQuantity(tier.id, -1)}
                             disabled={quantity === 0}
                             hitSlop={STEPPER_HIT_SLOP}
+                            accessibilityRole="button"
+                            accessibilityLabel={`${t('a11y.decrease')}, ${tier.name}`}
+                            accessibilityState={{ disabled: quantity === 0 }}
                             style={[
                               styles.stepperButton,
                               quantity === 0 && styles.stepperButtonDisabled,
@@ -583,6 +592,9 @@ export default function TieredTicketSelector({
                             onPress={() => updateTierQuantity(tier.id, 1)}
                             disabled={atMax}
                             hitSlop={STEPPER_HIT_SLOP}
+                            accessibilityRole="button"
+                            accessibilityLabel={`${t('a11y.increase')}, ${tier.name}`}
+                            accessibilityState={{ disabled: atMax }}
                             style={[
                               styles.stepperButton,
                               atMax && styles.stepperButtonDisabled,

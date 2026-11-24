@@ -48,6 +48,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${siteUrl}/legal/privacy`, lastModified: now, changeFrequency: 'yearly', priority: 0.3 },
     { url: `${siteUrl}/legal/terms`, lastModified: now, changeFrequency: 'yearly', priority: 0.3 },
     { url: `${siteUrl}/legal/refunds`, lastModified: now, changeFrequency: 'yearly', priority: 0.3 },
+    { url: `${siteUrl}/accessibility`, lastModified: now, changeFrequency: 'yearly', priority: 0.3 },
   ]
 
   // The eight Kreyòl worlds browse through Discover with their stored

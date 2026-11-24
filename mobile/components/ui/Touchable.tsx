@@ -23,6 +23,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { tapLight } from '../../lib/haptics';
+import { isReducedMotion } from '../../lib/a11y';
 
 export interface TouchableProps extends Omit<PressableProps, 'style' | 'children'> {
   children?: React.ReactNode;
@@ -75,8 +76,14 @@ export const Touchable = forwardRef<View, TouchableProps>(function Touchable(
   const [pressed, setPressed] = useState(false);
   const animate = scale !== false && !disabled;
 
-  const springTo = (to: number) =>
+  // Reduce Motion (lib/a11y): the press fill stays, the scale does not.
+  const springTo = (to: number) => {
+    if (isReducedMotion()) {
+      value.setValue(1);
+      return;
+    }
     Animated.spring(value, { toValue: to, useNativeDriver: true, speed: 40, bounciness: 0 }).start();
+  };
 
   const { outer, inner } = splitStyle(style);
 

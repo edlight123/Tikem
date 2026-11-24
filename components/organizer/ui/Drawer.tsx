@@ -1,5 +1,6 @@
 'use client'
 
+import { useDialogFocus } from '@/lib/a11y/useDialogFocus'
 import React, { useEffect, useRef } from 'react'
 import { X } from 'lucide-react'
 
@@ -30,24 +31,9 @@ export function Drawer({ open, onClose, title, size = 'md', children, footer }: 
   const panelRef = useRef<HTMLDivElement>(null)
   const titleId = 'org-drawer-title'
 
-  // Close on Escape
-  useEffect(() => {
-    if (!open) return
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    document.addEventListener('keydown', handler)
-    return () => document.removeEventListener('keydown', handler)
-  }, [open, onClose])
-
-  // Focus first focusable element on open
-  useEffect(() => {
-    if (!open) return
-    const el = panelRef.current?.querySelector<HTMLElement>(
-      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-    )
-    el?.focus()
-  }, [open])
+  // Escape closes, focus moves in and stays in, and returns to the opener on
+  // close (lib/a11y/useDialogFocus).
+  useDialogFocus(panelRef, open, { onEscape: onClose })
 
   // Lock body scroll
   useEffect(() => {

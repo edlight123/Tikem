@@ -691,7 +691,8 @@
     "language": "Langue",
     "instagram": "Tikèm sur Instagram",
     "built_by": "Conçu par {{labs}}",
-    "photo_credits": "Crédits photo"
+    "photo_credits": "Crédits photo",
+    "accessibility": "Accessibilité"
   },
   "admin": {
     "search_placeholder": "Rechercher des événements...",
@@ -1626,7 +1627,12 @@
     "familyHint": "Une personne inscrit sa famille ; chacun reçoit son billet.",
     "familyUpTo": "Personnes par inscription",
     "ticketTypes": "Types prêts",
-    "addTicketTypes": "Plusieurs types d’invités ? Ajoutez des types de billets"
+    "addTicketTypes": "Plusieurs types d’invités ? Ajoutez des types de billets",
+    "posterAlt": {
+      "label": "Décrire l'affiche",
+      "placeholder": "Ce qu'on y voit, pour les personnes qui utilisent un lecteur d'écran",
+      "hint": "Facultatif. Laissé vide, nous la décrivons à partir du titre, de la date et du lieu."
+    }
   },
   "promoter": {
     "portal_eyebrow": "Portail promoteur",
@@ -2412,5 +2418,8 @@
     "ideas_title": "idées à organiser",
     "use_idea": "Créer cet événement",
     "part_of": "Pour {{name}}"
+  },
+  "a11y": {
+    "skipToContent": "Aller au contenu"
   }
 }

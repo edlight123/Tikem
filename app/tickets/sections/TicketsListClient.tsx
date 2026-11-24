@@ -63,6 +63,7 @@ export default function TicketsListClient({ upcomingEvents, pastEvents }: Ticket
                   city={event.city}
                   country={event.country}
                   timezone={event.timezone}
+                  posterAlt={event.poster_alt}
                   ticketCount={item.ticketCount}
                 />
               )
@@ -100,6 +101,7 @@ export default function TicketsListClient({ upcomingEvents, pastEvents }: Ticket
                   city={event.city}
                   country={event.country}
                   timezone={event.timezone}
+                  posterAlt={event.poster_alt}
                   ticketCount={item.ticketCount}
                 />
               )

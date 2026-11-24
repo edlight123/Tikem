@@ -8,6 +8,7 @@
 // five events: the admin's picks first, then the most-sold upcoming ones
 // (lib/home/feed pickHeroEvents). Nothing advances on its own.
 
+import { usePosterAlt } from '@/lib/usePosterAlt'
 import { useCallback, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -23,6 +24,7 @@ const pad = (n: number) => String(n).padStart(2, '0')
 
 export default function FeaturedHero({ events, zone }: { events: HomeEvent[]; zone: string }) {
   const { t, i18n } = useTranslation('common')
+  const posterAlt = usePosterAlt()
   const [index, setIndex] = useState(0)
   const count = events.length
   const go = useCallback(
@@ -84,7 +86,7 @@ export default function FeaturedHero({ events, zone }: { events: HomeEvent[]; zo
             {ev.banner_image_url && (
               <PosterImage
                 src={ev.banner_image_url}
-                alt={ev.title}
+                alt={posterAlt(ev)}
                 priority={index === 0}
                 sizes="(min-width: 1024px) 560px, (min-width: 640px) 70vw, 100vw"
               />

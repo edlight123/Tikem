@@ -37,6 +37,7 @@ import { NotificationsSkeleton } from '../components/Skeleton';
 import { useAppAlert } from '../components/AppAlert';
 import type { Notification } from '../types/notifications';
 import { Touchable } from '../components/ui/Touchable';
+import { isReducedMotion } from '../lib/a11y';
 
 export default function NotificationsScreen() {
   const { colors } = useTheme();
@@ -709,12 +710,15 @@ function SwipeRow({ children, onDelete }: { children: React.ReactNode; onDelete:
           Animated.timing(x, { toValue: g.dx > 0 ? width : -width, duration: 180, useNativeDriver: false }).start(
             () => onDelete(),
           );
+        } else if (isReducedMotion()) {
+          x.setValue(0);
         } else {
           Animated.spring(x, { toValue: 0, useNativeDriver: false, bounciness: 4 }).start();
         }
       },
       onPanResponderTerminate: () => {
-        Animated.spring(x, { toValue: 0, useNativeDriver: false }).start();
+        if (isReducedMotion()) x.setValue(0);
+        else Animated.spring(x, { toValue: 0, useNativeDriver: false }).start();
       },
     }),
   ).current;

@@ -1,4 +1,5 @@
 import React from 'react';
+import { joinA11y } from '../lib/a11y';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Touchable } from './ui/Touchable';
 import { CalendarPlus, MapPin, Send, ExternalLink } from 'lucide-react-native';
@@ -99,7 +100,13 @@ export default function TicketPassCard({
       </View>
 
       {/* The one shared ticket identity — white inverted stub. Tap to enlarge. */}
-      <Touchable scale={0.98} onPress={onQRPress} accessibilityRole="button">
+      <Touchable
+        scale={0.98}
+        onPress={onQRPress}
+        accessibilityRole="button"
+        accessibilityLabel={joinA11y(t('a11y.qrCode'), eventTitle, dateLabel, tier, holder, orderRef)}
+        accessibilityHint={t('a11y.qrCodeHint')}
+      >
         <TicketQRCard
           qrValue={ticketQrValue(ticket)}
           eventTitle={eventTitle}

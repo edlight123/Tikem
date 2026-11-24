@@ -1,5 +1,6 @@
 'use client'
 
+import { usePosterAlt } from '@/lib/usePosterAlt'
 import { useTranslation } from 'react-i18next'
 import { format } from 'date-fns'
 import { ArrowLeft, Calendar, MapPin, User, Clock, Sparkles, CheckCircle2 } from 'lucide-react'
@@ -23,6 +24,7 @@ export default function TicketDetailContent({ ticket, event, user, pendingTransf
   const { t } = useTranslation('tickets')
 
   const cleanTitle = (event?.title || '').replace(/^\[[^\]]*\]\s*/, '')
+  const posterAlt = usePosterAlt()
 
   const getStatusBadge = () => {
     if (ticket.checked_in_at) {
@@ -141,7 +143,7 @@ export default function TicketDetailContent({ ticket, event, user, pendingTransf
               <div className="relative w-full h-40 sm:h-48">
                 <Image
                   src={event.banner_image_url}
-                  alt={cleanTitle}
+                  alt={posterAlt({ ...event, title: cleanTitle })}
                   fill
                   sizes="(max-width: 640px) 100vw, 50vw"
                   className="object-cover"

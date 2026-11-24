@@ -1,4 +1,5 @@
 import React from 'react';
+import { useCaptionLines } from '../lib/a11y';
 import { View, Text, StyleSheet } from 'react-native';
 import { Touchable } from './ui/Touchable';
 import { ArrowRight } from 'lucide-react-native';
@@ -38,11 +39,13 @@ export default function SectionHeader({
   const { colors } = useTheme();
   const { t } = useI18n();
   const styles = getStyles(colors);
+  // Larger text: a long section title wraps to a second line instead of clipping.
+  const titleLines = useCaptionLines(1);
 
   return (
     <View style={styles.row}>
       <View style={styles.titleWrap}>
-        <Text style={styles.title} numberOfLines={1}>
+        <Text style={styles.title} numberOfLines={titleLines} accessibilityRole="header">
           {title.toLowerCase()}
         </Text>
         {!!subtitle && (
@@ -52,7 +55,13 @@ export default function SectionHeader({
         )}
       </View>
       {onViewAll ? (
-        <Touchable style={styles.viewAll} onPress={onViewAll} hitSlop={8}>
+        <Touchable
+          style={styles.viewAll}
+          onPress={onViewAll}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={`${t('common.viewAll')}, ${title}`}
+        >
           <Text style={styles.viewAllText}>{t('common.viewAll').toLowerCase()}</Text>
           <ArrowRight size={15} color={colors.textSecondary} />
         </Touchable>

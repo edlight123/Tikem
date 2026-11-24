@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, StatusBar } from 'react-nativ
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronLeft } from 'lucide-react-native';
 import { useTheme } from '../contexts/ThemeContext';
+import { useI18n } from '../contexts/I18nContext';
 
 interface ScreenHeaderProps {
   title: string;
@@ -15,6 +16,7 @@ interface ScreenHeaderProps {
 
 /** A consistent top header for detail / flow screens. */
 export default function ScreenHeader({ title, subtitle, onBack, right, transparent }: ScreenHeaderProps) {
+  const { t } = useI18n();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const styles = getStyles(colors);
@@ -33,7 +35,14 @@ export default function ScreenHeader({ title, subtitle, onBack, right, transpare
       {!transparent && <StatusBar barStyle={colors.text === '#0F172A' ? 'dark-content' : 'light-content'} />}
       <View style={styles.row}>
         {onBack ? (
-          <TouchableOpacity style={styles.backBtn} onPress={onBack} hitSlop={10} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={onBack}
+            hitSlop={10}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={t('common.back')}
+          >
             <ChevronLeft size={24} color={transparent ? '#FFFFFF' : colors.text} />
           </TouchableOpacity>
         ) : (
@@ -44,6 +53,7 @@ export default function ScreenHeader({ title, subtitle, onBack, right, transpare
           <Text
             style={[styles.title, transparent && styles.titleOnImage]}
             numberOfLines={1}
+            accessibilityRole="header"
           >
             {title}
           </Text>

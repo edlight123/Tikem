@@ -616,7 +616,14 @@ export default function DiscoverScreen({ navigation, route }: any) {
               </Text>
             </Touchable>
             </View>
-            <Touchable style={styles.filterBtn} onPress={openFiltersModal}>
+            <Touchable
+            style={styles.filterBtn}
+            onPress={openFiltersModal}
+            accessibilityRole="button"
+            accessibilityLabel={
+              countActiveFilters() > 0 ? `${t('a11y.filters')}, ${countActiveFilters()}` : t('a11y.filters')
+            }
+          >
               <SlidersHorizontal size={20} color={colors.text} />
               {countActiveFilters() > 0 && (
                 <View style={styles.filterCountBadge}>
@@ -655,6 +662,8 @@ export default function DiscoverScreen({ navigation, route }: any) {
           <Touchable
             style={styles.filterBtn}
             onPress={() => navigation.navigate('Search')}
+            accessibilityRole="button"
+            accessibilityLabel={t('a11y.search')}
           >
             <Search size={20} color={colors.text} />
           </Touchable>

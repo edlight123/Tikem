@@ -6,6 +6,7 @@ import { ToastProvider } from '@/components/ui/Toast'
 import PWAInstallPrompt from '@/components/pwa/PWAInstallPrompt'
 import { I18nProvider } from '@/components/I18nProvider'
 import Footer from '@/components/Footer'
+import SkipLink from '@/components/SkipLink'
 import { FeeConfigProvider } from '@/components/FeeConfigProvider'
 import SmoothScroll from '@/components/SmoothScroll'
 import { getPlatformFeeSettings } from '@/lib/checkout/fee-config-server'
@@ -166,6 +167,8 @@ export default async function RootLayout({
         <SmoothScroll />
         <FeeConfigProvider config={feeConfig}>
           <I18nProvider lng={lng}>
+            {/* First stop for keyboard users: jumps past the navbar. */}
+            <SkipLink />
             <ToastProvider>
               <div className="flex-1">{children}</div>
               <Footer />
