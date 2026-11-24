@@ -260,8 +260,16 @@ function ClaimRow({ claim, now, onDone }: { claim: Claim; now: Date | null; onDo
         </p>
         <div className="flex flex-wrap items-center gap-3 text-xs">
           {claim.instagram_handle && (
-            <ConsoleState tone={claim.handle_matches ? 'good' : 'warn'}>
-              @{claim.instagram_handle} {claim.handle_matches ? 'matches the credit' : claim.source_handle ? `credit is @${claim.source_handle}` : 'no handle on the credit'}
+            // A typed handle is self-reported: anyone can type someone else's.
+            // Never shown as verified (green); confirm by DM from that account
+            // or with a second proof before approving an Instagram-only claim.
+            <ConsoleState tone={claim.handle_matches ? 'neutral' : 'warn'}>
+              @{claim.instagram_handle} (typed, not verified){' '}
+              {claim.handle_matches
+                ? '· same as the credit. Confirm by DM from that account before approving'
+                : claim.source_handle
+                  ? `· credit is @${claim.source_handle}`
+                  : '· no handle on the credit'}
             </ConsoleState>
           )}
           {proofLink && (

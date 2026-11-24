@@ -383,6 +383,7 @@ export function parseClaimInput(raw: any): { ok: true; value: ClaimInput } | { o
 }
 
 /** Whether the claimant's handle matches the handle credited on the event (a hint for the admin, not a decision). */
+/** Self-reported: a typed handle equal to the credit is a hint for the admin, never proof of ownership. */
 export function handleMatches(claimHandle: string, sourceHandle: unknown): boolean {
   const a = parseHandle(claimHandle)
   const b = parseHandle(sourceHandle)
