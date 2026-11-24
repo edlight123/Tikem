@@ -1,0 +1,5 @@
+{
+  "ios": {
+    "NSLocationWhenInUseUsageDescription": "Tikèm uses your approximate location, only when you ask, to show events in the nearest area and how far an event is. Your location stays on your phone and is never stored."
+  }
+}

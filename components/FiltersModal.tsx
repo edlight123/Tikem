@@ -13,6 +13,7 @@ import { buildPriceRangeFilter, countActiveFilters, filtersEqual, parsePriceRang
 // rounded-full outline whose selected state is a teal hairline — a coloured
 // status pill — so this modal no longer uses it.
 import { discoverChipCls } from './discover/DateChips'
+import { UseMyLocationButton } from './location/UseMyLocationButton'
 
 /**
  * Surfaces here follow the POSH ladder (docs/POSH_DESIGN_BRIEF.md, "Surfaces:
@@ -425,6 +426,7 @@ export function FiltersModal({
             <div className="space-y-3">
               <label className="eyebrow text-eyebrow text-fg-muted">{t('filters.location')}</label>
               <div className="space-y-3">
+                <UseMyLocationButton onDone={onClose} />
                 {/* City Dropdown. Filled picker trigger, own chevron — the
                     native arrow goes with appearance-none. */}
                 <div className="relative">

@@ -1799,6 +1799,14 @@
     "not_now_aria": "Not now",
     "region_aria": "Location suggestion"
   },
+  "current_location": {
+    "use_current": "Use my current location",
+    "locating": "Finding where you are…",
+    "denied": "Location is blocked for this site. Allow it in your browser settings, or pick a city.",
+    "unavailable": "We couldn’t find your location. Try again, or pick a city.",
+    "unsupported": "Tikèm isn’t near you yet. Pick a city.",
+    "distance_away": "{{distance}} away"
+  },
   "invite": {
     "title": "Event Invite",
     "loading": "Loading…",

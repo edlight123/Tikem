@@ -62,6 +62,7 @@ import JoinWaitlistButton from '../components/JoinWaitlistButton';
 import FollowButton from '../components/FollowButton';
 import CountdownTimer from '../components/CountdownTimer';
 import VenueStaticMap from '../components/VenueStaticMap';
+import { useVenueDistance } from '../hooks/useVenueDistance';
 import WhosGoing from '../components/WhosGoing';
 import SectionHeader from '../components/SectionHeader';
 import VenueDetailsLines from '../components/VenueDetailsLines';
@@ -190,6 +191,8 @@ export default function EventDetailScreen({ route, navigation }: any) {
   });
   const [loading, setLoading] = useState(() => !getEventPreview(eventId));
   const [fresh, setFresh] = useState(false);
+  // "2.4 km away", only once the person shared their location (never asks here).
+  const venueDistance = useVenueDistance(event);
   const [purchasing, setPurchasing] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
   const [favoriteLoading, setFavoriteLoading] = useState(false);
@@ -995,6 +998,7 @@ export default function EventDetailScreen({ route, navigation }: any) {
                       const area = (event as any).commune || event.city;
                       return event.venue_name && area && !String(event.venue_name).includes(String(area)) ? area : '';
                     })(),
+                    venueDistance,
                   ]
                     .filter(Boolean)
                     .join(' · ')}

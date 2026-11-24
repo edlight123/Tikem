@@ -22,6 +22,8 @@ interface MobileKeyFactsProps {
   venueName: string
   city: string
   address: string
+  /** "2.4 km away", when the browser already shared its location ('' otherwise). */
+  distance?: string
   commune: string
   isFree: boolean
   /**
@@ -59,6 +61,7 @@ export default function MobileKeyFacts({
   city,
   address,
   commune,
+  distance = '',
   isFree,
   hasFreeOption = false,
   ticketPrice,
@@ -90,7 +93,7 @@ export default function MobileKeyFacts({
   // The neighbourhood people say ("Pétion-Ville") before the city, and never
   // a repeat of what the venue name already says (same as the app).
   const area = (commune && commune.trim()) || city
-  const place = [venueName, venueName && area && venueName.includes(area) ? '' : area]
+  const place = [venueName, venueName && area && venueName.includes(area) ? '' : area, distance]
     .filter((p) => p && p.trim())
     .join(' · ')
 
