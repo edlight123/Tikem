@@ -1633,6 +1633,13 @@
       "label": "Décrire l'affiche",
       "placeholder": "Ce qu'on y voit, pour les personnes qui utilisent un lecteur d'écran",
       "hint": "Facultatif. Laissé vide, nous la décrivons à partir du titre, de la date et du lieu."
+    },
+    "format": {
+      "bold": "Gras",
+      "italic": "Italique",
+      "bullets": "Liste à puces",
+      "numbers": "Liste numérotée",
+      "toolbar": "Mise en forme du texte"
     }
   },
   "promoter": {

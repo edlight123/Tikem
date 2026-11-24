@@ -1,4 +1,5 @@
 import { format } from 'date-fns'
+import { stripRichText } from '@/lib/richText'
 
 interface Event {
   id: string
@@ -46,7 +47,7 @@ export function generateICSFile(event: Event): string {
     .filter(Boolean)
     .join(', ')
 
-  const description = event.description || ''
+  const description = stripRichText(event.description)
   const eventUrl = icsSafeValue(
     `${process.env.NEXT_PUBLIC_APP_URL}/events/${encodeURIComponent(event.id)}`
   )
@@ -93,7 +94,7 @@ export function generateGoogleCalendarUrl(event: Event): string {
     action: 'TEMPLATE',
     text: event.title,
     dates: `${formatGoogleDate(startDate)}/${formatGoogleDate(endDate)}`,
-    details: event.description || '',
+    details: stripRichText(event.description),
     location: location,
     sprop: `website:${process.env.NEXT_PUBLIC_APP_URL}`,
   })
@@ -121,7 +122,7 @@ export function generateOutlookCalendarUrl(event: Event): string {
     subject: event.title,
     startdt: formatOutlookDate(startDate),
     enddt: formatOutlookDate(endDate),
-    body: event.description || '',
+    body: stripRichText(event.description),
     location: location,
   })
 

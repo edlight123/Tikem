@@ -13,6 +13,7 @@
 import { seriesKey } from '@/lib/events/series'
 import { CULTURAL_CATEGORIES } from '@/lib/categories'
 import { LOCATION_CONFIG, normalizeEventCategory } from '@/lib/filters/config'
+import { stripRichText } from '@/lib/richText'
 
 /* -------------------------------------------------------------------------- */
 /*  The serializable event the homepage sections share                        */
@@ -103,7 +104,7 @@ export function imageKey(url: string | null | undefined): string {
 export function blurbFrom(description: unknown): string {
   // The homepage sets no em dashes (owner rule), organizer copy included:
   // one becomes the comma it almost always stands for.
-  const text = str(description)
+  const text = stripRichText(str(description))
     .replace(/\s+/g, ' ')
     .replace(/\s*—\s*/g, ', ')
     .trim()

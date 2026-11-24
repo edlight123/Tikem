@@ -1633,6 +1633,13 @@
       "label": "Describe the flyer",
       "placeholder": "What's on it, for people using a screen reader",
       "hint": "Optional. Left empty, we describe it from the title, date and place."
+    },
+    "format": {
+      "bold": "Bold",
+      "italic": "Italic",
+      "bullets": "Bulleted list",
+      "numbers": "Numbered list",
+      "toolbar": "Text formatting"
     }
   },
   "promoter": {

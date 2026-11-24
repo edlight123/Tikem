@@ -20,6 +20,7 @@ import { intlLocaleFor } from '@/lib/dateLocale'
 import { marketTimezone } from '@/lib/notifications/policy'
 import { ticketScarcity, isUrgent } from '@/lib/ticketScarcity'
 import { isSocialFlagOn } from '@/lib/social/flags'
+import { stripRichText } from '@/lib/richText'
 
 export const runtime = 'nodejs'
 export const revalidate = 300 // Cache for 5 minutes
@@ -74,7 +75,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   // route supply the 1200x630 card AND its dimensions automatically.
   return {
     title: `${event.title} | Tikèm`,
-    description: event.description || `Join us for ${event.title} at ${event.venue_name}, ${event.city}`,
+    description: stripRichText(event.description) || `Join us for ${event.title} at ${event.venue_name}, ${event.city}`,
     alternates: { canonical: `/events/${id}` },
     openGraph: {
       title: event.title,

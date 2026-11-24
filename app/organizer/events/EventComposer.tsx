@@ -78,6 +78,7 @@ import {
   type GuestlistVisibility,
 } from '@/lib/guestlistVisibility'
 import GuestlistVisibilityPicker from '@/components/organizer/GuestlistVisibility'
+import FormattingToolbar, { richTextareaChange, richTextareaKeyDown } from '@/components/organizer/FormattingToolbar'
 import { DatePicker, TimePicker } from '@/components/ui/DateTimePickers'
 import { normalizeEventCurrencyForCountry, type EventCurrency } from '@/lib/currency-policy'
 import {
@@ -688,6 +689,7 @@ export default function EventComposer({
   // Details
   const [showDescription, setShowDescription] = useState(!!(event?.description || ideaSeed?.description))
   const [description, setDescription] = useState(event?.description || ideaSeed?.description || '')
+  const descriptionRef = useRef<HTMLTextAreaElement>(null)
   const [address, setAddress] = useState(event?.address || '')
   const [venueName, setVenueName] = useState(event?.venue_name || '')
   // Venue details (parking, step-free…, age, dress code): all optional, shown
@@ -2784,15 +2786,21 @@ export default function EventComposer({
             <SectionTitle icon={Info}>{t('composer.details', { defaultValue: 'Event Details' })}</SectionTitle>
             <div className="space-y-3">
               {showDescription || description ? (
-                <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder={t('composer.descPlaceholder', { defaultValue: 'Tell people what to expect…' })}
-                  aria-label={tx('event_composer.event_description')}
-                  rows={4}
-                  autoFocus={showDescription}
-                  className={field}
-                />
+                <div>
+                  {/* Bold, italic and lists, saved as light markdown (lib/richText). */}
+                  <FormattingToolbar textareaRef={descriptionRef} value={description} onChange={setDescription} />
+                  <textarea
+                    ref={descriptionRef}
+                    value={description}
+                    onChange={(e) => richTextareaChange(e.currentTarget, description, e.target.value, setDescription)}
+                    onKeyDown={(e) => richTextareaKeyDown(e, description, setDescription)}
+                    placeholder={t('composer.descPlaceholder', { defaultValue: 'Tell people what to expect…' })}
+                    aria-label={tx('event_composer.event_description')}
+                    rows={6}
+                    autoFocus={showDescription}
+                    className={field}
+                  />
+                </div>
               ) : (
                 <button type="button" onClick={() => setShowDescription(true)} className={rowCls}>
                   <Pencil className="h-[18px] w-[18px] text-fg-subtle" /> {t('composer.addDescription', { defaultValue: 'Add Description' })}

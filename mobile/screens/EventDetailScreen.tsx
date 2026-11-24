@@ -78,6 +78,7 @@ import { useBlockedOrganizers } from '../lib/blockedOrganizers';
 import { AFTER_ALERT_MS, promptBlockToggle } from '../lib/moderationActions';
 import PurchaseSuccessSheet from '../components/PurchaseSuccessSheet';
 import FriendsGoingRow from '../components/FriendsGoingRow';
+import RichText from '../components/RichText';
 import InviteFriendsRow from '../components/InviteFriendsSheet';
 import { requestPhonePrompt } from '../lib/phonePrompt';
 import { useAppAlert } from '../components/AppAlert';
@@ -1191,7 +1192,7 @@ export default function EventDetailScreen({ route, navigation }: any) {
           {!!String(event.description || '').trim() && (
             <View style={styles.section}>
               <SectionHeader title={t('eventDetail.sections.about')} />
-              <Text style={styles.description}>{String(event.description).trim()}</Text>
+              <RichText text={String(event.description)} style={styles.description} />
             </View>
           )}
 

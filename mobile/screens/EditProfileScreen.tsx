@@ -563,6 +563,8 @@ export default function EditProfileScreen() {
             current={cover}
             onClose={() => setShowCover(false)}
             onChanged={setCover}
+            orgName={userProfile?.organization_name || userProfile?.full_name || ''}
+            logoUri={userProfile?.organization_logo || userProfile?.photo_url || null}
           />
         ) : null}
 

@@ -4563,4 +4563,11 @@ export default {
     qrCode: "QR code du billet",
     qrCodeHint: "Ouvre le code en plein écran pour l'entrée",
   },
+  richText: {
+    bold: "Gras",
+    italic: "Italique",
+    bulletList: "Liste à puces",
+    numberedList: "Liste numérotée",
+    toolbar: "Mise en forme du texte",
+  },
 } as const;

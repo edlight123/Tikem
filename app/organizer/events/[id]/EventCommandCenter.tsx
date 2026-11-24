@@ -19,6 +19,7 @@ import {
   Users,
 } from 'lucide-react'
 import { formatMoneyFromCents, normalizeCurrency } from '@/lib/money'
+import { stripRichText } from '@/lib/richText'
 
 interface EventCommandCenterProps {
   event: any
@@ -286,7 +287,7 @@ export function EventCommandCenter({ event, stats, tickets, tiers }: EventComman
             <div className="border-t border-line pt-3">
               <h4 className="label-mono mb-1.5 uppercase text-xs text-fg-subtle">{tx('actions.about')}</h4>
               <p className="line-clamp-5 whitespace-pre-wrap text-sm leading-relaxed text-fg-muted">
-                {event.description}
+                {stripRichText(event.description)}
               </p>
             </div>
           )}

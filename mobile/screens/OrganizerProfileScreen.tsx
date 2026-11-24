@@ -14,7 +14,6 @@ import {
   Animated,
 } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
-import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import {
@@ -59,6 +58,7 @@ import { AFTER_ALERT_MS, promptBlockToggle } from '../lib/moderationActions';
 import StretchyHero from '../components/StretchyHero';
 import GalleryStrip from '../components/GalleryStrip';
 import OrgCoverSheet from '../components/organizer/OrgCoverSheet';
+import OrgHeroBackdrop from '../components/organizer/OrgHeroBackdrop';
 import { useActiveOrg } from '../lib/activeOrg';
 import { COVER_TEMPLATE_SOURCES, readGallery, readOrgCover, type OrgCoverState } from '../lib/orgPage';
 
@@ -109,11 +109,14 @@ const SOCIAL_ICON: Record<SocialType, { Icon: LucideIcon; label: string }> = {
   tiktok: { Icon: Music2, label: 'TikTok' },
 };
 
-// The org page's banner: a photo banner, or (no banner) just room for the
-// controls so the logo still sits below them. The logo overlaps by half.
-const BANNER_PHOTO_H = 150;
-const BANNER_PLAIN_H = 64;
-const ORG_LOGO = 76;
+// The org page's banner. Always a band (a photo banner, or OrgHeroBackdrop's
+// blurred newest poster / monogram when there is none), never an empty void.
+// The back button sits at insets.top + 8 (40pt tall); the logo overlaps the
+// band's foot by half, so with these heights the two never meet
+// (TestFlight 2026-11-24: the chevron sat on the logo).
+const BANNER_PHOTO_H = 156;
+const BANNER_PLAIN_H = 128;
+const ORG_LOGO = 64;
 
 export default function OrganizerProfileScreen({ route, navigation }: any) {
   const { colors } = useTheme();
@@ -634,6 +637,10 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
     (user.uid === organizerId || activeOrg.options.some((o) => o.orgId === organizerId && (o.role === 'owner' || o.role === 'admin')));
   const orgHero = isHost && !personView;
   const bannerHeight = insets.top + (coverSource ? BANNER_PHOTO_H : BANNER_PLAIN_H);
+  // No banner: the newest poster, blurred, carries the org's colours instead.
+  const heroPosterUri: string | null =
+    [...upcomingEvents, ...pastEvents].find((e: any) => !!e?.banner_image_url)?.banner_image_url || null;
+  const orgDisplayName: string = organizer.organization_name || organizer.full_name || '';
   const identity = personView ? details?.identity : undefined;
   const alsoRuns = personView ? details?.also_runs || null : null;
   const personName = identity?.full_name || organizer.full_name || organizer.organization_name || '';
@@ -740,26 +747,23 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
               height={bannerHeight}
               backgroundColor={colors.background}
               background={
-                coverSource ? (
-                  <>
-                    <ExpoImage source={coverSource} style={StyleSheet.absoluteFill} contentFit="cover" transition={200} />
-                    <LinearGradient
-                      colors={['rgba(0,0,0,0.35)', 'rgba(0,0,0,0)', colors.background]}
-                      locations={[0, 0.45, 1]}
-                      style={StyleSheet.absoluteFill}
-                    />
-                  </>
-                ) : null
+                <OrgHeroBackdrop coverSource={coverSource} posterUri={heroPosterUri} name={orgDisplayName} />
               }
             >
-              {canManage && coverSource ? (
+              {/* The owner edits the banner from the banner itself: one small
+                  pill at its foot, right (the logo takes the left). */}
+              {canManage ? (
                 <TouchableOpacity
                   style={styles.editBanner}
                   onPress={() => setShowCover(true)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   accessibilityRole="button"
-                  accessibilityLabel={t('orgPage.changeBanner')}
+                  accessibilityLabel={coverSource ? t('orgPage.changeBanner') : t('orgPage.addBanner')}
                 >
-                  <Pencil size={15} color={colors.white} />
+                  {coverSource ? <Pencil size={14} color={colors.white} /> : <ImagePlus size={14} color={colors.white} />}
+                  <Text style={styles.editBannerText} numberOfLines={1}>
+                    {coverSource ? t('orgPage.changeBanner') : t('orgPage.addBanner')}
+                  </Text>
                 </TouchableOpacity>
               ) : null}
             </StretchyHero>
@@ -776,7 +780,7 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
                       contentFit="cover"
                     />
                   ) : (
-                    <OrgMark size={40} color="#000000" />
+                    <OrgMark size={32} color="#000000" />
                   )}
                 </View>
                 <View style={styles.statsBeside}>
@@ -789,8 +793,8 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
                 </View>
               </View>
 
-              <Text style={styles.orgName} numberOfLines={2}>
-                {organizer.organization_name || organizer.full_name}
+              <Text style={styles.orgName} numberOfLines={2} accessibilityRole="header">
+                {orgDisplayName}
               </Text>
 
               {(organizer.is_verified || !!subtitle) && (
@@ -809,27 +813,20 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
 
               {socialRow}
 
-              {/* Add-prompts: only for the owner (or a team admin), only for
-                  what is missing, never in a preview. */}
-              {canManage && (!coverSource || gallery.length === 0) ? (
-                <View style={styles.promptRow}>
-                  {!coverSource ? (
-                    <TouchableOpacity style={styles.prompt} onPress={() => setShowCover(true)} accessibilityRole="button">
-                      <ImagePlus size={15} color={colors.text} />
-                      <Text style={styles.promptText}>{t('orgPage.addBanner')}</Text>
-                    </TouchableOpacity>
-                  ) : null}
-                  {gallery.length === 0 ? (
-                    <TouchableOpacity
-                      style={styles.prompt}
-                      onPress={() => navigation.navigate('OrgGallery', { orgId: organizerId })}
-                      accessibilityRole="button"
-                    >
-                      <Images size={15} color={colors.text} />
-                      <Text style={styles.promptText}>{t('orgPage.addPhotos')}</Text>
-                    </TouchableOpacity>
-                  ) : null}
-                </View>
+              {/* Add-prompt: only for the owner (or a team admin), only when
+                  the page has no photos, never in a preview. A quiet text
+                  link, not a boxed button (the banner's own pill handles the
+                  banner). */}
+              {canManage && gallery.length === 0 ? (
+                <TouchableOpacity
+                  style={styles.promptLink}
+                  onPress={() => navigation.navigate('OrgGallery', { orgId: organizerId })}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  accessibilityRole="button"
+                >
+                  <Images size={14} color={colors.textSecondary} />
+                  <Text style={styles.promptLinkText}>{t('orgPage.addPhotos')}</Text>
+                </TouchableOpacity>
               ) : null}
 
               {preview ? (
@@ -1054,6 +1051,9 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
           current={coverState}
           onClose={() => setShowCover(false)}
           onChanged={(next) => setOrganizer((prev: any) => ({ ...prev, coverTemplate: next.coverTemplate, coverImageUrl: next.coverImageUrl }))}
+          orgName={orgDisplayName}
+          logoUri={organizer.organization_logo || organizer.photo_url || null}
+          posterUri={heroPosterUri}
         />
       ) : null}
       <ReportContentModal
@@ -1276,7 +1276,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   logoRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    gap: 20,
+    gap: 18,
   },
   orgLogo: {
     width: ORG_LOGO,
@@ -1295,15 +1295,15 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   statsBeside: {
     flexDirection: 'row',
-    gap: 22,
-    paddingBottom: 6,
+    gap: 18,
+    paddingBottom: 2,
   },
   statBlock: {
     alignItems: 'flex-start',
   },
   statFigure: {
-    fontSize: 17,
-    lineHeight: 21,
+    fontSize: 15,
+    lineHeight: 19,
     fontWeight: '700',
     color: colors.text,
     fontVariant: ['tabular-nums'],
@@ -1315,10 +1315,10 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     textTransform: 'lowercase',
   },
   orgName: {
-    marginTop: 14,
+    marginTop: 12,
     fontFamily: font.serif,
-    fontSize: 30,
-    lineHeight: 36,
+    fontSize: 28,
+    lineHeight: 34,
     letterSpacing: -0.5,
     color: colors.text,
   },
@@ -1352,25 +1352,17 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     alignItems: 'center',
     justifyContent: 'center',
   },
-  promptRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 12,
-  },
-  prompt: {
+  promptLink: {
     flexDirection: 'row',
     alignItems: 'center',
+    alignSelf: 'flex-start',
     gap: 6,
-    height: 36,
-    paddingHorizontal: 12,
-    borderRadius: radius.sm,
-    backgroundColor: colors.surfaceRaised,
+    marginTop: 12,
   },
-  promptText: {
+  promptLinkText: {
     fontSize: 13,
     fontWeight: '600',
-    color: colors.text,
+    color: colors.textSecondary,
   },
   previewNote: {
     flexDirection: 'row',
@@ -1386,12 +1378,19 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     position: 'absolute',
     right: 16,
     bottom: 12,
-    width: 36,
-    height: 36,
+    height: 32,
+    paddingHorizontal: 10,
+    flexDirection: 'row',
+    gap: 6,
     borderRadius: radius.sm,
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  editBannerText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.white,
   },
   alsoRuns: {
     flexDirection: 'row',

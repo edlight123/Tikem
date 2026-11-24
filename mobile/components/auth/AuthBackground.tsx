@@ -10,10 +10,14 @@ import { themedArt } from '../../lib/nationalDaysRemote';
  * (2026-11-14: the illustrated backdrops "read very AI"). A different photo
  * shows each time the auth screen mounts.
  *
- * The art keeps its own colours (each piece is different), unified by:
- *  1. a top+bottom darkening scrim so the wordmark (top) and form (bottom) stay
- *     legible over any image, and
- *  2. a faint upper-left teal wash — the POSH brand accent, sparing.
+ * The art keeps its own colours (each piece is different), unified by a
+ * top+bottom darkening scrim so the wordmark (top) and form (bottom) stay
+ * legible over any image. (The faint teal wash in the upper-left corner went
+ * on 2026-11-24 with the composer's teal glow: the photo carries the colour.)
+ *
+ * The photos are full-screen portrait crops at the 3x screen's own size
+ * (1290x2796, assets/photos/auth); the old 1200x800 tiles were stretched 3x
+ * and read as blurry (TestFlight 2026-11-24).
  *
  * All photos are BUNDLED assets, so the screen works offline and on first
  * launch; nothing streams. The rotation is authPhotos() in lib/artLibrary.ts.
@@ -34,20 +38,11 @@ export function AuthBackground({ children }: { children?: React.ReactNode }) {
         accessibilityIgnoresInvertColors
       />
 
-      {/* 1 — legibility scrim: darker at top (wordmark) and bottom (form),
+      {/* Legibility scrim: darker at top (wordmark) and bottom (form),
              letting the art breathe through the middle. */}
       <LinearGradient
         colors={['rgba(10,10,10,0.66)', 'rgba(10,10,10,0.12)', 'rgba(10,10,10,0.58)', '#0A0A0A']}
         locations={[0, 0.30, 0.66, 1]}
-        style={StyleSheet.absoluteFill}
-        pointerEvents="none"
-      />
-
-      {/* 2 — sparing brand teal wash, anchored to the upper-left headline corner. */}
-      <LinearGradient
-        colors={['rgba(20,184,166,0.16)', 'transparent']}
-        start={{ x: 0.08, y: 0 }}
-        end={{ x: 0.9, y: 0.55 }}
         style={StyleSheet.absoluteFill}
         pointerEvents="none"
       />

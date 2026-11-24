@@ -4530,4 +4530,11 @@ export default {
     qrCode: "Kòd QR tikè a",
     qrCodeHint: "Louvri kòd la sou tout ekran an pou pòt la",
   },
+  richText: {
+    bold: "Gra",
+    italic: "Italik",
+    bulletList: "Lis ak pwen",
+    numberedList: "Lis nimewote",
+    toolbar: "Fòma tèks la",
+  },
 } as const;

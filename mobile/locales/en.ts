@@ -4544,4 +4544,11 @@ export default {
     qrCode: "Ticket QR code",
     qrCodeHint: "Opens the code full screen for the door",
   },
+  richText: {
+    bold: "Bold",
+    italic: "Italic",
+    bulletList: "Bulleted list",
+    numberedList: "Numbered list",
+    toolbar: "Text formatting",
+  },
 } as const;
