@@ -22,17 +22,19 @@ jest.mock('next/og', () => ({ ImageResponse: class {} }))
 const APP_CATEGORIES = ['Music', 'Sports', 'Arts', 'Business', 'Food & Drink', 'Community', 'Education', 'Tech', 'Health', 'Other']
 
 /** Weighted by how much each occasion is celebrated with events. */
+// Inauthentic photos (Nice/Venice carnival, foreign bands and crowds,
+// Japanese lanterns) were dropped after the 2026-11-23 design review.
 const COUNTS: Record<OccasionKey, number> = {
-  kanaval: 18,
+  kanaval: 10,
   nwel: 18,
   'fen-ane': 16,
   'fet-endepandans': 10,
   'fet-manman': 10,
-  'fet-chanpet': 10,
+  'fet-chanpet': 8,
   'fet-papa': 8,
-  'fet-drapo': 8,
-  'heritage-month': 8,
-  rara: 6,
+  'fet-drapo': 6,
+  'heritage-month': 5,
+  rara: 5,
   'fet-gede': 5,
   vertieres: 4,
 }
