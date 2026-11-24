@@ -2233,5 +2233,23 @@
     "age_18": "18 an oswa plis sèlman",
     "age_21": "21 an oswa plis sèlman",
     "dress_code": "Kòd abiman: {{value}}"
+  },
+  "occasions": {
+    "label": "Okazyon",
+    "none": "Okenn",
+    "suggested": "sijere pou dat sa a",
+    "more": "Plis",
+    "less": "Mwens",
+    "see_all": "Wè tout",
+    "under_way": "Ap fèt kounye a",
+    "tomorrow": "Demen",
+    "in_days": "Nan {{count}} jou",
+    "pre_kanaval": "Dimanch pre-kanaval depi {{date}}",
+    "add_event": "Ajoute yon evènman",
+    "events_title": "evènman",
+    "empty": "Poko gen anyen ki anonse.",
+    "ideas_title": "lide pou òganize",
+    "use_idea": "Kreye evènman sa a",
+    "part_of": "Pou {{name}}"
   }
 }

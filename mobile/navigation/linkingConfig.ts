@@ -25,6 +25,10 @@ export const LINKING_CONFIG = {
     Notifications: 'notifications',
     TicketDetail: 'tickets/:ticketId',
     EventDetail: 'events/:eventId',
+    // An occasion's page (Kanaval, Fèt Manman…): the same path as the website's
+    // /occasions/<key>, so tikem://occasions/kanaval and the https link (AASA,
+    // Android intent filters) both land here.
+    Occasion: 'occasions/:key',
     // Push-notification targets (server-side `url`s, mapped to tikem://<path> in
     // lib/pushNotifications.ts). Without a route here a tap opened the app and
     // went nowhere. App scheme only, like national-day below.

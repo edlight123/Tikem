@@ -74,6 +74,11 @@
               "scheme": "https",
               "host": "www.tikem.co",
               "pathPrefix": "/i/"
+            },
+            {
+              "scheme": "https",
+              "host": "www.tikem.co",
+              "pathPrefix": "/occasions/"
             }
           ],
           "category": [
@@ -108,6 +113,11 @@
               "scheme": "https",
               "host": "tikem.co",
               "pathPrefix": "/i/"
+            },
+            {
+              "scheme": "https",
+              "host": "tikem.co",
+              "pathPrefix": "/occasions/"
             }
           ],
           "category": [

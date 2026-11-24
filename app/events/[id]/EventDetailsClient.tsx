@@ -1,5 +1,6 @@
 'use client'
 
+import OccasionTag from '@/components/occasions/OccasionTag'
 import { DiscoverEventCard } from '@/components/discover/DiscoverEventCard'
 import { useTranslation } from 'react-i18next'
 import BuyTicketButton from './BuyTicketButton'
@@ -157,6 +158,7 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
       <MobileHero
         title={event.title}
         category={event.category}
+        occasion={(event as any).occasion}
         bannerUrl={event.banner_image_url}
         organizerName={organizerLabel}
         organizerLogo={event.users?.organization_logo}
@@ -263,6 +265,8 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                   {showCategory && event.category}
                   {showCategory && isTrending && <span className="text-fg-faint"> · </span>}
                   {isTrending && <span>{t('events.trending')}</span>}
+                  {(event as any).occasion && (showCategory || isTrending) && <span className="text-fg-faint"> · </span>}
+                  <OccasionTag occasion={(event as any).occasion} className="normal-case tracking-normal" />
                 </p>
                 {/* Save + share as one cluster, mirroring the mobile buy row.
                     The heart previously hung in a `mt-4` block under the

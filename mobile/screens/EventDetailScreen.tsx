@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import OccasionLink from '../components/OccasionLink';
 import PosterImage from '../components/PosterImage';
 import OrgMark from '../components/OrgMark';
 import { 
@@ -965,6 +966,8 @@ export default function EventDetailScreen({ route, navigation }: any) {
           {familySize > 0 && (
             <Text style={styles.familyText}>{t('eventDetail.familyBadge', { count: familySize })}</Text>
           )}
+          {/* The occasion it is tagged for (Kanaval, Fèt Manman…), linking to its page. */}
+          <OccasionLink occasion={(event as any).occasion} onPress={(key) => navigation.navigate('Occasion', { key })} />
 
           {/* Date, then where, at the same size (owner, 2026-11-18, from a
               Stitch reference: "the date is above, the location immediately

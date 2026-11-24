@@ -1,4 +1,25 @@
 export default {
+  // Occasions (lib/occasions): the composer's Occasion row, the occasion
+  // page and the event screen's occasion line.
+  occasions: {
+    label: 'Occasion',
+    none: 'None',
+    suggested: 'suggested for this date',
+    more: 'More',
+    less: 'Less',
+    underWay: 'Under way',
+    tomorrow: 'Tomorrow',
+    inDays: 'In {count} days',
+    preKanaval: 'Pre-kanaval Sundays from {date}',
+    addEvent: 'Add an event',
+    eventsTitle: 'events',
+    emptyTitle: 'nothing listed yet',
+    emptyBody: 'Events tagged for it will show here.',
+    ideasTitle: 'ideas to host',
+    useIdea: 'create this event',
+    partOf: 'Part of {name}',
+    notFound: 'This occasion does not exist',
+  },
   // Country and region names, used by the "elsewhere in …" rail and by every
   // empty state that names the active location.
   countries: {

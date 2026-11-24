@@ -216,6 +216,24 @@ describe('the Home row', () => {
   })
 })
 
+describe('wiring', () => {
+  const read = (p: string) => fs.readFileSync(path.join(root, p), 'utf8')
+
+  it('both composers save the occasion through the allow-list', () => {
+    expect(read('app/organizer/events/EventComposer.tsx')).toMatch(/occasion: parseOccasion\(occasion\)/)
+    expect(read('mobile/screens/organizer/CreateEventFlowRefactored.tsx')).toMatch(/occasion: parseOccasion\(draft\.occasion\)/)
+    expect(read('mobile/lib/api/events.ts')).toMatch(/occasion: parseOccasion\(eventData\.occasion\)/)
+  })
+
+  it('occasion links open the app: AASA, Android intent filters and the linking config', () => {
+    expect(read('app/api/well-known/aasa/route.ts')).toMatch(/'\/occasions\/\*'/)
+    const app = JSON.parse(read('mobile/app.json'))
+    const prefixes = app.expo.android.intentFilters.flatMap((f: any) => f.data.map((d: any) => `${d.host}${d.pathPrefix}`))
+    expect(prefixes).toEqual(expect.arrayContaining(['www.tikem.co/occasions/', 'tikem.co/occasions/']))
+    expect(read('mobile/navigation/linkingConfig.ts')).toMatch(/Occasion: 'occasions\/:key'/)
+  })
+})
+
 describe('ideas', () => {
   it('are few, valid and land inside or near their occasion, never in the past', () => {
     expect(OCCASION_IDEAS.length).toBeLessThanOrEqual(OCCASIONS.length * 2)
