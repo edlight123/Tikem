@@ -28,7 +28,7 @@ import { artByKey } from '../lib/artLibrary';
 import OverlayHeader, { useOverlayHeaderInset } from '../components/OverlayHeader';
 import SectionHeader from '../components/SectionHeader';
 import VerifiedBadge from '../components/VerifiedBadge';
-import { Skeleton, ListSkeleton } from '../components/Skeleton';
+import { Skeleton, ListCardSkeleton } from '../components/Skeleton';
 import { Touchable } from '../components/ui/Touchable';
 
 interface OrganizerResult {
@@ -53,12 +53,18 @@ const normalize = (s: any): string =>
  * centred spinner.
  */
 function SearchResultsSkeleton() {
+  // scrollContent (16 gutter, top 8) + section (marginTop 16), then the
+  // SectionHeader's title AND its scope subtitle (marginBottom 12) — the
+  // subtitle line was missing, so the rows slid down when results landed.
   return (
-    <View style={{ paddingTop: 16 }}>
-      <View style={{ paddingHorizontal: 16 }}>
+    <View style={{ paddingTop: 24, paddingHorizontal: 16 }}>
+      <View style={{ marginBottom: 12, gap: 6 }}>
         <Skeleton width={150} height={22} radius={4} />
+        <Skeleton width={110} height={13} radius={4} />
       </View>
-      <ListSkeleton count={6} />
+      {Array.from({ length: 6 }).map((_, i) => (
+        <ListCardSkeleton key={i} />
+      ))}
     </View>
   );
 }

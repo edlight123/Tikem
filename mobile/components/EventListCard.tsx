@@ -3,7 +3,7 @@ import { joinA11y } from '../lib/a11y';
 import { storedPosterAlt } from '../lib/usePosterAlt';
 import { View, Text, StyleSheet } from 'react-native';
 import { Touchable } from './ui/Touchable';
-import { Image } from 'expo-image';
+import { ShimmerImage } from './Skeleton';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Calendar, MapPin } from 'lucide-react-native';
 import { useTheme } from '../contexts/ThemeContext';
@@ -80,13 +80,9 @@ export default function EventListCard({ event, onPress }: EventListCardProps) {
           />
         )}
         {event.banner_image_url ? (
-          <Image
-            accessible={false}
-            source={{ uri: event.banner_image_url }}
-            style={StyleSheet.absoluteFill}
-            contentFit="cover"
-            cachePolicy="memory-disk"
-            transition={200}
+          // Shimmers until the poster paints, like the list skeleton before it.
+          <ShimmerImage
+            uri={event.banner_image_url}
             recyclingKey={event.id ? String(event.id) : undefined}
           />
         ) : null}

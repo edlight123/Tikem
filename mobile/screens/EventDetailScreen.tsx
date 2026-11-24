@@ -845,6 +845,19 @@ export default function EventDetailScreen({ route, navigation }: any) {
     return (
       <SafeAreaView style={styles.container} edges={['bottom']}>
         <EventDetailSkeleton />
+        {/* The real back button, where the loaded page puts it: a slow fetch
+            must never leave the placeholder with no way out. */}
+        <View style={[styles.stickyHeader, { paddingTop: insets.top, height: insets.top + HEADER_BAR }]}>
+          <TouchableOpacity
+            style={styles.iconButton}
+            onPress={() => goBackOrHome(navigation)}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={t('common.back')}
+          >
+            <ChevronLeft size={22} color="#FFF" />
+          </TouchableOpacity>
+        </View>
       </SafeAreaView>
     );
   }
@@ -970,12 +983,17 @@ export default function EventDetailScreen({ route, navigation }: any) {
       >
         {/* Hero — same poster blurred as backdrop, sharp poster centered */}
         <View style={[styles.heroContainer, { paddingTop: insets.top + HEADER_BAR }]}>
-          <LinearGradient
-            colors={resolvePosterTheme(event, event.id || event.title, event.category).colors}
-            start={{ x: 0.1, y: 0 }}
-            end={{ x: 0.9, y: 1 }}
-            style={StyleSheet.absoluteFill}
-          />
+          {/* The teal theme gradient is the art for an event with NO poster.
+              Behind a loading poster it flashed teal before the image painted;
+              with one, the neutral surface (and the poster's shimmer) shows. */}
+          {!(event.banner_image_url || event.cover_image_url) && (
+            <LinearGradient
+              colors={resolvePosterTheme(event, event.id || event.title, event.category).colors}
+              start={{ x: 0.1, y: 0 }}
+              end={{ x: 0.9, y: 1 }}
+              style={StyleSheet.absoluteFill}
+            />
+          )}
           {(event.banner_image_url || event.cover_image_url) && (
             <ExpoImage
               accessible={false}
@@ -1006,12 +1024,14 @@ export default function EventDetailScreen({ route, navigation }: any) {
           {/* Centered sharp poster — expo-image so it reuses the memory-disk
               cache the Discover/Home card already filled, showing instantly. */}
           <View style={styles.heroPoster}>
-            <LinearGradient
-              colors={resolvePosterTheme(event, event.id || event.title, event.category).colors}
-              start={{ x: 0.1, y: 0 }}
-              end={{ x: 0.9, y: 1 }}
-              style={StyleSheet.absoluteFill}
-            />
+            {!(event.banner_image_url || event.cover_image_url) && (
+              <LinearGradient
+                colors={resolvePosterTheme(event, event.id || event.title, event.category).colors}
+                start={{ x: 0.1, y: 0 }}
+                end={{ x: 0.9, y: 1 }}
+                style={StyleSheet.absoluteFill}
+              />
+            )}
             {(event.banner_image_url || event.cover_image_url) && (
               <PosterImage
                 uri={(event.banner_image_url || event.cover_image_url)!}

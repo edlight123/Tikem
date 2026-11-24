@@ -7,14 +7,13 @@ import {
   RefreshControl,
   StatusBar
 } from 'react-native';
-import { Image } from 'expo-image';
 import { useTabBarSpace } from '../hooks/useTabBarSpace';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ticket, Heart } from 'lucide-react-native';
 import { collection, query, where, getDocs, documentId } from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { db } from '../config/firebase';
-import { Skeleton } from '../components/Skeleton';
+import { Skeleton, ShimmerImage } from '../components/Skeleton';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -122,21 +121,36 @@ function rowStatusFor(
   return { status: 'void', label: withDictionaryFallback(t, CANCELLED_KEY, 'Cancelled') };
 }
 
-/** Placeholder rows that mirror the ticket-row layout (poster + text lines). */
+/**
+ * Placeholder in the loaded list's exact rhythm: the month divider, then each
+ * day's small-caps label + rule (it was missing, so every row jumped ~50pt
+ * when the list landed), then rows of poster + title (23) / meta / foot.
+ */
 function TicketsListSkeleton({ styles }: { styles: ReturnType<typeof getStyles> }) {
+  const row = (key: number) => (
+    <View key={key} style={styles.row}>
+      <Skeleton width={POSTER_W} height={POSTER_H} radius={4} />
+      <View style={styles.body}>
+        <View style={{ height: 23, justifyContent: 'center' }}>
+          <Skeleton width={'85%'} height={18} radius={4} />
+        </View>
+        <Skeleton width={'60%'} height={13} radius={4} style={{ marginTop: 6 }} />
+        <Skeleton width={'35%'} height={11} radius={4} style={{ marginTop: 10 }} />
+      </View>
+    </View>
+  );
   return (
     <View style={styles.month}>
       <View style={styles.monthHead}>
-        <Skeleton width={130} height={30} radius={4} />
+        <Skeleton width={130} height={30} radius={4} style={{ marginBottom: 2 }} />
       </View>
-      {Array.from({ length: 3 }).map((_, i) => (
-        <View key={i} style={styles.row}>
-          <Skeleton width={POSTER_W} height={POSTER_H} radius={4} />
-          <View style={styles.body}>
-            <Skeleton width={'85%'} height={20} radius={4} />
-            <Skeleton width={'60%'} height={12} radius={4} style={{ marginTop: 9 }} />
-            <Skeleton width={'35%'} height={11} radius={4} style={{ marginTop: 12 }} />
+      {[2, 1].map((rows, d) => (
+        <View key={d} style={styles.day}>
+          <View style={styles.dayHead}>
+            <Skeleton width={104} height={11} radius={4} />
+            <View style={styles.dayRule} />
           </View>
+          {Array.from({ length: rows }).map((_, i) => row(i))}
         </View>
       ))}
     </View>
@@ -160,6 +174,10 @@ export default function TicketsScreen({ navigation }: any) {
   const [savedEvents, setSavedEvents] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<'upcoming' | 'past' | 'saved'>('upcoming');
   const [loading, setLoading] = useState(true);
+  // Saved events load on their own (fetchFavorites), after the tickets. Until
+  // the first load answers, the Saved tab shows placeholder rows, never
+  // "Nothing saved yet" for someone who has saved events.
+  const [savedReady, setSavedReady] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   // Scroll offset for the header chrome: solid canvas at rest, translucent
   // only once the list has actually scrolled underneath (see OverlayHeader).
@@ -341,6 +359,8 @@ export default function TicketsScreen({ navigation }: any) {
       setSavedEvents(events);
     } catch (error) {
       console.error('Error fetching saved events:', error);
+    } finally {
+      setSavedReady(true);
     }
   };
 
@@ -518,7 +538,9 @@ export default function TicketsScreen({ navigation }: any) {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} />
         }
       >
-        {displayedTickets.length === 0 ? (
+        {isSaved && !savedReady ? (
+          <TicketsListSkeleton styles={styles} />
+        ) : displayedTickets.length === 0 ? (
           // A poster of Tikèm art instead of a lone icon: an empty wallet
           // should still feel like a night out waiting to happen.
           <EmptyState
@@ -646,13 +668,8 @@ export default function TicketsScreen({ navigation }: any) {
                                 />
                               )}
                               {!!poster && (
-                                <Image
-                                  accessible={false}
-                                  source={{ uri: poster }}
-                                  style={StyleSheet.absoluteFill}
-                                  contentFit="cover"
-                                  cachePolicy="memory-disk"
-                                  transition={200}
+                                <ShimmerImage
+                                  uri={poster}
                                   recyclingKey={event.id ? String(event.id) : undefined}
                                 />
                               )}

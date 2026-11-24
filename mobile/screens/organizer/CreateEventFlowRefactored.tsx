@@ -113,6 +113,7 @@ import { AFTER_ALERT_MS } from '../../lib/moderationActions';
 import { allowedPlusOnes, plusOnesSetting } from '../../lib/attendRequests';
 import { MAX_FREE_TICKETS_PER_PERSON } from '../../lib/ticketPricing';
 import { composerModeOf, isRsvpEvent, resolveEventTimezone, rsvpCapacityFrom, tierDescriptionFrom, tierEditorPrice, type ComposerMode } from '../../lib/composerFields';
+import { Skeleton } from '../../components/Skeleton';
 
 type RouteParams = {
   CreateEvent: undefined;
@@ -2163,9 +2164,37 @@ export default function CreateEventFlowRefactored() {
 
   if (loadingEvent) {
     return (
-      <View style={[styles.container, styles.loadingContainer]}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.loadingText}>{t('organizerCreateEventFlow.loadingEvent')}</Text>
+      // Editing an event: the canvas's own header, then its flyer hero and
+      // the first field rows as placeholders, instead of a spinner + caption.
+      <View style={styles.container}>
+        <SafeAreaView style={styles.safeArea}>
+          <View style={styles.header}>
+            <TouchableOpacity
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              onPress={() => navigation.goBack()}
+              accessibilityRole="button"
+              accessibilityLabel={t('common.close')}
+            >
+              <Ionicons name="close" size={24} color={colors.text} />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle} numberOfLines={1} accessibilityRole="header">
+              {t('organizerCreateEventFlow.headerEdit')}
+            </Text>
+            <View style={{ width: 24 }} />
+          </View>
+          <View style={{ paddingTop: 4, overflow: 'hidden', flex: 1 }}>
+            <Skeleton aspectRatio={4 / 5} radius={FLYER_RADIUS} style={{ marginHorizontal: 16, marginBottom: 12 }} />
+            <View style={styles.canvasPad}>
+              <Skeleton width="70%" height={30} radius={4} style={{ marginBottom: 20 }} />
+              {[0, 1, 2, 3].map((i) => (
+                <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14 }}>
+                  <Skeleton width={20} height={20} radius={4} />
+                  <Skeleton width={i % 2 ? '44%' : '58%'} height={14} radius={4} />
+                </View>
+              ))}
+            </View>
+          </View>
+        </SafeAreaView>
       </View>
     );
   }

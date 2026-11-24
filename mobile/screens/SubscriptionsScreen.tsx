@@ -111,7 +111,7 @@ export default function SubscriptionsScreen({ navigation }: any) {
       {loading ? (
         // No scroll container here — pad the placeholder rows by hand.
         <View style={{ paddingTop: headerH }}>
-          <PeopleRowsSkeleton count={6} />
+          <PeopleRowsSkeleton count={6} variant="card" />
         </View>
       ) : items.length === 0 ? (
         <View style={styles.emptyWrap}>

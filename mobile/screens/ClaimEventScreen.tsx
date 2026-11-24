@@ -10,7 +10,7 @@
  * need a store build (the website takes a PDF).
  */
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
@@ -19,6 +19,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useI18n } from '../contexts/I18nContext';
 import OverlayHeader, { useOverlayHeaderInset } from '../components/OverlayHeader';
 import WhitePillCTA from '../components/WhitePillCTA';
+import { Skeleton } from '../components/Skeleton';
 import RequestStatusDot, { requestTone } from '../components/RequestStatusDot';
 import { Touchable } from '../components/ui/Touchable';
 import { ChipRow, FieldInput } from '../components/community/Fields';
@@ -133,8 +134,25 @@ export default function ClaimEventScreen({ route, navigation }: any) {
       </OverlayHeader>
 
       {loading ? (
-        <View style={[styles.center, { paddingTop: headerH }]}>
-          <ActivityIndicator color={colors.text} />
+        // The claim form's shape (event name, proof chips, a field, the
+        // message box, the send button), not a centred spinner.
+        <View style={styles.flex}>
+          <View style={[styles.flex, { paddingTop: headerH + 8, paddingHorizontal: 16 }]}>
+            <Skeleton width="58%" height={15} radius={4} style={{ marginBottom: 14 }} />
+            <Skeleton width={110} height={12} radius={4} style={{ marginBottom: 10 }} />
+            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 20 }}>
+              {[96, 72, 84].map((w) => (
+                <Skeleton key={w} width={w} height={36} radius={4} />
+              ))}
+            </View>
+            <Skeleton width={90} height={12} radius={4} style={{ marginBottom: 10 }} />
+            <Skeleton height={48} radius={4} style={{ marginBottom: 20 }} />
+            <Skeleton width={80} height={12} radius={4} style={{ marginBottom: 10 }} />
+            <Skeleton height={96} radius={4} />
+          </View>
+          <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+            <Skeleton height={40} radius={4} />
+          </View>
         </View>
       ) : status === 'pending' || status === 'approved' ? (
         <View style={[styles.body, { paddingTop: headerH + 16 }]}>

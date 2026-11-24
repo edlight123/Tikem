@@ -61,7 +61,7 @@ export default function FollowersScreen() {
 
       {items === null ? (
         <View style={{ paddingTop: headerH }}>
-          <PeopleRowsSkeleton count={6} />
+          <PeopleRowsSkeleton count={6} variant="card" />
         </View>
       ) : items.length === 0 ? (
         <View style={{ paddingTop: headerH }}>
