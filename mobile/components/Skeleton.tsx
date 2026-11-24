@@ -150,10 +150,10 @@ export function DiscoverCardSkeleton() {
       <Skeleton aspectRatio={2 / 3} radius={4} style={{ width: '100%' } as ViewStyle} />
       <View style={styles.discoverBody}>
         <View style={styles.discoverBodyText}>
-          <Skeleton width={'88%'} height={20} radius={4} />
-          <Skeleton width={'52%'} height={20} radius={4} />
-          <Skeleton width={'40%'} height={13} radius={4} style={{ marginTop: 3 } as ViewStyle} />
-          <Skeleton width={'72%'} height={13} radius={4} />
+          {/* One serif title line (28/30), organizer, meta — the card's rhythm. */}
+          <Skeleton width={'70%'} height={26} radius={4} style={{ marginTop: 2 } as ViewStyle} />
+          <Skeleton width={'38%'} height={13} radius={4} style={{ marginTop: 2 } as ViewStyle} />
+          <Skeleton width={'76%'} height={12} radius={4} />
         </View>
         <View style={styles.discoverActions}>
           <Skeleton width={20} height={20} radius={4} />
@@ -161,7 +161,7 @@ export function DiscoverCardSkeleton() {
         </View>
       </View>
       {/* Compact WhitePillCTA: 46 tall, radius.button (4). */}
-      <Skeleton height={46} radius={4} style={{ width: '100%', marginTop: 14 } as ViewStyle} />
+      <Skeleton height={46} radius={4} style={{ width: '100%', marginTop: 16 } as ViewStyle} />
     </View>
   );
 }
@@ -544,9 +544,9 @@ const styles = StyleSheet.create({
   homeSection: {
     marginBottom: 24,
   },
-  // DiscoverEventCard: wrap marginBottom 28, body row marginTop 12 gap 12.
+  // DiscoverEventCard: wrap marginBottom 32, body row marginTop 12 gap 12.
   discoverCard: {
-    marginBottom: 28,
+    marginBottom: 32,
   },
   discoverBody: {
     flexDirection: 'row',
@@ -560,7 +560,7 @@ const styles = StyleSheet.create({
   },
   discoverActions: {
     flexDirection: 'row',
-    gap: 14,
+    gap: 16,
     paddingTop: 4,
   },
   // Discover feed content padding.

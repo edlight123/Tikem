@@ -16,6 +16,7 @@ import { resolveEventPricing } from '../lib/ticketPricing';
 import { radius, font } from '../theme/tokens';
 import WhitePillCTA from './WhitePillCTA';
 import VerifiedBadge from './VerifiedBadge';
+import { Skeleton } from './Skeleton';
 import { primeEventPreview } from '../lib/eventPreviewCache';
 
 
@@ -52,6 +53,9 @@ export default function DiscoverEventCard({
   // nothing is cropped. Falls back to 2:3 until the image reports its size, and
   // is clamped so an extreme ratio can't blow up or collapse the card.
   const [aspectRatio, setAspectRatio] = useState<number>(2 / 3);
+  // Shimmer under the poster until it paints, like the feed skeleton, instead
+  // of a flat grey box.
+  const [posterLoaded, setPosterLoaded] = useState(false);
   // See EventListCard: `ticket_price` is the lowest tier price, so it cannot
   // decide freeness once free and paid tiers coexist on one event. A mixed event
   // gets the paid CTA — the buyer picks the free tier on the detail screen.
@@ -93,6 +97,9 @@ export default function DiscoverEventCard({
             style={StyleSheet.absoluteFill}
           />
         )}
+        {hasImage && !posterLoaded && (
+          <Skeleton radius={0} style={StyleSheet.absoluteFill as any} />
+        )}
         {hasImage && (
           <Image
             accessible={false}
@@ -102,7 +109,9 @@ export default function DiscoverEventCard({
             cachePolicy="memory-disk"
             transition={200}
             recyclingKey={event.id ? String(event.id) : undefined}
+            onError={() => setPosterLoaded(true)}
             onLoad={(e) => {
+              setPosterLoaded(true);
               const w = e?.source?.width;
               const h = e?.source?.height;
               if (w && h) {

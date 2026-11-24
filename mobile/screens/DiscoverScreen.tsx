@@ -76,6 +76,12 @@ export default function DiscoverScreen({ navigation, route }: any) {
   const [allEvents, setAllEvents] = useState<any[]>([]);
   const [friendsGoingCounts, setFriendsGoingCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
+  // True once the CURRENT fetch has been run through organizeEvents. Until then
+  // the feed shows skeleton cards, never the "no events here" state: loading
+  // flips false in the same render that fills allEvents, but feedEvents is only
+  // built by the effect after it, so the empty state used to flash for a frame
+  // (and a country switch kept the old market's feed until the fetch landed).
+  const [feedReady, setFeedReady] = useState(false);
   const [error, setError] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -138,6 +144,7 @@ export default function DiscoverScreen({ navigation, route }: any) {
   // catalogue entirely. Same rule as Home.
   useEffect(() => {
     if (!countryResolved) return;
+    setFeedReady(false);
     fetchEvents();
   }, [userCountry, countryResolved, blockedOrganizers]);
 
@@ -195,11 +202,12 @@ export default function DiscoverScreen({ navigation, route }: any) {
   }, [route?.params?.category, route?.params?.trending, route?.params?.thisWeek, route?.params?.allEvents, route?.params?.timestamp]);
 
   // Re-organize events when filters change
+  // Runs on an EMPTY list too: skipping it left the previous market's feed on
+  // screen when the new country had nothing.
   useEffect(() => {
-    if (allEvents.length > 0) {
-      organizeEvents();
-    }
-  }, [allEvents, appliedFilters, searchQuery, selectedDate, pickedDate, selectedCategories, route?.params]);
+    if (loading) return;
+    organizeEvents();
+  }, [loading, allEvents, appliedFilters, searchQuery, selectedDate, pickedDate, selectedCategories, route?.params]);
 
   const fetchEvents = async () => {
     // The country is a query predicate now — never fetch before it resolves.
@@ -254,6 +262,7 @@ export default function DiscoverScreen({ navigation, route }: any) {
           setError(false);
         } else {
           setError(true);
+          setFeedReady(true);
         }
         return;
       }
@@ -264,6 +273,7 @@ export default function DiscoverScreen({ navigation, route }: any) {
     } catch (err) {
       console.error('[DiscoverScreen] Error fetching events:', err);
       setError(true);
+      setFeedReady(true);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -468,6 +478,7 @@ export default function DiscoverScreen({ navigation, route }: any) {
     );
     // One card per recurring series, at its soonest date that passed the filters.
     setFeedEvents(collapseSeries(feed));
+    setFeedReady(true);
 
     // The one labelled rail: same country (or same region in a big country),
     // OTHER metros. Same date/category rules as the feed, only the location
@@ -497,7 +508,15 @@ export default function DiscoverScreen({ navigation, route }: any) {
             if (h) setHeaderH(h);
           }}
         >
-          <Skeleton height={44} radius={4} style={{ width: '100%' }} />
+          {/* Same rows as the real header (location, search + filter, tabs) so
+              nothing jumps when the feed lands. */}
+          <View style={styles.locationRow}>
+            <Skeleton width={72} height={13} radius={4} />
+          </View>
+          <View style={styles.searchRow}>
+            <Skeleton height={46} radius={4} style={{ flex: 1 }} />
+            <Skeleton width={46} height={46} radius={4} />
+          </View>
           <View style={styles.tabsRow}>
             <Skeleton width={64} height={16} radius={4} />
             <Skeleton width={78} height={16} radius={4} />
@@ -717,7 +736,13 @@ export default function DiscoverScreen({ navigation, route }: any) {
           />
         ) : (
           <>
-            {discoverTab === 'forYou' && (
+            {discoverTab === 'forYou' && !feedReady && (
+              // Cancel feedContent's padding: the skeleton carries its own.
+              <View style={{ marginHorizontal: -16, marginTop: -12 }}>
+                <DiscoverFeedSkeleton />
+              </View>
+            )}
+            {discoverTab === 'forYou' && feedReady && (
               <>
                 {/* Nothing here? Say WHERE there is nothing, and offer the one
                     move that can change it. Never quietly show another market. */}
