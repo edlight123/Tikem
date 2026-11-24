@@ -145,8 +145,10 @@ function aboutFrom(details: PublicProfileDetails | undefined): {
 /** A count beside the logo: the figure, its label under it. */
 function Stat({ value, label }: { value: number | string; label: string }) {
   return (
-    <div className="flex flex-col whitespace-nowrap">
-      <span className="text-lead font-semibold leading-tight tabular-nums text-fg">{value}</span>
+    // Phones: one line ("8 events"), short enough to sit below the banner's
+    // edge beside the overlapping logo; stacked from sm up.
+    <div className="flex flex-row items-baseline gap-1 whitespace-nowrap sm:flex-col sm:items-start sm:gap-0">
+      <span className="text-body font-semibold leading-tight tabular-nums text-fg sm:text-lead">{value}</span>
       <span className="text-meta lowercase text-fg-subtle">{label}</span>
     </div>
   )
