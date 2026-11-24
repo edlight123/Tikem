@@ -20,6 +20,15 @@ import {
 
 export const FUND_TRANSFERS_COLLECTION = 'fund_transfers'
 
+/**
+ * The doc id of the payout that settles a withdrawal. One per withdrawal, so
+ * two admins recording the same wire at once cannot both succeed (create()
+ * refuses the second).
+ */
+export function payoutDocIdForWithdrawal(withdrawalId: string): string {
+  return `payout_${withdrawalId}`
+}
+
 const CURRENCIES = ['HTG', 'USD', 'CAD', 'EUR'] as const
 
 const money = z.number().finite().positive().max(1_000_000_000)
@@ -42,7 +51,14 @@ export const FundTransferInputSchema = z
     date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'date must be YYYY-MM-DD'),
     note: z.string().trim().max(500).optional().nullable(),
     organizerId: z.string().trim().max(128).optional().nullable(),
-    withdrawalId: z.string().trim().max(128).optional().nullable(),
+    // A Firestore doc id: it also names the payout's own doc (payout_<id>).
+    withdrawalId: z
+      .string()
+      .trim()
+      .max(128)
+      .regex(/^[A-Za-z0-9_-]+$/, 'Not a withdrawal id')
+      .optional()
+      .nullable(),
   })
   .superRefine((v, ctx) => {
     if (v.kind === 'organizer_payout') {
@@ -53,6 +69,15 @@ export const FundTransferInputSchema = z
         ctx.addIssue({ code: 'custom', path: ['organizerId'], message: 'Name the organizer or the withdrawal it pays.' })
       }
     } else {
+      // Only a payout settles a withdrawal. A movement carrying one would take
+      // the withdrawal's payout slot and block the real wire.
+      if (v.withdrawalId || v.organizerId) {
+        ctx.addIssue({
+          code: 'custom',
+          path: [v.withdrawalId ? 'withdrawalId' : 'organizerId'],
+          message: 'Only an organizer payout names an organizer or a withdrawal.',
+        })
+      }
       if (v.toAccount === ORGANIZER_PAYEE) {
         ctx.addIssue({ code: 'custom', path: ['toAccount'], message: 'Use an organizer payout to pay an organizer.' })
       }

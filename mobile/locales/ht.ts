@@ -1123,6 +1123,8 @@ export default {
     stripeMissingKey: 'Peman ak kat pa disponib nan vèsyon app sa a. Mete Tikèm ajou, oswa achte sou tikem.co.',
     errors: {
       haitiUseSogepay: 'Pou evènman Ayiti, itilize Sogepay oswa Mobile Money.',
+      cardBelowMinimum: "Peman ak kat kòmanse a {{amount}} HTG. Tanpri itilize MonCash pou ti kòmand yo.",
+      cardFxUnavailable: "Nou pa ka jwenn yon to chanj ki serye kounye a, kidonk peman ak kat la kanpe. Peye ak MonCash, oswa eseye ankò nan kèk minit.",
       stripeUnavailable: 'Stripe pa disponib kounye a.',
       paymentFailed: 'Peman an echwe. Tanpri eseye ankò.',
       missingSogepayUrl: 'URL redireksyon Sogepay la manke.',

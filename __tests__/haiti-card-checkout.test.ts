@@ -24,8 +24,16 @@ const mockCreate = jest.fn(async (args: any) => ({ id: 'pi_test', client_secret:
 
 jest.mock('stripe', () => jest.fn(() => ({ paymentIntents: { create: mockCreate } })))
 jest.mock('@/lib/firebase/admin', () => ({ adminDb: {} }))
-// Never a live rate lookup from a test.
-jest.mock('@/lib/currency', () => ({ fetchStripeHTGRate: jest.fn(async () => 0.0076) }))
+// Never a live rate lookup from a test: the guarded engine is scripted.
+const mockFx = { result: null as any, error: null as any }
+const mockGetRate = jest.fn(async (_opts?: any) => {
+  if (mockFx.error) throw mockFx.error
+  return mockFx.result
+})
+jest.mock('@/lib/fx/usd-htg', () => ({
+  ...jest.requireActual('@/lib/fx/usd-htg'),
+  getUsdToHtgBaseRate: (opts?: any) => mockGetRate(opts),
+}))
 jest.mock('@/lib/auth', () => ({ getCurrentUser: jest.fn(async () => ({ id: 'u1', email: 'u@x.com' })) }))
 jest.mock('@/lib/security', () => ({
   isBlacklisted: jest.fn(async () => ({ blacklisted: false })),
@@ -143,6 +151,10 @@ beforeEach(() => {
   mockFreeClaim.used = false
   mockHold.outcome = null
   mockHaitiCard.enabled = true
+  mockFx.error = null
+  mockFx.result = { baseRate: 131.58, provider: 'https://open.er-api.com/v6/latest/USD', fetchedAtIso: '2026-11-24T00:00:00Z', source: 'live' }
+  mockGetRate.mockClear()
+  delete process.env.HAITI_CARD_MIN_USD
   tier('vip', 5000)
   tier('ga', 2500)
   tier('free', 0)
@@ -158,7 +170,7 @@ describe('Haiti card checkout (Stripe platform charge)', () => {
     const { status } = await post({ tierId: 'vip', quantity: 1 })
     expect(status).toBe(200)
     const pi = lastIntent()
-    // 5,000 HTG x 0.0076 = 38.00 USD; the Haiti fee is absorbed by the organizer.
+    // 5,000 HTG / 131.58 = 38.00 USD; the Haiti fee is absorbed by the organizer.
     expect(pi.amount).toBe(3800)
     expect(pi.currency).toBe('usd')
     expect(pi.transfer_data).toBeUndefined()
@@ -168,12 +180,34 @@ describe('Haiti card checkout (Stripe platform charge)', () => {
         payoutProvider: 'stripe_platform',
         fundsRail: 'stripe_platform',
         originalCurrency: 'HTG',
-        exchangeRate: '0.0076',
+        fxBaseRate: '131.58',
+        fxSource: 'live',
         priceInOriginalCurrency: '5000',
         localFaceTotal: '5000',
       })
     )
     expect(pi.description).toContain('(5,000 HTG)')
+    expect(Number(pi.metadata.exchangeRate)).toBeCloseTo(1 / 131.58, 10)
+  })
+
+  it('prices from the guarded engine, falling back to the LOWEST HTG-per-USD (more USD, never less)', async () => {
+    await post({ tierId: 'vip', quantity: 1 })
+    expect(mockGetRate).toHaveBeenCalledWith({ fallback: 'lowest' })
+    // A snapshot fallback at a lower rate charges more USD for the same HTG.
+    mockFx.result = { baseRate: 125, provider: 'fx_snapshots/2026-11-20', fetchedAtIso: '2026-11-20T00:00:00Z', source: 'snapshot_fallback' }
+    await post({ tierId: 'vip', quantity: 1 })
+    expect(lastIntent().amount).toBe(4000)
+    expect(lastIntent().metadata.fxSource).toBe('snapshot_fallback')
+  })
+
+  it('refuses the card sale when no trustworthy rate exists (no hard-coded fallback)', async () => {
+    const { FxRateUnavailableError } = jest.requireActual('@/lib/fx/usd-htg')
+    mockFx.error = new FxRateUnavailableError()
+    const { status, data } = await post({ tierId: 'vip', quantity: 1 })
+    expect(status).toBe(409)
+    expect(data.code).toBe('card_fx_unavailable')
+    expect(data.error).toMatch(/MonCash/)
+    expect(mockCreate).not.toHaveBeenCalled()
   })
 
   it('requests 3D Secure whenever the issuer or Radar asks', async () => {
@@ -189,20 +223,47 @@ describe('Haiti card checkout (Stripe platform charge)', () => {
     expect(data.pricing.local).toEqual({ currency: 'HTG', faceValue: 10000, buyerFee: 0, total: 10000, ratePerUsd: 131.58 })
   })
 
-  it("refuses a card total under Stripe's $0.50 minimum, before holding seats", async () => {
-    tier('tiny', 50) // 50 HTG = 0.38 USD
-    const { status, data } = await post({ tierId: 'tiny', quantity: 1 })
+  it('refuses a card order under the Haiti card minimum (USD 5), naming the HTG floor', async () => {
+    tier('small', 500) // 500 HTG = 3.80 USD
+    const { status, data } = await post({ tierId: 'small', quantity: 1 })
     expect(status).toBe(400)
-    expect(data.code).toBe('card_amount_too_small')
+    expect(data.code).toBe('card_amount_below_minimum')
+    // 5 USD x 131.58 = 657.9 HTG, rounded up to a whole 50.
+    expect(data.minimumHtg).toBe(700)
+    expect(data.minimumUsd).toBe(5)
+    expect(data.error).toBe('Card payments start at 700 HTG. Please use MonCash for smaller orders.')
     expect(mockCreate).not.toHaveBeenCalled()
+    // Two of them clear it.
+    expect((await post({ tierId: 'small', quantity: 2 })).status).toBe(200)
   })
 
-  it('the kill switch pauses Haiti card checkout', async () => {
+  it('the minimum is configurable with HAITI_CARD_MIN_USD, never below Stripe\'s 0.50', async () => {
+    tier('small', 500)
+    process.env.HAITI_CARD_MIN_USD = '3'
+    expect((await post({ tierId: 'small', quantity: 1 })).status).toBe(200)
+    process.env.HAITI_CARD_MIN_USD = '0'
+    tier('tiny', 50) // 0.38 USD
+    expect((await post({ tierId: 'tiny', quantity: 1 })).data.code).toBe('card_amount_below_minimum')
+  })
+
+  it('is OFF unless HAITI_CARD_ENABLED is exactly "true"', () => {
+    const { haitiCardEnabled } = jest.requireActual('@/lib/payment-provider')
+    delete process.env.HAITI_CARD_ENABLED
+    expect(haitiCardEnabled()).toBe(false)
+    process.env.HAITI_CARD_ENABLED = 'yes'
+    expect(haitiCardEnabled()).toBe(false)
+    process.env.HAITI_CARD_ENABLED = 'true'
+    expect(haitiCardEnabled()).toBe(true)
+    delete process.env.HAITI_CARD_ENABLED
+  })
+
+  it('while off, Haiti card checkout is refused before any rate lookup', async () => {
     mockHaitiCard.enabled = false
     const ht = await post({ tierId: 'vip', quantity: 1 })
     expect(ht.status).toBe(409)
     expect(ht.data.code).toBe('haiti_card_unavailable')
     expect(mockCreate).not.toHaveBeenCalled()
+    expect(mockGetRate).not.toHaveBeenCalled()
   })
 })
 

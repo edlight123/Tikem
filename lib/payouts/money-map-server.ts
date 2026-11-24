@@ -87,9 +87,19 @@ async function loadTickets(from: string | null, to: string | null): Promise<{ ti
   }
 }
 
-export async function loadFundTransfers(limit = 500) {
-  const snap = await adminDb.collection(FUND_TRANSFERS_COLLECTION).orderBy('date', 'desc').limit(limit).get()
-  return snap.docs.map((d: any) => fundTransferFromDoc(d.id, d.data() || {}))
+/** The WHOLE ledger, newest first, read in pages (a capped read would understate every balance). */
+export async function loadFundTransfers(pageSize = 500) {
+  const out: ReturnType<typeof fundTransferFromDoc>[] = []
+  let last: any = null
+  for (;;) {
+    let q = adminDb.collection(FUND_TRANSFERS_COLLECTION).orderBy('date', 'desc').limit(pageSize)
+    if (last) q = q.startAfter(last)
+    const snap = await q.get()
+    for (const d of snap.docs) out.push(fundTransferFromDoc(d.id, d.data() || {}))
+    if (snap.docs.length < pageSize) break
+    last = snap.docs[snap.docs.length - 1]
+  }
+  return out
 }
 
 /** Bank withdrawals filed but not completed: owed, to be paid by wire. */

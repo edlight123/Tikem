@@ -34,6 +34,15 @@ jest.mock('@/lib/firebase/admin', () => {
           set: async (data: any) => {
             mockStore[name][docId] = data
           },
+          // Firestore create(): refuses an existing doc with ALREADY_EXISTS (6).
+          create: async (data: any) => {
+            if (docId in mockStore[name]) {
+              const err: any = new Error('6 ALREADY_EXISTS: Document already exists')
+              err.code = 6
+              throw err
+            }
+            mockStore[name][docId] = data
+          },
         }
       },
       where: (f: string, _op: string, v: any) => {
@@ -171,6 +180,25 @@ describe('POST /api/admin/fund-transfers', () => {
       })
     )
     expect(mockAudit).toHaveBeenCalledWith(expect.objectContaining({ action: 'money.organizer_payout.record' }))
+  })
+
+  it('a movement cannot name a withdrawal or an organizer (it would take the payout slot)', async () => {
+    const res = await post({ ...movement, withdrawalId: 'w1' })
+    expect(res.status).toBe(400)
+    expect(res.data.error).toMatch(/Only an organizer payout/)
+    expect((await post({ ...movement, organizerId: 'org1' })).status).toBe(400)
+    // The real wire still goes through.
+    expect((await post(wire)).status).toBe(201)
+  })
+
+  it('a payout for a withdrawal has one deterministic doc, so two at once cannot both land', async () => {
+    const [a, b] = await Promise.all([post(wire), post({ ...wire, reference: 'other' })])
+    expect([a.status, b.status].sort()).toEqual([201, 409])
+    expect(Object.keys(mockStore.fund_transfers)).toEqual(['payout_w1'])
+  })
+
+  it('refuses a withdrawal id that is not a doc id', async () => {
+    expect((await post({ ...wire, withdrawalId: 'a/b' })).status).toBe(400)
   })
 
   it('refuses a wire for a missing, non-bank, failed, other-organizer or already-paid withdrawal', async () => {

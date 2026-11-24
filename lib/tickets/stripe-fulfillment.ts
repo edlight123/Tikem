@@ -582,6 +582,18 @@ export async function fulfillStripeOrder(input: StripeOrderInput): Promise<Strip
   // account for a destination charge, Tikèm's own Stripe balance otherwise
   // (every Haiti card sale). Decided from the charge, never from the event.
   const fundsRail = isConnect ? 'stripe_connect' : 'stripe_platform'
+  // The guarded USD/HTG rate a converted order was charged at (lib/fx/usd-htg),
+  // as create-payment-intent stamped it. Empty on a same-currency order.
+  const fxBase = Number(m.fxBaseRate)
+  const fxFields =
+    Number.isFinite(fxBase) && fxBase > 0
+      ? {
+          exchange_rate_base: fxBase,
+          exchange_rate_source: m.fxSource ? String(m.fxSource) : null,
+          exchange_rate_provider: m.fxProvider ? String(m.fxProvider) : null,
+          exchange_rate_fetched_at: m.fxFetchedAt ? String(m.fxFetchedAt) : null,
+        }
+      : {}
   const feeIncidence = m.feeIncidence === 'buyer' ? 'buyer' : 'organizer'
   const attribution = attributionFromStripeMetadata(m)
   const guest = input.guestRecipient
@@ -701,6 +713,7 @@ export async function fulfillStripeOrder(input: StripeOrderInput): Promise<Strip
     currency: eventCurrency,
     original_currency: eventCurrency,
     exchange_rate_used: exchangeRateUsed,
+    ...fxFields,
     charged_amount: plan.charged,
     charged_currency: chargedCurrency,
     // The buyer service fee inside charged_amount (charged currency, major
@@ -765,6 +778,7 @@ export async function fulfillStripeOrder(input: StripeOrderInput): Promise<Strip
         face_amount_minor: orderGrossCents,
         currency: eventCurrency,
         exchange_rate_used: exchangeRateUsed,
+        ...fxFields,
         ticket_ids: ticketIds,
         tickets_issued_at: nowIso,
         // A retry after a failed sell-out refund can land here once capacity

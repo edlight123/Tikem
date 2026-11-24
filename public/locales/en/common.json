@@ -996,6 +996,8 @@
     "card_haiti_uses_sogepay": "Card payments for Haiti events use Sogepay.",
     "card_charged_usd": "Your card is charged {{amount}} USD, at {{rate}} HTG per dollar.",
     "card_charged_usd_later": "Your card is charged in US dollars at today's rate.",
+    "card_below_minimum": "Card payments start at {{amount}} HTG. Please use MonCash for smaller orders.",
+    "card_fx_unavailable": "We can't get a reliable exchange rate right now, so card payment is paused. Please pay with MonCash, or try again in a few minutes.",
     "sogepay_haiti_only": "Sogepay is only available for Haiti events.",
     "sogepay_initiate_failed": "Failed to initiate Sogepay payment",
     "sogepay_missing_redirect": "Missing Sogepay redirect URL",

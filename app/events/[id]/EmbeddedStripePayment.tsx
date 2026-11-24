@@ -437,6 +437,18 @@ export default function EmbeddedStripePayment({
         const data = await response.json()
 
         if (!response.ok) {
+          // Haiti card refusals: below the card minimum, or no trustworthy rate.
+          if (data?.code === 'card_amount_below_minimum' && Number(data?.minimumHtg) > 0) {
+            throw new Error(
+              t('checkout.card_below_minimum', {
+                amount: Number(data.minimumHtg).toLocaleString(),
+                defaultValue: data.error,
+              })
+            )
+          }
+          if (data?.code === 'card_fx_unavailable') {
+            throw new Error(t('checkout.card_fx_unavailable', { defaultValue: data.error }))
+          }
           if (data?.code === 'organizer_payments_unavailable') {
             throw new Error(
               t('checkout.organizer_payments_unavailable', { defaultValue: data.error })

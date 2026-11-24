@@ -81,6 +81,10 @@ const STRIPE_RETURN_URL = 'tikem://stripe-redirect';
 // Feature flag: Sogepay (Haiti card processing) is not live yet. While disabled, Haiti events
 // show only MonCash/NatCash. Flip to true to re-enable the Sogepay card option.
 const SOGEPAY_ENABLED = false;
+// Haiti card (Stripe platform charge, Visa/Mastercard in USD): OFF until the
+// owner enables it after a real test payment. EAS env + OTA to turn on; the
+// server's HAITI_CARD_ENABLED must be on too or the charge is refused.
+const HAITI_CARD_ENABLED = process.env.EXPO_PUBLIC_HAITI_CARD_ENABLED === 'true';
 
 // Feature flag: launching MonCash-only — NatCash hidden for now. The handler
 // and backend path stay intact; flip to true to bring the option back.
@@ -254,7 +258,11 @@ function PaymentForm({
   // Card on a Haiti event: an international Visa/Mastercard charged in USD as a
   // Tikèm platform charge (the server converts the HTG price at the day's rate).
   // Only offered where the Stripe SDK and key are present; MonCash never needs them.
-  const cardAvailable = !isExpoGo && Boolean(StripeProvider) && Boolean(STRIPE_PUBLISHABLE_KEY);
+  const cardAvailable =
+    !isExpoGo &&
+    Boolean(StripeProvider) &&
+    Boolean(STRIPE_PUBLISHABLE_KEY) &&
+    (!isHaitiEvent || HAITI_CARD_ENABLED);
 
   // Stripe Payment
   const handleStripePayment = async () => {
@@ -394,6 +402,17 @@ function PaymentForm({
       // older servers passed Stripe's developer text (with acct_ ids) through.
       if (classifyCheckoutError(err) === 'organizer_unavailable') {
         setCardUnavailable(true);
+      }
+      // Haiti card refusals: below the card minimum, or no trustworthy rate.
+      const code = String(err?.payload?.code || '');
+      const minimumHtg = Number(err?.payload?.minimumHtg);
+      if (code === 'card_amount_below_minimum' && minimumHtg > 0) {
+        setError(t('paymentModal.errors.cardBelowMinimum', { amount: minimumHtg.toLocaleString('en-US') }));
+        return;
+      }
+      if (code === 'card_fx_unavailable') {
+        setError(t('paymentModal.errors.cardFxUnavailable'));
+        return;
       }
       setError(friendlyCheckoutError(err, t, 'paymentModal.errors.paymentFailed'));
     } finally {

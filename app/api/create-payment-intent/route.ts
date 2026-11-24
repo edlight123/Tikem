@@ -14,7 +14,12 @@ import {
   logSuspiciousActivity 
 } from '@/lib/security'
 import { adminDb } from '@/lib/firebase/admin'
-import { cardChargeRailForEventCountry, haitiCardEnabled } from '@/lib/payment-provider'
+import {
+  cardChargeRailForEventCountry,
+  haitiCardEnabled,
+  haitiCardMinimumHtg,
+  haitiCardMinUsdCents,
+} from '@/lib/payment-provider'
 import { fundsRailForPaymentMethod } from '@/lib/payouts/funds-rail'
 import { applicationFeeFor, applyPromoToLines, priceTierLinesCents } from '@/lib/checkout/buyer-pricing'
 import {
@@ -33,7 +38,7 @@ import { approvalFreeLinesRefusal } from '@/lib/events/approval'
 import { getPlatformSettings } from '@/lib/admin/platform-settings'
 import { locationFeesForCountry } from '@/types/platform-settings'
 import { fromCents } from '@/lib/ticketPricing'
-import { requestLanguage } from '@/lib/fx/usd-htg'
+import { getUsdToHtgBaseRate, isFxRateUnavailableError, requestLanguage } from '@/lib/fx/usd-htg'
 import { buildTierSoldIncrements } from '@/lib/tickets/inventory'
 import {
   createSeatHold,
@@ -72,6 +77,25 @@ import {
 
 /** Stripe's minimum charge in USD, in cents. */
 const STRIPE_MIN_USD_CENTS = 50
+
+/** Buyer copy for the Haiti card refusals (the apps show the server's `error`). */
+const HAITI_CARD_COPY = {
+  paused: {
+    en: 'Card payments for Haiti events are not available yet. Please pay with MonCash.',
+    fr: 'Le paiement par carte pour les événements en Haïti n’est pas encore disponible. Veuillez payer avec MonCash.',
+    ht: 'Peman ak kat pou evènman Ayiti poko disponib. Tanpri peye ak MonCash.',
+  },
+  fx: {
+    en: "We can't get a reliable exchange rate right now, so card payment is paused. Please pay with MonCash, or try again in a few minutes.",
+    fr: 'Nous ne parvenons pas à obtenir un taux de change fiable pour le moment : le paiement par carte est suspendu. Payez avec MonCash, ou réessayez dans quelques minutes.',
+    ht: 'Nou pa ka jwenn yon to chanj ki serye kounye a, kidonk peman ak kat la kanpe. Peye ak MonCash, oswa eseye ankò nan kèk minit.',
+  },
+  minimum: {
+    en: (htg: string) => `Card payments start at ${htg} HTG. Please use MonCash for smaller orders.`,
+    fr: (htg: string) => `Le paiement par carte commence à ${htg} HTG. Utilisez MonCash pour les petites commandes.`,
+    ht: (htg: string) => `Peman ak kat kòmanse a ${htg} HTG. Tanpri itilize MonCash pou ti kòmand yo.`,
+  },
+} as const
 
 /** The event's own currency, or its country's default. */
 function eventCurrencyFor(event: any): string {
@@ -275,13 +299,11 @@ export async function POST(request: Request) {
     // whose organizers cannot hold Stripe accounts — a plain PLATFORM charge in
     // USD that Tikèm holds and pays out over MonCash / bank (lib/payment-provider).
     const provider = cardChargeRailForEventCountry(event.country)
+    const lang = requestLanguage(request)
     if (provider === 'stripe_platform' && !haitiCardEnabled()) {
       await logPurchaseAttempt({ userId: attemptUserId, eventId, ipAddress, quantity, fingerprint }, false)
       return NextResponse.json(
-        {
-          error: 'Card payments for this event are paused right now. Please pay with MonCash.',
-          code: 'haiti_card_unavailable',
-        },
+        { error: HAITI_CARD_COPY.paused[lang], code: 'haiti_card_unavailable' },
         { status: 409 }
       )
     }
@@ -491,16 +513,27 @@ export async function POST(request: Request) {
     // settles in EUR.
     const eventCurrency = (event.currency?.toUpperCase() || defaultCurrencyForCountry(event.country).toUpperCase()) as string
     let stripeCurrency = eventCurrency.toLowerCase()
+    /** HTG → USD multiplier (USD per 1 HTG), the shape fulfillment stores as exchange_rate_used. */
     let exchangeRateUsed: number | null = null
+    /** The guarded rate behind it: HTG per 1 USD, where it came from. */
+    let fx: { baseRate: number; provider: string; fetchedAtIso: string; source: string } | null = null
     let originalCurrency = eventCurrency
 
-    // Convert HTG to USD for Stripe if needed (Stripe doesn't support HTG directly)
+    // Convert HTG to USD for Stripe (Stripe has no HTG). The rate comes from the
+    // guarded engine (lib/fx/usd-htg: timeouts, an 80–250 plausibility band, ±15%
+    // of the 14-day snapshot median). Tikèm is SELLING HTG for USD here, so the
+    // safe fallback is the LOWEST HTG-per-USD of the window: the buyer pays a
+    // little more USD, never less. No trustworthy rate → no card sale (MonCash
+    // still works); never a hard-coded constant.
     if (eventCurrency === 'HTG') {
-      const { fetchStripeHTGRate } = await import('@/lib/currency')
-      // Fetch live exchange rate from Stripe
-      exchangeRateUsed = await fetchStripeHTGRate()
+      try {
+        fx = await getUsdToHtgBaseRate({ fallback: 'lowest' })
+      } catch (err) {
+        if (!isFxRateUnavailableError(err)) throw err
+        return refuse({ error: HAITI_CARD_COPY.fx[lang], code: 'card_fx_unavailable' }, 409)
+      }
+      exchangeRateUsed = 1 / fx.baseRate
       stripeCurrency = 'usd'
-      console.log(`💱 Converting HTG to USD for Stripe (Stripe rate: ${exchangeRateUsed})`)
     }
 
     // ── WHO PAYS THE FEE ────────────────────────────────────────────────────────
@@ -568,10 +601,9 @@ export async function POST(request: Request) {
 
     const amountCents = buyerPricing.chargeAmount
 
-    // Stripe's smallest USD charge is $0.50. A cheap HTG ticket converted at the
-    // day's rate can fall under it; say so plainly instead of surfacing
-    // Stripe's developer error, and point the buyer at MonCash.
-    if (stripeCurrency === 'usd' && amountCents < STRIPE_MIN_USD_CENTS) {
+    // Stripe's smallest USD charge is $0.50; a converted HTG order can fall under
+    // it. Say so plainly instead of surfacing Stripe's developer error.
+    if (stripeCurrency === 'usd' && amountCents < STRIPE_MIN_USD_CENTS && !fx) {
       return refuse(
         {
           error: 'This order is too small to pay by card. Please pay with MonCash.',
@@ -579,6 +611,26 @@ export async function POST(request: Request) {
         },
         400
       )
+    }
+
+    // Haiti card minimum (HAITI_CARD_MIN_USD, default USD 5). The Canadian
+    // platform pays ~2.9% + C$0.30, +0.8% international and +2% FX on every
+    // charge, out of Tikèm's 10%: a small card order loses money. MonCash takes
+    // the small ones.
+    if (fx) {
+      const minUsdCents = Math.max(STRIPE_MIN_USD_CENTS, haitiCardMinUsdCents())
+      if (amountCents < minUsdCents) {
+        const minimumHtg = haitiCardMinimumHtg(minUsdCents, fx.baseRate)
+        return refuse(
+          {
+            error: HAITI_CARD_COPY.minimum[lang](minimumHtg.toLocaleString('en-US')),
+            code: 'card_amount_below_minimum',
+            minimumHtg,
+            minimumUsd: minUsdCents / 100,
+          },
+          400
+        )
+      }
     }
 
     // What the buyer sees on a converted (HTG → USD) order: the event-currency
@@ -595,7 +647,7 @@ export async function POST(request: Request) {
             buyerFee: Math.round(fromCents(buyerPricing.buyerFee) / exchangeRateUsed),
             total: Math.round(localFaceMajor * 100) / 100 + Math.round(fromCents(buyerPricing.buyerFee) / exchangeRateUsed),
             // HTG per 1 USD, the way a buyer reads a rate.
-            ratePerUsd: Math.round((1 / exchangeRateUsed) * 100) / 100,
+            ratePerUsd: Math.round((fx ? fx.baseRate : 1 / exchangeRateUsed) * 100) / 100,
           }
         : null
     const fundsRail = fundsRailForPaymentMethod('stripe', { destinationCharge: provider === 'stripe_connect' })
@@ -734,6 +786,16 @@ export async function POST(request: Request) {
           currency: stripeCurrency,
           originalCurrency: originalCurrency,
           exchangeRate: exchangeRateUsed?.toString() || '',
+          // The guarded rate actually charged (HTG per USD) and its source, kept
+          // on the order and tickets at fulfillment.
+          ...(fx
+            ? {
+                fxBaseRate: String(fx.baseRate),
+                fxSource: fx.source,
+                fxProvider: String(fx.provider).slice(0, 200),
+                fxFetchedAt: fx.fetchedAtIso,
+              }
+            : {}),
           payoutProvider: provider,
           stripeConnectAccountId: stripeConnectAccountId || '',
           // Where the money sits (lib/payouts/funds-rail): stamped on every ticket

@@ -8,6 +8,7 @@ import {
   FundTransferInputSchema,
   buildFundTransferDoc,
   fundTransferFromDoc,
+  payoutDocIdForWithdrawal,
 } from '@/lib/payouts/fund-transfers'
 import { loadFundTransfers } from '@/lib/payouts/money-map-server'
 
@@ -70,12 +71,6 @@ export async function POST(request: NextRequest) {
       return adminError('That withdrawal belongs to another organizer', 409)
     }
     doc.organizerId = doc.organizerId || organizerId || null
-    const already = await adminDb
-      .collection(FUND_TRANSFERS_COLLECTION)
-      .where('withdrawalId', '==', doc.withdrawalId)
-      .limit(1)
-      .get()
-    if (!already.empty) return adminError('A payout is already recorded for that withdrawal', 409)
     withdrawal = {
       amountMinor: Math.round(Number(w.amount) || 0),
       currency: String(w.currency || 'HTG').toUpperCase(),
@@ -85,7 +80,11 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const ref = adminDb.collection(FUND_TRANSFERS_COLLECTION).doc()
+    // A payout for a withdrawal has a deterministic id and is CREATED, so a
+    // second payout for the same withdrawal fails atomically (no read-then-write race).
+    const ref = doc.withdrawalId
+      ? adminDb.collection(FUND_TRANSFERS_COLLECTION).doc(payoutDocIdForWithdrawal(doc.withdrawalId))
+      : adminDb.collection(FUND_TRANSFERS_COLLECTION).doc()
     const nowIso = new Date().toISOString()
     const stored = {
       ...doc,
@@ -94,7 +93,14 @@ export async function POST(request: NextRequest) {
       createdBy: user.id,
       createdByEmail: user.email || null,
     }
-    await ref.set(stored)
+    try {
+      await ref.create(stored)
+    } catch (e: any) {
+      if (e?.code === 6 || /already exists/i.test(String(e?.message || ''))) {
+        return adminError('A payout is already recorded for that withdrawal', 409)
+      }
+      throw e
+    }
     await logAdminAction({
       action: doc.kind === 'organizer_payout' ? 'money.organizer_payout.record' : 'money.fund_transfer.record',
       adminId: user.id,

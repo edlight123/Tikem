@@ -32,16 +32,30 @@ Nobody can approve a payout to, or send a prefunded transfer to, their own accou
 - Haitian buyers pay with an international Visa/Mastercard. Haitian organizers
   cannot hold Stripe accounts, so this is a plain charge on Tikèm's own Stripe
   balance (no Connect destination). The buyer is quoted in HTG and charged USD
-  at the day's rate (`create-payment-intent`); 3D Secure is requested whenever
-  the issuer or Radar asks.
+  (`create-payment-intent`); 3D Secure is requested whenever the issuer or
+  Radar asks.
+- **OFF until switched on.** After a real test payment, set
+  `HAITI_CARD_ENABLED=true` (server, Vercel), `NEXT_PUBLIC_HAITI_CARD_ENABLED=true`
+  (web button, Vercel, redeploy) and `EXPO_PUBLIC_HAITI_CARD_ENABLED=true` (app
+  button: EAS production env, then OTA). The server flag alone decides whether a
+  charge is accepted; removing it pauses Haiti card checkout at once. MonCash is
+  unaffected.
+- **Rate.** The guarded USD/HTG engine (`lib/fx/usd-htg.ts`: timeouts, 80–250
+  band, ±15% of the 14-day median). If the live rate is refused, the LOWEST
+  stored rate of the window is used (the buyer pays a little more USD, never
+  less). No trustworthy rate → the card is refused (`card_fx_unavailable`) and
+  the buyer is pointed to MonCash. The rate used is on the order and tickets
+  (`exchange_rate_base`, `exchange_rate_source`).
+- **Minimum.** Card orders under USD 5 (`HAITI_CARD_MIN_USD`) are refused
+  (`card_amount_below_minimum`, "card payments start at X HTG"): Stripe's
+  Canadian-account fees (~2.9% + C$0.30, +0.8% international, +2% FX) would eat
+  the 10% fee on a smaller order.
 - The ticket records both sides: `price_paid` (HTG face, what the organizer's
   balance counts) and `charged_amount` / `charged_currency` (USD). Refunds go
   back in USD through Stripe; the HTG face leaves the organizer's balance.
 - Tikèm pays the organizer later over MonCash prefunding or a bank wire, like
   any MonCash sale. Stripe converts the USD to CAD on payout unless a USD bank
   account is attached to the Stripe account.
-- Kill switch: set `HAITI_CARD_DISABLED=true` (Vercel env, redeploy) to pause it.
-  MonCash is unaffected.
 
 ### Where the money sits (`funds_rail`)
 Every order and ticket carries `funds_rail`: `moncash` (NatCash too),

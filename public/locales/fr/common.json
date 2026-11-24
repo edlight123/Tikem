@@ -996,6 +996,8 @@
     "card_haiti_uses_sogepay": "Les paiements par carte pour les événements en Haïti passent par Sogepay.",
     "card_charged_usd": "Votre carte est débitée de {{amount}} USD, à {{rate}} HTG par dollar.",
     "card_charged_usd_later": "Votre carte est débitée en dollars US, au taux du jour.",
+    "card_below_minimum": "Le paiement par carte commence à {{amount}} HTG. Utilisez MonCash pour les petites commandes.",
+    "card_fx_unavailable": "Nous ne parvenons pas à obtenir un taux de change fiable pour le moment : le paiement par carte est suspendu. Payez avec MonCash, ou réessayez dans quelques minutes.",
     "sogepay_haiti_only": "Sogepay est disponible uniquement pour les événements en Haïti.",
     "sogepay_initiate_failed": "Échec du démarrage du paiement Sogepay",
     "sogepay_missing_redirect": "URL de redirection Sogepay manquante",

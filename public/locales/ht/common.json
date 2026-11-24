@@ -996,6 +996,8 @@
     "card_haiti_uses_sogepay": "Peman kat pou evènman Ayiti yo pase pa Sogepay.",
     "card_charged_usd": "Kat ou ap peye {{amount}} USD, a {{rate}} HTG pou chak dola.",
     "card_charged_usd_later": "Kat ou ap peye an dola ameriken, nan to jodi a.",
+    "card_below_minimum": "Peman ak kat kòmanse a {{amount}} HTG. Tanpri itilize MonCash pou ti kòmand yo.",
+    "card_fx_unavailable": "Nou pa ka jwenn yon to chanj ki serye kounye a, kidonk peman ak kat la kanpe. Peye ak MonCash, oswa eseye ankò nan kèk minit.",
     "sogepay_haiti_only": "Sogepay disponib sèlman pou evènman an Ayiti.",
     "sogepay_initiate_failed": "Nou pa t kapab kòmanse peman Sogepay a",
     "sogepay_missing_redirect": "Pa gen lyen redireksyon Sogepay",

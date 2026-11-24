@@ -20,6 +20,10 @@ jest.mock('stripe', () => jest.fn(() => ({ paymentIntents: { create: mockCreate 
 jest.mock('@/lib/firebase/admin', () => ({ adminDb: {} }))
 // Never a live rate lookup from a test.
 jest.mock('@/lib/currency', () => ({ fetchStripeHTGRate: jest.fn(async () => 0.0076) }))
+jest.mock('@/lib/fx/usd-htg', () => ({
+  ...jest.requireActual('@/lib/fx/usd-htg'),
+  getUsdToHtgBaseRate: jest.fn(async () => ({ baseRate: 131.58, provider: 'test', fetchedAtIso: '2026-11-24T00:00:00Z', source: 'live' })),
+}))
 jest.mock('@/lib/auth', () => ({ getCurrentUser: jest.fn(async () => ({ id: 'u1', email: 'u@x.com' })) }))
 jest.mock('@/lib/security', () => ({
   isBlacklisted: jest.fn(async () => ({ blacklisted: false })),

@@ -33,8 +33,11 @@ const EmbeddedStripePayment = dynamic(() => import('./EmbeddedStripePayment'), {
 
 // Haiti card checkout runs on Stripe as a PLATFORM charge (lib/payment-provider:
 // cardChargeRailForEventCountry): international Visa/Mastercard, priced in HTG,
-// charged in USD at the day's rate. Sogepay never went live; its handler below
-// stays for the day it does, but no button reaches it.
+// charged in USD at the day's rate. OFF until the owner enables it after a real
+// test payment: this build-time flag shows the button, HAITI_CARD_ENABLED on the
+// server accepts the charge. Sogepay never went live; its handler below stays
+// for the day it does, but no button reaches it.
+const HAITI_CARD_ENABLED = process.env.NEXT_PUBLIC_HAITI_CARD_ENABLED === 'true'
 
 // Feature flag: launching MonCash-only — NatCash hidden for now. The purchase
 // handler and backend path stay intact; flip to true to bring the option back.
@@ -1621,6 +1624,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, payAtDoor = f
             <div className="space-y-3">
               {/* Card Option — Stripe everywhere. On a Haiti event it is an
                   international Visa/Mastercard charged in USD at the day's rate. */}
+              {(!isHaitiEvent || HAITI_CARD_ENABLED) && (
               <button
                 onClick={() => handlePurchase('stripe')}
                 disabled={loading}
@@ -1652,6 +1656,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, payAtDoor = f
                   </svg>
                 )}
               </button>
+              )}
 
               {/* MonCash Option (Haiti only) */}
               {isHaitiEvent && (
