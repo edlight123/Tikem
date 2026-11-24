@@ -26,7 +26,7 @@ export default function CategoriesContent({ initialCategory }: CategoriesContent
     setLoading(true)
     try {
       if (isDemoMode()) {
-        setEvents(DEMO_EVENTS as Event[])
+        setEvents(DEMO_EVENTS as unknown as Event[])
       } else {
         // Filter by category server-side, but do the DATE cut in memory: the
         // stored start_datetime is a string on newer docs and a Firestore
