@@ -1,4 +1,5 @@
 import { venueDetailsFields, venueDetailsOf } from '../venueDetails';
+import { parseOccasion } from '../occasions';
 import { auth, db, storage } from '../../config/firebase';
 import {
   collection,
@@ -166,6 +167,8 @@ export interface CreateEventData {
    * composer writes.
    */
   national_day?: string | null;
+  /** The occasion it belongs to (lib/occasions key), or null. Same field the web composer writes. */
+  occasion?: string | null;
   /**
    * Recurring-event cadence (create-only). When set to a real cadence and
    * `recurrence_count > 1`, createEvent generates that many independent event
@@ -488,6 +491,9 @@ function webParityFields(eventData: CreateEventData) {
     family_max: familyMax({ family_registration: true, family_max: eventData.family_max }),
     is_online: !!eventData.is_online,
     national_day: eventData.national_day || null,
+    // Allow-listed again here (firestore.rules refuses unknown keys); left
+    // alone when the caller never set it.
+    ...(eventData.occasion !== undefined ? { occasion: parseOccasion(eventData.occasion) } : {}),
     enable_waitlist: eventData.ticket_tiers.some((t) => !!t.waitlist),
     ...(eventData.fee_incidence ? { fee_incidence: eventData.fee_incidence } : {}),
     ...(eventData.guestlist ? { guestlist: eventData.guestlist } : {}),

@@ -36,6 +36,14 @@ service cloud.firestore {
         && (dress == null || (dress is string && dress.size() <= 60));
     }
 
+    // Occasion (lib/occasions.ts): optional, and when present one of the
+    // known keys (the list is checked against OCCASION_KEYS by
+    // __tests__/occasions.test.ts). .get() so older docs pass untouched.
+    function validOccasion(d) {
+      let o = d.get('occasion', null);
+      return o == null || o in ['kanaval', 'rara', 'fet-endepandans', 'fet-drapo', 'fet-manman', 'fet-papa', 'fet-gede', 'vertieres', 'nwel', 'fen-ane', 'heritage-month', 'fet-chanpet'];
+    }
+
     function isCurrencyAllowedForCountry(countryRaw, currencyRaw) {
       let c = normalizedCountry(countryRaw);
       let cur = normalizedCurrency(currencyRaw);
@@ -346,6 +354,7 @@ service cloud.firestore {
         && !(request.resource.data.get('requires_approval', false) == true
              && request.resource.data.get('has_paid_tiers', false) == true)
         && validVenueDetails(request.resource.data)
+        && validOccasion(request.resource.data)
         && isCurrencyAllowedForCountry(request.resource.data.country, request.resource.data.currency);
 
       allow update: if isSignedIn() && (
@@ -361,6 +370,7 @@ service cloud.firestore {
           !(request.resource.data.get('requires_approval', false) == true &&
             request.resource.data.get('has_paid_tiers', false) == true) &&
           validVenueDetails(request.resource.data) &&
+          validOccasion(request.resource.data) &&
           // H3: moderation fields are client-immutable so a rejected/reported
           // organizer can't re-surface their event. Admin SDK still writes them
           // (it bypasses rules). .get() defaults keep legacy docs that predate

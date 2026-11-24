@@ -2394,5 +2394,23 @@
         "generic": "Envoi impossible. Réessayez."
       }
     }
+  },
+  "occasions": {
+    "label": "Occasion",
+    "none": "Aucune",
+    "suggested": "suggérée pour cette date",
+    "more": "Plus",
+    "less": "Moins",
+    "see_all": "Voir tout",
+    "under_way": "En cours",
+    "tomorrow": "Demain",
+    "in_days": "Dans {{count}} jours",
+    "pre_kanaval": "Dimanches pré-carnaval dès le {{date}}",
+    "add_event": "Ajouter un événement",
+    "events_title": "événements",
+    "empty": "Rien n’est encore annoncé.",
+    "ideas_title": "idées à organiser",
+    "use_idea": "Créer cet événement",
+    "part_of": "Pour {{name}}"
   }
 }

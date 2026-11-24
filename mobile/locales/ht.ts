@@ -1,4 +1,25 @@
 export default {
+  // Okazyon (lib/occasions): ranje Okazyon nan fòm nan, paj okazyon an ak
+  // liy okazyon an sou ekran evènman an.
+  occasions: {
+    label: 'Okazyon',
+    none: 'Okenn',
+    suggested: 'sijere pou dat sa a',
+    more: 'Plis',
+    less: 'Mwens',
+    underWay: 'Ap fèt kounye a',
+    tomorrow: 'Demen',
+    inDays: 'Nan {count} jou',
+    preKanaval: 'Dimanch pre-kanaval depi {date}',
+    addEvent: 'Ajoute yon evènman',
+    eventsTitle: 'evènman',
+    emptyTitle: 'poko gen anyen',
+    emptyBody: 'Evènman ki pou okazyon sa a ap parèt la a.',
+    ideasTitle: 'lide pou òganize',
+    useIdea: 'kreye evènman sa a',
+    partOf: 'Pou {name}',
+    notFound: 'Okazyon sa a pa egziste',
+  },
   // Non peyi ak rejyon, pou ray « lòt kote nan … » ak tout ekran vid ki di ki
   // kote ou ye.
   countries: {

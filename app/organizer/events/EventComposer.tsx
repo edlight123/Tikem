@@ -104,6 +104,8 @@ import { incidenceForEvent, priceOrder } from '@/lib/checkout/buyer-pricing'
 import { fromCents, MAX_FREE_TICKETS_PER_PERSON } from '@/lib/ticketPricing'
 import { allowedPlusOnes, PLUS_ONES_SETTING_MAX } from '@/lib/events/approval'
 import { nationalDayForEventDate, nationalDayName } from '@/lib/nationalDays'
+import { ideaById, ideaDate, ideaText, parseOccasion, type OccasionKey } from '@/lib/occasions'
+import OccasionPicker from '@/components/occasions/OccasionPicker'
 import { isBelowMinPaidPrice, MIN_PAID_PRICE_ERROR_CODE, minPaidPriceFor } from '@/lib/min-paid-price'
 import { canLeaveDoorMode, composerModeOf, doorTierSaveFields, lowestDoorPrice, tierEditorPrice, type ComposerMode } from '@/lib/events/door-mode'
 import { TIER_SETS, isUntouchedDraft, tierNameFor, tierSetLabel, type TierSet } from '@/lib/ticketTypes'
@@ -246,6 +248,17 @@ interface EventComposerProps {
    * event's country (composerSeedFromDefaults) before it prefills anything.
    */
   orgDefaults?: Record<string, any> | null
+  /**
+   * CREATE only: start tagged for this occasion (lib/occasions), from an
+   * occasion page's "Add an event" (?occasion=). Unknown keys are ignored.
+   */
+  initialOccasion?: string | null
+  /**
+   * CREATE only: an occasion idea (lib/occasions OCCASION_IDEAS id, ?idea=)
+   * that fills the title, a line of description, the category, the occasion
+   * and a date inside it.
+   */
+  initialIdea?: string | null
 }
 
 /** Where a signed-out composition survives the trip through sign-up. */
@@ -575,6 +588,8 @@ export default function EventComposer({
   defaultCountry,
   defaultCity,
   orgDefaults,
+  initialOccasion,
+  initialIdea,
 }: EventComposerProps) {
   // Payout and verification links are the org owner's to follow (owner_only);
   // a team member sees the notice without a link to a page that would bounce them.
@@ -598,7 +613,14 @@ export default function EventComposer({
   const [doorLockNotice, setDoorLockNotice] = useState(false)
   /** Tickets and pay-at-the-door both edit tier rows; RSVP has none. */
   const hasTierRows = sellMode === 'tickets' || sellMode === 'door'
-  const [title, setTitle] = useState(event?.title || '')
+  // An occasion idea to start from (create only), read once.
+  const [ideaSeed] = useState(() => {
+    const idea = event ? null : ideaById(initialIdea)
+    if (!idea) return null
+    const lang = (i18n.language || 'en').slice(0, 2)
+    return { ...ideaText(idea, lang), category: idea.category, occasion: idea.occasion, date: ideaDate(idea), time: idea.time }
+  })
+  const [title, setTitle] = useState(event?.title || ideaSeed?.title || '')
   const [summary, setSummary] = useState(event?.summary || '')
   const [showSummary, setShowSummary] = useState(!!event?.summary)
   const [bannerUrl, setBannerUrl] = useState(event?.banner_image_url || '')
@@ -620,8 +642,8 @@ export default function EventComposer({
   })
 
   // Dates
-  const [startDate, setStartDate] = useState(start0.date)
-  const [startTime, setStartTime] = useState(start0.time)
+  const [startDate, setStartDate] = useState(start0.date || ideaSeed?.date || '')
+  const [startTime, setStartTime] = useState(start0.time || ideaSeed?.time || '')
   const [endDate, setEndDate] = useState(end0.date)
   const [endTime, setEndTime] = useState(end0.time)
   // Recurrence is create-only; editing never regenerates a series, so the
@@ -635,8 +657,8 @@ export default function EventComposer({
   const [recurrenceEndDate, setRecurrenceEndDate] = useState('')
 
   // Details
-  const [showDescription, setShowDescription] = useState(!!event?.description)
-  const [description, setDescription] = useState(event?.description || '')
+  const [showDescription, setShowDescription] = useState(!!(event?.description || ideaSeed?.description))
+  const [description, setDescription] = useState(event?.description || ideaSeed?.description || '')
   const [address, setAddress] = useState(event?.address || '')
   const [venueName, setVenueName] = useState(event?.venue_name || '')
   // Venue details (parking, step-free…, age, dress code): all optional, shown
@@ -653,7 +675,7 @@ export default function EventComposer({
       : composerSeedFromDefaults(orgDefaults, pickDefaultComposerCountry(defaultCountry), CATEGORIES)
   )
   const seedCountry = pickDefaultComposerCountry(defaultCountry)
-  const [category, setCategory] = useState(event?.category || seed.category || 'Concert')
+  const [category, setCategory] = useState(event?.category || ideaSeed?.category || seed.category || 'Concert')
   const [isOnline, setIsOnline] = useState(!!event?.is_online)
 
   // Country — decides the currency, the default fee incidence, the timezone
@@ -907,6 +929,11 @@ export default function EventComposer({
   // national day's window (lib/nationalDays). Saved as `national_day`, the
   // day's eventTag, which the Home banners and rails read.
   const [nationalDayOn, setNationalDayOn] = useState(!!event?.national_day)
+  // The occasion it belongs to (lib/occasions), or null. Saved as `occasion`;
+  // the occasion pages and Home's occasion row read it.
+  const [occasion, setOccasion] = useState<OccasionKey | null>(() =>
+    event ? parseOccasion(event.occasion) : ideaSeed?.occasion ?? parseOccasion(initialOccasion)
+  )
 
   // WHO PAYS THE SERVICE FEE for this event. The default follows the country
   // (Haiti absorbs it into the organizer's proceeds, US/CA/FR adds it on top),
@@ -1069,6 +1096,7 @@ export default function EventComposer({
     if (d.requires_approval) setRequiresApproval(true)
     if (Number(d.plus_ones_max) > 0) setPlusOnesMax(Math.min(Math.floor(Number(d.plus_ones_max)), PLUS_ONES_SETTING_MAX))
     if (d.national_day) setNationalDayOn(true)
+    if (parseOccasion(d.occasion)) setOccasion(parseOccasion(d.occasion))
     setVenueDetails(venueDetailsOf(d))
     if (d.fee_incidence) setPassFeesToBuyer(d.fee_incidence === 'buyer')
     // `enable_waitlist` is now per tier; the event-level value in an older
@@ -1548,6 +1576,8 @@ export default function EventComposer({
       // The national day it is tagged for, or null when the toggle is off or
       // the date moved out of every window.
       national_day: nationalDayOn && eligibleNationalDay ? eligibleNationalDay.eventTag : null,
+      // The occasion (lib/occasions), allow-listed again here and in firestore.rules.
+      occasion: parseOccasion(occasion),
       // Stamped on the event so checkout, the ticket record and the earnings
       // ledger all read the same answer. Free events carry it harmlessly.
       fee_incidence: passFeesToBuyer ? 'buyer' : 'organizer',
@@ -2600,6 +2630,9 @@ export default function EventComposer({
                 />
               </div>
             )}
+
+            {/* Occasion: None, the one the date falls in, and More. */}
+            <OccasionPicker value={occasion} onChange={setOccasion} startDate={startDate} chipClassName={chipCls} />
 
             {/* Repeats — create-only. Generates a series of independent events. */}
             {!isEdit && (

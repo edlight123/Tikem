@@ -21,6 +21,7 @@ import { COUNTRY_COOKIE, resolveCountry } from '@/lib/home/country'
 import NationalDayBanner from '@/components/home/NationalDayBanner'
 import { getActiveNationalDay, nationalDayPreviewKey } from '@/lib/nationalDaysServer'
 import { eventMatchesNationalDay } from '@/lib/nationalDays'
+import { homeOccasion } from '@/lib/occasions'
 import { buildSiteJsonLd } from '@/lib/seo/siteJsonLd'
 import { serializeJsonLd } from '@/app/events/[id]/eventJsonLd'
 import {
@@ -248,6 +249,26 @@ export default async function HomePage({
       ).length
     : 0
 
+  // The occasion row (lib/occasions): an occasion under way or within 30
+  // days, with at least two tagged events in the browsed country. One card
+  // per series, like the other sections.
+  const upcomingIds = new Set(upcoming.map((e) => e.id))
+  const occasionPick = homeOccasion(
+    filterBlockedEvents(rawEvents, blockedOrganizers).filter(
+      (e: any) => (e.country || 'HT') === country && upcomingIds.has(String(e.id))
+    ),
+    now,
+    { timeZone: zone }
+  )
+  const occasionRow = occasionPick
+    ? {
+        key: occasionPick.key,
+        mainStart: occasionPick.range.mainStart,
+        mainEnd: occasionPick.range.mainEnd,
+        events: occasionPick.events,
+      }
+    : null
+
   return (
     <div className="min-h-screen bg-black pb-mobile-nav">
       <LiveTicker signals={buildTickerSignals(inCountry, now)} />
@@ -300,6 +321,7 @@ export default async function HomePage({
         soon={startingSoon(scoped, now)}
         elsewhereMode={elsewhereMode}
         elsewhere={elsewhere}
+        occasionRow={occasionRow}
       />
 
       <MobileNavWrapper user={user} isAdmin={isAdmin(((user as any)?.email_verified) ? user?.email : null)} />

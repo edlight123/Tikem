@@ -61,6 +61,8 @@ import {
 import { flyerDraftPatch, type FlyerRead } from '../../lib/flyerFill';
 import { isDeviceOnlyImageUri } from '../../lib/localImageUri';
 import { nationalDayForEventDate, nationalDayName } from '../../lib/nationalDays';
+import { OCCASION_KEYS, ideaById, ideaDate, ideaText, occasionByKey, occasionName, parseOccasion, suggestOccasion } from '../../lib/occasions';
+import OccasionIcon from '../../components/OccasionIcon';
 import { getEventById } from '../../lib/api/organizer';
 import { db } from '../../config/firebase';
 import { collection, getDocs, query, where } from 'firebase/firestore';
@@ -213,6 +215,9 @@ export interface EventDraft {
   // The national day it is tagged for (lib/nationalDays eventTag), '' = none.
   // Offered only while the start date is near a day; see the toggle.
   national_day: string;
+
+  // The occasion it belongs to (lib/occasions key), '' = none.
+  occasion: string;
 
   // Poster-theme override. '' = Auto (deterministic pick from seed/category);
   // a valid PosterThemeKey pins the poster gradient for this event everywhere.
@@ -591,6 +596,7 @@ export default function CreateEventFlowRefactored() {
     guestlist_visibility: 'faces',
     show_going_count: false,
     national_day: '',
+    occasion: '',
     theme_key: '',
     recurrence: 'none',
     recurrence_count: 4,
@@ -780,6 +786,7 @@ export default function CreateEventFlowRefactored() {
           guestlist_visibility: guestlistVisibilityFrom(event as any),
           show_going_count: (event as any).show_going_count === true,
           national_day: typeof (event as any).national_day === 'string' ? (event as any).national_day : '',
+          occasion: parseOccasion((event as any).occasion) || '',
           // Poster-theme override; default '' (Auto) when the field is absent.
           theme_key: (event as any).theme_key || '',
           // Recurrence is create-only; editing never regenerates a series. The
@@ -915,6 +922,30 @@ export default function CreateEventFlowRefactored() {
       updateDraft({ is_rsvp: true });
     }
   }, [eventDraft.country, eventDraft.is_rsvp, eventDraft.pay_at_door]);
+
+  // From an occasion page (OccasionScreen): tagged for it, or filled in from
+  // one of its ideas (title, a line, category, a date inside it). Once.
+  const occasionParam = (route.params as any)?.occasion as string | undefined;
+  const ideaParam = (route.params as any)?.idea as string | undefined;
+  useEffect(() => {
+    if (isEditMode) return;
+    const idea = ideaById(ideaParam);
+    if (idea) {
+      const copy = ideaText(idea, language);
+      updateDraft({
+        title: copy.title,
+        description: copy.description,
+        category: CATEGORIES.includes(idea.appCategory) ? idea.appCategory : 'Other',
+        occasion: idea.occasion,
+        start_date: ideaDate(idea),
+        start_time: idea.time,
+      });
+    } else if (parseOccasion(occasionParam)) {
+      updateDraft({ occasion: parseOccasion(occasionParam)! });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [occasionParam, ideaParam]);
+  const [occasionsOpen, setOccasionsOpen] = useState(false);
 
   // Choose the entry mode (sell tickets vs free RSVP) and enter the canvas.
   const chooseMode = (mode: ComposerMode) => {
@@ -1694,6 +1725,8 @@ export default function CreateEventFlowRefactored() {
       // Kept only while the date still sits near that same day.
       national_day:
         draft.national_day && eligibleNationalDay?.eventTag === draft.national_day ? draft.national_day : null,
+      // Allow-listed (lib/occasions); firestore.rules refuses anything else.
+      occasion: parseOccasion(draft.occasion),
       ...(draft.is_online
         ? { venue_name: '', address: '', city: '', commune: '', department: '' }
         : {}),
@@ -2692,6 +2725,49 @@ export default function CreateEventFlowRefactored() {
                   ))}
                 </ScrollView>
               </View>
+
+              {/* Occasion (lib/occasions): None, the one the date falls in
+                  (dot), the one chosen, and More for the full list. */}
+              {(() => {
+                const suggested = suggestOccasion(eventDraft.start_date || null);
+                const chosen = parseOccasion(eventDraft.occasion);
+                const keys = occasionsOpen
+                  ? [...(suggested ? [suggested] : []), ...OCCASION_KEYS.filter((k) => k !== suggested)]
+                  : Array.from(new Set([suggested, chosen].filter((k): k is NonNullable<typeof k> => !!k)));
+                return (
+                  <View style={styles.chipBlock}>
+                    <Text style={styles.chipLabel}>{t('occasions.label')}</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipScroll}>
+                      <TouchableOpacity
+                        style={[styles.chip, !chosen && styles.chipActive]}
+                        onPress={() => updateDraft({ occasion: '' })}
+                        accessibilityState={{ selected: !chosen }}
+                      >
+                        <Text style={[styles.chipText, !chosen && styles.chipTextActive]}>{t('occasions.none')}</Text>
+                      </TouchableOpacity>
+                      {keys.map((k) => {
+                        const on = chosen === k;
+                        return (
+                          <TouchableOpacity
+                            key={k}
+                            style={[styles.chip, styles.occasionChip, on && styles.chipActive]}
+                            onPress={() => updateDraft({ occasion: on ? '' : k })}
+                            accessibilityState={{ selected: on }}
+                            accessibilityLabel={k === suggested ? `${occasionName(k, language)}, ${t('occasions.suggested')}` : occasionName(k, language)}
+                          >
+                            <OccasionIcon name={occasionByKey(k)!.icon} color={on ? colors.onPrimary : colors.textSecondary} />
+                            <Text style={[styles.chipText, on && styles.chipTextActive]}>{occasionName(k, language)}</Text>
+                            {k === suggested && <View style={[styles.occasionDot, on && { backgroundColor: colors.onPrimary }]} />}
+                          </TouchableOpacity>
+                        );
+                      })}
+                      <TouchableOpacity style={styles.occasionMore} onPress={() => setOccasionsOpen((v) => !v)}>
+                        <Text style={styles.chipLabel}>{occasionsOpen ? t('occasions.less') : t('occasions.more')}</Text>
+                      </TouchableOpacity>
+                    </ScrollView>
+                  </View>
+                );
+              })()}
             </View>
 
             {/* Additional Details */}
@@ -3909,6 +3985,21 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   chipTextActive: {
     color: colors.onPrimary,
+  },
+  occasionChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  occasionDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.primary,
+  },
+  occasionMore: {
+    justifyContent: 'center',
+    paddingHorizontal: 6,
   },
 
   // ── Poster-theme swatches ──

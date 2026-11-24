@@ -85,6 +85,7 @@ import InviteRedeemScreen from '../screens/InviteRedeemScreen';
 // Detail Screens
 import EventDetailScreen from '../screens/EventDetailScreen';
 import CategoryEventsScreen from '../screens/CategoryEventsScreen';
+import OccasionScreen from '../screens/OccasionScreen';
 import EventTicketsScreen from '../screens/EventTicketsScreen';
 import TicketDetailScreen from '../screens/TicketDetailScreen';
 import OrganizerProfileScreen from '../screens/OrganizerProfileScreen';
@@ -141,6 +142,8 @@ export type RootStackParamList = {
   // React Navigation merges the query string into params. EventDetailScreen
   // captures and persists it for purchase attribution.
   EventDetail: { eventId: string; ref?: string };
+  // An occasion's page (lib/occasions key); also tikem://occasions/<key>.
+  Occasion: { key: string };
   // Either `category` (per-category listing) or `feed` (one of Home's curated
   // rails opened as its own page) — never both.
   CategoryEvents: {
@@ -1080,6 +1083,7 @@ export default function AppNavigator() {
             <Stack.Screen name="OrganizerEventRecap" component={OrganizerEventRecapScreen} options={{ headerShown: false }} />
             <Stack.Screen name="EditProfile" component={EditProfileScreen} options={{ headerShown: false }} />
             <Stack.Screen name="CategoryEvents" component={CategoryEventsScreen} />
+            <Stack.Screen name="Occasion" component={OccasionScreen} options={{ headerShown: false }} />
             <Stack.Screen name="EventTickets" component={EventTicketsScreen} />
             <Stack.Screen name="TicketDetail" component={TicketDetailScreen} />
             <Stack.Screen name="OrganizerProfile" component={OrganizerProfileScreen} />

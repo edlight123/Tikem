@@ -2394,5 +2394,23 @@
         "generic": "Couldn't send. Try again."
       }
     }
+  },
+  "occasions": {
+    "label": "Occasion",
+    "none": "None",
+    "suggested": "suggested for this date",
+    "more": "More",
+    "less": "Less",
+    "see_all": "See all",
+    "under_way": "Under way",
+    "tomorrow": "Tomorrow",
+    "in_days": "In {{count}} days",
+    "pre_kanaval": "Pre-kanaval Sundays from {{date}}",
+    "add_event": "Add an event",
+    "events_title": "events",
+    "empty": "Nothing listed for it yet.",
+    "ideas_title": "ideas to host",
+    "use_idea": "Create this event",
+    "part_of": "Part of {{name}}"
   }
 }

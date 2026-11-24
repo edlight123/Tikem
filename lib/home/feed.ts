@@ -54,6 +54,10 @@ export interface HomeEvent {
   organizer_id?: string
   /** Other dates of this series hidden behind this card (collapseSeries). */
   more_dates?: number
+  /** The occasion it is tagged for (lib/occasions), for Home's occasion row. */
+  occasion?: string
+  /** The national day it is tagged for (lib/nationalDays eventTag). */
+  national_day?: string
 }
 
 const str = (v: unknown) => (typeof v === 'string' ? v : v == null ? '' : String(v))
@@ -138,6 +142,8 @@ export function toHomeEvent(e: any): HomeEvent | null {
     posterHasText: Boolean(e.poster_template && typeof e.poster_template === 'object'),
     series_id: e.series_id ? str(e.series_id) : undefined,
     organizer_id: e.organizer_id ? str(e.organizer_id) : undefined,
+    occasion: typeof e.occasion === 'string' ? e.occasion : undefined,
+    national_day: typeof e.national_day === 'string' ? e.national_day : undefined,
   }
 }
 

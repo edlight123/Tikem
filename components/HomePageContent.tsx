@@ -15,6 +15,7 @@ import WorldsIndex from '@/components/home/WorldsIndex'
 import StartingSoon from '@/components/home/StartingSoon'
 import ElsewhereRail from '@/components/home/ElsewhereRail'
 import OrganizerBand from '@/components/home/OrganizerBand'
+import OccasionRow, { type HomeOccasionRow } from '@/components/home/OccasionRow'
 import type { HomeEvent, HomeWorld, WeekDay } from '@/lib/home/feed'
 
 interface StripEvent {
@@ -41,6 +42,8 @@ export interface HomePageContentProps {
   soon: HomeEvent[]
   elsewhereMode: 'home' | 'abroad'
   elsewhere: HomeEvent[]
+  /** The occasion row (lib/occasions homeOccasion), or null. */
+  occasionRow?: HomeOccasionRow | null
 }
 
 export default function HomePageContent({
@@ -56,6 +59,7 @@ export default function HomePageContent({
   soon,
   elsewhereMode,
   elsewhere,
+  occasionRow = null,
 }: HomePageContentProps) {
   const elsewhereRail = (
     <ElsewhereRail
@@ -73,6 +77,7 @@ export default function HomePageContent({
       <div className="mx-auto max-w-7xl space-y-20 px-4 pb-20 pt-16 sm:space-y-24 sm:px-6 sm:pt-20 lg:space-y-28 lg:px-8 lg:pb-28">
         {/* Nothing listed here: say so first, then show what is. */}
         {countryEmpty && elsewhereRail}
+        <OccasionRow row={occasionRow} />
         <ThisWeek days={week} scopeQs={scopeQs} />
         <WorldsIndex worlds={worlds} scopeQs={scopeQs} />
         <StartingSoon events={soon} now={now} zone={zone} />

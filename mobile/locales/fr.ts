@@ -1,4 +1,25 @@
 export default {
+  // Occasions (lib/occasions) : la rangée Occasion du formulaire, la page
+  // d'une occasion et la ligne de l'écran d'un événement.
+  occasions: {
+    label: 'Occasion',
+    none: 'Aucune',
+    suggested: 'suggérée pour cette date',
+    more: 'Plus',
+    less: 'Moins',
+    underWay: 'En cours',
+    tomorrow: 'Demain',
+    inDays: 'Dans {count} jours',
+    preKanaval: 'Dimanches pré-carnaval dès le {date}',
+    addEvent: 'Ajouter un événement',
+    eventsTitle: 'événements',
+    emptyTitle: 'rien pour l’instant',
+    emptyBody: 'Les événements associés apparaîtront ici.',
+    ideasTitle: 'idées à organiser',
+    useIdea: 'créer cet événement',
+    partOf: 'Pour {name}',
+    notFound: 'Cette occasion n’existe pas',
+  },
   // Noms de pays et de régions, utilisés par le rail « ailleurs … » et par les
   // écrans vides qui nomment le lieu actif. Les variantes « …In » portent la
   // préposition (« en Haïti », « au Québec ») pour que le titre du rail reste
