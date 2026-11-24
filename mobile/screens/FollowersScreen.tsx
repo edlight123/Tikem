@@ -79,7 +79,7 @@ export default function FollowersScreen() {
               <Touchable
                 key={p.uid}
                 style={[styles.row, i > 0 && styles.rowDivided]}
-                onPress={() => navigation.navigate('OrganizerProfile', { organizerId: p.uid })}
+                onPress={() => navigation.navigate('OrganizerProfile', { organizerId: p.uid, view: 'person' })}
                 scale={false}
                 pressedColor={colors.surfaceRaised}
                 accessibilityRole="button"

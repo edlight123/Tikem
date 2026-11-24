@@ -8,6 +8,8 @@
  *
  * 200 { kind: 'org', org: { description, website, instagram, facebook, twitter, linkedin, tiktok } }
  * 200 { kind: 'person', person: { bio, socials: { instagram, tiktok, twitter, facebook } } | null }
+ * ?view=person: the PERSONAL page, also for an organization's owner:
+ * 200 { kind: 'person', view: 'person', identity, person, also_runs }
  * 404 no such profile; 429 rate limited.
  */
 import { NextRequest, NextResponse } from 'next/server'
@@ -42,7 +44,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   }
 
   try {
-    const result = await loadPublicProfileDetails(uid, viewerId)
+    const view = new URL(request.url).searchParams.get('view') === 'person' ? 'person' : 'default'
+    const result = await loadPublicProfileDetails(uid, viewerId, { view })
     if (!result) return NextResponse.json({ error: 'Not found' }, { status: 404 })
     return NextResponse.json(result.details, {
       // Depends on who is asking (friends see more), so never shared-cached.

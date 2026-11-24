@@ -9,6 +9,12 @@ import MobileNavWrapper from '@/components/MobileNavWrapper'
 import { notFound } from 'next/navigation'
 import OrganizerProfileClient from './OrganizerProfileClient'
 import { isOrganizerBlocked } from '@/lib/moderation/blocks'
+import { teamRoleIn } from '@/lib/organizer/context'
+import { resolveOrgCover } from '@/lib/organizer/cover'
+import { orgPagePrefix, ownStorageUrl, readGallery, storageBucketName } from '@/lib/gallery'
+import PreviewBanner from '@/components/organizer/page/PreviewBanner'
+import { DEMO_EVENTS, DEMO_ORG_PAGE, isDemoMode } from '@/lib/demo'
+import { coverTemplatePath } from '@/lib/organizer/cover'
 import type { Metadata } from 'next'
 
 export const runtime = 'nodejs'
@@ -39,9 +45,34 @@ async function isHostAccount(uid: string): Promise<boolean> {
   }
 }
 
-export async function generateMetadata({ params }: { params: Promise<{ organizerId: string }> }): Promise<Metadata> {
+/** The owner, or a team admin of this org (they edit its page). */
+async function canEditOrgPage(viewerId: string | undefined, orgId: string): Promise<boolean> {
+  if (!viewerId) return false
+  if (viewerId === orgId) return true
+  try {
+    return (await teamRoleIn(orgId, viewerId)) === 'admin'
+  } catch {
+    return false
+  }
+}
+
+export async function generateMetadata({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ organizerId: string }>
+  searchParams?: Promise<{ view?: string }>
+}): Promise<Metadata> {
   const { organizerId } = await params
-  
+  if (isDemoMode()) return { title: `${DEMO_ORG_PAGE.name} | Tikèm Organizer` }
+  // The personal page is titled with the personal name, never the brand.
+  if ((await searchParams)?.view === 'person') {
+    const snap = await adminDb.collection('public_profiles').doc(organizerId).get().catch(() => null)
+    const personal = String((snap?.exists && snap.data()?.full_name) || '').trim()
+    const title = personal ? `${personal} | Tikèm` : 'Tikèm'
+    return { title, openGraph: { title, type: 'profile' }, twitter: { card: 'summary', title } }
+  }
+
   const supabase = await createClient()
   const { data: organizer } = await supabase
     .from('users')
@@ -66,14 +97,112 @@ export async function generateMetadata({ params }: { params: Promise<{ organizer
   return {
     title,
     description,
+    // og:image comes from ./opengraph-image.tsx (the organizer card).
     openGraph: { title, description, type: 'profile' },
-    twitter: { card: 'summary', title, description },
+    twitter: { card: 'summary_large_image', title, description },
   }
 }
 
-export default async function OrganizerProfilePage({ params }: { params: Promise<{ organizerId: string }> }) {
+export default async function OrganizerProfilePage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ organizerId: string }>
+  // nobanner / nophotos: demo-mode review switches only.
+  searchParams?: Promise<{ preview?: string; view?: string; nobanner?: string; nophotos?: string }>
+}) {
   const user = await getCurrentUser()
   const { organizerId } = await params
+  const query = (await searchParams) || {}
+  const isSelf = !!user && user.id === organizerId
+
+  // Demo mode (local review only, no Firestore): the demo organizer's page.
+  if (isDemoMode()) {
+    if (organizerId !== DEMO_ORG_PAGE.id) notFound()
+    const d = DEMO_ORG_PAGE
+    const demoPreview = query.preview === '1' && isSelf
+    const person = query.view === 'person'
+    const nowIso = new Date().toISOString()
+    const events = DEMO_EVENTS.filter((e: any) => e.organizer_id === d.id)
+    return (
+      <div className="min-h-screen bg-canvas pb-mobile-nav">
+        <Navbar user={user} />
+        {demoPreview && <PreviewBanner exitHref={`/profile/organizer/${d.id}`} />}
+        <OrganizerProfileClient
+          organizer={{ id: d.id, name: person ? d.personalName : d.name, logo: '', is_verified: true, created_at: d.created_at }}
+          upcomingEvents={person ? [] : events.filter((e: any) => e.start_datetime >= nowIso)}
+          pastEvents={person ? [] : events.filter((e: any) => e.start_datetime < nowIso)}
+          followerCount={d.followers}
+          totalEvents={events.length}
+          totalTicketsSold={0}
+          isFollowing={false}
+          userId={demoPreview ? undefined : user?.id}
+          details={
+            person
+              ? { kind: 'person', view: 'person', person: { bio: '', socials: { instagram: '', tiktok: '', twitter: '', facebook: '' } } }
+              : { kind: 'org', org: { description: d.description, website: d.website, instagram: d.instagram, facebook: d.facebook, twitter: '', linkedin: '', tiktok: '' } }
+          }
+          isAuthenticated={!!user && !demoPreview}
+          isHost={!person}
+          cover={person || query.nobanner === '1' ? null : { kind: 'template', key: d.coverTemplate, src: coverTemplatePath(d.coverTemplate) }}
+          gallery={person || query.nophotos === '1' ? [] : d.gallery}
+          canEdit={isSelf && !demoPreview && !person}
+          preview={demoPreview}
+          alsoRuns={person ? { name: d.name, logo: '', href: `/profile/organizer/${d.id}` } : null}
+        />
+        <MobileNavWrapper user={user} />
+      </div>
+    )
+  }
+
+  const editor = await canEditOrgPage(user?.id, organizerId)
+  // ?preview=1 ("Preview my page"): exactly what a visitor sees, with no
+  // owner tools and a bar saying so. Only for someone who can edit the page.
+  const preview = query.preview === '1' && editor
+
+  // ?view=person: the PERSONAL page, which every account has, also an
+  // organization's owner (lib/profile/public-details.ts, PERSON VIEW). Opened
+  // from attendee contexts: who's going, guest lists, an attendee's messages.
+  if (query.view === 'person') {
+    const loaded = await loadPublicProfileDetails(organizerId, user?.id ?? null, { view: 'person' }).catch((err) => {
+      console.error('[person-profile] details failed', err?.message)
+      return null
+    })
+    if (!loaded?.details.identity) notFound()
+    const identity = loaded.details.identity
+    const alsoRuns = loaded.details.also_runs
+    return (
+      <div className="min-h-screen bg-canvas pb-mobile-nav">
+        <Navbar user={user} />
+        <OrganizerProfileClient
+          organizer={{
+            id: organizerId,
+            name: identity.full_name || 'Tikèm',
+            logo: '',
+            is_verified: identity.is_verified,
+            created_at: identity.joined_at || '',
+          }}
+          upcomingEvents={[]}
+          pastEvents={[]}
+          followerCount={0}
+          totalEvents={0}
+          totalTicketsSold={0}
+          isFollowing={false}
+          userId={user?.id}
+          details={loaded.details}
+          friendshipState={loaded.friendship}
+          isAuthenticated={!!user}
+          isBlocked={user && !isSelf ? await isOrganizerBlocked(user.id, organizerId) : false}
+          isHost={false}
+          personPhoto={identity.photo_url}
+          alsoRuns={
+            alsoRuns ? { name: alsoRuns.name, logo: alsoRuns.logo, href: `/profile/organizer/${encodeURIComponent(organizerId)}` } : null
+          }
+        />
+        <MobileNavWrapper user={user} />
+      </div>
+    )
+  }
   
   const supabase = await createClient()
   
@@ -186,7 +315,18 @@ export default async function OrganizerProfilePage({ params }: { params: Promise
   })
   const details = loaded?.details ?? { kind: 'person' as const, person: null }
   const friendshipState: FriendshipState = loaded?.friendship ?? (user?.id === organizerId ? 'self' : 'none')
-  const isSelf = !!user && user.id === organizerId
+
+  // The banner and photos, from the page's public doc (lib/organizer/cover.ts,
+  // lib/gallery.ts): only a known template or this org's own uploads show.
+  const pageDoc = await adminDb
+    .collection('public_profiles')
+    .doc(organizerId)
+    .get()
+    .then((s: any) => (s.exists ? s.data() : null))
+    .catch(() => null)
+  const cover = resolveOrgCover(organizerId, pageDoc)
+  const bucket = storageBucketName()
+  const gallery = readGallery(pageDoc?.gallery, (u) => ownStorageUrl(u, bucket, orgPagePrefix(organizerId)))
 
   // Location only: the hero shows where they work. Nothing else from the
   // owner-only users doc reaches the page.
@@ -208,6 +348,7 @@ export default async function OrganizerProfilePage({ params }: { params: Promise
   return (
     <div className="min-h-screen bg-canvas pb-mobile-nav">
       <Navbar user={user} />
+      {preview && <PreviewBanner exitHref={`/profile/organizer/${encodeURIComponent(organizerId)}`} />}
 
       <OrganizerProfileClient
         organizer={organizer}
@@ -217,18 +358,22 @@ export default async function OrganizerProfilePage({ params }: { params: Promise
         totalEvents={totalEvents}
         totalTicketsSold={totalTicketsSold}
         isFollowing={isFollowing}
-        userId={user?.id}
+        userId={preview ? undefined : user?.id}
         details={details}
-        friendshipState={friendshipState}
-        isAuthenticated={!!user}
+        friendshipState={preview ? 'none' : friendshipState}
+        isAuthenticated={!!user && !preview}
         // Already in `userData` from the fetch above — the hero shows where an
         // organizer works when they have set it. Roughly half of production
         // organizer docs carry default_country, fewer default_city, so both
         // are optional and the row simply omits what is missing.
         city={typeof userData?.default_city === 'string' ? userData.default_city : undefined}
         country={typeof userData?.default_country === 'string' ? userData.default_country : undefined}
-        isBlocked={user && !isSelf ? await isOrganizerBlocked(user.id, organizerId) : false}
+        isBlocked={user && !isSelf && !preview ? await isOrganizerBlocked(user.id, organizerId) : false}
         isHost={isHost}
+        cover={cover}
+        gallery={gallery}
+        canEdit={editor && !preview}
+        preview={preview}
       />
 
       <MobileNavWrapper user={user} />

@@ -2,28 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { adminDb } from '@/lib/firebase/admin';
 import { requireOrg } from '@/lib/organizer/context';
-import { safeExternalUrl } from '@/lib/safeUrl';
+import { cleanOrgLinks } from '@/lib/organizer/links';
 import { writeOrgBrandAdmin } from '@/lib/firestore/org-brand-server';
-
-const MAX_LINK_LENGTH = 500;
-const HANDLE_RE = /^@?[A-Za-z0-9._-]{1,100}$/;
-
-/**
- * A social field is "username or URL". A bare handle is stored as typed; a
- * value that looks like a link (has a scheme, a slash, or a dot-host) must pass
- * safeExternalUrl, so a `javascript:` URL can never reach an <a href>.
- * Returns '' for empty, the normalised value, or null when invalid.
- */
-function cleanSocial(raw: unknown): string | null {
-  if (raw == null || raw === '') return '';
-  if (typeof raw !== 'string') return null;
-  const s = raw.trim();
-  if (!s) return '';
-  if (s.length > MAX_LINK_LENGTH) return null;
-  // Handles (incl. dotted ones like john.doe) carry no scheme or slash.
-  if (HANDLE_RE.test(s)) return s;
-  return safeExternalUrl(s);
-}
 
 function storageBucketName(): string {
   const raw = process.env.FIREBASE_STORAGE_BUCKET || process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || '';
@@ -58,10 +38,12 @@ function cleanLogoUrl(raw: unknown): string | null {
  *
  * Body (JSON), every key optional except as noted; only keys present are
  * written, so a partial body never blanks the rest:
- *   organization_name         required unless the body only sets the logo
+ *   organization_name         may be left out of a partial update, never sent empty
  *   organization_logo         https URL in our Storage bucket, or '' to clear
  *   organization_type, organization_description, website,
- *   facebook, instagram, twitter, linkedin
+ *   facebook, instagram, twitter, linkedin   (links stored as https URLs)
+ *
+ * GET returns the acting org's description and links, for the app's editor.
  */
 export async function PUT(request: NextRequest) {
   try {
@@ -84,39 +66,32 @@ export async function PUT(request: NextRequest) {
       organization_name,
       organization_type,
       organization_description,
-      website,
-      facebook,
-      instagram,
-      twitter,
-      linkedin,
       organization_logo,
     } = body;
 
     // Every link here is rendered as an href (admin console, public profile,
-    // mobile). Reject anything that is not http(s) instead of storing it.
-    let cleanWebsite = '';
-    if (typeof website === 'string' && website.trim()) {
-      const safe = website.trim().length <= MAX_LINK_LENGTH ? safeExternalUrl(website) : null;
-      if (!safe) {
-        return NextResponse.json({ error: 'Website must be a valid http(s) URL' }, { status: 400 });
-      }
-      cleanWebsite = safe;
-    } else if (website != null && typeof website !== 'string') {
-      return NextResponse.json({ error: 'Website must be a valid http(s) URL' }, { status: 400 });
+    // mobile). Stored as https URLs only; a bare handle becomes its profile
+    // URL on that network (lib/organizer/links.ts).
+    const linkInput: Record<string, unknown> = {};
+    for (const key of ['website', 'facebook', 'instagram', 'twitter', 'linkedin'] as const) {
+      if (has(key)) linkInput[key] = body[key];
     }
-
-    const social: Record<string, string> = {};
-    const socialInput = Object.entries({ facebook, instagram, twitter, linkedin }).filter(([key]) => has(key));
-    for (const [key, value] of socialInput) {
-      const cleaned = cleanSocial(value);
-      if (cleaned === null) {
-        return NextResponse.json(
-          { error: `${key} must be a username or a valid http(s) URL` },
-          { status: 400 }
-        );
-      }
-      social[key] = cleaned;
+    const links = cleanOrgLinks(linkInput);
+    if (!links.ok) {
+      return NextResponse.json(
+        {
+          error:
+            links.field === 'website'
+              ? 'Website must be a valid web address'
+              : `${links.field} must be a username or a link to that profile`,
+          field: links.field,
+        },
+        { status: 400 }
+      );
     }
+    const cleanWebsite = links.website ?? '';
+    const social: Record<string, string> = links.social;
+    const socialInput = Object.keys(social);
 
     let cleanLogo: string | null = null;
     if (has('organization_logo')) {
@@ -129,9 +104,13 @@ export async function PUT(request: NextRequest) {
       }
     }
 
-    // Validate required fields (a logo-only update may leave the name alone).
-    const logoOnly = has('organization_logo') && !has('organization_name');
-    if (!logoOnly && (typeof organization_name !== 'string' || organization_name.trim().length === 0)) {
+    // The name may be left out of a partial update (the logo alone, or the
+    // app's description + links), but never sent empty, and a body that
+    // changes nothing at all is refused as before.
+    const nameSent = has('organization_name');
+    const otherKeys = ['organization_logo', 'organization_type', 'organization_description', 'website', 'facebook', 'instagram', 'twitter', 'linkedin'];
+    const nothingElse = !otherKeys.some(has);
+    if ((nameSent || nothingElse) && (typeof organization_name !== 'string' || organization_name.trim().length === 0)) {
       return NextResponse.json(
         { error: 'Organization name is required' },
         { status: 400 }
@@ -140,11 +119,11 @@ export async function PUT(request: NextRequest) {
 
     // Update the org's data in Firestore: only the keys the caller sent.
     const details: Record<string, unknown> = { updated_at: new Date().toISOString() };
-    if (!logoOnly) details.organization_name = organization_name.trim();
+    if (nameSent) details.organization_name = organization_name.trim();
     if (has('organization_type')) details.organization_type = typeof organization_type === 'string' ? organization_type : '';
     if (has('organization_description')) {
       details.organization_description =
-        typeof organization_description === 'string' ? organization_description.trim() : '';
+        typeof organization_description === 'string' ? organization_description.trim().slice(0, 2000) : '';
     }
     if (has('website')) details.website = cleanWebsite;
     // merge: true deep-merges the map, so only the networks sent are touched.
@@ -154,7 +133,7 @@ export async function PUT(request: NextRequest) {
     // The brand's canonical home is public_profiles/{orgId} (plus the
     // users/{orgId} copy the app and the event pages read): lib/profile/org-brand.ts.
     const brand: Record<string, unknown> = {};
-    if (!logoOnly) brand.organization_name = organization_name.trim();
+    if (nameSent) brand.organization_name = organization_name.trim();
     if (cleanLogo !== null) brand.organization_logo = cleanLogo;
     await writeOrgBrandAdmin(orgId, brand, { organizers: true });
 
@@ -169,6 +148,21 @@ export async function PUT(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+export async function GET() {
+  const org = await requireOrg('manage_settings');
+  if (!org.ok) return org.response;
+  const snap = await adminDb.collection('organizers').doc(org.value.orgId).get();
+  const d = snap.exists ? snap.data() || {} : {};
+  const social = (d.social_media && typeof d.social_media === 'object' ? d.social_media : {}) as Record<string, unknown>;
+  const str = (v: unknown) => (typeof v === 'string' ? v : '');
+  return NextResponse.json({
+    organization_description: str(d.organization_description),
+    website: str(d.website),
+    instagram: str(social.instagram),
+    facebook: str(social.facebook),
+  });
 }
 
 // The app sends partial updates as PATCH ({ organization_name? , organization_logo? }); same handler.

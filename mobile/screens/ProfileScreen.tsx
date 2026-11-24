@@ -84,7 +84,7 @@ import { Switch } from '../components/ui/Switch';
 import StatusBarBackdrop from '../components/StatusBarBackdrop';
 import MessagesButton from '../components/MessagesButton';
 import { refreshAttendeeUnread, useAttendeeUnread } from '../lib/attendeeUnread';
-import { backendJson } from '../lib/api/backend';
+import HostSetupSheet from '../components/HostSetupSheet';
 
 // Tikèm's own accounts, and the studio that builds it. EdLight Labs is the
 // technology division of EdLight Initiative, not a separate company. The
@@ -355,30 +355,24 @@ export default function ProfileScreen() {
   const openEdit = () => navigation.navigate('EditProfile', { organizer: isOwnOrganizer });
 
   // Profile > "Host events on Tikèm": become an organizer without creating an
-  // event first, then land on the organizer Dashboard.
+  // event first (one compact step: name, one line, links, all optional), then
+  // land on the organizer Dashboard.
   const [hostingBusy, setHostingBusy] = useState(false);
+  const [showHostSetup, setShowHostSetup] = useState(false);
   const startHosting = () => {
     if (hostingBusy) return;
-    showAlert(t('profile.hostEvents.title'), t('profile.hostEvents.body'), [
-      { text: t('common.cancel'), style: 'cancel' },
-      {
-        text: t('profile.hostEvents.cta'),
-        onPress: async () => {
-          setHostingBusy(true);
-          try {
-            await backendJson('/api/account/become-organizer', { method: 'POST', body: JSON.stringify({}) });
-            // The organizer tab set is chosen from the profile, so refresh first.
-            await refreshUserProfile();
-            setMode('organizer', { landingTab: 'Dashboard' });
-          } catch (e) {
-            console.warn('become-organizer failed', e);
-            showAlert(t('common.error'), t('profile.hostEvents.failed'));
-          } finally {
-            setHostingBusy(false);
-          }
-        },
-      },
-    ]);
+    setShowHostSetup(true);
+  };
+  const finishHosting = async () => {
+    setHostingBusy(true);
+    try {
+      // The organizer tab set is chosen from the profile, so refresh first.
+      await refreshUserProfile();
+      setShowHostSetup(false);
+      setMode('organizer', { landingTab: 'Dashboard' });
+    } finally {
+      setHostingBusy(false);
+    }
   };
 
   const confirmSignOut = useCallback(() => {
@@ -820,6 +814,13 @@ export default function ProfileScreen() {
           ) : null}
         </TouchableOpacity>
         <DeleteAccountSheet visible={showDeleteAccount} onClose={() => setShowDeleteAccount(false)} />
+        {showHostSetup ? (
+          <HostSetupSheet
+            visible={showHostSetup}
+            onClose={() => setShowHostSetup(false)}
+            onDone={finishHosting}
+          />
+        ) : null}
         {canAddPhone || showPhoneLink ? (
           <PhoneLinkSheet visible={showPhoneLink} onClose={() => setShowPhoneLink(false)} />
         ) : null}

@@ -27,6 +27,16 @@
  * An organizer is a person too, but their profile is the organization's
  * storefront, so it shows the organization's details, not their personal ones.
  *
+ * PERSON VIEW (view: 'person', ?view=person). An organization's owner also
+ * goes to other people's events, and there they are a person, not a brand:
+ * who's going, guest lists, an attendee's messages open their PERSONAL page.
+ * `view: 'person'` answers as a person whatever the kind: `identity` (the
+ * personal name and photo from public_profiles, never organization_name or
+ * organization_logo), `person` under the person privacy rule above, and for
+ * an org account `also_runs` (the organization's name and logo; its page is
+ * the default view of this same uid). The org's own description, links and
+ * events never appear in it.
+ *
  * Never returned, for either kind: email, phone, WhatsApp, privacy settings or
  * anything else from users/{uid} beyond bio and the four social handles.
  *
@@ -63,13 +73,30 @@ export interface PersonPublicDetails {
   socials: PersonSocials
 }
 
+/** The personal name and photo (person view): never the organization's brand. */
+export interface PersonIdentity {
+  full_name: string
+  photo_url: string
+  is_verified: boolean
+  /** ISO date the account was created, or null. */
+  joined_at: string | null
+}
+
 export interface PublicProfileDetails {
   kind: ProfileKind
   /** Present when kind is 'org'. */
   org?: OrgPublicDetails
   /** Present when kind is 'person': null when their privacy hides it from this viewer. */
   person?: PersonPublicDetails | null
+  /** 'person' when the person view was asked for. */
+  view?: 'person'
+  /** Person view only. */
+  identity?: PersonIdentity
+  /** Person view of an organization's owner: the organization they run. */
+  also_runs?: { name: string; logo: string } | null
 }
+
+export type ProfileView = 'default' | 'person'
 
 type Doc = Record<string, any> | null | undefined
 
@@ -174,6 +201,46 @@ export function buildPublicProfileDetails(input: {
   }
 }
 
+const isoDate = (v: any): string | null => {
+  if (!v) return null
+  const d =
+    typeof v?.toDate === 'function'
+      ? v.toDate()
+      : typeof v?.seconds === 'number'
+        ? new Date(v.seconds * 1000)
+        : typeof v?._seconds === 'number'
+          ? new Date(v._seconds * 1000)
+          : new Date(v)
+  return Number.isNaN(d.getTime()) ? null : d.toISOString()
+}
+
+/** Pure: the person view from already-read documents. */
+export function buildPersonView(input: {
+  userDoc: Doc
+  orgDoc: Doc
+  publicDoc: Doc
+  hasPublishedEvents: boolean
+  friendship: FriendshipState
+}): PublicProfileDetails {
+  const { userDoc, orgDoc, publicDoc, friendship } = input
+  const isOrg = resolveProfileKind(input) === 'org'
+  const brandName = str(publicDoc?.organization_name) || str(orgDoc?.organization_name) || str(userDoc?.organization_name)
+  const brandLogo = str(publicDoc?.organization_logo) || str(orgDoc?.organization_logo) || str(userDoc?.organization_logo)
+  const photo = safeExternalUrl(str(publicDoc?.photo_url) || str(userDoc?.photo_url)) || ''
+  return {
+    kind: 'person',
+    view: 'person',
+    identity: {
+      full_name: (str(publicDoc?.full_name) || str(userDoc?.full_name) || str(userDoc?.display_name)).slice(0, 120),
+      photo_url: photo.startsWith('https://') ? photo : '',
+      is_verified: Boolean(publicDoc?.is_verified ?? userDoc?.is_verified),
+      joined_at: isoDate(publicDoc?.created_at ?? userDoc?.created_at),
+    },
+    person: canViewPersonDetails(userDoc, friendship) ? resolvePersonDetails(userDoc) : null,
+    also_runs: isOrg && brandName ? { name: brandName, logo: brandLogo.startsWith('https://') ? brandLogo : '' } : null,
+  }
+}
+
 /**
  * Read everything and answer for this viewer (null when signed out). Returns
  * null when no such user exists. `hasPublishedEvents` may be passed by a
@@ -182,7 +249,7 @@ export function buildPublicProfileDetails(input: {
 export async function loadPublicProfileDetails(
   uid: string,
   viewerId: string | null,
-  opts: { hasPublishedEvents?: boolean } = {}
+  opts: { hasPublishedEvents?: boolean; view?: ProfileView } = {}
 ): Promise<{ details: PublicProfileDetails; friendship: FriendshipState } | null> {
   const id = String(uid || '').trim()
   if (!id) return null
@@ -223,6 +290,10 @@ export async function loadPublicProfileDetails(
     } catch {
       hasPublishedEvents = false
     }
+  }
+
+  if (opts.view === 'person') {
+    return { details: buildPersonView({ userDoc, orgDoc, publicDoc, hasPublishedEvents, friendship }), friendship }
   }
 
   return {

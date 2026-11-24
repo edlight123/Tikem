@@ -127,14 +127,14 @@ describe('PUT /api/organizer/settings/organization', () => {
     expect(res.status).toBe(400)
   })
 
-  it('stores a normalised website and plain handles', async () => {
+  it('stores the website and handles as https links', async () => {
     const res = await orgPUT(
       orgReq({ organization_name: 'X', website: 'example.com', instagram: '@john.doe', facebook: 'https://facebook.com/x' })
     )
     expect(res.status).toBe(200)
     const written = (orgSet.mock.calls[0] as any)[0]
     expect(written.website).toBe('https://example.com/')
-    expect(written.social_media.instagram).toBe('@john.doe')
+    expect(written.social_media.instagram).toBe('https://www.instagram.com/john.doe')
     expect(written.social_media.facebook).toBe('https://facebook.com/x')
     // The name also lands in its canonical home, public_profiles (lib/profile/org-brand.ts).
     const canonical = batchSet.mock.calls.find((c: any[]) => c[0]._col === 'public_profiles')

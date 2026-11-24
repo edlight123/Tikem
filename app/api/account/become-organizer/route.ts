@@ -5,7 +5,8 @@ import { updateUserRole } from '@/lib/firestore/user-profile-server'
 export const dynamic = 'force-dynamic'
 
 /**
- * POST /api/account/become-organizer   { organizationName?, organizationLogo? }
+ * POST /api/account/become-organizer
+ *   { organizationName?, organizationLogo?, description?, website?, instagram?, facebook? }
  *
  * Turns the signed-in account into an organizer: the app's twin of the web's
  * "create your organization" step (app/organizer/actions.ts becomeOrganizer).
@@ -54,6 +55,15 @@ export async function POST(request: Request) {
       console.error('[become-organizer] brand details not saved', e)
     }
   }
+
+  // One line, website, Instagram, Facebook: optional, https links only.
+  const { saveOrgSetupDetails } = await import('@/lib/organizer/setupDetails')
+  await saveOrgSetupDetails(user.id, {
+    description: body?.description,
+    website: body?.website,
+    instagram: body?.instagram,
+    facebook: body?.facebook,
+  })
 
   return NextResponse.json({ ok: true, role: role === 'attendee' ? 'organizer' : role, upgraded })
 }

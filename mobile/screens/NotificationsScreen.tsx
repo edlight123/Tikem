@@ -429,7 +429,7 @@ export default function NotificationsScreen() {
     // "X joined Tikèm from your invite" opens their profile.
     if ((notification.type as string) === 'invite_joined') {
       const actorId = (notification.metadata as any)?.actorId;
-      if (typeof actorId === 'string' && actorId) return { screen: 'OrganizerProfile', params: { organizerId: actorId } };
+      if (typeof actorId === 'string' && actorId) return { screen: 'OrganizerProfile', params: { organizerId: actorId, view: 'person' } };
     }
     // The national-day note opens the day's themed event list.
     if ((notification.type as string) === 'national_day') {

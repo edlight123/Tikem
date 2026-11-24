@@ -369,3 +369,20 @@ export function isDemoMode(): boolean {
 export function isDemoEmail(email: string): boolean {
   return email === DEMO_USERS.organizer.email || email === DEMO_USERS.attendee.email
 }
+
+// The demo organizer's public page (app/profile/organizer/[organizerId], demo
+// mode only): banner, photos and links, so the page can be reviewed without
+// Firestore. Photos are the bundled world photos.
+export const DEMO_ORG_PAGE = {
+  id: 'demo-organizer-id',
+  name: 'Kompa Nights HT',
+  personalName: 'Demo Organizer',
+  description: 'Konpa nights and day parties in Port-au-Prince and Miami.',
+  website: 'https://kompanights.example.com/',
+  instagram: 'https://www.instagram.com/kompanights',
+  facebook: 'https://www.facebook.com/kompanights',
+  coverTemplate: 'lavi-lannwit' as const,
+  gallery: ['mizik', 'kilti', 'gastronomi', 'eksperyans'].map((k) => ({ url: `/art/world-photos/${k}.jpg`, caption: null })),
+  followers: 248,
+  created_at: '2025-03-01T00:00:00.000Z',
+}

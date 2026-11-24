@@ -65,6 +65,8 @@ const nextConfig = {
   // serverless bundle ships without them and every share card 500s in prod.
   outputFileTracingIncludes: {
     '/events/[id]/opengraph-image': ['./assets/fonts/**'],
+    // The organizer card: fonts, plus the template banners it reads off disk.
+    '/profile/organizer/[organizerId]/opengraph-image': ['./assets/fonts/**', './public/art/world-photos/**'],
     // Poster templates are drawn server-side with these typefaces.
     '/api/posters/preview': ['./assets/fonts/**'],
     '/api/posters/create': ['./assets/fonts/**'],

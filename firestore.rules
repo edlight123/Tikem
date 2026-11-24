@@ -243,7 +243,13 @@ service cloud.firestore {
                == get(/databases/$(database)/documents/users/$(uid)).data.get('rating', null))
           : (request.resource.data.get('is_verified', false) == false
              && request.resource.data.get('rating', null) == null)
-      );
+      )
+      // The org page's banner and photos are server-owned: written only by
+      // /api/organizer/settings/{cover,gallery} (owner or team admin), which
+      // check every URL. A client merge write leaves them as they are.
+      && request.resource.data.get('gallery', null) == (resource == null ? null : resource.data.get('gallery', null))
+      && request.resource.data.get('coverImageUrl', null) == (resource == null ? null : resource.data.get('coverImageUrl', null))
+      && request.resource.data.get('coverTemplate', null) == (resource == null ? null : resource.data.get('coverTemplate', null));
       allow delete: if false;
     }
 

@@ -155,7 +155,7 @@ export default function ConnectionsScreen() {
     setRefreshing(false);
   }, [loadOverview]);
 
-  const openProfile = (uid: string) => navigation.navigate('OrganizerProfile', { organizerId: uid });
+  const openProfile = (uid: string) => navigation.navigate('OrganizerProfile', { organizerId: uid, view: 'person' });
 
   const goToLogin = () => navigation.navigate('Auth');
 

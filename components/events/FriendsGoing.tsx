@@ -55,7 +55,7 @@ export default function FriendsGoing({ eventId, currentUserId, className = '' }:
           {data.friends.map((f) => (
             <Link
               key={f.uid}
-              href={`/profile/organizer/${f.uid}`}
+              href={`/profile/organizer/${f.uid}?view=person`}
               title={f.displayName}
               className="grid h-8 w-8 place-items-center overflow-hidden rounded-full bg-surface-high text-xs font-semibold text-fg ring-2 ring-black"
             >

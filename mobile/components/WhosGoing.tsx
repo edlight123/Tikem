@@ -78,7 +78,7 @@ export default function WhosGoing({ eventId, visibility = 'faces', capacity, alw
     };
   }, [eventId, visibility]);
 
-  const goToProfile = (uid: string) => navigation.navigate('OrganizerProfile', { organizerId: uid });
+  const goToProfile = (uid: string) => navigation.navigate('OrganizerProfile', { organizerId: uid, view: 'person' });
 
   if (visibility === 'hidden') return null;
 

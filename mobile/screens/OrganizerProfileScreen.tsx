@@ -8,21 +8,32 @@ import {
   ScrollView,
   StyleSheet,
     TouchableOpacity,
-  Image,
   Dimensions,
   RefreshControl,
   Linking,
-    ImageBackground,
+  Animated,
 } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import {
   Calendar,
   MapPin,
   Globe,
-  MessageCircle,
   ChevronDown,
+  ChevronRight,
   MoreHorizontal,
+  Instagram,
+  Facebook,
+  Twitter,
+  Linkedin,
+  Music2,
+  ImagePlus,
+  Images,
+  Eye,
+  Pencil,
+  type LucideIcon,
 } from 'lucide-react-native';
 import { doc, getDoc, collection, query, where, getDocs, addDoc, deleteDoc, Timestamp } from 'firebase/firestore';
 import { db } from '../config/firebase';
@@ -44,6 +55,11 @@ import ReportContentModal from '../components/ReportContentModal';
 import { useAppAlert } from '../components/AppAlert';
 import { useBlockedOrganizers } from '../lib/blockedOrganizers';
 import { AFTER_ALERT_MS, promptBlockToggle } from '../lib/moderationActions';
+import StretchyHero from '../components/StretchyHero';
+import GalleryStrip from '../components/GalleryStrip';
+import OrgCoverSheet from '../components/organizer/OrgCoverSheet';
+import { useActiveOrg } from '../lib/activeOrg';
+import { COVER_TEMPLATE_SOURCES, readGallery, readOrgCover, type OrgCoverState } from '../lib/orgPage';
 
 const { width } = Dimensions.get('window');
 // Hero geometry. Build 13 gave the hero a fixed 232pt floor and bottom-aligned
@@ -81,23 +97,36 @@ interface SocialLink {
   url: string;
 }
 
-// The existing icon row, with each network's own glyph (it was one generic
-// "external link" arrow for all of them) on a quiet fill.
-const SOCIAL_ICON: Record<SocialType, { name: React.ComponentProps<typeof Ionicons>['name']; label: string }> = {
-  website: { name: 'globe-outline', label: 'Website' },
-  instagram: { name: 'logo-instagram', label: 'Instagram' },
-  facebook: { name: 'logo-facebook', label: 'Facebook' },
-  twitter: { name: 'logo-x', label: 'X' },
-  linkedin: { name: 'logo-linkedin', label: 'LinkedIn' },
-  tiktok: { name: 'logo-tiktok', label: 'TikTok' },
+// Website and socials as line icons (lucide), the same set as the website's
+// organizer page. lucide has no TikTok glyph; Music2 stands in, as on the web.
+const SOCIAL_ICON: Record<SocialType, { Icon: LucideIcon; label: string }> = {
+  website: { Icon: Globe, label: 'Website' },
+  instagram: { Icon: Instagram, label: 'Instagram' },
+  facebook: { Icon: Facebook, label: 'Facebook' },
+  twitter: { Icon: Twitter, label: 'X' },
+  linkedin: { Icon: Linkedin, label: 'LinkedIn' },
+  tiktok: { Icon: Music2, label: 'TikTok' },
 };
+
+// The org page's banner: a photo banner, or (no banner) just room for the
+// controls so the logo still sits below them. The logo overlaps by half.
+const BANNER_PHOTO_H = 150;
+const BANNER_PLAIN_H = 64;
+const ORG_LOGO = 76;
 
 export default function OrganizerProfileScreen({ route, navigation }: any) {
   const { colors } = useTheme();
   const styles = getStyles(colors);
   const insets = useSafeAreaInsets();
   const { organizerId } = route.params;
+  // preview: "Preview my page" (what visitors see: no owner prompts).
+  const preview = route.params?.preview === true;
+  // view 'person': the PERSONAL page, also for an organization's owner.
+  const personView = route.params?.view === 'person';
   const { user } = useAuth();
+  const activeOrg = useActiveOrg();
+  const scrollY = React.useRef(new Animated.Value(0)).current;
+  const [showCover, setShowCover] = useState(false);
   const { t, language } = useI18n();
   const scrollViewRef = React.useRef<ScrollView>(null);
   
@@ -170,7 +199,7 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
     try {
       // What shows under the name, privacy-checked server-side. In parallel
       // with the reads below; a failure leaves the legacy brand fields.
-      fetchPublicProfileDetails(organizerId).then(setDetails);
+      fetchPublicProfileDetails(organizerId, { view: personView ? 'person' : undefined }).then(setDetails);
 
       // H4: cross-user read of the organizer's SAFE public projection (name,
       // photo, is_verified, organization_name/logo) instead of users/{uid}.
@@ -187,6 +216,9 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
         // Signed out (or offline): keep the placeholder.
       }
       setOrganizer(organizerData);
+
+      // The personal page lists no hosted events: those are the org's page.
+      if (personView) return;
 
       // Fetch events
       const eventsQuery = query(
@@ -421,9 +453,6 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
     checkFollowStatus();
   };
 
-  const scrollToBottom = () => {
-    scrollViewRef.current?.scrollToEnd({ animated: true });
-  };
 
   const renderEventCard = (event: any) => (
     <PosterEventCard
@@ -522,17 +551,18 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
         ? details.person?.bio || ''
         : organizer.description || '';
   const personHidden = details?.kind === 'person' && details.person === null;
-  const isOrgProfile = !!organizer.organization_name || details?.kind === 'org';
+  const isOrgProfile = !personView && (!!organizer.organization_name || details?.kind === 'org');
   // Not everyone is an organizer (owner, 2026-11-17). Someone who has never
   // hosted gets a person's profile: no "0 events", no Follow, no empty
   // "upcoming events", and "Joined Tikèm" instead of "Hosting events since".
   const isHost =
-    isOrgProfile ||
+    !personView &&
+    (isOrgProfile ||
     (stats.totalEvents || 0) > 0 ||
     upcomingEvents.length > 0 ||
     pastEvents.length > 0 ||
     organizer.role === 'organizer' ||
-    organizer.is_organizer === true;
+    organizer.is_organizer === true);
 
   // Connect (friend-request) action still sits inline next to the stats.
   const isSelf = !!user && user.uid === organizerId;
@@ -549,6 +579,30 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
   const showAllPastLabel =
     t(PAST_SHOW_ALL_KEY) === PAST_SHOW_ALL_KEY ? 'Show all' : t(PAST_SHOW_ALL_KEY);
 
+  // The org page's banner and photos (server-written on public_profiles;
+  // lib/galleryRules re-checks them: a known template or this org's uploads).
+  const cover = readOrgCover(organizerId, organizer);
+  const coverSource = cover?.kind === 'template' ? COVER_TEMPLATE_SOURCES[cover.key] : cover?.kind === 'upload' ? { uri: cover.url } : null;
+  const gallery = readGallery(organizer.gallery, organizerId);
+  const coverState: OrgCoverState = {
+    coverTemplate: cover?.kind === 'template' ? cover.key : null,
+    coverImageUrl: cover?.kind === 'upload' ? cover.url : null,
+  };
+  // Owner prompts: the owner, or a team admin of this org; never in a preview.
+  const canManage =
+    !preview &&
+    !personView &&
+    !!user &&
+    (user.uid === organizerId || activeOrg.options.some((o) => o.orgId === organizerId && (o.role === 'owner' || o.role === 'admin')));
+  const orgHero = isHost && !personView;
+  const bannerHeight = insets.top + (coverSource ? BANNER_PHOTO_H : BANNER_PLAIN_H);
+  const identity = personView ? details?.identity : undefined;
+  const alsoRuns = personView ? details?.also_runs || null : null;
+  const personName = identity?.full_name || organizer.full_name || organizer.organization_name || '';
+  const personPhoto = personView
+    ? identity?.photo_url || organizer.photo_url || ''
+    : organizer.organization_logo || organizer.avatarUrl || organizer.photo_url || '';
+
   const statItems = [
     { label: t('organizerProfile.stats.events'), value: String(stats.totalEvents || 0) },
     { label: t('organizerProfile.stats.followers'), value: String(stats.followerCount || 0) },
@@ -557,162 +611,269 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
   // A person's line: friends-facing facts only, never "0 events · 0 followers".
   const personLine = !isHost && joinedLabel ? t('organizerProfile.joinedOn', { date: joinedLabel }) : null;
 
+  // The controls over the top of the page: back, "…", Follow.
+  const controls = (
+    <>
+      {/* Back: a clean chevron on a scrim, top-left, never over the logo. */}
+      <TouchableOpacity
+        style={[styles.backButton, { top: insets.top + HERO_CONTROL_TOP }]}
+        onPress={() => goBackOrHome(navigation)}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        accessibilityRole="button"
+        accessibilityLabel={t('common.back')}
+      >
+        <Ionicons name="chevron-back" size={26} color={colors.white} />
+      </TouchableOpacity>
+
+      {/* "…": report / block. Not on your own page, not in a preview. */}
+      {!isSelf && !preview && (
+        <TouchableOpacity
+          style={[styles.moreButton, { top: insets.top + HERO_CONTROL_TOP }]}
+          onPress={handleMore}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          accessibilityRole="button"
+          accessibilityLabel={t('moderation.moreTitle')}
+        >
+          <MoreHorizontal size={20} color={colors.white} />
+        </TouchableOpacity>
+      )}
+
+      {/* Follow, top right. Hidden while blocked (the block removed the
+          follow and re-following is refused) and on a personal page. */}
+      {!isSelf && !preview && !isBlocked && !personView && (isHost || isFollowing) && (
+        <TouchableOpacity
+          style={[
+            styles.followButtonSmall,
+            { top: insets.top + HERO_CONTROL_TOP },
+            isFollowing && styles.followingButtonSmall,
+          ]}
+          onPress={handleFollow}
+        >
+          {isFollowing ? <Ionicons name="checkmark" size={15} color={colors.white} /> : null}
+          <Text style={[styles.followButtonSmallText, isFollowing && styles.followingButtonSmallText]}>
+            {isFollowing ? t('organizerProfile.following') : t('organizerProfile.follow')}
+          </Text>
+        </TouchableOpacity>
+      )}
+    </>
+  );
+
+  // Website and socials as line icons on one row (lucide, like the website).
+  const socialRow =
+    socialLinks.length > 0 ? (
+      <View style={styles.socialRow}>
+        {socialLinks.map((link) => {
+          const Icon = SOCIAL_ICON[link.type].Icon;
+          return (
+            <TouchableOpacity
+              key={link.type}
+              style={styles.socialIcon}
+              onPress={() => openLink(link.url)}
+              hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+              accessibilityRole="link"
+              accessibilityLabel={
+                link.type === 'website' ? t('organizerProfile.websiteLabel') : SOCIAL_ICON[link.type].label
+              }
+            >
+              <Icon size={19} color={colors.textSecondary} strokeWidth={1.75} />
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    ) : null;
+
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
-      <ScrollView
-        ref={scrollViewRef}
+      <Animated.ScrollView
+        ref={scrollViewRef as any}
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
+        onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: true })}
+        scrollEventThrottle={16}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.white} />
         }
       >
-        {/* Premium Hero Section with ImageBackground */}
-        <ImageBackground
-          source={organizer.coverImageUrl ? { uri: organizer.coverImageUrl } : undefined}
-          // No cover: the header sits on the page's own black, not a lighter
-          // band (TestFlight: "is this page premium enough?").
-          style={[styles.hero, !organizer.coverImageUrl && styles.heroPlain]}
-          resizeMode="cover"
-        >
-          {/* Dark scrim over a cover photo for readability */}
-          {!!organizer.coverImageUrl && <View style={styles.heroScrim} />}
-
-          {/* Back Button — a clean chevron-back, consistent with the
-              organizer-surface headers (top-left, never over the avatar). */}
-          <TouchableOpacity
-            style={[styles.backButton, { top: insets.top + HERO_CONTROL_TOP }]}
-            onPress={() => goBackOrHome(navigation)}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            accessibilityRole="button"
-            accessibilityLabel={t('common.back')}
-          >
-            <Ionicons name="chevron-back" size={26} color={colors.white} />
-          </TouchableOpacity>
-
-          {/* "…" — report / block. Top right, the Follow button sits beside it.
-              Not on your own profile. */}
-          {!isSelf && (
-            <TouchableOpacity
-              style={[styles.moreButton, { top: insets.top + HERO_CONTROL_TOP }]}
-              onPress={handleMore}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              accessibilityRole="button"
-              accessibilityLabel={t('moderation.moreTitle')}
+        {orgHero ? (
+          <View>
+            {/* The banner stretches into the pull-down: no empty band above it. */}
+            <StretchyHero
+              scrollY={scrollY}
+              height={bannerHeight}
+              backgroundColor={colors.background}
+              background={
+                coverSource ? (
+                  <>
+                    <ExpoImage source={coverSource} style={StyleSheet.absoluteFill} contentFit="cover" transition={200} />
+                    <LinearGradient
+                      colors={['rgba(0,0,0,0.35)', 'rgba(0,0,0,0)', colors.background]}
+                      locations={[0, 0.45, 1]}
+                      style={StyleSheet.absoluteFill}
+                    />
+                  </>
+                ) : null
+              }
             >
-              <MoreHorizontal size={20} color={colors.white} />
-            </TouchableOpacity>
-          )}
+              {canManage && coverSource ? (
+                <TouchableOpacity
+                  style={styles.editBanner}
+                  onPress={() => setShowCover(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('orgPage.changeBanner')}
+                >
+                  <Pencil size={15} color={colors.white} />
+                </TouchableOpacity>
+              ) : null}
+            </StretchyHero>
+            {controls}
 
-          {/* Small Follow Button - Top Right. Hidden while blocked: the block
-              removed the follow and re-following is refused. */}
-          {!isSelf && !isBlocked && (isHost || isFollowing) && (
-            <TouchableOpacity
-              style={[
-                styles.followButtonSmall,
-                { top: insets.top + HERO_CONTROL_TOP },
-                isFollowing && styles.followingButtonSmall,
-              ]}
-              onPress={handleFollow}
-            >
-              {isFollowing ? <Ionicons name="checkmark" size={15} color={colors.white} /> : null}
-              <Text style={[styles.followButtonSmallText, isFollowing && styles.followingButtonSmallText]}>
-                {isFollowing ? t('organizerProfile.following') : t('organizerProfile.follow')}
-              </Text>
-            </TouchableOpacity>
-          )}
-
-          {/* Hero Content — TOP-anchored (build 13 shipped it bottom-aligned
-              inside a 232pt floor, which left dead cover art above it). It is a
-              SINGLE identity row: the avatar sits beside the name instead of
-              stacked above it, and verified + category · city share one meta
-              line beneath the name. paddingTop clears the back chevron and the
-              Follow pill by HERO_IDENTITY_GAP at every safe-area inset. */}
-          <View style={[styles.heroContent, { paddingTop: insets.top + HERO_IDENTITY_OFFSET }]}>
-            <View style={styles.identityRow}>
-              {/* Avatar — 52 inline for an organizer. A person's profile is
-                  mostly their face, so it goes to 72 with no white ring
-                  (owner feedback 2026-11-19, "should it be bigger?"). */}
-              <View style={[styles.avatar, !isOrgProfile && styles.avatarPerson]}>
-                {(organizer.organization_logo || organizer.avatarUrl || organizer.photo_url) ? (
-                  <Image
-                    source={{ uri: organizer.organization_logo || organizer.avatarUrl || organizer.photo_url }}
-                    style={styles.avatarImage}
-                  />
-                ) : isOrgProfile ? (
-                  <OrgMark size={52} color="#000000" />
-                ) : (
-                  // A person, not an organization: their drawn portrait.
-                  <Image source={defaultAvatar(organizerId)} style={styles.avatarImage} />
-                )}
+            <View style={styles.orgHead}>
+              {/* The logo overlaps the banner; the counts sit beside it. */}
+              <View style={styles.logoRow}>
+                <View style={styles.orgLogo}>
+                  {organizer.organization_logo || organizer.photo_url ? (
+                    <ExpoImage
+                      source={{ uri: organizer.organization_logo || organizer.photo_url }}
+                      style={styles.orgLogoImage}
+                      contentFit="cover"
+                    />
+                  ) : (
+                    <OrgMark size={40} color="#000000" />
+                  )}
+                </View>
+                <View style={styles.statsBeside}>
+                  {statItems.slice(0, 2).map((item) => (
+                    <View key={item.label} style={styles.statBlock}>
+                      <Text style={styles.statFigure}>{item.value}</Text>
+                      <Text style={styles.statCaption}>{item.label}</Text>
+                    </View>
+                  ))}
+                </View>
               </View>
 
-              <View style={styles.identityText}>
-                {/* Organization brand overrides the personal name here and
-                    everywhere the organizer is shown. */}
-                <Text style={styles.organizerName} numberOfLines={1}>
-                  {organizer.organization_name || organizer.full_name}
-                </Text>
+              <Text style={styles.orgName} numberOfLines={2}>
+                {organizer.organization_name || organizer.full_name}
+              </Text>
 
-                {/* Verified mark + category · city on one line. VerifiedBadge is
-                    a bare teal glyph + label — never a filled pill. */}
-                {(organizer.is_verified || !!subtitle) && (
-                  <View style={styles.metaRow}>
-                    {organizer.is_verified && <VerifiedBadge size="small" showLabel />}
-                    {organizer.is_verified && !!subtitle && (
-                      <Text style={styles.metaDot}>·</Text>
-                    )}
-                    {!!subtitle && (
-                      <Text style={styles.subtitle} numberOfLines={1}>
-                        {subtitle}
-                      </Text>
+              {(organizer.is_verified || !!subtitle) && (
+                <View style={styles.metaRow}>
+                  {organizer.is_verified && <VerifiedBadge size="small" showLabel />}
+                  {organizer.is_verified && !!subtitle && <Text style={styles.metaDotMuted}>·</Text>}
+                  {!!subtitle && (
+                    <Text style={styles.subtitleMuted} numberOfLines={1}>
+                      {subtitle}
+                    </Text>
+                  )}
+                </View>
+              )}
+
+              {!!aboutText && <Text style={styles.orgAbout}>{aboutText}</Text>}
+
+              {socialRow}
+
+              {/* Add-prompts: only for the owner (or a team admin), only for
+                  what is missing, never in a preview. */}
+              {canManage && (!coverSource || gallery.length === 0) ? (
+                <View style={styles.promptRow}>
+                  {!coverSource ? (
+                    <TouchableOpacity style={styles.prompt} onPress={() => setShowCover(true)} accessibilityRole="button">
+                      <ImagePlus size={15} color={colors.text} />
+                      <Text style={styles.promptText}>{t('orgPage.addBanner')}</Text>
+                    </TouchableOpacity>
+                  ) : null}
+                  {gallery.length === 0 ? (
+                    <TouchableOpacity
+                      style={styles.prompt}
+                      onPress={() => navigation.navigate('OrgGallery', { orgId: organizerId })}
+                      accessibilityRole="button"
+                    >
+                      <Images size={15} color={colors.text} />
+                      <Text style={styles.promptText}>{t('orgPage.addPhotos')}</Text>
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+              ) : null}
+
+              {preview ? (
+                <View style={styles.previewNote}>
+                  <Eye size={14} color={colors.textSecondary} />
+                  <Text style={styles.previewNoteText}>{t('orgPage.previewNote')}</Text>
+                </View>
+              ) : null}
+            </View>
+          </View>
+        ) : (
+          <View style={[styles.hero, styles.heroPlain]}>
+            {controls}
+            <View style={[styles.heroContent, { paddingTop: insets.top + HERO_IDENTITY_OFFSET }]}>
+              <View style={styles.identityRow}>
+                {/* A person: their face at 72, no ring. */}
+                <View style={[styles.avatar, styles.avatarPerson]}>
+                  {personPhoto ? (
+                    <ExpoImage source={{ uri: personPhoto }} style={styles.avatarImage} contentFit="cover" />
+                  ) : (
+                    <ExpoImage source={defaultAvatar(organizerId)} style={styles.avatarImage} contentFit="cover" />
+                  )}
+                </View>
+                <View style={styles.identityText}>
+                  <Text style={styles.organizerName} numberOfLines={1}>
+                    {personName}
+                  </Text>
+                  {(organizer.is_verified || !!subtitle) && (
+                    <View style={styles.metaRow}>
+                      {organizer.is_verified && <VerifiedBadge size="small" showLabel />}
+                      {organizer.is_verified && !!subtitle && <Text style={styles.metaDot}>·</Text>}
+                      {!!subtitle && (
+                        <Text style={styles.subtitle} numberOfLines={1}>
+                          {subtitle}
+                        </Text>
+                      )}
+                    </View>
+                  )}
+                </View>
+              </View>
+
+              {/* An organization's owner seen as a person: the org they run. */}
+              {alsoRuns ? (
+                <TouchableOpacity
+                  style={styles.alsoRuns}
+                  onPress={() => navigation.push('OrganizerProfile', { organizerId })}
+                  accessibilityRole="link"
+                >
+                  <View style={styles.alsoRunsLogo}>
+                    {alsoRuns.logo ? (
+                      <ExpoImage source={{ uri: alsoRuns.logo }} style={styles.orgLogoImage} contentFit="cover" />
+                    ) : (
+                      <OrgMark size={16} color="#000000" />
                     )}
                   </View>
-                )}
-              </View>
-            </View>
+                  <Text style={styles.alsoRunsText} numberOfLines={1}>
+                    {t('orgPage.alsoRuns', { name: alsoRuns.name })}
+                  </Text>
+                  <ChevronRight size={16} color={colors.textTertiary} />
+                </TouchableOpacity>
+              ) : null}
 
-            {/* Contact — scrolls to the socials at the bottom. Was a full-width
-                button; now a compact self-start chip so it doesn't eat a row.
-                H4: gated only on public brand socials now (no email/whatsapp/phone). */}
-            {socialLinks.length > 0 && (
-              <TouchableOpacity
-                style={styles.contactButtonHero}
-                onPress={scrollToBottom}
-              >
-                <MessageCircle size={14} color={colors.white} />
-                <Text style={styles.contactButtonHeroText}>{t('organizerProfile.contactSocial')}</Text>
-              </TouchableOpacity>
-            )}
+              {socialRow}
+            </View>
           </View>
-        </ImageBackground>
+        )}
 
         <View style={styles.content}>
 
           {/* Stats — one quiet tabular-numeral line rather than a full-width row of three
               27px numerals. All three figures are kept, just at reading size:
               "4 EVENTS · 4 FOLLOWERS · 0 SOLD". */}
-          {!isHost ? (
-            personLine ? (
-              <View style={styles.statLine}>
-                <Text style={styles.statLabel}>{personLine}</Text>
-              </View>
-            ) : null
-          ) : (
-          <View style={styles.statLine}>
-            {statItems.map((item, i) => (
-              <React.Fragment key={item.label}>
-                {i > 0 && <Text style={styles.statSep}>·</Text>}
-                <Text style={styles.statValue}>{item.value}</Text>
-                <Text style={styles.statLabel}>{item.label}</Text>
-              </React.Fragment>
-            ))}
-          </View>
-          )}
+          {/* A person's line (hosts show their counts beside the logo). */}
+          {!isHost && personLine ? (
+            <View style={styles.statLine}>
+              <Text style={styles.statLabel}>{personLine}</Text>
+            </View>
+          ) : null}
 
           {/* Connect action — a quiet secondary pill inline under the stats,
               not a prominent full-width card. */}
-          {showConnect ? (
+          {showConnect && !preview ? (
             <View style={styles.connectRow}>
               <ConnectButton
                 targetUserId={organizerId}
@@ -758,6 +919,14 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
           </View>
           )}
 
+          {/* Photos: a strip with a full-screen viewer. */}
+          {orgHero && gallery.length > 0 ? (
+            <View style={styles.section}>
+              <SectionHeader title={t('orgPage.photosTitle')} />
+              <GalleryStrip photos={gallery} style={styles.galleryBleed} />
+            </View>
+          ) : null}
+
           {/* Past Events — beta feedback: these used to be hidden behind a
               collapsed accordion, so the profile read as "Upcoming only". They
               now render inline, dimmed, newest first. The whole section is
@@ -794,11 +963,11 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
           )}
 
           {/* About Section: hidden for a person with nothing to say in it. */}
-          {(isHost || !!aboutText || (personHidden && !isSelf) || !!(organizer.city && organizer.country) || (organizer.languages && organizer.languages.length > 0)) && (
+          {((isHost && !orgHero) || (!!aboutText && !orgHero) || (personHidden && !isSelf) || !!(organizer.city && organizer.country) || (organizer.languages && organizer.languages.length > 0)) && (
           <View style={styles.section}>
             <SectionHeader title={t('organizerProfile.aboutTitle')} />
             
-            {!!aboutText && <Text style={styles.aboutText}>{aboutText}</Text>}
+            {!!aboutText && !orgHero && <Text style={styles.aboutText}>{aboutText}</Text>}
             {personHidden && !isSelf && (
               <Text style={styles.privateNote}>{t('organizerProfile.privateDetails')}</Text>
             )}
@@ -838,30 +1007,17 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
           </View>
           )}
 
-          {/* Social & Contact Section */}
-          {socialLinks.length > 0 && (
-            <View style={styles.section}>
-              <SectionHeader title={t('organizerProfile.connectTitle')} />
-              <View style={styles.socialLinks}>
-                {socialLinks.map((link) => (
-                  <TouchableOpacity
-                    key={link.type}
-                    style={styles.socialButton}
-                    onPress={() => openLink(link.url)}
-                    accessibilityRole="link"
-                    accessibilityLabel={
-                      link.type === 'website' ? t('organizerProfile.websiteLabel') : SOCIAL_ICON[link.type].label
-                    }
-                  >
-                    <Ionicons name={SOCIAL_ICON[link.type].name} size={22} color={colors.text} />
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          )}
-
         </View>
-      </ScrollView>
+      </Animated.ScrollView>
+      {showCover ? (
+        <OrgCoverSheet
+          visible={showCover}
+          orgId={organizerId}
+          current={coverState}
+          onClose={() => setShowCover(false)}
+          onChanged={(next) => setOrganizer((prev: any) => ({ ...prev, coverTemplate: next.coverTemplate, coverImageUrl: next.coverImageUrl }))}
+        />
+      ) : null}
       <ReportContentModal
         visible={showReport}
         onClose={() => setShowReport(false)}
@@ -1071,6 +1227,162 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     color: colors.white,
     fontSize: 13,
     fontWeight: '600',
+  },
+
+  // Org hero: logo overlapping the banner, counts beside it.
+  orgHead: {
+    paddingHorizontal: 20,
+    marginTop: -ORG_LOGO / 2,
+    paddingBottom: 4,
+  },
+  logoRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 20,
+  },
+  orgLogo: {
+    width: ORG_LOGO,
+    height: ORG_LOGO,
+    borderRadius: radius.sm,
+    backgroundColor: colors.white,
+    borderWidth: 3,
+    borderColor: colors.background,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  orgLogoImage: {
+    width: '100%',
+    height: '100%',
+  },
+  statsBeside: {
+    flexDirection: 'row',
+    gap: 22,
+    paddingBottom: 6,
+  },
+  statBlock: {
+    alignItems: 'flex-start',
+  },
+  statFigure: {
+    fontSize: 17,
+    lineHeight: 21,
+    fontWeight: '700',
+    color: colors.text,
+    fontVariant: ['tabular-nums'],
+  },
+  statCaption: {
+    fontSize: 12,
+    lineHeight: 16,
+    color: colors.textSecondary,
+    textTransform: 'lowercase',
+  },
+  orgName: {
+    marginTop: 14,
+    fontFamily: font.serif,
+    fontSize: 30,
+    lineHeight: 36,
+    letterSpacing: -0.5,
+    color: colors.text,
+  },
+  metaDotMuted: {
+    fontSize: 12,
+    color: colors.textTertiary,
+  },
+  subtitleMuted: {
+    flexShrink: 1,
+    fontSize: 13,
+    lineHeight: 16,
+    color: colors.textSecondary,
+  },
+  orgAbout: {
+    marginTop: 10,
+    fontSize: 15,
+    lineHeight: 22,
+    color: colors.text,
+  },
+  socialRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 8,
+    marginLeft: -8,
+  },
+  socialIcon: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  promptRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 12,
+  },
+  prompt: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    height: 36,
+    paddingHorizontal: 12,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surfaceRaised,
+  },
+  promptText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  previewNote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 12,
+  },
+  previewNoteText: {
+    fontSize: 13,
+    color: colors.textSecondary,
+  },
+  editBanner: {
+    position: 'absolute',
+    right: 16,
+    bottom: 12,
+    width: 36,
+    height: 36,
+    borderRadius: radius.sm,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  alsoRuns: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    alignSelf: 'flex-start',
+    maxWidth: '100%',
+    marginTop: 14,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surface,
+  },
+  alsoRunsLogo: {
+    width: 26,
+    height: 26,
+    borderRadius: radius.sm,
+    overflow: 'hidden',
+    backgroundColor: colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  alsoRunsText: {
+    flexShrink: 1,
+    fontSize: 13,
+    color: colors.text,
+  },
+  galleryBleed: {
+    marginHorizontal: -16,
   },
 
   // Content

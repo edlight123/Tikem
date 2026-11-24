@@ -251,5 +251,19 @@
     "profile_placeholder": "votre.profil",
     "notice": "Ces liens s'affichent sur votre profil public tels que vous les saisissez. Nous ne vérifions pas que ces comptes vous appartiennent.",
     "save_error": "Enregistrement impossible. Veuillez réessayer."
+  },
+  "org_page": {
+    "photos": "photos",
+    "photo_of": "Photo {{n}} sur {{total}}, {{name}}",
+    "close": "Fermer",
+    "previous": "Photo précédente",
+    "next": "Photo suivante",
+    "add_banner": "Ajouter une bannière",
+    "change_banner": "Changer la bannière",
+    "add_photos": "Ajouter des photos",
+    "preview": "Voir ma page",
+    "preview_note": "Votre page telle que les visiteurs la voient",
+    "exit_preview": "Terminé",
+    "also_runs": "Dirige aussi {{name}}"
   }
 }

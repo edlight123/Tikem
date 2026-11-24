@@ -229,7 +229,12 @@ export default function MessageThreadScreen({ navigation, route }: any) {
   /** The name and photo open the other side's page: the attendee as a person, or the organization. */
   const openOtherProfile = () => {
     if (!thread?.other_id) return;
-    navigation.navigate('OrganizerProfile', { organizerId: thread.other_id });
+    // An attendee is a person (their personal page, even when they also run
+    // an organization); for the attendee, the other side is the organization.
+    navigation.navigate(
+      'OrganizerProfile',
+      isOrganizer ? { organizerId: thread.other_id, view: 'person' } : { organizerId: thread.other_id }
+    );
   };
 
   /** A 403 from any write: the thread is closed by a block from here on. */

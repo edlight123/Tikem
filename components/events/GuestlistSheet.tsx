@@ -221,7 +221,7 @@ export default function GuestlistSheet({
                 ({ u, friend }) => (
                   <li key={u.uid}>
                     <Link
-                      href={`/profile/organizer/${u.uid}`}
+                      href={`/profile/organizer/${u.uid}?view=person`}
                       className="-mx-2 flex items-center gap-3.5 rounded px-2 py-2.5 transition-colors hover:bg-surface"
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}

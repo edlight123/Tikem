@@ -17,6 +17,11 @@ function sanitizeRedirectTarget(target: string | undefined | null): string {
   return path === '/' ? '/organizer' : path
 }
 
+// One field and label style for the whole step.
+const fieldCls =
+  'bg-surface w-full rounded px-4 py-3 text-body text-fg placeholder:text-fg-subtle focus:outline-none focus:ring-2 focus:ring-brand-400/40'
+const labelCls = 'mb-2 block text-sm font-semibold text-fg-soft'
+
 export default function OrganizerUpgradePrompt({ redirectTo }: { redirectTo?: string }) {
   const { t } = useTranslation('organizer')
 
@@ -25,6 +30,11 @@ export default function OrganizerUpgradePrompt({ redirectTo }: { redirectTo?: st
   const [error, setError] = useState<string | null>(null)
   const [orgName, setOrgName] = useState('')
   const [logoUrl, setLogoUrl] = useState('')
+  // What people see on the page, all optional (editable later in settings).
+  const [about, setAbout] = useState('')
+  const [website, setWebsite] = useState('')
+  const [instagram, setInstagram] = useState('')
+  const [facebook, setFacebook] = useState('')
 
   const safeRedirect = sanitizeRedirectTarget(redirectTo)
 
@@ -32,7 +42,7 @@ export default function OrganizerUpgradePrompt({ redirectTo }: { redirectTo?: st
     setError(null)
     startTransition(async () => {
       try {
-        await becomeOrganizer({ organizationName: orgName, organizationLogo: logoUrl })
+        await becomeOrganizer({ organizationName: orgName, organizationLogo: logoUrl, description: about, website, instagram, facebook })
         router.push(safeRedirect)
         router.refresh()
       } catch (e: any) {
@@ -78,7 +88,7 @@ export default function OrganizerUpgradePrompt({ redirectTo }: { redirectTo?: st
 
           {/* Brand name */}
           <div className="mt-7">
-            <label htmlFor="org-name" className="mb-2 block text-sm font-semibold text-fg-soft">
+            <label htmlFor="org-name" className={labelCls}>
               {t('upgrade_prompt.what_is_org_called')}
             </label>
             <input
@@ -86,18 +96,67 @@ export default function OrganizerUpgradePrompt({ redirectTo }: { redirectTo?: st
               value={orgName}
               onChange={(e) => setOrgName(e.target.value)}
               placeholder={t('upgrade_prompt.brand_name')}
-              className="bg-surface w-full rounded-xl px-4 py-3 text-body text-fg placeholder:text-fg-subtle focus:outline-none focus:ring-2 focus:ring-brand-400/40"
+              className={fieldCls}
             />
           </div>
 
           {/* Square logo */}
           <div className="mt-6">
-            <label className="mb-2 block text-sm font-semibold text-fg-soft">
-              Add your brand&rsquo;s logo <span className="font-normal text-fg-subtle">(square, optional)</span>
+            <label className={labelCls}>
+              {t('upgrade_prompt.logo_label')} <span className="font-normal text-fg-subtle">({t('upgrade_prompt.optional')})</span>
             </label>
-            <div className="w-40">
+            <div className="w-24">
               <ImageUpload variant="square" currentImage={logoUrl} onImageUploaded={setLogoUrl} />
             </div>
+          </div>
+
+          {/* One line, then where people can find you. All optional. */}
+          <div className="mt-6">
+            <label htmlFor="org-about" className={labelCls}>
+              {t('upgrade_prompt.one_line')} <span className="font-normal text-fg-subtle">({t('upgrade_prompt.optional')})</span>
+            </label>
+            <input
+              id="org-about"
+              value={about}
+              maxLength={300}
+              onChange={(e) => setAbout(e.target.value)}
+              placeholder={t('upgrade_prompt.one_line_placeholder')}
+              className={fieldCls}
+            />
+          </div>
+          <div className="mt-6 space-y-3">
+            <span className={labelCls}>
+              {t('upgrade_prompt.links_label')} <span className="font-normal text-fg-subtle">({t('upgrade_prompt.optional')})</span>
+            </span>
+            <input
+              aria-label={t('upgrade_prompt.website')}
+              value={website}
+              onChange={(e) => setWebsite(e.target.value)}
+              placeholder={t('upgrade_prompt.website_placeholder')}
+              inputMode="url"
+              autoCapitalize="none"
+              autoCorrect="off"
+              className={fieldCls}
+            />
+            <input
+              aria-label="Instagram"
+              value={instagram}
+              onChange={(e) => setInstagram(e.target.value)}
+              placeholder="@instagram"
+              autoCapitalize="none"
+              autoCorrect="off"
+              className={fieldCls}
+            />
+            <input
+              aria-label="Facebook"
+              value={facebook}
+              onChange={(e) => setFacebook(e.target.value)}
+              placeholder="facebook.com/yourpage"
+              inputMode="url"
+              autoCapitalize="none"
+              autoCorrect="off"
+              className={fieldCls}
+            />
           </div>
 
           {/* Actions */}

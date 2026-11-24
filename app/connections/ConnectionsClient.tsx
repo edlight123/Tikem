@@ -112,7 +112,7 @@ function PersonRow({
   onChange?: (s: FriendshipState) => void
 }) {
   const { t } = useTranslation('common')
-  const href = `/profile/organizer/${user.uid}`
+  const href = `/profile/organizer/${user.uid}?view=person`
   // An incoming request renders two buttons (Accept + Decline). Against a name
   // on a 402px phone that leaves ~150px for the name, so the pair drops to its
   // own line under sm and returns inline above it. One ConnectButton instance

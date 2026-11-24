@@ -56,6 +56,7 @@ import OrganizerEarningsHubScreen from '../screens/organizer/OrganizerEarningsHu
 import OrganizerEventStaffScreen from '../screens/organizer/OrganizerEventStaffScreen';
 import OrganizerTeamHubScreen from '../screens/organizer/OrganizerTeamHubScreen';
 import OrganizerOrgTeamScreen from '../screens/organizer/OrganizerOrgTeamScreen';
+import OrgGalleryScreen from '../screens/organizer/OrgGalleryScreen';
 import OrganizerPayoutSettingsScreen from '../screens/organizer/OrganizerPayoutSettingsScreenV2';
 import OrganizerPromoCodesScreen from '../screens/organizer/OrganizerPromoCodesScreen';
 import OrganizerCompsScreen from '../screens/organizer/OrganizerCompsScreen';
@@ -162,7 +163,12 @@ export type RootStackParamList = {
   };
   EventTickets: { eventId: string };
   TicketDetail: { ticketId: string };
-  OrganizerProfile: { organizerId: string };
+  // preview: "Preview my page" (exactly what visitors see, no owner prompts).
+  // view 'person': the personal page, also for an organization's owner
+  // (attendee contexts: who's going, guest lists, an attendee's messages).
+  OrganizerProfile: { organizerId: string; preview?: boolean; view?: 'person' };
+  // Photos on an organization's page (owner or team admin; the server checks).
+  OrgGallery: { orgId?: string } | undefined;
   Notifications: { userId: string };
   // inviteEventId/Title: "Invite to Tikèm" from an event context (lib/invites).
   Connections:
@@ -1091,6 +1097,7 @@ export default function AppNavigator() {
             <Stack.Screen name="EventTickets" component={EventTicketsScreen} />
             <Stack.Screen name="TicketDetail" component={TicketDetailScreen} />
             <Stack.Screen name="OrganizerProfile" component={OrganizerProfileScreen} />
+            <Stack.Screen name="OrgGallery" component={OrgGalleryScreen} options={{ headerShown: false }} />
             <Stack.Screen name="Connections" component={ConnectionsScreen} />
             <Stack.Screen
               name="Notifications"

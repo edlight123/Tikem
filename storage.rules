@@ -77,6 +77,15 @@ service firebase.storage {
     // H5: all uploads/deletes go through the server API (/api/event-photos,
     // Admin SDK, which bypasses these rules) — there is no client-SDK write path.
     // So deny client writes/deletes entirely; public read stays.
+    // An organization's page images (banner + photo gallery). Uploaded only
+    // by /api/organizer/settings/{cover,gallery} with the Admin SDK, after
+    // checking the caller is the org's owner or a team admin. Links carry a
+    // download token (lib/firebase/downloadUrl), so they work either way.
+    match /org-pages/{orgId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if false;
+    }
+
     match /event-photos/{eventId}/{allPaths=**} {
       allow read: if true; // Public read
       allow write: if false; // Server-side only via Admin SDK
