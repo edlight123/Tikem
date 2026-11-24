@@ -3,8 +3,7 @@
  * lib/messages/threadExtras.ts on the server (a parity test keeps the
  * allow-list in step: __tests__/message-thread-extras.test.ts).
  */
-import { useEffect, useState } from 'react';
-import { AccessibilityInfo, Platform } from 'react-native';
+import { Platform } from 'react-native';
 
 /** The only reactions offered. */
 export const REACTIONS = ['❤️', '👍', '😂', '😮', '🙏', '🔥'] as const;
@@ -77,19 +76,8 @@ export function emojiSafe(text: string): string {
   return Platform.OS === 'android' && text ? `${text} ` : text;
 }
 
-/** The system Reduce Motion setting, live. */
-export function useReducedMotion(): boolean {
-  const [reduced, setReduced] = useState(false);
-  useEffect(() => {
-    let alive = true;
-    AccessibilityInfo.isReduceMotionEnabled()
-      .then((v) => alive && setReduced(!!v))
-      .catch(() => {});
-    const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', (v) => setReduced(!!v));
-    return () => {
-      alive = false;
-      sub?.remove?.();
-    };
-  }, []);
-  return reduced;
-}
+/**
+ * Reduce Motion, live: the phone's setting or Profile > Accessibility >
+ * Reduce motion "always" (lib/a11y).
+ */
+export { useReducedMotion } from '../../lib/a11y';

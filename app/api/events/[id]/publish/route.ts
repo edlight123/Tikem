@@ -16,6 +16,7 @@ import { appUrl } from '@/lib/email-kit/layout'
 import { MIN_PAID_PRICE_ERROR_CODE, publishPriceBelowMinimum } from '@/lib/min-paid-price'
 import { readOrgBrandAdmin } from '@/lib/firestore/org-brand-server'
 import { isPaidEvent } from '@/lib/events/paid-event'
+import { cleanPosterAlt } from '@/lib/posterAlt'
 
 const TIER_LIMIT = 25
 
@@ -247,6 +248,15 @@ export async function POST(
             payout_blocked_at: null,
           }
         : {}),
+    }
+
+    // The flyer description (lib/posterAlt.ts) is written by the composers
+    // straight to Firestore; the rules cap it, and publishing is the server's
+    // chance to normalize whatever a client sent (non-string, whitespace, over
+    // POSTER_ALT_MAX) before it is read aloud on every card.
+    if (eventData.poster_alt !== undefined && eventData.poster_alt !== null) {
+      const cleaned = cleanPosterAlt(eventData.poster_alt)
+      if (cleaned !== eventData.poster_alt) updatePayload.poster_alt = cleaned || null
     }
 
     // Persist a normalized country code when we can determine it.

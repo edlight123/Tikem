@@ -121,6 +121,7 @@ import {
 } from '@/lib/events/venue-details'
 import type { FlyerRead } from '@/lib/flyer/parse'
 import { useOrgRole } from '@/components/organizer/OrgRoleProvider'
+import { POSTER_ALT_MAX, cleanPosterAlt } from '@/lib/posterAlt'
 import {
   Accessibility,
   CalendarDays,
@@ -931,6 +932,9 @@ export default function EventComposer({
   const [spotifyUrl, setSpotifyUrl] = useState(event?.spotify_url || '')
   // Optional promo video link (default '').
   const [videoUrl, setVideoUrl] = useState(event?.video_url || '')
+  // "Describe the flyer": what a screen reader says for the poster
+  // (lib/posterAlt.ts). Optional; empty means one is built from the facts.
+  const [posterAlt, setPosterAlt] = useState<string>(typeof event?.poster_alt === 'string' ? event.poster_alt : '')
   // Poster-theme override ('' = Auto), no longer editable here — the swatch row
   // was removed (see below). It is still READ and written back so a theme the
   // organizer chose in the mobile composer, where the picker works, survives an
@@ -1070,6 +1074,7 @@ export default function EventComposer({
     // draft is picked up as each tier's fallback in the tier mapping above.
     if (d.spotify_url) setSpotifyUrl(d.spotify_url)
     if (d.video_url) setVideoUrl(d.video_url)
+    if (typeof d.poster_alt === 'string') setPosterAlt(d.poster_alt)
     if (d.theme_key) setThemeKey(d.theme_key)
     if (d.accent_color) setAccentColor(d.accent_color)
     // The recurrence plan survives the round trip too (create-only controls).
@@ -1503,6 +1508,7 @@ export default function EventComposer({
       currency: normalizeEventCurrencyForCountry(country, currency),
       banner_image_url: bannerUrl || null,
       poster_template: posterSpec || null,
+      poster_alt: cleanPosterAlt(posterAlt) || null,
       is_online: isOnline,
       // Recurrence is create-only: on edit preserve the stored flag; on create it
       // reflects the chosen cadence (per-occurrence metadata is stamped below).
@@ -3819,6 +3825,29 @@ export default function EventComposer({
                     )}
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Describe the flyer (lib/posterAlt.ts): read aloud for the poster.
+                Quiet and optional; left empty, one is built from the facts. */}
+            {bannerUrl && (
+              <div className="rounded bg-surface-low px-4 py-3 transition-colors focus-within:bg-surface focus-within:ring-2 focus-within:ring-brand-400/50">
+                <label htmlFor="composer-poster-alt" className="block text-xs font-semibold text-fg-muted">
+                  {t('composer.posterAlt.label')}
+                </label>
+                <textarea
+                  id="composer-poster-alt"
+                  value={posterAlt}
+                  onChange={(e) => setPosterAlt(e.target.value.slice(0, POSTER_ALT_MAX))}
+                  maxLength={POSTER_ALT_MAX}
+                  rows={2}
+                  placeholder={t('composer.posterAlt.placeholder')}
+                  aria-describedby="composer-poster-alt-hint"
+                  className="mt-1 w-full resize-none bg-transparent text-body text-fg placeholder:text-fg-subtle focus:outline-none"
+                />
+                <p id="composer-poster-alt-hint" className="text-xs text-fg-subtle">
+                  {t('composer.posterAlt.hint')}
+                </p>
               </div>
             )}
 

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
-import { AccessibilityInfo, Animated, StyleSheet, Text } from 'react-native';
+import { Animated, StyleSheet, Text } from 'react-native';
+import { isReducedMotion } from '../../lib/a11y';
 
 /**
  * The heart that pops over a bubble when it is double-tapped: springs up,
@@ -14,8 +15,8 @@ export default function HeartPop({ emoji, onDone }: { emoji: string; onDone?: ()
   useEffect(() => {
     let anim: Animated.CompositeAnimation | null = null;
     let alive = true;
-    AccessibilityInfo.isReduceMotionEnabled()
-      .catch(() => false)
+    // The phone's Reduce Motion or the in-app "always" (lib/a11y).
+    Promise.resolve(isReducedMotion())
       .then((reduced) => {
         if (!alive) return;
         if (reduced) scale.setValue(1);

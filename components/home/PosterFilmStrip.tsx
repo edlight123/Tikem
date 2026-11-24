@@ -6,6 +6,7 @@
 // hover, and degrades to a plain swipeable row under reduced motion. Every
 // poster is a real link into its event.
 
+import { usePosterAlt } from '@/lib/usePosterAlt'
 import Link from 'next/link'
 import Image from 'next/image'
 
@@ -24,6 +25,7 @@ interface StripEvent {
 const MARQUEE_MIN = 11
 
 export default function PosterFilmStrip({ events }: { events: StripEvent[] }) {
+  const posterAlt = usePosterAlt()
   const posters = (events || []).filter((e) => e?.banner_image_url).slice(0, 14)
   if (posters.length < 4) return null
 
@@ -56,7 +58,7 @@ export default function PosterFilmStrip({ events }: { events: StripEvent[] }) {
           >
             <Image
               src={ev.banner_image_url as string}
-              alt={ev.title}
+              alt={posterAlt(ev)}
               fill
               sizes="180px"
               quality={55}

@@ -15,6 +15,13 @@ service cloud.firestore {
       return raw is string ? raw.upper() : '';
     }
 
+    // Flyer description (lib/posterAlt.ts, POSTER_ALT_MAX): optional text a
+    // screen reader reads for the poster. .get() so older events pass.
+    function validPosterAlt(d) {
+      return d.get('poster_alt', null) == null
+        || (d.get('poster_alt', null) is string && d.get('poster_alt', '').size() <= 300);
+    }
+
     // Venue details (lib/events/venue-details.ts): optional, and when present
     // exactly the shapes the event page knows how to show. .get() so a doc
     // without them (every event before this) passes untouched.
@@ -313,6 +320,7 @@ service cloud.firestore {
         // by the Admin SDK only: a lower count would hide shards from the
         // capacity check.
         && request.resource.data.get('inventory_shards_n', null) == null
+        && validPosterAlt(request.resource.data)
         // Import bookkeeping, the Eventbrite ticket link and Eventbrite's
         // public counts (lib/import): Admin SDK only, so a link out or an
         // attendance figure visitors see is never typed in by a client.
@@ -366,6 +374,7 @@ service cloud.firestore {
           // Admin SDK when the event's shards are created. Lowering it would hide
           // shards (and the seats they hold or sold) from the capacity check.
           request.resource.data.get('inventory_shards_n', null) == resource.data.get('inventory_shards_n', null) &&
+          validPosterAlt(request.resource.data) &&
           // Import fields (lib/import) are the server's. The one client change
           // allowed: marking a synced Eventbrite copy as edited here
           // (imported.locally_edited = true), so the daily sync stops

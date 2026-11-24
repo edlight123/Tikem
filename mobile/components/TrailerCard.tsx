@@ -24,6 +24,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useI18n } from '../contexts/I18nContext';
 import { parseVideoEmbed } from '../lib/videoEmbed';
 import { useTrailerAutoplayAllowed } from '../lib/songAutoplay';
+import { useReducedMotion } from '../lib/a11y';
 import { radius, font } from '../theme/tokens';
 
 function frameHtml(src: string): string {
@@ -37,7 +38,10 @@ export default function TrailerCard({ url, title }: { url?: string | null; title
   const { t } = useI18n();
   const navigation: any = useNavigation();
   const isFocused = useIsFocused();
-  const autoplay = useTrailerAutoplayAllowed();
+  // Reduce Motion (lib/a11y) also stops the muted autoplay: the frame shows
+  // the play button instead.
+  const reduced = useReducedMotion();
+  const autoplay = useTrailerAutoplayAllowed() && !reduced;
   const embed = parseVideoEmbed(url);
   if (!embed) return null;
 

@@ -1,5 +1,6 @@
 'use client'
 
+import { usePosterAlt } from '@/lib/usePosterAlt'
 import { DiscoverEventCard } from '@/components/discover/DiscoverEventCard'
 import { useTranslation } from 'react-i18next'
 import BuyTicketButton from './BuyTicketButton'
@@ -55,6 +56,7 @@ interface EventDetailsClientProps {
 export default function EventDetailsClient({ event, user, isFavorite, isFollowing, relatedEvents, invitesEnabled = false, heldFreeTickets = 0 }: EventDetailsClientProps) {
   const { t, i18n } = useTranslation('common')
   const dfLocale = dateLocaleFor(i18n.language)
+  const posterAlt = usePosterAlt()
   const numLocale = intlLocaleFor(i18n.language)
   // Every date on this page prints in the EVENT's zone. Formatting in the
   // runtime's zone printed UTC on the server and the reader's zone in the
@@ -158,6 +160,7 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
         title={event.title}
         category={event.category}
         bannerUrl={event.banner_image_url}
+        posterAlt={posterAlt(event)}
         organizerName={organizerLabel}
         organizerLogo={event.users?.organization_logo}
         isVerified={event.users?.is_verified || false}
@@ -225,7 +228,7 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                 {event.banner_image_url ? (
                   <PosterImage
                     src={event.banner_image_url}
-                    alt={event.title}
+                    alt={posterAlt(event)}
                     sizes="(max-width: 1024px) 320px, 340px"
                     priority
                   />

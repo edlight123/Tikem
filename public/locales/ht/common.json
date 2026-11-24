@@ -671,7 +671,8 @@
     "language": "Lang",
     "instagram": "Tikèm sou Instagram",
     "built_by": "Se {{labs}} ki bati l",
-    "photo_credits": "Kredi foto"
+    "photo_credits": "Kredi foto",
+    "accessibility": "Aksesibilite"
   },
   "admin": {
     "search_placeholder": "Chèche evènman...",
@@ -1589,7 +1590,12 @@
     "familyHint": "Yon moun enskri fanmi l; chak moun resevwa pwòp tikè pa l.",
     "familyUpTo": "Moun pa enskripsyon",
     "ticketTypes": "Kalite pare",
-    "addTicketTypes": "Plizyè kalite envite? Ajoute kalite tikè"
+    "addTicketTypes": "Plizyè kalite envite? Ajoute kalite tikè",
+    "posterAlt": {
+      "label": "Dekri afich la",
+      "placeholder": "Sa ki sou li, pou moun k ap itilize yon lektè ekran",
+      "hint": "Si ou vle. Si ou kite l vid, n ap dekri l ak tit la, dat la ak kote a."
+    }
   },
   "promoter": {
     "portal_eyebrow": "Pòtay pwomotè",
@@ -2233,5 +2239,8 @@
     "age_18": "18 an oswa plis sèlman",
     "age_21": "21 an oswa plis sèlman",
     "dress_code": "Kòd abiman: {{value}}"
+  },
+  "a11y": {
+    "skipToContent": "Ale nan kontni an"
   }
 }

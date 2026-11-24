@@ -1319,6 +1319,7 @@ export default function TicketScannerScreen() {
             style={styles.belowHeaderButton}
             onPress={() => setFlashOn(!flashOn)}
             accessibilityRole="switch"
+            accessibilityLabel={t('a11y.flashlight')}
             accessibilityState={{ checked: flashOn }}
           >
             <Ionicons name={flashOn ? 'flash' : 'flash-off'} size={22} color={colors.text} />
@@ -1470,6 +1471,8 @@ export default function TicketScannerScreen() {
             style={styles.modalBackdrop}
             activeOpacity={1}
             onPress={handleCloseSheet}
+            accessibilityRole="button"
+            accessibilityLabel={t('common.close')}
           />
           <View style={[styles.bottomSheet, { paddingBottom: Math.max(40, insets.bottom + 16) }]}>
             <View style={styles.sheetGrabber} />

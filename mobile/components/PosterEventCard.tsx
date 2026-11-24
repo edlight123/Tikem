@@ -6,6 +6,8 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import PosterImage from './PosterImage';
+import { joinA11y, useCaptionLines } from '../lib/a11y';
+import { storedPosterAlt } from '../lib/usePosterAlt';
 import { Touchable } from './ui/Touchable';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Users } from 'lucide-react-native';
@@ -69,6 +71,9 @@ export default function PosterEventCard({
   const { colors } = useTheme();
   const { t, language } = useI18n();
   const styles = getStyles(colors);
+  // Larger text: captions get an extra line instead of an ellipsis.
+  const titleLines = useCaptionLines(1);
+  const metaLines = useCaptionLines(1);
 
   const hasImage = Boolean(event.banner_image_url);
   const theme = resolvePosterTheme(event, event.id || event.title, event.category);
@@ -116,7 +121,15 @@ export default function PosterEventCard({
 
   return (
     <View style={width ? { width } : { flex: 1 }}>
-      <Touchable scale={0.98} onPress={onPress} style={styles.card}>
+      <Touchable
+        scale={0.98}
+        onPress={onPress}
+        style={styles.card}
+        // One stop for the whole card: the facts the caption shows, then the
+        // organizer's own flyer description when they wrote one (lib/posterAlt).
+        accessibilityRole="button"
+        accessibilityLabel={joinA11y(event.title, tier2Line, dateLabel, friendsLabel, storedPosterAlt(event as any))}
+      >
         <View style={{ paddingHorizontal: posterInsetX, paddingTop: posterInsetX }}>
           <View style={[styles.poster, { aspectRatio: 1 / ratio }]}>
             {/* The teal theme gradient is the PERMANENT art for events with no
@@ -160,18 +173,18 @@ export default function PosterEventCard({
         {/* Three-tier caption (POSH §2.5). All text sits BELOW the poster so it
             never covers the artwork. */}
         <View style={styles.content}>
-          <Text style={styles.title} numberOfLines={1}>
+          <Text style={styles.title} numberOfLines={titleLines}>
             {event.title}
           </Text>
 
           {!!tier2Line && (
-            <Text style={styles.tier2} numberOfLines={1}>
+            <Text style={styles.tier2} numberOfLines={metaLines}>
               {tier2Line}
             </Text>
           )}
 
           {!!dateLabel && (
-            <Text style={styles.tier3} numberOfLines={1}>
+            <Text style={styles.tier3} numberOfLines={metaLines}>
               {dateLabel}
             </Text>
           )}

@@ -12,13 +12,14 @@
  *   eyebrow  11/600 caps   the ONE eyebrow style
  *   code     13 mono       true identifiers only (ticket ids, order refs)
  *
- * Weights stop at 700. Colour defaults to the theme's primary text; `muted`
+ * Weights stop at 700 (800 with Bolder text on). Colour defaults to the theme's primary text; `muted`
  * picks textSecondary, `faint` textTertiary.
  */
 import React from 'react';
-import { Text as RNText, type TextProps as RNTextProps, type TextStyle } from 'react-native';
+import { StyleSheet, Text as RNText, type TextProps as RNTextProps, type TextStyle } from 'react-native';
 import { useTheme } from '../../contexts/ThemeContext';
 import { font } from '../../theme/tokens';
+import { BODY_MAX_FONT_SCALE, bumpWeight, useA11yPrefs } from '../../lib/a11y';
 
 export type TextVariant =
   | 'display'
@@ -45,6 +46,11 @@ const VARIANTS: Record<TextVariant, TextStyle> = {
   code: { fontFamily: font.mono, fontSize: 13, lineHeight: 18 },
 };
 
+// Display sizes are already large: they grow less with the phone's text size,
+// so a 30pt serif title does not push a screen's controls off the edge.
+const LARGE: ReadonlySet<TextVariant> = new Set(['display', 'serif', 'title']);
+const LARGE_MAX_FONT_SCALE = 1.4;
+
 const MUTED_BY_DEFAULT: ReadonlySet<TextVariant> = new Set(['meta', 'caption', 'eyebrow']);
 
 export interface TextProps extends RNTextProps {
@@ -56,14 +62,26 @@ export interface TextProps extends RNTextProps {
 
 export function Text({ variant = 'body', color, muted, faint, style, ...rest }: TextProps) {
   const { colors } = useTheme();
+  const { boldText } = useA11yPrefs();
   const ink = color
     ?? (faint ? colors.textTertiary : muted || (muted === undefined && MUTED_BY_DEFAULT.has(variant)) ? colors.textSecondary : colors.text);
   return (
     <RNText
       {...rest}
       accessibilityRole={rest.accessibilityRole ?? (variant === 'serif' || variant === 'title' ? 'header' : undefined)}
-      maxFontSizeMultiplier={rest.maxFontSizeMultiplier ?? 1.4}
-      style={[VARIANTS[variant], { color: ink }, style]}
+      // Running text may grow to 1.6x with the phone's text size (was 1.4x for
+      // everything); display sizes stop at 1.4x. Dense UI passes its own cap.
+      maxFontSizeMultiplier={rest.maxFontSizeMultiplier ?? (LARGE.has(variant) ? LARGE_MAX_FONT_SCALE : BODY_MAX_FONT_SCALE)}
+      style={[
+        VARIANTS[variant],
+        { color: ink },
+        style,
+        // Profile > Accessibility > Bolder text: one weight step heavier. The
+        // serif has a single cut, so it is left as drawn.
+        boldText && variant !== 'serif'
+          ? { fontWeight: bumpWeight(StyleSheet.flatten([VARIANTS[variant], style])?.fontWeight ?? '400') }
+          : null,
+      ]}
     />
   );
 }

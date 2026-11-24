@@ -124,7 +124,12 @@ export default function EventLineupRail({ guestlist, gutter = 18 }: Props) {
       </ScrollView>
 
       <Modal visible={!!open} transparent animationType="slide" onRequestClose={() => setOpen(null)}>
-        <Pressable style={styles.backdrop} onPress={() => setOpen(null)} />
+        <Pressable
+          style={styles.backdrop}
+          onPress={() => setOpen(null)}
+          accessibilityRole="button"
+          accessibilityLabel={t('common.close')}
+        />
         {open && (
           <Animated.View style={[styles.sheet, swipe.sheetStyle, { paddingBottom: insets.bottom + 20 }]}>
             {/* Paints below the sheet's edge, so the event page's sticky bar can never

@@ -109,7 +109,14 @@ export default function ManualLookupSheet({
         style={styles.overlay}
         behavior="padding"
       >
-        <Touchable style={styles.backdrop} onPress={onClose} scale={false} haptic={false} />
+        <Touchable
+          style={styles.backdrop}
+          onPress={onClose}
+          scale={false}
+          haptic={false}
+          accessibilityRole="button"
+          accessibilityLabel={t('common.close')}
+        />
         <Animated.View style={[styles.sheet, swipe.sheetStyle, { paddingBottom: insets.bottom + spacing.sm }]}>
           <View {...swipe.panHandlers}>
           <View style={styles.grabber} />
@@ -153,7 +160,12 @@ export default function ManualLookupSheet({
               }}
             />
             {query.length > 0 && (
-              <Touchable onPress={() => setQuery('')} hitSlop={10}>
+              <Touchable
+                onPress={() => setQuery('')}
+                hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel={t('a11y.clearSearch')}
+              >
                 <X size={16} color={colors.textSecondary} />
               </Touchable>
             )}

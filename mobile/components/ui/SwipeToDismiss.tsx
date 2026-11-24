@@ -7,8 +7,9 @@
  * Swiping is not reachable by a screen reader: give the row an accessibility
  * action that calls the same dismiss.
  */
-import React, { useEffect, useRef } from 'react';
-import { AccessibilityInfo, Animated, Dimensions, PanResponder } from 'react-native';
+import React, { useRef } from 'react';
+import { Animated, Dimensions, PanResponder } from 'react-native';
+import { isReducedMotion } from '../../lib/a11y';
 
 const THRESHOLD = 90;
 
@@ -16,14 +17,6 @@ export default function SwipeToDismiss({ children, onDismiss }: { children: Reac
   const x = useRef(new Animated.Value(0)).current;
   const done = useRef(onDismiss);
   done.current = onDismiss;
-  const reduced = useRef(false);
-  useEffect(() => {
-    AccessibilityInfo.isReduceMotionEnabled()
-      .then((v) => {
-        reduced.current = !!v;
-      })
-      .catch(() => {});
-  }, []);
 
   const responder = useRef(
     PanResponder.create({
@@ -35,14 +28,15 @@ export default function SwipeToDismiss({ children, onDismiss }: { children: Reac
           Animated.timing(x, { toValue: g.dx > 0 ? width : -width, duration: 180, useNativeDriver: false }).start(() =>
             done.current(),
           );
-        } else if (reduced.current) {
+        } else if (isReducedMotion()) {
           x.setValue(0);
         } else {
           Animated.spring(x, { toValue: 0, useNativeDriver: false, bounciness: 4 }).start();
         }
       },
       onPanResponderTerminate: () => {
-        Animated.spring(x, { toValue: 0, useNativeDriver: false }).start();
+        if (isReducedMotion()) x.setValue(0);
+        else Animated.spring(x, { toValue: 0, useNativeDriver: false }).start();
       },
     }),
   ).current;

@@ -212,6 +212,8 @@ export default function EventFiltersSheet() {
             style={styles.closeButton}
             onPress={closeFiltersModal}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityRole="button"
+            accessibilityLabel={t('common.close')}
           >
             <X size={24} color={colors.text} />
           </Touchable>

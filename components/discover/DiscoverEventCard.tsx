@@ -1,5 +1,6 @@
 'use client'
 
+import { usePosterAlt } from '@/lib/usePosterAlt'
 import React, { useState, useEffect } from 'react'
 import { Bookmark, Users } from 'lucide-react'
 import { isValid, parseISO } from 'date-fns'
@@ -47,6 +48,7 @@ export function DiscoverEventCard({ event, rowOnPhone = false, priority = false 
   }
 
   const { t, i18n } = useTranslation('common')
+  const posterAlt = usePosterAlt()
   const cue = getEventCue(event, t)
   const friendsGoing = useFriendsGoingCount(event.id)
   // Not `getPriceLabel(event.ticket_price, …)`: `ticket_price` is the lowest tier
@@ -105,6 +107,7 @@ export function DiscoverEventCard({ event, rowOnPhone = false, priority = false 
         imageUrl={event.banner_image_url ?? undefined}
         priority={priority}
         title={event.title}
+        imageAlt={posterAlt(event as any)}
         priceLabel={priceLabel}
         venue={venue}
         dateLabel={dateLabel}
@@ -142,7 +145,7 @@ export function DiscoverEventCard({ event, rowOnPhone = false, priority = false 
       >
         <div className="relative aspect-[4/5] w-[72px] shrink-0 overflow-hidden rounded bg-surface">
           {event.banner_image_url && (
-            <PosterImage src={event.banner_image_url} alt={event.title} sizes="72px" frameRatio={4 / 5} />
+            <PosterImage src={event.banner_image_url} alt={posterAlt(event as any)} sizes="72px" frameRatio={4 / 5} />
           )}
         </div>
         <div className="min-w-0 flex-1">

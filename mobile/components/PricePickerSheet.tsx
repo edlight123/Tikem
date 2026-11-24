@@ -69,7 +69,12 @@ export default function PricePickerSheet({
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose} />
+      <Pressable
+        style={styles.backdrop}
+        onPress={onClose}
+        accessibilityRole="button"
+        accessibilityLabel={t('common.close')}
+      />
       <Animated.View style={[styles.sheet, swipe.sheetStyle, { paddingBottom: insets.bottom + 16 }]}>
         <View {...swipe.panHandlers}>
         <View style={styles.handle} />
@@ -79,6 +84,8 @@ export default function PricePickerSheet({
             style={styles.closeBtn}
             onPress={onClose}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityRole="button"
+            accessibilityLabel={t('common.close')}
           >
             <X size={20} color={colors.text} />
           </Touchable>

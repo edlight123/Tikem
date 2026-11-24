@@ -47,9 +47,18 @@ interface Props {
   frameRatio: number;
   recyclingKey?: string;
   transition?: number;
+  /**
+   * What a screen reader says for the poster (lib/posterAlt). With it the
+   * image is its own focus stop; without it the image is decorative and
+   * hidden (the card around it carries the words).
+   */
+  accessibilityLabel?: string;
 }
 
-export default function PosterImage({ uri, frameRatio, recyclingKey, transition = 200 }: Props) {
+export default function PosterImage({ uri, frameRatio, recyclingKey, transition = 200, accessibilityLabel }: Props) {
+  const a11y = accessibilityLabel
+    ? ({ accessible: true, accessibilityRole: 'image', accessibilityLabel } as const)
+    : ({ accessible: false, accessibilityElementsHidden: true, importantForAccessibility: 'no-hide-descendants' } as const);
   const [ratio, setRatio] = useState<number | undefined>(knownRatios.get(uri));
 
   const onLoad = (e: ImageLoadEventData) => {
@@ -75,6 +84,7 @@ export default function PosterImage({ uri, frameRatio, recyclingKey, transition 
   if (fits) {
     return (
       <Image
+        {...a11y}
         source={{ uri }}
         style={StyleSheet.absoluteFill}
         contentFit="cover"
@@ -87,7 +97,7 @@ export default function PosterImage({ uri, frameRatio, recyclingKey, transition 
   }
 
   return (
-    <View style={[StyleSheet.absoluteFill, { backgroundColor: tone }]}>
+    <View style={[StyleSheet.absoluteFill, { backgroundColor: tone }]} {...a11y}>
       <Image
         source={{ uri }}
         style={StyleSheet.absoluteFill}

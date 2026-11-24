@@ -86,6 +86,7 @@ import StatusChip from '../../components/StatusChip';
 import FeeIncidenceCard from '../../components/organizer/FeeIncidenceCard';
 import LineupEditor from '../../components/organizer/LineupEditor';
 import MirrorBallDropzone from '../../components/organizer/MirrorBallDropzone';
+import { POSTER_ALT_MAX } from '../../lib/posterAlt';
 import PosterTemplateSheet, { makePoster, type PosterFacts, type PosterSpec } from '../../components/organizer/PosterTemplateSheet';
 import { incidenceForEvent, type FeeIncidence } from '../../lib/buyerPricing';
 import { isBelowMinPaidPrice, minPaidPriceFor } from '../../lib/minPaidPrice';
@@ -191,6 +192,7 @@ export interface EventDraft {
   // Advanced settings (POSH secondary sections).
   show_on_explore: boolean;   // false = share-by-link only, hidden from Discover
   video_url: string;          // optional promo video link
+  poster_alt: string;         // "Describe the flyer" (lib/posterAlt), optional
   // Spotify track URL (https://open.spotify.com/track/{id}) — rendered as the
   // official embed on the event page. Picked via song search, or pasted when
   // the search route has no credentials.
@@ -313,6 +315,7 @@ function InlineTextRow({
           { color: colors.text },
         ]}
         placeholder={placeholder}
+        accessibilityLabel={placeholder.replace(/\s*\*$/, '')}
         placeholderTextColor={error ? colors.error : colors.textSecondary}
         selectionColor={colors.primary}
         value={value}
@@ -576,6 +579,7 @@ export default function CreateEventFlowRefactored() {
     capacity: '100',
     show_on_explore: true,
     video_url: '',
+    poster_alt: '',
     spotify_url: '',
     guestlist_visibility: 'faces',
     show_going_count: false,
@@ -764,6 +768,7 @@ export default function CreateEventFlowRefactored() {
           // Advanced settings — default to visible/on when the field is absent.
           show_on_explore: (event as any).show_on_explore !== false,
           video_url: (event as any).video_url || '',
+          poster_alt: typeof (event as any).poster_alt === 'string' ? (event as any).poster_alt : '',
           spotify_url: (event as any).spotify_url || '',
           // New field first, then the legacy boolean for older events.
           guestlist_visibility: guestlistVisibilityFrom(event as any),
@@ -1991,6 +1996,8 @@ export default function CreateEventFlowRefactored() {
                     style={styles.stepperBtnOnRaised}
                     onPress={() => step(-1)}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('a11y.decrease')}
                   >
                     <Ionicons name="remove" size={20} color={colors.text} />
                   </TouchableOpacity>
@@ -2010,6 +2017,8 @@ export default function CreateEventFlowRefactored() {
                     style={styles.stepperBtnOnRaised}
                     onPress={() => step(1)}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('a11y.increase')}
                   >
                     <Ionicons name="add" size={20} color={colors.text} />
                   </TouchableOpacity>
@@ -2120,6 +2129,8 @@ export default function CreateEventFlowRefactored() {
             <TouchableOpacity
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               onPress={() => navigation.goBack()}
+              accessibilityRole="button"
+              accessibilityLabel={t('common.back')}
             >
               <Ionicons name="chevron-back" size={26} color={colors.text} />
             </TouchableOpacity>
@@ -2206,10 +2217,12 @@ export default function CreateEventFlowRefactored() {
             <TouchableOpacity
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               onPress={confirmExit}
+              accessibilityRole="button"
+              accessibilityLabel={t('common.close')}
             >
               <Ionicons name="close" size={24} color={colors.text} />
             </TouchableOpacity>
-            <Text style={styles.headerTitle} numberOfLines={1}>
+            <Text style={styles.headerTitle} numberOfLines={1} accessibilityRole="header">
               {isEditMode ? t('organizerCreateEventFlow.headerEdit') : t('organizerCreateEventFlow.headerCreate')}
             </Text>
             <View style={{ width: 24 }} />
@@ -2666,7 +2679,12 @@ export default function CreateEventFlowRefactored() {
               <View style={styles.sectionHeaderRow}>
                 <Text style={styles.sectionHeader}>{t('organizerCreateEventFlow.canvas.ticketsHeader')}</Text>
                 {!eventDraft.is_rsvp && (!countryComingSoon || eventDraft.pay_at_door) && (
-                  <TouchableOpacity onPress={addTier} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <TouchableOpacity
+                    onPress={addTier}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('a11y.addTicketType')}
+                  >
                     <Ionicons name="add-circle" size={26} color={colors.text} />
                   </TouchableOpacity>
                 )}
@@ -2810,6 +2828,8 @@ export default function CreateEventFlowRefactored() {
                           <TouchableOpacity
                             onPress={() => removeTier(index)}
                             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                            accessibilityRole="button"
+                            accessibilityLabel={t('a11y.removeTicketType')}
                           >
                             <Ionicons name="trash-outline" size={18} color={colors.error} />
                           </TouchableOpacity>
@@ -3119,6 +3139,8 @@ export default function CreateEventFlowRefactored() {
                                     style={styles.stepperBtn}
                                     onPress={() => updateDraft({ recurrence_count: Math.max(2, eventDraft.recurrence_count - 1) })}
                                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                    accessibilityRole="button"
+                                    accessibilityLabel={t('a11y.decrease')}
                                   >
                                     <Ionicons name="remove" size={20} color={colors.text} />
                                   </TouchableOpacity>
@@ -3127,6 +3149,8 @@ export default function CreateEventFlowRefactored() {
                                     style={styles.stepperBtn}
                                     onPress={() => updateDraft({ recurrence_count: Math.min(52, eventDraft.recurrence_count + 1) })}
                                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                    accessibilityRole="button"
+                                    accessibilityLabel={t('a11y.increase')}
                                   >
                                     <Ionicons name="add" size={20} color={colors.text} />
                                   </TouchableOpacity>
@@ -3204,6 +3228,22 @@ export default function CreateEventFlowRefactored() {
                     keyboardType="url"
                     autoCapitalize="none"
                   />
+
+                  {/* Describe the flyer: what a screen reader says for the
+                      poster (lib/posterAlt). Empty = built from the facts. */}
+                  {!!eventDraft.banner_image_url && (
+                    <InlineTextRow
+                      colors={colors}
+                      placeholder={t('a11y.posterAltPlaceholder')}
+                      value={eventDraft.poster_alt}
+                      onChangeText={(text) => updateDraft({ poster_alt: text })}
+                      multiline
+                      compact
+                      maxLength={POSTER_ALT_MAX}
+                      autoCapitalize="sentences"
+                      autoCorrect
+                    />
+                  )}
 
                   {/* Song — a real Spotify search; degrades to pasting a link
                       when /api/spotify/search has no credentials. */}
@@ -3387,7 +3427,7 @@ export default function CreateEventFlowRefactored() {
                       </TouchableOpacity>
 
                       {/* One swatch per theme, rendered in that theme's gradient */}
-                      {POSTER_THEME_KEYS.map((key) => {
+                      {POSTER_THEME_KEYS.map((key, i) => {
                         const selected = eventDraft.theme_key === key;
                         const theme = resolvePosterTheme({ theme_key: key });
                         return (
@@ -3396,6 +3436,9 @@ export default function CreateEventFlowRefactored() {
                             style={[styles.themeSwatch, selected && styles.themeSwatchSelected]}
                             activeOpacity={0.8}
                             onPress={() => updateDraft({ theme_key: key })}
+                            accessibilityRole="radio"
+                            accessibilityState={{ selected }}
+                            accessibilityLabel={t('a11y.posterColour', { n: i + 1 })}
                           >
                             <LinearGradient
                               colors={theme.colors}
@@ -3548,6 +3591,8 @@ export default function CreateEventFlowRefactored() {
             style={StyleSheet.absoluteFill}
             activeOpacity={1}
             onPress={() => !saving && setConfirmVisible(false)}
+            accessibilityRole="button"
+            accessibilityLabel={t('common.close')}
           />
           <Animated.View style={[styles.sheet, confirmSwipe.sheetStyle, { paddingBottom: insets.bottom + 20 }]}>
             {/* Handle + title drag the sheet down; not while the save is running. */}

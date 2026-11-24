@@ -1,4 +1,5 @@
 import { venueDetailsFields, venueDetailsOf } from '../venueDetails';
+import { cleanPosterAlt } from '../posterAlt';
 import { auth, db, storage } from '../../config/firebase';
 import {
   collection,
@@ -145,6 +146,8 @@ export interface CreateEventData {
   theme_key?: string;
   /** Optional promo video link. */
   video_url?: string;
+  /** "Describe the flyer": what a screen reader says for the poster (lib/posterAlt). */
+  poster_alt?: string;
   /**
    * Optional Spotify track URL (`https://open.spotify.com/track/{id}`), picked
    * via song search in the composer. Rendered as the official Spotify embed on
@@ -725,6 +728,7 @@ export async function createEvent(
         // Advanced settings — default visible/on when the caller omits them.
         show_on_explore: eventData.show_on_explore !== false,
         video_url: eventData.video_url || '',
+        poster_alt: cleanPosterAlt(eventData.poster_alt) || null,
         // Song. `null` (not '') when empty, matching the web composer and the
         // lib/data/events.ts field whitelist.
         spotify_url: eventData.spotify_url?.trim() || null,
@@ -907,6 +911,7 @@ export async function updateEvent(
       // Advanced settings — default visible/on when the caller omits them.
       show_on_explore: eventData.show_on_explore !== false,
       video_url: eventData.video_url || '',
+      poster_alt: cleanPosterAlt(eventData.poster_alt) || null,
       // Song — cleared to null when the organizer removes it (see createEvent).
       spotify_url: eventData.spotify_url?.trim() || null,
       // Both fields — writing only the boolean left a web-set

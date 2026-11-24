@@ -671,7 +671,8 @@
     "language": "Language",
     "instagram": "Tikèm on Instagram",
     "built_by": "Built by {{labs}}",
-    "photo_credits": "Photo credits"
+    "photo_credits": "Photo credits",
+    "accessibility": "Accessibility"
   },
   "admin": {
     "search_placeholder": "Search events...",
@@ -1589,7 +1590,12 @@
     "familyHint": "One person registers their family; everyone gets their own ticket.",
     "familyUpTo": "People per registration",
     "ticketTypes": "Ready-made types",
-    "addTicketTypes": "Different kinds of guests? Add ticket types"
+    "addTicketTypes": "Different kinds of guests? Add ticket types",
+    "posterAlt": {
+      "label": "Describe the flyer",
+      "placeholder": "What's on it, for people using a screen reader",
+      "hint": "Optional. Left empty, we describe it from the title, date and place."
+    }
   },
   "promoter": {
     "portal_eyebrow": "Promoter portal",
@@ -2233,5 +2239,8 @@
     "age_18": "18+ only",
     "age_21": "21+ only",
     "dress_code": "Dress code: {{value}}"
+  },
+  "a11y": {
+    "skipToContent": "Skip to content"
   }
 }

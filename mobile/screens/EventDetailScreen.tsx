@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import PosterImage from '../components/PosterImage';
+import { usePosterAlt } from '../lib/usePosterAlt';
 import OrgMark from '../components/OrgMark';
 import { 
   View, 
@@ -178,6 +179,7 @@ export default function EventDetailScreen({ route, navigation }: any) {
   }, [eventId]);
   const { user, userProfile } = useAuth();
   const { t, language } = useI18n();
+  const posterAlt = usePosterAlt();
   const { colors } = useTheme();
   const styles = getStyles(colors);
   const showAlert = useAppAlert();
@@ -913,6 +915,7 @@ export default function EventDetailScreen({ route, navigation }: any) {
           />
           {(event.banner_image_url || event.cover_image_url) && (
             <ExpoImage
+              accessible={false}
               source={{ uri: event.banner_image_url || event.cover_image_url }}
               style={StyleSheet.absoluteFill}
               contentFit="cover"
@@ -952,6 +955,7 @@ export default function EventDetailScreen({ route, navigation }: any) {
                 frameRatio={4 / 5}
                 transition={120}
                 recyclingKey={event.id ? String(event.id) : undefined}
+                accessibilityLabel={posterAlt(event as any)}
               />
             )}
           </View>
@@ -961,7 +965,7 @@ export default function EventDetailScreen({ route, navigation }: any) {
 
         <View style={styles.content}>
           {/* Title block — text-first, under the poster */}
-          <Text style={styles.title}>{event.title}</Text>
+          <Text style={styles.title} accessibilityRole="header">{event.title}</Text>
           {familySize > 0 && (
             <Text style={styles.familyText}>{t('eventDetail.familyBadge', { count: familySize })}</Text>
           )}
@@ -1234,6 +1238,7 @@ export default function EventDetailScreen({ route, navigation }: any) {
             disabled={favoriteLoading}
             hitSlop={4}
             accessibilityRole="button"
+            accessibilityLabel={t('a11y.save')}
             accessibilityState={{ selected: isFavorite }}
           >
             <Heart size={19} color="#FFF" fill={isFavorite ? '#FFF' : 'transparent'} />
@@ -1488,6 +1493,8 @@ export default function EventDetailScreen({ route, navigation }: any) {
             style={StyleSheet.absoluteFill}
             activeOpacity={1}
             onPress={() => !unlocking && setShowAccessGate(false)}
+            accessibilityRole="button"
+            accessibilityLabel={t('common.close')}
           />
           <View style={styles.accessCard}>
             <TouchableOpacity

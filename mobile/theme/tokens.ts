@@ -55,6 +55,20 @@ export const colors = {
 } as const;
 
 /**
+ * Higher contrast (Profile > Accessibility): muted text steps brighter and
+ * hairlines get stronger. The canvas, surfaces and teal stay exactly as they
+ * are, so the dark look holds. Applied through `useTheme()`.
+ *  textSecondary #C7C7C7: 11.6:1 on bg · textTertiary #9C9C9C: 7.4:1 on bg
+ *  (the defaults are 7.9:1 and 3.6:1).
+ */
+export const highContrastColors = {
+  ...colors,
+  textSecondary: '#C7C7C7',
+  textTertiary: '#9C9C9C',
+  border: '#474747',
+} as const;
+
+/**
  * Font families — the three voices.
  *  serif → event titles / wordmark (editorial soul)
  *  mono  → TRUE IDENTIFIERS ONLY: ticket IDs, order refs, codes

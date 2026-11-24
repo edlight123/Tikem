@@ -1,5 +1,6 @@
 'use client'
 
+import { useDialogFocus } from '@/lib/a11y/useDialogFocus'
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { ConsoleButton } from '@/components/admin/console'
 
@@ -49,20 +50,10 @@ function ConsoleConfirmDialog({
   const titleId = 'console-confirm-title'
   const descId = 'console-confirm-desc'
 
-  // Esc to close
-  useEffect(() => {
-    if (!open) return
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    document.addEventListener('keydown', handler)
-    return () => document.removeEventListener('keydown', handler)
-  }, [open, onClose])
-
-  // Focus cancel on open (safer default for destructive dialogs)
-  useEffect(() => {
-    if (open) cancelRef.current?.focus()
-  }, [open])
+  // Escape closes; focus starts on Cancel (the safer default for destructive
+  // dialogs), Tab stays inside, and focus returns to the opener on close.
+  const dialogRef = useRef<HTMLDivElement>(null)
+  useDialogFocus(dialogRef, open, { onEscape: onClose, initialFocus: cancelRef })
 
   // Lock body scroll
   useEffect(() => {
@@ -75,7 +66,7 @@ function ConsoleConfirmDialog({
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div ref={dialogRef} className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
       <div className="absolute inset-0 bg-scrim" aria-hidden="true" onClick={onClose} />
 

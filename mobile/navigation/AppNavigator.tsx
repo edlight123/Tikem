@@ -1,4 +1,5 @@
 import React, { useContext, useRef, useState, useEffect } from 'react';
+import { DENSE_MAX_FONT_SCALE } from '../lib/a11y';
 import { AppState, View, TouchableOpacity, Text, StyleSheet, Platform, Animated, LayoutChangeEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ExpoLinking from 'expo-linking';
@@ -38,6 +39,7 @@ import FollowersScreen from '../screens/FollowersScreen';
 import NotificationSettingsScreen from '../screens/NotificationSettingsScreen';
 import ContentPageScreen from '../screens/ContentPageScreen';
 import PhotoCreditsScreen from '../screens/PhotoCreditsScreen';
+import AccessibilitySettingsScreen from '../screens/AccessibilitySettingsScreen';
 import FavoritesScreen from '../screens/FavoritesScreen';
 import TicketsScreen from '../screens/TicketsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
@@ -127,6 +129,7 @@ export type RootStackParamList = {
   NotificationSettings: { organizer?: boolean } | undefined;
   ContentPage: { slug: string; title?: string };
   PhotoCredits: undefined;
+  AccessibilitySettings: undefined;
   PaymentWebView: { url: string; title?: string; authToken?: string | null; eventId?: string };
   StripeConnectWebView: { url: string; authToken?: string | null };
   StripeOnboarding: { accountLocation?: 'united_states' | 'canada' | 'france'; hostedOnly?: boolean } | undefined;
@@ -449,7 +452,7 @@ function CustomTabBar({ state, descriptors, navigation, tabs }: TabBarProps) {
             onPress={onPress}
             style={tabBarStyles.tab}
             activeOpacity={0.7}
-            accessibilityRole="button"
+            accessibilityRole="tab"
             accessibilityState={{ selected: isFocused }}
             accessibilityLabel={tab.badge ? `${tab.label}, ${tab.badge}` : tab.label}
           >
@@ -472,7 +475,7 @@ function CustomTabBar({ state, descriptors, navigation, tabs }: TabBarProps) {
                 // Count badge (organizer Messages: questions not yet opened).
                 // Ringed in the canvas colour so it cuts cleanly into the icon.
                 <View style={[tabBarStyles.badge, { backgroundColor: colors.primary, borderColor: colors.background }]}>
-                  <Text style={[tabBarStyles.badgeText, { color: T.onTeal }]}>
+                  <Text style={[tabBarStyles.badgeText, { color: T.onTeal }]} maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE}>
                     {tab.badge > 9 ? '9+' : String(tab.badge)}
                   </Text>
                 </View>
@@ -1049,6 +1052,7 @@ export default function AppNavigator() {
             <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} options={{ headerShown: false }} />
             <Stack.Screen name="ContentPage" component={ContentPageScreen} options={{ headerShown: false }} />
             <Stack.Screen name="PhotoCredits" component={PhotoCreditsScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="AccessibilitySettings" component={AccessibilitySettingsScreen} options={{ headerShown: false }} />
             <Stack.Screen name="Favorites" component={FavoritesScreen} options={{ headerShown: false }} />
             <Stack.Screen name="Messages" component={MessagesScreen} options={{ headerShown: false }} />
             <Stack.Screen name="MessageThread" component={MessageThreadScreen} options={{ headerShown: false }} />

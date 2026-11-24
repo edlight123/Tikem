@@ -19,6 +19,8 @@ interface MobileHeroProps {
   selloutSoon: boolean
   /** Save + share, beside the organizer (they used to squeeze the buy row). */
   actions?: React.ReactNode
+  /** The poster's alt text (lib/posterAlt.ts); defaults to the title. */
+  posterAlt?: string
 }
 
 export default function MobileHero({
@@ -32,7 +34,8 @@ export default function MobileHero({
   isTrending,
   isSoldOut,
   selloutSoon,
-  actions
+  actions,
+  posterAlt,
 }: MobileHeroProps) {
   const { t } = useTranslation('common')
   const posterTheme = getPosterTheme(title, category)
@@ -95,7 +98,7 @@ export default function MobileHero({
               {/* No scrim over the art: nothing is laid on its lower half, and a
                   bottom gradient dimmed the date and venue a designed flyer
                   carries there. The status chips bring their own backing. */}
-              <PosterImage src={bannerUrl} alt={title} sizes="100vw" priority />
+              <PosterImage src={bannerUrl} alt={posterAlt || title} sizes="100vw" priority />
             </>
           ) : (
             <div className="poster-vignette absolute inset-0" style={{ backgroundImage: posterTheme.bg }}>
