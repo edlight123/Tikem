@@ -50,9 +50,37 @@ export default async function DiscoverPage({
 }: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }) {
-  const user = await getCurrentUser()
   const params = await searchParams
-  
+
+  // Parse filters from URL
+  const urlParams = new URLSearchParams()
+  Object.entries(params).forEach(([key, value]) => {
+    if (value) {
+      if (Array.isArray(value)) {
+        value.forEach(v => urlParams.append(key, v))
+      } else {
+        urlParams.set(key, String(value))
+      }
+    }
+  })
+  const filters = parseFiltersFromURL(urlParams)
+  const dayParam = typeof params.day === 'string' ? params.day : ''
+
+  // Nothing below waits on anything it doesn't need: the feed, the national
+  // day config, the language and the cookies start with the viewer's read,
+  // and the viewer's blocks start alongside their profile.
+  // Use optimized data layer with 30s caching.
+  const eventsPromise: Promise<any[]> = isDemoMode() ? Promise.resolve(DEMO_EVENTS as any[]) : getDiscoverEvents(filters, 200)
+  const nationalDayConfigPromise = dayParam ? getNationalDayConfig() : Promise.resolve(null)
+  const langPromise = resolveServerLanguage()
+  const cookiesPromise = cookies()
+  eventsPromise.catch(() => {})
+  nationalDayConfigPromise.catch(() => {})
+
+  const user = await getCurrentUser()
+  const blockedPromise = getBlockedOrganizerIds(user?.id)
+  blockedPromise.catch(() => {})
+
   // Get user's default country for prioritization
   let userCountry = 'HT' // Default to Haiti
   let userCity = ''
@@ -73,33 +101,11 @@ export default async function DiscoverPage({
   const countryParam = typeof params.country === 'string' ? params.country : ''
   const showAbroad = countryParam.toLowerCase() === 'abroad'
   const chosenCountry =
-    normalizeCountry(countryParam) || normalizeCountry((await cookies()).get(COUNTRY_COOKIE)?.value)
+    normalizeCountry(countryParam) || normalizeCountry((await cookiesPromise).get(COUNTRY_COOKIE)?.value)
   if (chosenCountry) userCountry = chosenCountry
 
-  // Parse filters from URL
-  const urlParams = new URLSearchParams()
-  Object.entries(params).forEach(([key, value]) => {
-    if (value) {
-      if (Array.isArray(value)) {
-        value.forEach(v => urlParams.append(key, v))
-      } else {
-        urlParams.set(key, String(value))
-      }
-    }
-  })
-  const filters = parseFiltersFromURL(urlParams)
-  
-  let allEvents: any[] = []
-  
-  if (isDemoMode()) {
-    allEvents = DEMO_EVENTS
-  } else {
-    // Use optimized data layer with 30s caching
-    allEvents = await getDiscoverEvents(filters, 200)
-  }
-
   // Organizers this viewer blocked never reach their feed (App Store 1.2).
-  allEvents = filterBlockedEvents(allEvents, await getBlockedOrganizerIds(user?.id))
+  const allEvents = filterBlockedEvents(await eventsPromise, await blockedPromise)
 
   // Apply filters and sort
   let filteredEvents = applyFiltersAndSort(allEvents, filters)
@@ -107,14 +113,13 @@ export default async function DiscoverPage({
   // ?day=vertieres: the events organizers tagged for a national day (the
   // homepage banner's "See events"). An unknown or disabled key filters
   // nothing, so a stale link still lands on the normal feed.
-  const dayParam = typeof params.day === 'string' ? params.day : ''
   const nationalDay = dayParam
-    ? resolveNationalDays(await getNationalDayConfig()).find((d) => d.key === dayParam) ?? null
+    ? resolveNationalDays(await nationalDayConfigPromise).find((d) => d.key === dayParam) ?? null
     : null
   if (nationalDay) {
     filteredEvents = filteredEvents.filter((e: any) => eventMatchesNationalDay(e, nationalDay))
   }
-  const serverLang = await resolveServerLanguage()
+  const serverLang = await langPromise
   const nationalDayTitle = nationalDay ? nationalDayText(nationalDay, serverLang).title : ''
   const pageHeading = tServer(serverLang, 'nav.discover', 'Discover')
 

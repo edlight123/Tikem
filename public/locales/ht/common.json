@@ -18,7 +18,11 @@
     "signOut": "Dekonekte",
     "resources": "Gid",
     "createEvent": "Kreye evènman",
-    "promoterPortal": "Pòtay pwomotè"
+    "promoterPortal": "Pòtay pwomotè",
+    "searchPlaceholder": "Chèche evènman, òganizatè, kote",
+    "menu": "Meni",
+    "primary": "Prensipal",
+    "addEvent": "Ajoute yon evènman"
   },
   "common": {
     "free": "GRATIS",

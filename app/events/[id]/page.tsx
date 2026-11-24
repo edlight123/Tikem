@@ -93,9 +93,11 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 }
 
 export default async function EventDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const user = await getCurrentUser()
   const { id } = await params
-  
+  // The viewer and the event load side by side instead of one after the other.
+  const userPromise = getCurrentUser()
+  let user: Awaited<typeof userPromise> = null
+
   let event: any = null
   
   if (isDemoMode()) {
@@ -114,10 +116,12 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
         is_verified: true
       }
     }
+    user = await userPromise
   } else {
     try {
       // Fetch from Firestore with timeout handling
-      const eventData = await getEventById(id)
+      const [eventData, viewer] = await Promise.all([getEventById(id), userPromise])
+      user = viewer
 
       if (!eventData) {
         notFound()
@@ -212,6 +216,9 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
   let isFollowing = false
   let isFavorite = false
   let heldFreeTickets = 0
+  // Friend invites (lib/invites): signed-in viewers only, behind config/auth.invites.
+  // Started now so it overlaps the related/follow reads below.
+  const invitesPromise = user ? isSocialFlagOn('invites').catch(() => false) : Promise.resolve(false)
 
   if (!isDemoMode()) {
     const now = new Date()
@@ -334,8 +341,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
   }
 
   const serializedEvent = serializeData(event)
-  // Friend invites (lib/invites): signed-in viewers only, behind config/auth.invites.
-  const invitesEnabled = user ? await isSocialFlagOn('invites').catch(() => false) : false
+  const invitesEnabled = await invitesPromise
   const serializedRelatedEvents = serializeData(relatedEvents)
 
   // schema.org Event for rich results. Only for public events: a draft shown

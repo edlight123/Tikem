@@ -18,7 +18,11 @@
     "signOut": "Se déconnecter",
     "resources": "Guides",
     "createEvent": "Créer un événement",
-    "promoterPortal": "Portail promoteur"
+    "promoterPortal": "Portail promoteur",
+    "searchPlaceholder": "Rechercher des événements, organisateurs, lieux",
+    "menu": "Menu",
+    "primary": "Principal",
+    "addEvent": "Ajouter un événement"
   },
   "common": {
     "free": "GRATUIT",

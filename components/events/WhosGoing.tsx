@@ -104,14 +104,9 @@ export default function WhosGoing({
 
   if (visibility === 'hidden') return null
 
-  // The card's own footprint while it loads, so nothing jumps when it lands.
-  if (loading) {
-    return (
-      <div className={`px-4 md:px-0 ${className}`}>
-        <div className="h-8 w-56 rounded bg-surface animate-pulse" />
-      </div>
-    )
-  }
+  // Nothing while it loads: most events show no guest line at all, and an
+  // empty grey bar that then vanished read as broken.
+  if (loading) return null
 
   if (!data || data.totalGoing === 0) {
     return null

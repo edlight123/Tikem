@@ -146,6 +146,8 @@ export interface SendRequestResult {
   ok: boolean
   status: FriendshipState
   error?: string
+  /** True when nothing changed (already friends, or our request was already there): send no notification. */
+  unchanged?: boolean
 }
 
 /**
@@ -167,11 +169,12 @@ export async function sendConnectionRequest(
   if (existing.exists) {
     const conn = mapConnection(existing)
     if (conn.status === 'accepted') {
-      return { ok: true, status: 'friends' }
+      return { ok: true, status: 'friends', unchanged: true }
     }
-    // There is a pending request already.
+    // Our request is already there: repeating it must not re-notify the
+    // other person.
     if (conn.requester_id === requesterId) {
-      return { ok: true, status: 'request_sent' }
+      return { ok: true, status: 'request_sent', unchanged: true }
     }
     // The other person already requested us → accept it.
     await ref.update({

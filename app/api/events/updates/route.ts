@@ -276,13 +276,24 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Check if user has access (either organizer or attendee)
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       )
+    }
+
+    // The full list (drafts included) is the organizer's: attendees get sent
+    // updates as notifications and nothing reads this list as an attendee.
+    // Anyone signed in used to be able to read any event's unsent drafts here.
+    const { data: event } = await supabase
+      .from('events')
+      .select('id, organizer_id')
+      .eq('id', eventId)
+      .single()
+    if (!event || !(await canOnEvent(user as any, event, 'view')).allowed) {
+      return NextResponse.json({ error: 'Event not found' }, { status: 404 })
     }
 
     const { data: updates, error } = await supabase

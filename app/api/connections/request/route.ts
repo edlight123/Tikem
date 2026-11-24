@@ -3,6 +3,7 @@ import { getCurrentUser } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
 import { sendConnectionRequest } from '@/lib/firestore/connections'
 import { createNotification } from '@/lib/notifications/helpers'
+import { isOrganizerBlocked } from '@/lib/moderation/blocks'
 
 export const runtime = 'nodejs'
 
@@ -14,7 +15,7 @@ export async function POST(request: Request) {
     }
 
     const { targetUserId } = await request.json()
-    if (!targetUserId || typeof targetUserId !== 'string') {
+    if (!targetUserId || typeof targetUserId !== 'string' || targetUserId.includes('/')) {
       return NextResponse.json({ error: 'targetUserId is required' }, { status: 400 })
     }
 
@@ -24,9 +25,24 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
+    // A block either way (users/{uid}/blocked_organizers covers people too)
+    // stops friend requests: a blocked person must not keep pinging.
+    const [theyBlocked, iBlocked] = await Promise.all([
+      isOrganizerBlocked(targetUserId, user.id),
+      isOrganizerBlocked(user.id, targetUserId),
+    ])
+    if (theyBlocked || iBlocked) {
+      return NextResponse.json({ error: 'You cannot send a request to this person.' }, { status: 403 })
+    }
+
     const result = await sendConnectionRequest(user.id, targetUserId)
     if (!result.ok) {
       return NextResponse.json({ error: result.error || 'Failed' }, { status: 400 })
+    }
+    // Already friends, or our request was already pending: nothing to announce
+    // (tapping Add friend twice used to notify the other person twice).
+    if (result.unchanged) {
+      return NextResponse.json({ ok: true, status: result.status })
     }
 
     // Best-effort notification to the other user.

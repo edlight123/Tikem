@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
-import { Bell } from 'lucide-react'
+import { Bell, ChevronDown, Plus, Search, User as UserIcon, X } from 'lucide-react'
 import { TikemWordmark } from '@/components/ui/TikemLogo'
 import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -192,168 +192,160 @@ export default function Navbar({ user, isAdmin = false, flush = false, solid = f
     router.refresh()
   }
 
+  // The mobile menu closes on Escape and on navigation.
+  useEffect(() => {
+    if (!mobileMenuOpen) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMobileMenuOpen(false)
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [mobileMenuOpen])
+  useEffect(() => {
+    setMobileMenuOpen(false)
+    setAccountMenuOpen(false)
+  }, [pathname])
+
+  // Churn guard: composing an event never requires an account up front;
+  // guests build the whole thing at /create and only meet sign-up at publish.
+  // Organizers go straight in.
+  const createHref = user?.role === 'organizer' || onATeam ? '/organizer/events/new' : '/create'
+  // Discover has its own search bar right under the nav: one search per page.
+  const showSearch = !pathname?.startsWith('/discover')
+  const loginHref = `/auth/login?redirect=${encodeURIComponent(redirectTarget)}`
+  const signupHref = `/auth/signup?redirect=${encodeURIComponent(redirectTarget)}`
+
   const accountMenuItemClass =
-    'block w-full text-left px-4 py-2 text-sm text-fg-muted hover:bg-surface hover:text-fg transition-colors duration-200'
+    'block w-full text-left px-4 py-2 text-meta text-fg-muted hover:bg-surface hover:text-fg transition-colors duration-200'
+  const topLinkClass = (active: boolean) =>
+    `hidden h-10 items-center rounded px-2.5 text-meta font-medium transition-colors duration-200 lg:inline-flex ${
+      active ? 'text-fg' : 'text-fg-muted hover:text-fg'
+    }`
+  const mobileItemClass = (active: boolean) =>
+    `flex h-11 items-center rounded px-3 text-body font-medium transition-colors ${
+      active ? 'text-fg' : 'text-fg-muted hover:bg-surface hover:text-fg'
+    }`
+  const close = () => setMobileMenuOpen(false)
 
   return (
     <nav
-      className={`sticky top-0 z-50 ${solid ? 'bg-black' : 'bg-canvas/80 backdrop-blur-xl'} ${
-        flush ? '' : 'border-b border-line'
-      }`}
+      aria-label={t('nav.primary', { defaultValue: 'Main' })}
+      // A fill, no hairline under the bar (fill-not-hairline rule). `flush`
+      // is still accepted from older call sites; there is no rule to drop.
+      data-flush={flush || undefined}
+      className={`sticky top-0 z-50 ${solid ? 'bg-black' : 'bg-canvas/90 backdrop-blur-xl'}`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-14 sm:h-16">
-          <div className="flex items-center">
-            <Link href="/" className="group flex items-center">
-              <TikemWordmark
-                className="text-headline text-fg sm:text-display transition-opacity duration-200 group-hover:opacity-80"
-              />
-            </Link>
-            <div className="hidden md:ml-8 md:flex md:space-x-2 lg:space-x-4">
-              <Link
-                href="/discover"
-                className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                  pathname === '/' || pathname === '/discover'
-                    ? 'text-fg'
-                    : 'text-fg-muted hover:bg-surface hover:text-fg'
-                }`}
-              >
-                {t('nav.home')}
-              </Link>
-              <Link
-                href="/resources"
-                className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                  pathname?.startsWith('/resources') ? 'text-fg' : 'text-fg-muted hover:bg-surface hover:text-fg'
-                }`}
-              >
-                {t('nav.resources', { defaultValue: 'Guides' })}
-              </Link>
-              {/* Churn guard: composing an event never requires an account
-                  up front, guests build the whole thing at /create and only
-                  meet sign-up at publish. Organizers go straight in. */}
-              <Link
-                href={user?.role === 'organizer' || onATeam ? '/organizer/events/new' : '/create'}
-                className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                  pathname?.startsWith('/create') || pathname?.startsWith('/organizer/events/new')
-                    ? 'text-fg'
-                    : 'text-fg-muted hover:bg-surface hover:text-fg'
-                }`}
-              >
-                {t('nav.createEvent', { defaultValue: 'Create event' })}
-              </Link>
-            </div>
-          </div>
+        <div className="flex h-14 items-center justify-between gap-3 sm:h-16">
+          <Link href="/" className="group flex flex-none items-center" aria-label="Tikèm">
+            <TikemWordmark className="text-headline text-fg transition-opacity duration-200 group-hover:opacity-80" />
+          </Link>
 
-          <div className="flex items-center space-x-4">
+          {/* One search for events, organizers and venues, opening Discover.
+              Focus lights up the whole bar instead of boxing the text field. */}
+          {showSearch ? (
+            <form
+              action="/discover"
+              role="search"
+              className="mx-4 hidden h-10 max-w-xl flex-1 items-center gap-2 rounded bg-surface px-3 transition-colors duration-150 focus-within:bg-surface-raised focus-within:ring-1 focus-within:ring-line-strong hover:bg-surface-raised md:flex lg:mx-8"
+            >
+              <Search aria-hidden className="h-4 w-4 flex-none text-fg-subtle" />
+              <input
+                type="search"
+                name="search"
+                aria-label={t('nav.searchPlaceholder', { defaultValue: 'Search events, organizers, venues' })}
+                placeholder={t('nav.searchPlaceholder', { defaultValue: 'Search events, organizers, venues' })}
+                className="nav-search h-10 min-w-0 flex-1 bg-transparent text-meta text-fg outline-none placeholder:text-fg-subtle focus-visible:!outline-none"
+              />
+            </form>
+          ) : (
+            <div className="hidden flex-1 md:block" />
+          )}
+
+          <div className="flex flex-none items-center gap-1 sm:gap-2">
+            <Link href="/discover" className={topLinkClass(pathname === '/discover')}>
+              {t('nav.home')}
+            </Link>
+            <Link href="/resources" className={topLinkClass(!!pathname?.startsWith('/resources'))}>
+              {t('nav.resources', { defaultValue: 'Guides' })}
+            </Link>
+
+            {/* The one solid button in the bar. */}
+            <Link
+              href={createHref}
+              className="ml-1 hidden h-10 items-center rounded bg-inverse px-4 text-meta font-medium text-on-inverse transition-colors duration-200 hover:bg-inverse-hover md:inline-flex"
+            >
+              {t('nav.createEvent', { defaultValue: 'Create event' })}
+            </Link>
+
+            {/* Phones: add an event from the top bar, a small white tile. */}
+            <Link
+              href={createHref}
+              aria-label={t('nav.addEvent', { defaultValue: 'Add an event' })}
+              className="grid h-11 w-11 place-items-center md:hidden"
+            >
+              <span className="grid h-8 w-8 place-items-center rounded bg-inverse text-on-inverse">
+                <Plus className="h-[18px] w-[18px]" strokeWidth={2.2} aria-hidden />
+              </span>
+            </Link>
+
             {user ? (
               <>
-                {/* Notification Bell */}
                 <NotificationBell userId={user.id} />
 
                 {/* Account dropdown (desktop) */}
-                <div className="relative hidden sm:block" ref={accountMenuRef}>
+                <div className="relative hidden md:block" ref={accountMenuRef}>
                   <button
                     type="button"
                     onClick={() => setAccountMenuOpen((open) => !open)}
                     aria-haspopup="menu"
                     aria-expanded={accountMenuOpen}
                     aria-label={user.full_name}
-                    className="flex items-center gap-2 text-sm text-fg-soft hover:text-fg transition-colors duration-200"
+                    className="flex h-10 items-center gap-2 rounded pl-1 pr-2 text-meta text-fg-soft transition-colors duration-200 hover:bg-surface hover:text-fg"
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={user.photo_url || defaultAvatarUrl(user.id)}
                       alt=""
-                      className="w-8 h-8 rounded-full object-cover bg-surface-raised"
+                      className="h-8 w-8 rounded-full object-cover bg-surface-raised"
                     />
-                    <span className="font-medium">{user.full_name}</span>
-                    <svg
-                      className={`w-4 h-4 transition-transform duration-200 ${accountMenuOpen ? 'rotate-180' : ''}`}
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                      aria-hidden="true"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
+                    <span className="hidden max-w-[10rem] truncate font-medium xl:inline">{user.full_name}</span>
+                    <ChevronDown
+                      aria-hidden
+                      className={`h-4 w-4 text-fg-subtle transition-transform duration-200 ${accountMenuOpen ? 'rotate-180' : ''}`}
+                    />
                   </button>
 
                   {accountMenuOpen && (
                     <div
                       role="menu"
                       aria-label={user.full_name}
-                      className="absolute right-0 mt-2 w-56 rounded-lg border border-line bg-surface-solid py-1 shadow-xl"
+                      className="absolute right-0 mt-2 w-56 rounded bg-surface-raised-solid py-1 shadow-xl"
                     >
-                      <Link
-                        href="/tickets"
-                        role="menuitem"
-                        onClick={() => setAccountMenuOpen(false)}
-                        className={accountMenuItemClass}
-                      >
+                      <Link href="/tickets" role="menuitem" onClick={() => setAccountMenuOpen(false)} className={accountMenuItemClass}>
                         {t('nav.myTickets')}
                       </Link>
-                      <Link
-                        href="/favorites"
-                        role="menuitem"
-                        onClick={() => setAccountMenuOpen(false)}
-                        className={accountMenuItemClass}
-                      >
+                      <Link href="/favorites" role="menuitem" onClick={() => setAccountMenuOpen(false)} className={accountMenuItemClass}>
                         {t('nav.favorites')}
                       </Link>
-                      <Link
-                        href="/connections"
-                        role="menuitem"
-                        onClick={() => setAccountMenuOpen(false)}
-                        className={accountMenuItemClass}
-                      >
+                      <Link href="/connections" role="menuitem" onClick={() => setAccountMenuOpen(false)} className={accountMenuItemClass}>
                         {t('nav.friends', { defaultValue: 'Friends' })}
                       </Link>
-                      {isHost ? (
-                        <Link
-                          href="/organizer"
-                          role="menuitem"
-                          onClick={() => setAccountMenuOpen(false)}
-                          className={accountMenuItemClass}
-                        >
-                          {t('nav.organizer')}
-                        </Link>
-                      ) : (
-                        <Link
-                          href="/organizer"
-                          role="menuitem"
-                          onClick={() => setAccountMenuOpen(false)}
-                          className={accountMenuItemClass}
-                        >
-                          {t('nav.becomeHost', { defaultValue: 'Become a host' })}
-                        </Link>
-                      )}
+                      <Link href="/organizer" role="menuitem" onClick={() => setAccountMenuOpen(false)} className={accountMenuItemClass}>
+                        {isHost ? t('nav.organizer') : t('nav.becomeHost', { defaultValue: 'Become a host' })}
+                      </Link>
                       {isPromoter && (
-                        <Link
-                          href="/promoter"
-                          role="menuitem"
-                          onClick={() => setAccountMenuOpen(false)}
-                          className={accountMenuItemClass}
-                        >
+                        <Link href="/promoter" role="menuitem" onClick={() => setAccountMenuOpen(false)} className={accountMenuItemClass}>
                           {t('nav.promoterPortal', { defaultValue: 'Promoter portal' })}
                         </Link>
                       )}
                       {isAdmin && (
-                        <Link
-                          href="/admin"
-                          role="menuitem"
-                          onClick={() => setAccountMenuOpen(false)}
-                          className={accountMenuItemClass}
-                        >
+                        <Link href="/admin" role="menuitem" onClick={() => setAccountMenuOpen(false)} className={accountMenuItemClass}>
                           {t('nav.admin')}
                         </Link>
                       )}
-                      <div className="my-1 border-t border-line" />
-                      <Link
-                        href="/profile"
-                        role="menuitem"
-                        onClick={() => setAccountMenuOpen(false)}
-                        className={accountMenuItemClass}
-                      >
+                      <div aria-hidden className="mx-4 my-1 h-px bg-surface-high" />
+                      <Link href="/profile" role="menuitem" onClick={() => setAccountMenuOpen(false)} className={accountMenuItemClass}>
                         {t('nav.profile')}
                       </Link>
                       <button
@@ -372,186 +364,117 @@ export default function Navbar({ user, isAdmin = false, flush = false, solid = f
                 </div>
               </>
             ) : (
-              <>
-                {/* Quiet buttons (posh calibration, 2026-08-28): sign-in is bare
-                    text, the ONE white pill is the only chrome in the navbar.
-                    Regular weights and small type read premium; teal never fills. */}
-                <Link
-                  href={`/auth/login?redirect=${encodeURIComponent(redirectTarget)}`}
-                  className="hidden sm:inline-flex items-center px-3 py-2 text-meta font-normal text-fg-muted transition-colors duration-200 hover:text-fg"
-                >
-                  {t('nav.signIn')}
-                </Link>
-                <Link
-                  href={`/auth/signup?redirect=${encodeURIComponent(redirectTarget)}`}
-                  className="inline-flex items-center rounded-xl bg-inverse px-4 py-2 text-meta font-medium text-on-inverse transition-colors duration-200 hover:bg-inverse-hover"
-                >
-                  {t('auth:signup.submit')}
-                </Link>
-              </>
+              // Signing in is a quiet link: "Create event" is the only fill.
+              <Link
+                href={loginHref}
+                className="hidden h-10 items-center rounded px-3 text-meta font-medium text-fg-soft transition-colors duration-200 hover:bg-surface hover:text-fg md:inline-flex"
+              >
+                {t('nav.signIn')}
+              </Link>
             )}
 
-            {/* Mobile menu button */}
+            {/* Phones: the menu opens from your avatar (or a person glyph). */}
             <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 rounded-lg text-fg-soft hover:bg-surface-raised"
+              type="button"
+              onClick={() => setMobileMenuOpen((open) => !open)}
+              aria-expanded={mobileMenuOpen}
+              aria-controls="site-mobile-menu"
+              aria-label={t('nav.menu', { defaultValue: 'Menu' })}
+              className="-mr-1.5 grid h-11 w-11 place-items-center md:hidden"
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                {mobileMenuOpen ? (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <span className="grid h-8 w-8 place-items-center overflow-hidden rounded-full bg-surface-raised text-fg-soft">
+                {user ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={user.photo_url || defaultAvatarUrl(user.id)} alt="" className="h-full w-full object-cover" />
+                ) : mobileMenuOpen ? (
+                  <X className="h-4 w-4" strokeWidth={2} aria-hidden />
                 ) : (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  <UserIcon className="h-4 w-4" strokeWidth={2} aria-hidden />
                 )}
-              </svg>
+              </span>
             </button>
           </div>
         </div>
 
-        {/* Mobile menu */}
+        {/* Mobile menu: one filled panel, no rules. */}
         {mobileMenuOpen && (
-          <div className="md:hidden py-4 border-t border-line">
-            <div className="space-y-1">
-              <Link
-                href="/discover"
-                onClick={() => setMobileMenuOpen(false)}
-                className={`block px-3 py-2 rounded-lg text-sm font-medium ${
-                  pathname === '/' || pathname === '/discover'
-                    ? 'text-fg'
-                    : 'text-fg-muted hover:bg-surface hover:text-fg'
-                }`}
-              >
-                {t('nav.home')}
-              </Link>
-              <Link
-                href="/resources"
-                onClick={() => setMobileMenuOpen(false)}
-                className={`block px-3 py-2 rounded-lg text-sm font-medium ${
-                  pathname?.startsWith('/resources') ? 'text-fg' : 'text-fg-muted hover:bg-surface hover:text-fg'
-                }`}
-              >
-                {t('nav.resources', { defaultValue: 'Guides' })}
-              </Link>
-              <Link
-                href={user?.role === 'organizer' || onATeam ? '/organizer/events/new' : '/create'}
-                onClick={() => setMobileMenuOpen(false)}
-                className={`block px-3 py-2 rounded-lg text-sm font-medium ${
-                  pathname?.startsWith('/create') ? 'text-fg' : 'text-fg-muted hover:bg-surface hover:text-fg'
-                }`}
-              >
-                {t('nav.createEvent', { defaultValue: 'Create event' })}
-              </Link>
-              {user && (
-                <>
-                  <Link
-                    href="/tickets"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={`block px-3 py-2 rounded-lg text-sm font-medium ${
-                      pathname?.startsWith('/tickets') ? 'text-fg' : 'text-fg-muted hover:bg-surface hover:text-fg'
-                    }`}
-                  >
-                    {t('nav.myTickets')}
+          <div id="site-mobile-menu" className="md:hidden mb-3 rounded bg-surface-solid p-2">
+            <form action="/discover" role="search" className="mb-2 flex h-11 items-center gap-2 rounded bg-surface-raised px-3">
+              <Search aria-hidden className="h-4 w-4 flex-none text-fg-subtle" />
+              <input
+                type="search"
+                name="search"
+                aria-label={t('nav.searchPlaceholder', { defaultValue: 'Search events, organizers, venues' })}
+                placeholder={t('nav.searchPlaceholder', { defaultValue: 'Search events, organizers, venues' })}
+                className="nav-search h-11 min-w-0 flex-1 bg-transparent text-base text-fg outline-none placeholder:text-fg-subtle"
+              />
+            </form>
+            <Link href="/discover" onClick={close} className={mobileItemClass(pathname === '/' || pathname === '/discover')}>
+              {t('nav.home')}
+            </Link>
+            <Link href="/resources" onClick={close} className={mobileItemClass(!!pathname?.startsWith('/resources'))}>
+              {t('nav.resources', { defaultValue: 'Guides' })}
+            </Link>
+            <Link href={createHref} onClick={close} className={mobileItemClass(!!pathname?.startsWith('/create'))}>
+              {t('nav.createEvent', { defaultValue: 'Create event' })}
+            </Link>
+            {user ? (
+              <>
+                <div aria-hidden className="mx-3 my-1.5 h-px bg-surface-high" />
+                <Link href="/tickets" onClick={close} className={mobileItemClass(!!pathname?.startsWith('/tickets'))}>
+                  {t('nav.myTickets')}
+                </Link>
+                <Link href="/favorites" onClick={close} className={mobileItemClass(pathname === '/favorites')}>
+                  {t('nav.favorites')}
+                </Link>
+                <Link href="/connections" onClick={close} className={mobileItemClass(!!pathname?.startsWith('/connections'))}>
+                  {t('nav.friends', { defaultValue: 'Friends' })}
+                </Link>
+                <Link href="/organizer" onClick={close} className={mobileItemClass(!!pathname?.startsWith('/organizer'))}>
+                  {isHost ? t('nav.organizer') : t('nav.becomeHost', { defaultValue: 'Become a host' })}
+                </Link>
+                {isPromoter && (
+                  <Link href="/promoter" onClick={close} className={mobileItemClass(!!pathname?.startsWith('/promoter'))}>
+                    {t('nav.promoterPortal', { defaultValue: 'Promoter portal' })}
                   </Link>
-                  <Link
-                    href="/favorites"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={`block px-3 py-2 rounded-lg text-sm font-medium ${
-                      pathname === '/favorites' ? 'text-fg' : 'text-fg-muted hover:bg-surface hover:text-fg'
-                    }`}
-                  >
-                    {t('nav.favorites')}
+                )}
+                {isAdmin && (
+                  <Link href="/admin" onClick={close} className={mobileItemClass(!!pathname?.startsWith('/admin'))}>
+                    {t('nav.admin')}
                   </Link>
-                  <Link
-                    href="/connections"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={`block px-3 py-2 rounded-lg text-sm font-medium ${
-                      pathname?.startsWith('/connections') ? 'text-fg' : 'text-fg-muted hover:bg-surface hover:text-fg'
-                    }`}
-                  >
-                    {t('nav.friends', { defaultValue: 'Friends' })}
-                  </Link>
-                  {isHost ? (
-                    <Link
-                      href="/organizer"
-                      onClick={() => setMobileMenuOpen(false)}
-                      className={`block px-3 py-2 rounded-lg text-sm font-medium ${
-                        pathname?.startsWith('/organizer') ? 'text-fg' : 'text-fg-muted hover:bg-surface hover:text-fg'
-                      }`}
-                    >
-                      {t('nav.organizer')}
-                    </Link>
-                  ) : (
-                    <Link
-                      href="/organizer"
-                      onClick={() => setMobileMenuOpen(false)}
-                      className={`block px-3 py-2 rounded-lg text-sm font-medium ${
-                        pathname?.startsWith('/organizer') ? 'text-fg' : 'text-fg-muted hover:bg-surface hover:text-fg'
-                      }`}
-                    >
-                      {t('nav.becomeHost', { defaultValue: 'Become a host' })}
-                    </Link>
-                  )}
-                  {isPromoter && (
-                    <Link
-                      href="/promoter"
-                      onClick={() => setMobileMenuOpen(false)}
-                      className={`block px-3 py-2 rounded-lg text-sm font-medium ${
-                        pathname?.startsWith('/promoter') ? 'text-fg' : 'text-fg-muted hover:bg-surface hover:text-fg'
-                      }`}
-                    >
-                      {t('nav.promoterPortal', { defaultValue: 'Promoter portal' })}
-                    </Link>
-                  )}
-                  {isAdmin && (
-                    <Link
-                      href="/admin"
-                      onClick={() => setMobileMenuOpen(false)}
-                      className={`block px-3 py-2 rounded-lg text-sm font-medium ${
-                        pathname?.startsWith('/admin') ? 'text-fg' : 'text-fg-muted hover:bg-surface hover:text-fg'
-                      }`}
-                    >
-                      {t('nav.admin')}
-                    </Link>
-                  )}
-                  <Link
-                    href="/profile"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={`block px-3 py-2 rounded-lg text-sm font-medium ${
-                      pathname === '/profile' ? 'text-fg' : 'text-fg-muted hover:bg-surface hover:text-fg'
-                    }`}
-                  >
-                    {t('nav.profile')}
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMobileMenuOpen(false)
-                      handleSignOut()
-                    }}
-                    className="block w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-fg-muted hover:bg-surface hover:text-fg"
-                  >
-                    {t('nav.signOut')}
-                  </button>
-                </>
-              )}
-              {!user && (
-                <>
-                  <Link
-                    href={`/auth/login?redirect=${encodeURIComponent(redirectTarget)}`}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="block px-3 py-2 rounded-lg text-sm font-medium text-fg-muted hover:bg-surface hover:text-fg"
-                  >
-                    {t('nav.signIn')}
-                  </Link>
-                  <Link
-                    href={`/auth/signup?redirect=${encodeURIComponent(redirectTarget)}`}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="block px-3 py-2 rounded-lg text-sm font-medium text-fg-muted hover:bg-surface hover:text-fg"
-                  >
-                    {t('auth:signup.submit')}
-                  </Link>
-                </>
-              )}
-            </div>
+                )}
+                <Link href="/profile" onClick={close} className={mobileItemClass(pathname === '/profile')}>
+                  {t('nav.profile')}
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => {
+                    close()
+                    handleSignOut()
+                  }}
+                  className={`w-full text-left ${mobileItemClass(false)}`}
+                >
+                  {t('nav.signOut')}
+                </button>
+              </>
+            ) : (
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <Link
+                  href={loginHref}
+                  onClick={close}
+                  className="inline-flex h-10 items-center justify-center rounded bg-surface-raised text-meta font-medium text-fg"
+                >
+                  {t('nav.signIn')}
+                </Link>
+                <Link
+                  href={signupHref}
+                  onClick={close}
+                  className="inline-flex h-10 items-center justify-center rounded bg-inverse text-meta font-medium text-on-inverse"
+                >
+                  {t('auth:signup.submit')}
+                </Link>
+              </div>
+            )}
           </div>
         )}
       </div>
