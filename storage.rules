@@ -47,6 +47,23 @@ service firebase.storage {
       allow update, delete: if false;
     }
     
+    // Event-claim proof documents (lib/community/claim-proofs). PRIVATE: no
+    // client read or list, ever, not even the uploader. The claim API
+    // (app/api/events/[id]/claim) takes the storage PATH, checks it sits under
+    // the caller's own claim-proofs/{uid}/ and that the object exists; admins
+    // see it through a short-lived signed URL minted server-side
+    // (GET /api/admin/community). No download URL is ever created for these.
+    // Create-only: no overwrite, no client delete (removed with the account
+    // by lib/account/deletion.ts).
+    match /claim-proofs/{userId}/{fileName} {
+      allow read: if false;
+      allow create: if request.auth != null && request.auth.uid == userId
+        && resource == null
+        && request.resource.size <= 10 * 1024 * 1024
+        && request.resource.contentType.matches('image/(jpeg|png|webp|heic|heif|gif)|application/pdf');
+      allow update, delete: if false;
+    }
+
     // User profile images
     match /profile-images/{userId}/{allPaths=**} {
       allow read: if true; // Public read

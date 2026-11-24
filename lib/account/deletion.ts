@@ -368,6 +368,30 @@ export async function scrubAccountData(uid: string, email: string | null, nowIso
     await wallet.set({ moncash_phone: null, account_deleted: true, anonymized_at: nowIso }, { merge: true })
   }
 
+  // Community shares and event claims (lib/community): the record stays for
+  // moderation history, the person goes. A pending claim is closed, and its
+  // proof (deleted from storage below) is unlinked.
+  const shares = await docsMatching('event_submissions', [['submitted_by', uid]])
+  await inChunks(shares, (d) =>
+    d.ref.set({ submitted_by: null, submitted_by_email: null, account_deleted: true, anonymized_at: nowIso }, { merge: true })
+  )
+  const claims = await docsMatching('event_claims', [['requested_by', uid]])
+  await inChunks(claims, (d) => {
+    const c = d.data() || {}
+    return d.ref.set(
+      {
+        requested_by: null,
+        requested_by_email: null,
+        proof_path: null,
+        account_deleted: true,
+        anonymized_at: nowIso,
+        ...(c.status === 'pending' ? { status: 'withdrawn' } : {}),
+      },
+      { merge: true }
+    )
+  })
+  counts.community_records_anonymized = shares.length + claims.length
+
   // The account's own content and social graph — deleted outright.
   counts.favorites_deleted =
     (await deleteAll(await docsMatching('favorites', [['user_id', uid]]))) +
@@ -445,6 +469,8 @@ export async function scrubAccountData(uid: string, email: string | null, nowIso
       `posters/${uid}/`,
       `verification/${uid}/`,
       `verifications/bank/${uid}/`,
+      // Event-claim proofs (lib/community/claim-proofs): private, often an ID or a letter.
+      `claim-proofs/${uid}/`,
     ]) {
       const [files] = await bucket.getFiles({ prefix })
       storageFiles += files.length

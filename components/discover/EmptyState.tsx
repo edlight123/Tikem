@@ -36,6 +36,12 @@ export function EmptyState({ hasFilters, countryName = 'your area' }: EmptyState
           <MapPin className="h-4 w-4" />
           Change your location
         </Link>
+        {/* Quiet entry to Share an event (lib/community). */}
+        <p className="mt-6 text-meta text-fg-muted">
+          <Link href="/share-event" className="underline underline-offset-2 hover:text-fg">
+            {t('community.share.empty_entry')}
+          </Link>
+        </p>
       </div>
     )
   }

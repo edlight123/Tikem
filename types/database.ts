@@ -59,6 +59,11 @@ export type NotificationType =
   | 'attend_request'
   | 'attend_request_approved'
   | 'attend_request_declined'
+  // Community-shared events (lib/community). Transactional: the member asked
+  // by sharing or claiming. community_review is admin-only (new share/claim).
+  | 'community_event_published'
+  | 'community_claim_decided'
+  | 'community_review'
 
 export interface Database {
   public: {

@@ -252,6 +252,11 @@ export function checkEventPurchasable(event: any, now: Date = new Date()): { ok:
   if (event.is_published !== true) {
     return refuse('This event is not available for purchase.', 'event_unavailable', 400)
   }
+  // Shared by the community (lib/community/submissions): the organizer did not
+  // post it, so Tikèm sells and issues nothing for it until they claim it.
+  if (event.community_shared === true) {
+    return refuse('Tickets for this event are not sold on Tikèm.', 'community_event', 400)
+  }
 
   const end = toDateOrNull(event.end_datetime ?? event.endDatetime)
   const start = toDateOrNull(event.start_datetime ?? event.startDatetime)

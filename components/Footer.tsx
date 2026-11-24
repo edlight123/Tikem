@@ -40,6 +40,7 @@ export default function Footer() {
     { href: '/discover', label: t('nav.home', { defaultValue: 'Events' }) },
     { href: '/resources', label: t('nav.resources', { defaultValue: 'Guides' }) },
     { href: '/platform', label: t('nav.platform', { defaultValue: 'Platform' }) },
+    { href: '/share-event', label: t('community.share.entry', { defaultValue: 'Share an event' }) },
   ]
 
   const companyLinks: FooterLink[] = [

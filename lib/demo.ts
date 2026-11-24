@@ -202,6 +202,38 @@ export const DEMO_EVENTS = [
     is_published: true,
     created_at: '2026-11-01T10:00:00',
     updated_at: '2026-11-01T10:00:00'
+  },
+  // A community-shared event (lib/community): credited to its source,
+  // claimable, selling nothing on Tikèm, with a ticket link-out.
+  {
+    id: 'demo-community-1',
+    organizer_id: 'tikem-community',
+    organizer_name: 'Tikèm Community',
+    title: 'Kompa sou plaj',
+    description: 'Bal kompa sou plaj la, de 9è diswa rive 3è dimaten.',
+    category: 'Party',
+    venue_name: 'Wahoo Bay',
+    city: 'Port-au-Prince',
+    country: 'HT',
+    commune: '',
+    address: 'Route Nationale 1',
+    start_datetime: '2026-12-19T02:00:00.000Z',
+    end_datetime: '2026-12-19T08:00:00.000Z',
+    banner_image_url: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800',
+    ticket_price: 1500,
+    currency: 'HTG',
+    total_tickets: 0,
+    tickets_sold: 0,
+    is_published: true,
+    community_shared: true,
+    claimable: true,
+    community_free: false,
+    source_name: 'Kompa Nights',
+    source_handle: 'kompa.nights',
+    source_url: 'https://instagram.com/p/demo',
+    external_url: 'https://tickets.example.com/kompa',
+    created_at: '2026-11-20T10:00:00',
+    updated_at: '2026-11-20T10:00:00'
   }
 ]
 

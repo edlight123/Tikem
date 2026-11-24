@@ -2295,5 +2295,104 @@
     "age_18": "18 an oswa plis sèlman",
     "age_21": "21 an oswa plis sèlman",
     "dress_code": "Kòd abiman: {{value}}"
+  },
+  "community": {
+    "event": {
+      "shared": "Kominote a pataje l",
+      "from": "Soti nan {{name}}",
+      "source": "Gade orijinal la",
+      "claim": "Se evènman pa w? Reklame l",
+      "not_sold": "Tikèm pa vann tikè pou evènman sa a.",
+      "tickets_elsewhere": "Tikè sou sit òganizatè a",
+      "tickets_elsewhere_note": "Tikèm pa vann tikè pou evènman sa a. W ap achte yo nan men òganizatè a.",
+      "price_unknown": "Pri a pa endike",
+      "price_note": "Jan òganizatè a anonse l"
+    },
+    "share": {
+      "entry": "Pataje yon evènman",
+      "empty_entry": "Ou wè yon afich? Pataje evènman an",
+      "title": "pataje yon evènman",
+      "steps": {
+        "flyer": "Afich la",
+        "when_where": "Ki lè ak ki kote",
+        "tickets": "Tikè",
+        "source": "Kote w te wè l"
+      },
+      "reading": "N ap li afich la…",
+      "filled": "Nou ranpli sa nou te ka li. Verifye l.",
+      "nothing_read": "Nou pa t ka li afich sa a. Mete sa w konnen.",
+      "fields": {
+        "title": "Non evènman an",
+        "date": "Dat",
+        "start": "Kòmanse",
+        "end": "Fini",
+        "venue": "Kote",
+        "city": "Vil",
+        "country": "Peyi",
+        "price": "Pri",
+        "currency": "Lajan",
+        "ticket_url": "Lyen tikè yo",
+        "category": "Kategori",
+        "source_url": "Lyen piblikasyon an oswa sit la",
+        "organizer": "Òganizatè",
+        "handle": "Instagram",
+        "note": "Lòt bagay"
+      },
+      "not_sure": "Mwen pa konnen",
+      "countries": {
+        "HT": "Ayiti",
+        "US": "Etazini",
+        "CA": "Kanada",
+        "FR": "Lafrans"
+      },
+      "free": "Gratis",
+      "paid": "Peye",
+      "send": "Voye",
+      "sending": "N ap voye…",
+      "sent": "Mèsi. N ap verifye l epi mete l sou Tikèm.",
+      "another": "Pataje yon lòt",
+      "done": "Fini",
+      "footnote": "Nou verifye chak evènman anvan li parèt epi nou bay òganizatè a kredi.",
+      "errors": {
+        "rate_limited": "Ou pataje anpil jodi a. Eseye ankò demen.",
+        "bad_image": "Mete afich la anvan.",
+        "forbidden": "Kont sa a pa ka pataje evènman.",
+        "generic": "Nou pa t ka voye l. Eseye ankò."
+      }
+    },
+    "claim": {
+      "title": "reklame evènman sa a",
+      "how": "Montre nou se pa w",
+      "methods": {
+        "instagram": "Instagram",
+        "link": "Yon lyen",
+        "upload": "Yon dokiman"
+      },
+      "handle": "Kont Instagram ou",
+      "handle_hint": "Kont ki te pibliye evènman an.",
+      "link": "Yon lyen ki montre se pa w",
+      "upload": "Voye yon foto ekran oswa yon dokiman",
+      "uploading": "N ap voye l…",
+      "upload_hint": "Se ekip Tikèm sèlman ki wè l. Imaj oswa PDF, 10 MB maksimòm.",
+      "upload_errors": {
+        "type": "Sèvi ak yon imaj oswa yon PDF.",
+        "size": "Fichye sa a depase 10 MB.",
+        "auth": "Konekte ankò, epi eseye ankò.",
+        "failed": "Nou pa t ka voye l. Eseye ankò."
+      },
+      "message": "Nòt pou ekip nou an (si w vle)",
+      "send": "Voye demann lan",
+      "sending": "N ap voye…",
+      "sent": "Demann lan ale. N ap reponn ou byento.",
+      "back": "Tounen nan evènman an",
+      "footnote": "Lè nou apwouve l, evènman an pase nan kont òganizatè w epi ou ka modifye l e vann tikè.",
+      "errors": {
+        "invalid_proof": "Verifye prèv ou a epi eseye ankò.",
+        "not_claimable": "Yo pa ka reklame evènman sa a.",
+        "rate_limited": "Twòp demann jodi a. Eseye ankò demen.",
+        "forbidden": "Kont sa a pa ka reklame evènman.",
+        "generic": "Nou pa t ka voye l. Eseye ankò."
+      }
+    }
   }
 }

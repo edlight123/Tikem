@@ -33,6 +33,7 @@ import {
   LogOut,
   MapPin,
   Inbox,
+  Megaphone,
   Phone,
   RotateCcw,
   Shield,
@@ -711,6 +712,8 @@ export default function ProfileScreen() {
               value={unreadMessages > 0 ? String(unreadMessages) : undefined}
               onPress={() => navigation.navigate('Messages')}
             />
+            {/* Seen a flyer for an event that is not on Tikèm? Share it (lib/community). */}
+            <ListRow icon={Megaphone} title={t('community.share.entry')} onPress={() => navigation.navigate('ShareEvent')} />
             {/* Publish-first: anyone can create an event; KYC is deferred to payout. */}
             {isOwnOrganizer || activeOrg.hasTeamAccess ? (
               <ListRow icon={Briefcase} title={t('profile.createEvent')} onPress={() => navigation.navigate('CreateEvent')} />
