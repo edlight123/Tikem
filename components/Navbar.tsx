@@ -11,6 +11,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { isDemoMode, isDemoEmail } from '@/lib/demo'
 import { demoLogout } from '@/app/auth/actions'
+import LocationMenu, { type NavLocation } from '@/components/home/LocationMenu'
 
 /**
  * BUNDLE: the navbar renders on essentially every route, so anything it
@@ -71,9 +72,14 @@ interface NavbarProps {
    * nav), and the bar's #0a0a0a read as a second tone above the row.
    */
   solid?: boolean
+  /**
+   * The place being browsed (homepage only). It becomes the second half of the
+   * search bar, and a small chip on phones, in place of the old city row.
+   */
+  location?: NavLocation
 }
 
-export default function Navbar({ user, isAdmin = false, flush = false, solid = false }: NavbarProps) {
+export default function Navbar({ user, isAdmin = false, flush = false, solid = false, location }: NavbarProps) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -247,7 +253,7 @@ export default function Navbar({ user, isAdmin = false, flush = false, solid = f
             <form
               action="/discover"
               role="search"
-              className="mx-4 hidden h-10 max-w-xl flex-1 items-center gap-2 rounded bg-surface px-3 transition-colors duration-150 focus-within:bg-surface-raised focus-within:ring-1 focus-within:ring-line-strong hover:bg-surface-raised md:flex lg:mx-8"
+              className={`mx-4 hidden h-10 max-w-xl flex-1 items-center gap-2 rounded bg-surface pl-3 ${location ? 'pr-0' : 'pr-3'} transition-colors duration-150 focus-within:bg-surface-raised focus-within:ring-1 focus-within:ring-line-strong hover:bg-surface-raised md:flex lg:mx-8`}
             >
               <Search aria-hidden className="h-4 w-4 flex-none text-fg-subtle" />
               <input
@@ -257,6 +263,12 @@ export default function Navbar({ user, isAdmin = false, flush = false, solid = f
                 placeholder={t('nav.searchPlaceholder', { defaultValue: 'Search events, organizers, venues' })}
                 className="nav-search h-10 min-w-0 flex-1 bg-transparent text-meta text-fg outline-none placeholder:text-fg-subtle focus-visible:!outline-none"
               />
+              {location && (
+                <>
+                  <span aria-hidden className="h-5 w-px flex-none bg-surface-high" />
+                  <LocationMenu location={location} inline />
+                </>
+              )}
             </form>
           ) : (
             <div className="hidden flex-1 md:block" />
@@ -277,6 +289,12 @@ export default function Navbar({ user, isAdmin = false, flush = false, solid = f
             >
               {t('nav.createEvent', { defaultValue: 'Create event' })}
             </Link>
+
+            {location && (
+              <div className="md:hidden">
+                <LocationMenu location={location} />
+              </div>
+            )}
 
             {/* Phones: add an event from the top bar, a small white tile. */}
             <Link

@@ -6,7 +6,6 @@ import Navbar from '@/components/Navbar'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
 import HomePageContent from '@/components/HomePageContent'
 import LiveTicker from '@/components/home/LiveTicker'
-import CityRow from '@/components/home/CityRow'
 import { isDemoMode, DEMO_EVENTS } from '@/lib/demo'
 import { isAdmin } from '@/lib/admin'
 import { parseFiltersFromURL } from '@/lib/filters/utils'
@@ -281,10 +280,15 @@ export default async function HomePage({
   return (
     <div className="min-h-screen bg-black pb-mobile-nav">
       <LiveTicker signals={buildTickerSignals(inCountry, now)} />
-      {/* flush + solid: one black band with the city row, no hairline, and
-          nothing showing through the bar as the page scrolls under it. */}
-      <Navbar user={user} isAdmin={isAdmin(((user as any)?.email_verified) ? user?.email : null)} flush solid />
-      <CityRow country={country} cities={cities} active={active?.key ?? null} total={inCountry.length} />
+      {/* The place being browsed lives in the nav's search bar now (no city
+          row under it: owner 2026-11-24, it read as an empty strip). */}
+      <Navbar
+        user={user}
+        isAdmin={isAdmin(((user as any)?.email_verified) ? user?.email : null)}
+        flush
+        solid
+        location={{ country, cities, active: active?.key ?? null, total: inCountry.length }}
+      />
 
       <LocationBannerWrapper userId={user?.id} currentCountry={country} currentCity={profileCity} />
 
