@@ -1,0 +1,21 @@
+diff --git a/node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios/ReactCommon/RCTTurboModule.mm b/node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios/ReactCommon/RCTTurboModule.mm
+index 2a67797..c927270 100644
+--- a/node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios/ReactCommon/RCTTurboModule.mm
++++ b/node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios/ReactCommon/RCTTurboModule.mm
+@@ -435,7 +435,15 @@ TraceSection s(
+     @try {
+       [inv invokeWithTarget:strongModule];
+     } @catch (NSException *exception) {
+-      throw convertNSExceptionToJSError(runtime, exception, std::string{moduleName}, methodNameStr);
++      // Tikèm patch (RN 0.81.5; upstream fix in 0.83.5): void methods run on
++      // the module's queue, not the JS thread, so converting the NSException
++      // to a JSError here touched the Hermes runtime off-thread and corrupted
++      // its heap (EXC_BAD_ACCESS in convertNSExceptionToJSError, build 51).
++#if DEBUG
++      @throw exception;
++#else
++      NSLog(@"[TurboModule] %s.%s threw %@: %@", moduleName, methodNameStr.c_str(), exception.name, exception.reason);
++#endif
+     } @finally {
+       [retainedObjectsForInvocation removeAllObjects];
+     }

@@ -135,6 +135,33 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
   // Org details or a person's privacy-gated bio + socials, from the server
   // (lib/api/publicDetails.ts). null until loaded, or when the call fails.
   const [details, setDetails] = useState<PublicProfileDetails | null>(null);
+  // A guest can't read public_profiles (signed-in only in firestore.rules):
+  // fill the page's name, logo, badge, banner and photos from the server's
+  // org card instead, never overwriting what the signed-in read returned.
+  useEffect(() => {
+    const card = details?.kind === 'org' ? details.card : undefined;
+    if (!card) return;
+    setOrganizer((prev: any) => {
+      if (!prev) return prev;
+      const next = { ...prev };
+      let changed = false;
+      const fill = (key: string, value: unknown) => {
+        const empty = next[key] === undefined || next[key] === null || next[key] === '' ||
+          (Array.isArray(next[key]) && next[key].length === 0);
+        const has = value !== undefined && value !== null && value !== '' && !(Array.isArray(value) && value.length === 0);
+        if (empty && has) { next[key] = value; changed = true; }
+      };
+      fill('organization_name', card.organization_name);
+      fill('organization_logo', card.organization_logo);
+      fill('coverTemplate', card.coverTemplate);
+      fill('coverImageUrl', card.coverImageUrl);
+      fill('gallery', card.gallery);
+      fill('city', card.city);
+      fill('country', card.country);
+      if (card.is_verified && next.is_verified !== true) { next.is_verified = true; changed = true; }
+      return changed ? next : prev;
+    });
+  }, [details, organizer]);
   const [upcomingEvents, setUpcomingEvents] = useState<any[]>([]);
   const [pastEvents, setPastEvents] = useState<any[]>([]);
   const [isFollowing, setIsFollowing] = useState(false);
