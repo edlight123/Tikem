@@ -447,7 +447,10 @@ describe('MonCash OTP verdict (mobileMoneyOtpVerified)', () => {
 describe('storage.rules — KYC uploads (static)', () => {
   const rules = readFileSync(join(__dirname, '..', 'storage.rules'), 'utf8')
   const start = rules.indexOf('match /verification/{userId}/{fileName}')
-  const block = rules.slice(start, rules.indexOf('// User profile images', start))
+  // Up to the next storage match block (another folder's rules, e.g. claim
+  // proofs, may sit between this block and the profile images comment).
+  const next = rules.indexOf('\n    match /', start + 1)
+  const block = rules.slice(start, next === -1 ? undefined : next)
 
   it('is create-only: no client overwrite or delete', () => {
     expect(start).toBeGreaterThan(-1)
