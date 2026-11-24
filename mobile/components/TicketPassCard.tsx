@@ -1,4 +1,5 @@
 import React from 'react';
+import { joinA11y } from '../lib/a11y';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Touchable } from './ui/Touchable';
 import { CalendarPlus, MapPin, Send, ExternalLink } from 'lucide-react-native';
@@ -18,7 +19,8 @@ interface TicketPassCardProps {
   ticket: any;
   event: any;
   user: any;
-  ticketNumber: number;
+  /** Shown as "Ticket 2" only when there are several. */
+  ticketNumber?: number;
   onQRPress: () => void;
   onViewEvent: () => void;
   onTransferPress?: () => void;
@@ -94,11 +96,17 @@ export default function TicketPassCard({
   return (
     <View style={styles.wrapper}>
       <View style={styles.chipRow}>
-        <StatusChip status={statusKey} label={isUsed ? undefined : t('ticketPass.ticketNumber').replace('{count}', String(ticketNumber))} />
+        <StatusChip status={statusKey} label={isUsed || !ticketNumber ? undefined : t('ticketPass.ticketNumber').replace('{count}', String(ticketNumber))} />
       </View>
 
       {/* The one shared ticket identity — white inverted stub. Tap to enlarge. */}
-      <Touchable scale={0.98} onPress={onQRPress} accessibilityRole="button">
+      <Touchable
+        scale={0.98}
+        onPress={onQRPress}
+        accessibilityRole="button"
+        accessibilityLabel={joinA11y(t('a11y.qrCode'), eventTitle, dateLabel, tier, holder, orderRef)}
+        accessibilityHint={t('a11y.qrCodeHint')}
+      >
         <TicketQRCard
           qrValue={ticketQrValue(ticket)}
           eventTitle={eventTitle}
@@ -126,7 +134,7 @@ export default function TicketPassCard({
             eventTitle={eventTitle}
             eventDate={dateLabel || ''}
             venueName={event?.venue_name || ''}
-            ticketNumber={ticketNumber}
+            ticketNumber={ticketNumber ?? 1}
             totalTickets={ticket?.quantity || 1}
           />
         )}

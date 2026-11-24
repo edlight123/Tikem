@@ -207,7 +207,7 @@ export default function RefundRequestScreen({ route, navigation }: any) {
         <View style={styles.backButton} />
       </OverlayHeader>
 
-      <ScrollView
+      <ScrollView keyboardDismissMode="on-drag" keyboardShouldPersistTaps="handled"
         style={styles.scrollView}
         contentContainerStyle={{ paddingTop: headerH, paddingBottom: insets.bottom + 24 }}
         showsVerticalScrollIndicator={false}

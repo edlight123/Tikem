@@ -391,7 +391,7 @@ export default function OrganizerEventStaffScreen() {
         onHeight={onHeight}
       />
 
-      <ScrollView
+      <ScrollView keyboardDismissMode="on-drag" keyboardShouldPersistTaps="handled"
         contentContainerStyle={[styles.content, { paddingTop: headerH + 8, paddingBottom: 40 + insets.bottom }]}
         showsVerticalScrollIndicator={false}
       >

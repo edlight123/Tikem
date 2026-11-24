@@ -6,6 +6,7 @@
 // an empty venue, and with a thin calendar it was most of the strip. The
 // whole section is hidden when the week has fewer than two events.
 
+import { usePosterAlt } from '@/lib/usePosterAlt'
 import Link from 'next/link'
 import Image from 'next/image'
 import PosterImage from '@/components/ui/PosterImage'
@@ -16,6 +17,7 @@ import { dayLabel, dayParts } from '@/lib/home/format'
 
 export default function ThisWeek({ days, scopeQs }: { days: WeekDay[]; scopeQs: string }) {
   const { t, i18n } = useTranslation('common')
+  const posterAlt = usePosterAlt()
   const lit = days.filter((d) => d.count > 0)
   // One event in the week is the hero's poster again, alone in a wide row;
   // below two the section stays out of the way.
@@ -55,7 +57,7 @@ export default function ThisWeek({ days, scopeQs }: { days: WeekDay[]; scopeQs: 
                   {d.top && (
                     <PosterImage
                       src={d.top.banner_image_url}
-                      alt={d.top.title}
+                      alt={posterAlt(d.top)}
                       sizes="(min-width: 1024px) 220px, 46vw"
                       quality={60}
                       className="transition-transform duration-500 ease-out group-hover:scale-[1.03]"

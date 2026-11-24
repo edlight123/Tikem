@@ -1,4 +1,6 @@
 import { venueDetailsFields, venueDetailsOf } from '../venueDetails';
+import { parseOccasion } from '../occasions';
+import { cleanPosterAlt } from '../posterAlt';
 import { auth, db, storage } from '../../config/firebase';
 import {
   collection,
@@ -145,6 +147,8 @@ export interface CreateEventData {
   theme_key?: string;
   /** Optional promo video link. */
   video_url?: string;
+  /** "Describe the flyer": what a screen reader says for the poster (lib/posterAlt). */
+  poster_alt?: string;
   /**
    * Optional Spotify track URL (`https://open.spotify.com/track/{id}`), picked
    * via song search in the composer. Rendered as the official Spotify embed on
@@ -166,6 +170,8 @@ export interface CreateEventData {
    * composer writes.
    */
   national_day?: string | null;
+  /** The occasion it belongs to (lib/occasions key), or null. Same field the web composer writes. */
+  occasion?: string | null;
   /**
    * Recurring-event cadence (create-only). When set to a real cadence and
    * `recurrence_count > 1`, createEvent generates that many independent event
@@ -488,6 +494,9 @@ function webParityFields(eventData: CreateEventData) {
     family_max: familyMax({ family_registration: true, family_max: eventData.family_max }),
     is_online: !!eventData.is_online,
     national_day: eventData.national_day || null,
+    // Allow-listed again here (firestore.rules refuses unknown keys); left
+    // alone when the caller never set it.
+    ...(eventData.occasion !== undefined ? { occasion: parseOccasion(eventData.occasion) } : {}),
     enable_waitlist: eventData.ticket_tiers.some((t) => !!t.waitlist),
     ...(eventData.fee_incidence ? { fee_incidence: eventData.fee_incidence } : {}),
     ...(eventData.guestlist ? { guestlist: eventData.guestlist } : {}),
@@ -725,6 +734,7 @@ export async function createEvent(
         // Advanced settings — default visible/on when the caller omits them.
         show_on_explore: eventData.show_on_explore !== false,
         video_url: eventData.video_url || '',
+        poster_alt: cleanPosterAlt(eventData.poster_alt) || null,
         // Song. `null` (not '') when empty, matching the web composer and the
         // lib/data/events.ts field whitelist.
         spotify_url: eventData.spotify_url?.trim() || null,
@@ -907,6 +917,7 @@ export async function updateEvent(
       // Advanced settings — default visible/on when the caller omits them.
       show_on_explore: eventData.show_on_explore !== false,
       video_url: eventData.video_url || '',
+      poster_alt: cleanPosterAlt(eventData.poster_alt) || null,
       // Song — cleared to null when the organizer removes it (see createEvent).
       spotify_url: eventData.spotify_url?.trim() || null,
       // Both fields — writing only the boolean left a web-set

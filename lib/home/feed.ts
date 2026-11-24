@@ -48,12 +48,18 @@ export interface HomeEvent {
    * small instead of setting the same facts again in display type.
    */
   posterHasText: boolean
+  /** The organizer's flyer description (lib/posterAlt.ts), when written. */
+  poster_alt?: string
   /** Recurring occurrences share it (lib/events/series). */
   series_id?: string
   /** The owner; series only merge within one organizer (lib/events/series). */
   organizer_id?: string
   /** Other dates of this series hidden behind this card (collapseSeries). */
   more_dates?: number
+  /** The occasion it is tagged for (lib/occasions), for Home's occasion row. */
+  occasion?: string
+  /** The national day it is tagged for (lib/nationalDays eventTag). */
+  national_day?: string
 }
 
 const str = (v: unknown) => (typeof v === 'string' ? v : v == null ? '' : String(v))
@@ -136,8 +142,11 @@ export function toHomeEvent(e: any): HomeEvent | null {
     template: isTemplateEvent(e),
     lineup,
     posterHasText: Boolean(e.poster_template && typeof e.poster_template === 'object'),
+    poster_alt: typeof e.poster_alt === 'string' && e.poster_alt.trim() ? e.poster_alt : undefined,
     series_id: e.series_id ? str(e.series_id) : undefined,
     organizer_id: e.organizer_id ? str(e.organizer_id) : undefined,
+    occasion: typeof e.occasion === 'string' ? e.occasion : undefined,
+    national_day: typeof e.national_day === 'string' ? e.national_day : undefined,
   }
 }
 

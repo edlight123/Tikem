@@ -8,6 +8,7 @@ import { getCitiesForCountry, getSubdivisions, getLocationTypeLabel, hasSubdivis
 import { countActiveFilters } from '@/lib/filters/utils'
 import type { EventFilters } from '@/lib/filters/types'
 import { SearchSuggest } from '@/components/discover/SearchSuggest'
+import { UseMyLocationButton } from '@/components/location/UseMyLocationButton'
 
 interface DiscoverTopBarProps {
   filters: EventFilters
@@ -139,7 +140,8 @@ export function DiscoverTopBar({ filters, onOpenFilters, userCountry = 'HT' }: D
               </button>
 
               {showCityDropdown && (
-                <div className="absolute top-full mt-2 right-0 bg-surface-raised-solid rounded-lg shadow-xl py-1 min-w-[180px] z-20">
+                <div className="absolute top-full mt-2 right-0 bg-surface-raised-solid rounded-lg shadow-xl py-1 min-w-[240px] z-20">
+                  <UseMyLocationButton className="px-2 pt-1 pb-1" onDone={() => setShowCityDropdown(false)} />
                   <button
                     onClick={() => handleCitySelect('')}
                     className="w-full text-left px-4 py-2 text-sm hover:bg-surface-raised text-fg-soft"

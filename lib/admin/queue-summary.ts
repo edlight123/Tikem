@@ -125,6 +125,8 @@ export async function getQueueSummary(): Promise<QueueSummary> {
     disputes,
     pendingEvents,
     reportedEvents,
+    communityShares,
+    eventClaims,
   ] = await Promise.all([
     statFor(
       () =>
@@ -155,6 +157,8 @@ export async function getQueueSummary(): Promise<QueueSummary> {
     // reports_count > 0 is a range filter; keeping it equality-free of any
     // orderBy keeps it on the same index-free footing as the rest.
     statFor(() => adminDb.collection('events').where('reports_count', '>', 0), 'created_at'),
+    statFor(() => adminDb.collection('event_submissions').where('status', '==', 'pending'), 'created_at'),
+    statFor(() => adminDb.collection('event_claims').where('status', '==', 'pending'), 'created_at'),
   ])
 
   return {
@@ -166,5 +170,7 @@ export async function getQueueSummary(): Promise<QueueSummary> {
     disputes,
     pendingEvents,
     reportedEvents,
+    communityShares,
+    eventClaims,
   }
 }

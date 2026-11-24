@@ -413,7 +413,8 @@ export default function OrganizerEventsScreen() {
                     </Text>
                   </View>
 
-                  {capacity > 0 ? (
+                  {/* Only once something has sold: an empty track reads as a fault. */}
+                  {capacity > 0 && sold > 0 ? (
                     <View style={styles.salesTrack}>
                       <View style={[styles.salesFill, { width: `${soldRatio * 100}%` }]} />
                     </View>

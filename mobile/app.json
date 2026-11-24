@@ -74,6 +74,11 @@
               "scheme": "https",
               "host": "www.tikem.co",
               "pathPrefix": "/i/"
+            },
+            {
+              "scheme": "https",
+              "host": "www.tikem.co",
+              "pathPrefix": "/occasions/"
             }
           ],
           "category": [
@@ -108,6 +113,11 @@
               "scheme": "https",
               "host": "tikem.co",
               "pathPrefix": "/i/"
+            },
+            {
+              "scheme": "https",
+              "host": "tikem.co",
+              "pathPrefix": "/occasions/"
             }
           ],
           "category": [
@@ -117,7 +127,8 @@
         }
       ],
       "permissions": [
-        "android.permission.READ_CONTACTS"
+        "android.permission.READ_CONTACTS",
+        "android.permission.ACCESS_COARSE_LOCATION"
       ],
       "googleServicesFile": "./google-services.json",
       "blockedPermissions": [
@@ -126,13 +137,20 @@
         "android.permission.READ_MEDIA_AUDIO",
         "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
         "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.ACCESS_MEDIA_LOCATION"
+        "android.permission.ACCESS_MEDIA_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_BACKGROUND_LOCATION"
       ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "scheme": "tikem",
+    "locales": {
+      "en": "./native-locales/en.json",
+      "fr": "./native-locales/fr.json",
+      "ht": "./native-locales/ht.json"
+    },
     "plugins": [
       "expo-apple-authentication",
       [
@@ -155,6 +173,17 @@
         "expo-contacts",
         {
           "contactsPermission": "Allow Tikèm to access your contacts to find friends who are already on Tikèm. Your contacts are only used to match and are never stored."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Tikèm uses your approximate location, only when you ask, to show events in the nearest area and how far an event is. Your location stays on your phone and is never stored.",
+          "locationAlwaysAndWhenInUsePermission": false,
+          "locationAlwaysPermission": false,
+          "isIosBackgroundLocationEnabled": false,
+          "isAndroidBackgroundLocationEnabled": false,
+          "isAndroidForegroundServiceEnabled": false
         }
       ],
       [

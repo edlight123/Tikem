@@ -176,7 +176,13 @@ export default function FavoritesScreen({ navigation }: any) {
       <StatusBar barStyle="light-content" backgroundColor={colors.background} />
       <OverlayHeader onHeight={onHeaderHeight} style={styles.header} scrollY={scrollY}>
         {navigation.canGoBack() && (
-          <Touchable onPress={() => navigation.goBack()} style={styles.backButton} hitSlop={8}>
+          <Touchable
+            onPress={() => navigation.goBack()}
+            style={styles.backButton}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={t('common.back')}
+          >
             <ArrowLeft size={24} color={colors.text} />
           </Touchable>
         )}
@@ -216,6 +222,8 @@ export default function FavoritesScreen({ navigation }: any) {
                       style={styles.cardActionBtn}
                       onPress={() => handleShare(event)}
                       hitSlop={8}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${t('common.share')}, ${event.title}`}
                     >
                       <Share2 size={15} color={colors.white} />
                     </Touchable>
@@ -223,6 +231,8 @@ export default function FavoritesScreen({ navigation }: any) {
                       style={styles.cardActionBtn}
                       onPress={() => removeFavorite(event.id)}
                       hitSlop={8}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${t('a11y.unsave')}, ${event.title}`}
                     >
                       <Heart size={15} color={colors.error} fill={colors.error} />
                     </Touchable>

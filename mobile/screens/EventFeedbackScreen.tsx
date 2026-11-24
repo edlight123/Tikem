@@ -94,7 +94,7 @@ export default function EventFeedbackScreen() {
       style={styles.container}
       behavior="padding"
     >
-      <ScrollView
+      <ScrollView keyboardDismissMode="on-drag"
         contentContainerStyle={[styles.content, { paddingBottom: 32 + insets.bottom }]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}

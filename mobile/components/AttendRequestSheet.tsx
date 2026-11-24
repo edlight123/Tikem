@@ -239,7 +239,7 @@ export default function AttendRequestSheet({ visible, onClose, eventId, allowedP
               </TouchableOpacity>
             </View>
           </View>
-          <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+          <ScrollView keyboardDismissMode="on-drag" keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
 
             {allowedPlusOnes > 0 && (
               <>

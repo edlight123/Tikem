@@ -9,6 +9,7 @@ import {
 import { BADGE_COLORS, BadgeStatus } from '../theme/badges';
 import { useI18n } from '../contexts/I18nContext';
 import { radius } from '../theme/tokens';
+import { useReducedMotion } from '../lib/a11y';
 
 /** Maps a display status to its BADGE_COLORS key (handles spaced labels). */
 const STATUS_KEY: Record<BadgeStatus, keyof typeof BADGE_COLORS> = {
@@ -50,10 +51,17 @@ export default function EventStatusBadge({ status, size = 'small', style }: Even
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const opacityAnim = useRef(new Animated.Value(1)).current;
 
+  const reduced = useReducedMotion();
+
   useEffect(() => {
-    // Premium pulse animation for VIP and Trending
+    // Premium pulse animation for VIP and Trending (still under Reduce Motion).
+    if (reduced) {
+      scaleAnim.setValue(1);
+      opacityAnim.setValue(1);
+      return;
+    }
     if (status === 'VIP' || status === 'Trending') {
-      Animated.loop(
+      const pulse = Animated.loop(
         Animated.sequence([
           Animated.parallel([
             Animated.timing(scaleAnim, {
@@ -80,9 +88,11 @@ export default function EventStatusBadge({ status, size = 'small', style }: Even
             }),
           ]),
         ])
-      ).start();
+      );
+      pulse.start();
+      return () => pulse.stop();
     }
-  }, [status, scaleAnim, opacityAnim]);
+  }, [status, scaleAnim, opacityAnim, reduced]);
 
   const color = STATUS_COLOR[status] ?? STATUS_COLOR.New;
   const fontSize = size === 'small' ? 10 : 12;

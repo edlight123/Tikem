@@ -230,7 +230,7 @@ export default function OrganizerPromotersScreen() {
           overlay
           onHeight={onHeight}
         />
-        <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: headerH + spacing.lg }]}>
+        <ScrollView keyboardDismissMode="on-drag" contentContainerStyle={[styles.scrollContent, { paddingTop: headerH + spacing.lg }]}>
           <Skeleton width="100%" height={52} radius={RADIUS.md} />
           <View style={styles.section}>
             {[0, 1].map((i) => (
@@ -344,7 +344,7 @@ export default function OrganizerPromotersScreen() {
         overlay
         onHeight={onHeight}
       />
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: headerH + spacing.lg }]}>
+      <ScrollView keyboardDismissMode="on-drag" contentContainerStyle={[styles.scrollContent, { paddingTop: headerH + spacing.lg }]}>
         <PromoteTabs active="promoters" eventId={eventId} />
         {promoters.length === 0 ? (
           <EmptyState
@@ -446,7 +446,7 @@ export default function OrganizerPromotersScreen() {
               <X size={20} color={colors.text} />
             </Touchable>
           </View>
-          <ScrollView contentContainerStyle={styles.sheetBody} keyboardShouldPersistTaps="handled">
+          <ScrollView keyboardDismissMode="on-drag" contentContainerStyle={styles.sheetBody} keyboardShouldPersistTaps="handled">
             {form}
           </ScrollView>
         </KeyboardAvoidingView>

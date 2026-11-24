@@ -3,7 +3,8 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
-import { Accessibility, ChevronDown, X } from 'lucide-react'
+import { ChevronDown, X } from 'lucide-react'
+import { VENUE_ACCESSIBILITY, VENUE_FACILITIES, amenityKeysOf, wantedAmenities } from '@/lib/events/venue-details'
 import { EventFilters, DateFilter, EventTypeFilter } from '@/lib/filters/types'
 import { CATEGORIES, getCitiesForCountry, getPriceSliderConfig, formatPriceForCountry, getSubdivisions, getLocationTypeLabel, hasSubdivisions } from '@/lib/filters/config'
 import { buildPriceRangeFilter, countActiveFilters, filtersEqual, parsePriceRange } from '@/lib/filters/utils'
@@ -12,6 +13,7 @@ import { buildPriceRangeFilter, countActiveFilters, filtersEqual, parsePriceRang
 // rounded-full outline whose selected state is a teal hairline — a coloured
 // status pill — so this modal no longer uses it.
 import { discoverChipCls } from './discover/DateChips'
+import { UseMyLocationButton } from './location/UseMyLocationButton'
 
 /**
  * Surfaces here follow the POSH ladder (docs/POSH_DESIGN_BRIEF.md, "Surfaces:
@@ -295,21 +297,46 @@ export function FiltersModal({
               </div>
             </div>
 
-            {/* Access: events whose venue the organizer marked step-free. */}
-            <div className="space-y-3">
-              <span className="eyebrow block text-eyebrow text-fg-muted">{t('filters.access')}</span>
-              <button
-                type="button"
-                onClick={() => onDraftChange({ ...draftFilters, stepFree: !draftFilters.stepFree })}
-                aria-pressed={!!draftFilters.stepFree}
-                className={`inline-flex min-h-9 items-center gap-2 rounded px-4 text-meta leading-[18px] font-medium transition-colors ${
-                  draftFilters.stepFree ? 'bg-inverse text-on-inverse' : 'bg-surface text-fg-muted hover:bg-surface-high hover:text-fg'
-                }`}
-              >
-                <Accessibility className="h-4 w-4" strokeWidth={1.75} aria-hidden="true" />
-                {t('filters.step_free')}
-              </button>
-            </div>
+            {/* Venue facts: what the place has, then accessibility. Multi-
+                select; an event must have every chosen one. The older
+                Step-free switch (?stepFree=1) reads as the step_free chip. */}
+            {(
+              [
+                ['at_the_venue', VENUE_FACILITIES],
+                ['accessibility', VENUE_ACCESSIBILITY],
+              ] as const
+            ).map(([group, keys]) => {
+              const chosen = wantedAmenities(draftFilters)
+              return (
+                <div key={group} className="space-y-3">
+                  <span className="eyebrow block text-eyebrow text-fg-muted">{t(`filters.${group}`)}</span>
+                  <div className="flex flex-wrap gap-2" role="group" aria-label={t(`filters.${group}`)}>
+                    {keys.map((k) => {
+                      const on = chosen.includes(k)
+                      return (
+                        <button
+                          key={k}
+                          type="button"
+                          onClick={() =>
+                            onDraftChange({
+                              ...draftFilters,
+                              stepFree: undefined,
+                              amenities: on ? chosen.filter((a) => a !== k) : amenityKeysOf([...chosen, k]),
+                            })
+                          }
+                          aria-pressed={on}
+                          className={`inline-flex min-h-9 items-center rounded px-4 text-meta leading-[18px] font-medium transition-colors ${
+                            on ? 'bg-inverse text-on-inverse' : 'bg-surface text-fg-muted hover:bg-surface-high hover:text-fg'
+                          }`}
+                        >
+                          {t(`filters.amenities.${k}`)}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )
+            })}
 
             {/* Price Filter — dual-thumb range, currency-aware */}
             <div className="space-y-3">
@@ -399,6 +426,7 @@ export function FiltersModal({
             <div className="space-y-3">
               <label className="eyebrow text-eyebrow text-fg-muted">{t('filters.location')}</label>
               <div className="space-y-3">
+                <UseMyLocationButton onDone={onClose} />
                 {/* City Dropdown. Filled picker trigger, own chevron — the
                     native arrow goes with appearance-none. */}
                 <div className="relative">

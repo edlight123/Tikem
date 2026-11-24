@@ -41,8 +41,11 @@ export interface EventFilters {
   // Event type
   eventType: EventTypeFilter
 
-  /** Only events whose venue the organizer marked step-free (lib/venueDetails). */
+  /** Older Step-free switch, still honoured; the sheet now writes `amenities`. */
   stepFree?: boolean
+
+  /** Venue facts the event must have, ALL of them (lib/venueDetails keys). */
+  amenities?: string[]
   
   // Sort
   sortBy: SortOption

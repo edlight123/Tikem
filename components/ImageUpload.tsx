@@ -37,6 +37,8 @@ interface ImageUploadProps {
   endpoint?: string
   /** Flyer only: opens the poster-template picker ("Make a poster"). */
   onMakePoster?: () => void
+  /** Flyer only: offer the flyer library (off where the flyer must be the real one, e.g. Share an event). */
+  library?: boolean
 }
 
 export default function ImageUpload({
@@ -46,6 +48,7 @@ export default function ImageUpload({
   variant = 'default',
   endpoint,
   onMakePoster,
+  library = true,
 }: ImageUploadProps) {
   const [uploading, setUploading] = useState(false)
   const [preview, setPreview] = useState<string | null>(currentImage || null)
@@ -234,7 +237,7 @@ export default function ImageUpload({
               >
                 {changeLabel}
               </button>
-              {isFlyer && (
+              {isFlyer && library && (
                 <button
                   type="button"
                   onClick={() => setLibraryOpen(true)}
@@ -273,7 +276,7 @@ export default function ImageUpload({
             <span className="mt-3 text-xs text-fg-subtle">
               {t('upload.formats', { defaultValue: 'PNG or JPG · up to 5MB' })}
             </span>
-            {isFlyer && (
+            {isFlyer && library && (
               <button
                 type="button"
                 onClick={() => setLibraryOpen(true)}

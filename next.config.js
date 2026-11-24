@@ -65,6 +65,8 @@ const nextConfig = {
   // serverless bundle ships without them and every share card 500s in prod.
   outputFileTracingIncludes: {
     '/events/[id]/opengraph-image': ['./assets/fonts/**'],
+    // The organizer card: fonts, plus the template banners it reads off disk.
+    '/profile/organizer/[organizerId]/opengraph-image': ['./assets/fonts/**', './public/art/world-photos/**'],
     // Poster templates are drawn server-side with these typefaces.
     '/api/posters/preview': ['./assets/fonts/**'],
     '/api/posters/create': ['./assets/fonts/**'],
@@ -276,10 +278,12 @@ const nextConfig = {
           },
           {
             // Camera is allowed same-origin because ticket check-in scans QR
-            // codes via getUserMedia (html5-qrcode / jsqr). Microphone and
-            // geolocation are unused by the app, so both are denied.
+            // codes via getUserMedia (html5-qrcode / jsqr). Geolocation is
+            // allowed same-origin only, for "Use my current location" (asked on
+            // a click, resolved in the page, never sent: lib/location). The
+            // microphone is unused, so it stays denied.
             key: 'Permissions-Policy',
-            value: 'camera=(self), microphone=(), geolocation=(), browsing-topics=()',
+            value: 'camera=(self), microphone=(), geolocation=(self), browsing-topics=()',
           },
           {
             // ENFORCING as of 2026-09-02, after a production-build sweep of the

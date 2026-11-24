@@ -10,6 +10,7 @@
 // entrance and float animate wrapper divs, the rotation lives on the
 // link — so no animation clobbers another's transform.
 
+import { usePosterAlt } from '@/lib/usePosterAlt'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePosterAccent } from '@/components/ui/usePosterAccent'
@@ -36,6 +37,7 @@ function FanPoster({
   floatDelay: string
 }) {
   const accent = usePosterAccent(ev.banner_image_url)
+  const posterAlt = usePosterAlt()
   return (
     <div className={`plt-enter absolute ${wrapper}`} style={{ ['--d' as any]: enterDelay }}>
       <div
@@ -50,7 +52,7 @@ function FanPoster({
         >
           <Image
             src={ev.banner_image_url}
-            alt={ev.title}
+            alt={posterAlt(ev)}
             fill
             sizes="240px"
             quality={70}

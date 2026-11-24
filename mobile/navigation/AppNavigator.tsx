@@ -1,4 +1,5 @@
 import React, { useContext, useRef, useState, useEffect } from 'react';
+import { DENSE_MAX_FONT_SCALE } from '../lib/a11y';
 import { AppState, View, TouchableOpacity, Text, StyleSheet, Platform, Animated, LayoutChangeEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ExpoLinking from 'expo-linking';
@@ -38,6 +39,7 @@ import FollowersScreen from '../screens/FollowersScreen';
 import NotificationSettingsScreen from '../screens/NotificationSettingsScreen';
 import ContentPageScreen from '../screens/ContentPageScreen';
 import PhotoCreditsScreen from '../screens/PhotoCreditsScreen';
+import AccessibilitySettingsScreen from '../screens/AccessibilitySettingsScreen';
 import FavoritesScreen from '../screens/FavoritesScreen';
 import TicketsScreen from '../screens/TicketsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
@@ -54,6 +56,7 @@ import OrganizerEarningsHubScreen from '../screens/organizer/OrganizerEarningsHu
 import OrganizerEventStaffScreen from '../screens/organizer/OrganizerEventStaffScreen';
 import OrganizerTeamHubScreen from '../screens/organizer/OrganizerTeamHubScreen';
 import OrganizerOrgTeamScreen from '../screens/organizer/OrganizerOrgTeamScreen';
+import OrgGalleryScreen from '../screens/organizer/OrgGalleryScreen';
 import OrganizerPayoutSettingsScreen from '../screens/organizer/OrganizerPayoutSettingsScreenV2';
 import OrganizerPromoCodesScreen from '../screens/organizer/OrganizerPromoCodesScreen';
 import OrganizerCompsScreen from '../screens/organizer/OrganizerCompsScreen';
@@ -85,6 +88,7 @@ import InviteRedeemScreen from '../screens/InviteRedeemScreen';
 // Detail Screens
 import EventDetailScreen from '../screens/EventDetailScreen';
 import CategoryEventsScreen from '../screens/CategoryEventsScreen';
+import OccasionScreen from '../screens/OccasionScreen';
 import EventTicketsScreen from '../screens/EventTicketsScreen';
 import TicketDetailScreen from '../screens/TicketDetailScreen';
 import OrganizerProfileScreen from '../screens/OrganizerProfileScreen';
@@ -105,6 +109,8 @@ import { useI18n } from '../contexts/I18nContext';
 // New Feature Screens
 import RefundRequestScreen from '../screens/RefundRequestScreen';
 import ReviewScreen from '../screens/ReviewScreen';
+import ShareEventScreen from '../screens/ShareEventScreen';
+import ClaimEventScreen from '../screens/ClaimEventScreen';
 import OrganizerAnalyticsScreen from '../screens/organizer/OrganizerAnalyticsScreen';
 import OrganizerRefundsScreen from '../screens/organizer/OrganizerRefundsScreen';
 
@@ -127,6 +133,7 @@ export type RootStackParamList = {
   NotificationSettings: { organizer?: boolean } | undefined;
   ContentPage: { slug: string; title?: string };
   PhotoCredits: undefined;
+  AccessibilitySettings: undefined;
   PaymentWebView: { url: string; title?: string; authToken?: string | null; eventId?: string };
   StripeConnectWebView: { url: string; authToken?: string | null };
   StripeOnboarding: { accountLocation?: 'united_states' | 'canada' | 'france'; hostedOnly?: boolean } | undefined;
@@ -139,6 +146,8 @@ export type RootStackParamList = {
   // React Navigation merges the query string into params. EventDetailScreen
   // captures and persists it for purchase attribution.
   EventDetail: { eventId: string; ref?: string };
+  // An occasion's page (lib/occasions key); also tikem://occasions/<key>.
+  Occasion: { key: string };
   // Either `category` (per-category listing) or `feed` (one of Home's curated
   // rails opened as its own page) — never both.
   CategoryEvents: {
@@ -154,7 +163,12 @@ export type RootStackParamList = {
   };
   EventTickets: { eventId: string };
   TicketDetail: { ticketId: string };
-  OrganizerProfile: { organizerId: string };
+  // preview: "Preview my page" (exactly what visitors see, no owner prompts).
+  // view 'person': the personal page, also for an organization's owner
+  // (attendee contexts: who's going, guest lists, an attendee's messages).
+  OrganizerProfile: { organizerId: string; preview?: boolean; view?: 'person' };
+  // Photos on an organization's page (owner or team admin; the server checks).
+  OrgGallery: { orgId?: string } | undefined;
   Notifications: { userId: string };
   // inviteEventId/Title: "Invite to Tikèm" from an event context (lib/invites).
   Connections:
@@ -204,6 +218,10 @@ export type RootStackParamList = {
   // New screens
   RefundRequest: { ticketId: string };
   Review: { ticketId: string; eventId: string; eventTitle: string };
+  // Community-shared events (lib/community): share a flyer you saw; claim
+  // a community event as its organizer.
+  ShareEvent: undefined;
+  ClaimEvent: { eventId: string; eventTitle?: string };
   OrganizerAnalytics: undefined;
   OrganizerRefunds: undefined;
   Favorites: undefined;
@@ -449,7 +467,7 @@ function CustomTabBar({ state, descriptors, navigation, tabs }: TabBarProps) {
             onPress={onPress}
             style={tabBarStyles.tab}
             activeOpacity={0.7}
-            accessibilityRole="button"
+            accessibilityRole="tab"
             accessibilityState={{ selected: isFocused }}
             accessibilityLabel={tab.badge ? `${tab.label}, ${tab.badge}` : tab.label}
           >
@@ -472,7 +490,7 @@ function CustomTabBar({ state, descriptors, navigation, tabs }: TabBarProps) {
                 // Count badge (organizer Messages: questions not yet opened).
                 // Ringed in the canvas colour so it cuts cleanly into the icon.
                 <View style={[tabBarStyles.badge, { backgroundColor: colors.primary, borderColor: colors.background }]}>
-                  <Text style={[tabBarStyles.badgeText, { color: T.onTeal }]}>
+                  <Text style={[tabBarStyles.badgeText, { color: T.onTeal }]} maxFontSizeMultiplier={DENSE_MAX_FONT_SCALE}>
                     {tab.badge > 9 ? '9+' : String(tab.badge)}
                   </Text>
                 </View>
@@ -1063,6 +1081,7 @@ export default function AppNavigator() {
             <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} options={{ headerShown: false }} />
             <Stack.Screen name="ContentPage" component={ContentPageScreen} options={{ headerShown: false }} />
             <Stack.Screen name="PhotoCredits" component={PhotoCreditsScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="AccessibilitySettings" component={AccessibilitySettingsScreen} options={{ headerShown: false }} />
             <Stack.Screen name="Favorites" component={FavoritesScreen} options={{ headerShown: false }} />
             <Stack.Screen name="Messages" component={MessagesScreen} options={{ headerShown: false }} />
             <Stack.Screen name="MessageThread" component={MessageThreadScreen} options={{ headerShown: false }} />
@@ -1074,9 +1093,11 @@ export default function AppNavigator() {
             <Stack.Screen name="OrganizerEventRecap" component={OrganizerEventRecapScreen} options={{ headerShown: false }} />
             <Stack.Screen name="EditProfile" component={EditProfileScreen} options={{ headerShown: false }} />
             <Stack.Screen name="CategoryEvents" component={CategoryEventsScreen} />
+            <Stack.Screen name="Occasion" component={OccasionScreen} options={{ headerShown: false }} />
             <Stack.Screen name="EventTickets" component={EventTicketsScreen} />
             <Stack.Screen name="TicketDetail" component={TicketDetailScreen} />
             <Stack.Screen name="OrganizerProfile" component={OrganizerProfileScreen} />
+            <Stack.Screen name="OrgGallery" component={OrgGalleryScreen} options={{ headerShown: false }} />
             <Stack.Screen name="Connections" component={ConnectionsScreen} />
             <Stack.Screen
               name="Notifications"
@@ -1155,6 +1176,8 @@ export default function AppNavigator() {
             <Stack.Screen name="EditEvent" component={CreateEventFlowRefactored} options={{ headerShown: false }} />
             <Stack.Screen name="RefundRequest" component={RefundRequestScreen} options={{ headerShown: false }} />
             <Stack.Screen name="Review" component={ReviewScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="ShareEvent" component={ShareEventScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="ClaimEvent" component={ClaimEventScreen} options={{ headerShown: false }} />
             <Stack.Screen name="OrganizerAnalytics" component={OrganizerAnalyticsScreen} options={{ headerShown: false }} />
             <Stack.Screen name="OrganizerRefunds" component={OrganizerRefundsScreen} options={{ headerShown: false }} />
           </>

@@ -55,6 +55,24 @@ body {
   background-color: transparent;
   color: inherit;
 }
+/* Visible keyboard focus everywhere (WCAG 2.4.7), in the accent token. Only
+ * :focus-visible, so a mouse click never draws it. :where() keeps it at zero
+ * specificity: a control that draws its own ring (focus-visible:ring-*) or
+ * opts out explicitly still wins. */
+:where(a[href], button, [role="button"], [role="tab"], [role="link"], input, select, textarea, summary, [tabindex]:not([tabindex="-1"])):focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 2px;
+}
+/* A focused element under the fixed navbar is scrolled clear of it. */
+:where(html) {
+  scroll-padding-top: 5rem;
+}
+@media (prefers-reduced-motion: reduce) {
+  :where(html) {
+    scroll-behavior: auto;
+  }
+}
+
 /* A select's open list paints its options from the select's own background.
  * Our fields use translucent fills (bg-surface), which Chrome and Firefox
  * on Windows/Linux composite over white: white text on a white list. Options

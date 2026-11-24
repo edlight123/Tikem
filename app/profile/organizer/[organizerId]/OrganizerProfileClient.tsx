@@ -32,6 +32,7 @@
 import { collapseSeries } from '@/lib/events/series'
 import { useMemo } from 'react'
 import Image from 'next/image'
+import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
 import { DiscoverEventCard } from '@/components/discover/DiscoverEventCard'
 import FollowButton from '@/components/FollowButton'
@@ -40,8 +41,6 @@ import { BlockOrganizerButton, ReportButton } from '@/components/moderation/Mode
 import {
   Shield,
   CalendarDays,
-  Users,
-  Ticket,
   MapPin,
   Instagram,
   Music2,
@@ -49,12 +48,18 @@ import {
   Facebook,
   Linkedin,
   Globe,
+  ImagePlus,
+  Images,
+  Eye,
 } from 'lucide-react'
 import OrganizerMark from '@/components/OrganizerMark'
 import { defaultAvatarUrl } from '@/lib/defaultAvatar'
 import { externalUrlLabel } from '@/lib/safeUrl'
 import type { FriendshipState } from '@/types/social'
 import type { PublicProfileDetails } from '@/lib/profile/public-details'
+import type { OrgCover } from '@/lib/organizer/cover'
+import type { GalleryPhoto } from '@/lib/gallery'
+import GalleryStrip from '@/components/organizer/page/GalleryStrip'
 
 interface OrganizerProfileClientProps {
   /**
@@ -97,6 +102,18 @@ interface OrganizerProfileClientProps {
    * stats, no Follow, no events section (owner, 2026-11-17).
    */
   isHost?: boolean
+  /** The org's banner (lib/organizer/cover.ts), or null. */
+  cover?: OrgCover | null
+  /** The org's photos (lib/gallery.ts). */
+  gallery?: GalleryPhoto[]
+  /** The viewer may edit this org's page (owner or team admin), and this is not a preview. */
+  canEdit?: boolean
+  /** "Preview my page": exactly what a visitor sees, no owner tools. */
+  preview?: boolean
+  /** A person's own photo (person view), else their drawn portrait. */
+  personPhoto?: string
+  /** Person view of an organization's owner: the organization they run. */
+  alsoRuns?: { name: string; logo: string; href: string } | null
 }
 
 type Network = 'instagram' | 'facebook' | 'twitter' | 'linkedin' | 'tiktok'
@@ -125,21 +142,14 @@ function aboutFrom(details: PublicProfileDetails | undefined): {
   return { text: '', website: '', links: {} }
 }
 
-/** A stat: number, then label. No icon-only readings. */
-function Stat({
-  Icon,
-  value,
-  label,
-}: {
-  Icon: typeof Users
-  value: number | string
-  label: string
-}) {
+/** A count beside the logo: the figure, its label under it. */
+function Stat({ value, label }: { value: number | string; label: string }) {
   return (
-    <div className="flex items-center gap-2 whitespace-nowrap">
-      <Icon className="h-4 w-4 shrink-0 text-fg-subtle" aria-hidden />
-      <span className="text-body font-semibold tabular-nums text-fg">{value}</span>
-      <span className="text-meta text-fg-subtle">{label}</span>
+    // Phones: one line ("8 events"), short enough to sit below the banner's
+    // edge beside the overlapping logo; stacked from sm up.
+    <div className="flex flex-row items-baseline gap-1 whitespace-nowrap sm:flex-col sm:items-start sm:gap-0">
+      <span className="text-body font-semibold leading-tight tabular-nums text-fg sm:text-lead">{value}</span>
+      <span className="text-meta lowercase text-fg-subtle">{label}</span>
     </div>
   )
 }
@@ -162,7 +172,6 @@ export default function OrganizerProfileClient({
   pastEvents,
   followerCount,
   totalEvents,
-  totalTicketsSold,
   isFollowing,
   userId,
   details,
@@ -172,6 +181,12 @@ export default function OrganizerProfileClient({
   country,
   isBlocked = false,
   isHost = true,
+  cover = null,
+  gallery = [],
+  canEdit = false,
+  preview = false,
+  personPhoto = '',
+  alsoRuns = null,
 }: OrganizerProfileClientProps) {
   // A recurring series is listed once, at its next date (lib/events/series).
   const upcomingEvents = useMemo(() => collapseSeries(upcomingAllDates || []), [upcomingAllDates])
@@ -215,194 +230,221 @@ export default function OrganizerProfileClient({
   }, [organizer.created_at, i18n.language])
 
   const place = [city, country].filter(Boolean).join(', ')
+  const showOrgMark = !alsoRuns && (!!organizer.logo || isOrg || totalEvents > 0)
+  // Never an empty band: a banner only when there is something to show.
+  const hasBanner = isHost && !alsoRuns && (!!cover || !!backdrop)
 
   return (
     <>
       {/* ───────────────────────── HERO ───────────────────────── */}
-      <header className="relative isolate overflow-hidden">
-        {backdrop && (
-          <div aria-hidden className="absolute inset-0 -z-10">
-            <Image
-              src={backdrop}
-              alt=""
-              fill
-              // It is blurred to a wash, so a thumbnail looks identical and
-              // arrives far sooner than a full-width image (speed pass
-              // 2026-11-17: this was the page's main paint at ~1.7s).
-              sizes="96px"
-              quality={40}
-              priority
-              className="scale-110 object-cover opacity-30 blur-2xl"
-            />
-            {/* Two stops, not one: the poster reads as light in the room, and
-                the copy below still sits on near-black so it stays legible
-                over whatever colours that particular flyer happens to have. */}
-            <div className="absolute inset-0 bg-gradient-to-b from-canvas/60 via-canvas/85 to-canvas" />
+      <header className="relative isolate">
+        {/* The banner: the org's own (a template photo or an upload), else
+            their newest poster as a blurred wash. Nothing at all when there
+            is neither, so there is never an empty band. */}
+        {hasBanner && (
+          <div className="relative h-36 overflow-hidden bg-surface-low sm:h-52 lg:h-64">
+            {cover ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={cover.src} alt="" className="absolute inset-0 h-full w-full object-cover" />
+            ) : backdrop ? (
+              <Image
+                src={backdrop}
+                alt=""
+                fill
+                // A blurred wash: a thumbnail looks identical and arrives far
+                // sooner than a full-width image (speed pass 2026-11-17).
+                sizes="96px"
+                quality={40}
+                priority
+                className="scale-110 object-cover opacity-40 blur-2xl"
+              />
+            ) : null}
+            {/* Bottom-weighted veil so the overlapping logo and the name sit on near-black. */}
+            <div aria-hidden className="absolute inset-0 bg-gradient-to-b from-transparent via-canvas/20 to-canvas" />
+            {canEdit && cover && (
+              <Link
+                href="/organizer/settings/organization#banner"
+                className="absolute right-4 top-3 inline-flex items-center gap-1.5 rounded bg-scrim px-3 py-2 text-meta font-semibold text-fg backdrop-blur transition-colors hover:bg-scrim-strong sm:right-6 lg:right-8"
+              >
+                <ImagePlus className="h-4 w-4" aria-hidden />
+                {t('org_page.change_banner')}
+              </Link>
+            )}
           </div>
         )}
 
-        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 md:py-12 lg:px-8">
-          <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:gap-6">
-            {/* Avatar. A real surface (`bg-canvas` would be the page colour,
-                the invisible-card mistake). No organizer has uploaded a logo
-                (checked against production), so the mark is an organization
-                glyph, not the name's first letter (owner rule). */}
-            {organizer.logo || isOrg || totalEvents > 0 ? (
-              <OrganizerMark logoUrl={organizer.logo} className="h-20 w-20 rounded-2xl shadow-lg sm:h-24 sm:w-24" />
+        <div className={`mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 ${hasBanner ? 'pb-8' : 'py-8 md:py-10'}`}>
+          {/* Logo (or portrait) overlapping the banner, the counts beside it. */}
+          <div className={`flex items-end gap-4 sm:gap-6 ${hasBanner ? '-mt-10 sm:-mt-12' : ''}`}>
+            {showOrgMark ? (
+              <OrganizerMark
+                logoUrl={organizer.logo}
+                className="relative h-20 w-20 rounded shadow-lg ring-4 ring-canvas sm:h-24 sm:w-24"
+              />
             ) : (
-              // A person, not an organization (no logo, never hosted): their
-              // drawn portrait in a circle, like everywhere else they appear.
+              // A person: their own photo, else their drawn portrait, in a circle.
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={defaultAvatarUrl(organizer.id)}
+                src={personPhoto || defaultAvatarUrl(organizer.id)}
                 alt=""
-                className="h-20 w-20 shrink-0 rounded-full object-cover shadow-lg sm:h-24 sm:w-24"
+                className="relative h-20 w-20 shrink-0 rounded-full bg-surface object-cover shadow-lg ring-4 ring-canvas sm:h-24 sm:w-24"
               />
             )}
 
-            <div className="min-w-0 flex-1">
-              <h1 className="font-grotesk font-bold uppercase tracking-[-0.02em] text-fg !text-[clamp(30px,5.5vw,46px)] !leading-[0.98]">
-                {organizer.name}
-              </h1>
-
-              {/* Verified as a DOT plus a label, not a filled pill (house
-                  rule). It was a rounded-full chip in page-colour on teal. */}
-              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-meta">
-                {organizer.is_verified && (
-                  <span className="inline-flex items-center gap-1.5 text-brand-300">
-                    <Shield className="h-3.5 w-3.5" aria-hidden />
-                    {t('organizer_profile.verified', 'Verified')}
-                  </span>
-                )}
-                {place && (
-                  <span className="inline-flex items-center gap-1.5 text-fg-subtle">
-                    <MapPin className="h-3.5 w-3.5" aria-hidden />
-                    {place}
-                  </span>
-                )}
-                {isHost && since && (
-                  <span className="text-fg-subtle">
-                    {t('organizer_profile.since', {
-                      defaultValue: 'On Tikèm since {{date}}',
-                      date: since,
-                    })}
-                  </span>
-                )}
-                {!isHost && joined && (
-                  <span className="text-fg-subtle">
-                    {t('organizer_profile.joined', { defaultValue: 'Joined Tikèm {{date}}', date: joined })}
-                  </span>
-                )}
+            {/* Counts, hosts only: a person never shows "0 events". */}
+            {isHost && !alsoRuns && (
+              <div className="flex items-baseline gap-5 pb-1 sm:gap-7">
+                <Stat value={totalEvents || 0} label={t('organizer_profile.events', 'events')} />
+                <Stat value={followerCount || 0} label={t('organizer_profile.followers', 'followers')} />
               </div>
+            )}
+          </div>
 
-              {/* Stats, hosts only: a person never shows "0 events". One row,
-                  no horizontal scroller; three items fit at 320px. */}
-              {isHost && (
-              <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2">
-                <Stat
-                  Icon={CalendarDays}
-                  value={totalEvents || 0}
-                  label={t('organizer_profile.events', 'events')}
-                />
-                <Stat
-                  Icon={Users}
-                  value={followerCount || 0}
-                  label={t('organizer_profile.followers', 'followers')}
-                />
-                {/* Ticket, not Star: a star is "featured" everywhere else. */}
-                <Stat
-                  Icon={Ticket}
-                  value={totalTicketsSold}
-                  label={t('organizer_profile.sold', 'sold')}
-                />
-              </div>
-              )}
+          <h1 className="mt-4 font-grotesk font-bold uppercase tracking-[-0.02em] text-fg !text-[clamp(28px,5vw,44px)] !leading-[0.98]">
+            {organizer.name}
+          </h1>
 
-              {/* An org's description, or a person's bio when their privacy
-                  lets this viewer see it (decided on the server). */}
-              {about.text && (
-                <p className="mt-4 max-w-[60ch] whitespace-pre-line text-body leading-relaxed text-fg-muted">
-                  {about.text}
-                </p>
-              )}
+          {/* Verified as a mark plus a label, never a filled pill (house rule). */}
+          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-meta">
+            {organizer.is_verified && (
+              <span className="inline-flex items-center gap-1.5 text-brand-300">
+                <Shield className="h-3.5 w-3.5" aria-hidden />
+                {t('organizer_profile.verified', 'Verified')}
+              </span>
+            )}
+            {place && (
+              <span className="inline-flex items-center gap-1.5 text-fg-subtle">
+                <MapPin className="h-3.5 w-3.5" aria-hidden />
+                {place}
+              </span>
+            )}
+            {isHost && since && (
+              <span className="text-fg-subtle">
+                {t('organizer_profile.since', { defaultValue: 'On Tikèm since {{date}}', date: since })}
+              </span>
+            )}
+            {!isHost && joined && (
+              <span className="text-fg-subtle">
+                {t('organizer_profile.joined', { defaultValue: 'Joined Tikèm {{date}}', date: joined })}
+              </span>
+            )}
+          </div>
 
-              {details?.kind === 'person' && details.person === null && (
-                <p className="mt-4 text-meta text-fg-subtle">
-                  {t('organizer_profile.private_details', 'Bio and socials are visible to friends only.')}
-                </p>
-              )}
+          {/* An org's description, or a person's bio when their privacy lets
+              this viewer see it (decided on the server). */}
+          {about.text && (
+            <p className="mt-4 max-w-[60ch] whitespace-pre-line text-body leading-relaxed text-fg-muted">{about.text}</p>
+          )}
 
+          {details?.kind === 'person' && details.person === null && (
+            <p className="mt-4 text-meta text-fg-subtle">
+              {t('organizer_profile.private_details', 'Bio and socials are visible to friends only.')}
+            </p>
+          )}
+
+          {/* An organization's owner seen as a person: the org they run. */}
+          {alsoRuns && (
+            <Link
+              href={alsoRuns.href}
+              className="mt-4 inline-flex max-w-full items-center gap-2.5 rounded bg-surface px-3 py-2 transition-colors hover:bg-surface-raised"
+            >
+              <OrganizerMark logoUrl={alsoRuns.logo} className="h-7 w-7 rounded" />
+              <span className="truncate text-meta text-fg-muted">{t('org_page.also_runs', { name: alsoRuns.name })}</span>
+            </Link>
+          )}
+
+          {/* Website and socials as line icons, on one row. */}
+          {(about.website || socialEntries.length > 0) && (
+            <div className="mt-4 flex flex-wrap items-center gap-1">
               {about.website && (
                 <a
                   href={about.website}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-3 inline-flex max-w-full items-center gap-1.5 text-sm text-brand-300 transition-colors hover:text-fg"
+                  className="mr-2 inline-flex max-w-full items-center gap-1.5 py-2 text-sm text-fg-muted transition-colors hover:text-fg"
                 >
-                  <Globe className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                  <Globe className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
                   <span className="truncate">{externalUrlLabel(about.website)}</span>
                 </a>
               )}
+              {socialEntries.map(({ key, Icon, label }) => (
+                <a
+                  key={key}
+                  href={about.links[key]}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={label}
+                  className="grid h-10 w-10 place-items-center rounded text-fg-muted transition-colors hover:bg-surface hover:text-fg"
+                >
+                  <Icon className="h-[18px] w-[18px]" strokeWidth={1.75} />
+                </a>
+              ))}
+            </div>
+          )}
 
-              {/* Actions and socials on ONE row: they were two stacked blocks
-                  with their own margins, which is most of the height the hero
-                  was spending. */}
-              {(socialEntries.length > 0 || (userId && userId !== organizer.id)) && (
-                <div className="mt-5 flex flex-wrap items-center gap-3">
-                  {userId && userId !== organizer.id && (
-                    <>
-                      {/* `quiet`: Follow beside this is the page's primary
-                          action and takes the white pill, so Add friend is a
-                          quiet fill rather than a competing second primary. */}
-                      <ConnectButton
-                        targetUserId={organizer.id}
-                        initialState={friendshipState}
-                        isAuthenticated={isAuthenticated}
-                        quiet
-                      />
-                      {/* No Follow while blocked: blocking removed the follow and
-                          the follow API refuses to re-add it. */}
-                      {/* Follow is for hosts (kept for anyone already
-                          following, so they can unfollow). */}
-                      {!isBlocked && (isHost || isFollowing) && (
-                        <FollowButton
-                          organizerId={organizer.id}
-                          userId={userId}
-                          initialIsFollowing={isFollowing}
-                        />
-                      )}
-                    </>
-                  )}
-                  {socialEntries.map(({ key, Icon, label }) => (
-                    <a
-                      key={key}
-                      href={about.links[key]}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-label={label}
-                      className="grid h-11 w-11 place-items-center rounded bg-surface-raised text-fg-muted transition-colors hover:bg-surface-high hover:text-fg"
-                    >
-                      <Icon className="h-4 w-4" />
-                    </a>
-                  ))}
-                </div>
-              )}
-              {/* Report / block (App Store 1.2) — quiet text actions, never
-                  shown on your own profile. */}
-              {userId !== organizer.id && (
-                <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2">
-                  <ReportButton kind="organizer" targetId={organizer.id} userId={userId} person={!isHost} />
-                  <BlockOrganizerButton
-                    person={!isHost}
-                    organizerId={organizer.id}
-                    organizerName={organizer.name}
-                    userId={userId}
-                    initialBlocked={isBlocked}
-                  />
-                </div>
+          {/* Actions: Add friend + Follow, never on your own page. */}
+          {userId && userId !== organizer.id && (
+            <div className="mt-5 flex flex-wrap items-center gap-3">
+              {/* `quiet`: Follow is the page's primary action and takes the
+                  white pill, so Add friend is a quiet fill. */}
+              <ConnectButton
+                targetUserId={organizer.id}
+                initialState={friendshipState}
+                isAuthenticated={isAuthenticated}
+                quiet
+              />
+              {/* No Follow while blocked (the follow API refuses it), and
+                  Follow is for hosts, kept for anyone already following. */}
+              {!isBlocked && !alsoRuns && (isHost || isFollowing) && (
+                <FollowButton organizerId={organizer.id} userId={userId} initialIsFollowing={isFollowing} />
               )}
             </div>
-          </div>
+          )}
+
+          {/* Owner tools: only what is missing, plus the visitor's view. Never in a preview. */}
+          {canEdit && (
+            <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-meta">
+              {!cover && (
+                <Link
+                  href="/organizer/settings/organization#banner"
+                  className="inline-flex items-center gap-1.5 font-semibold text-fg-soft hover:text-fg"
+                >
+                  <ImagePlus className="h-4 w-4" aria-hidden />
+                  {t('org_page.add_banner')}
+                </Link>
+              )}
+              {gallery.length === 0 && (
+                <Link
+                  href="/organizer/settings/organization#photos"
+                  className="inline-flex items-center gap-1.5 font-semibold text-fg-soft hover:text-fg"
+                >
+                  <Images className="h-4 w-4" aria-hidden />
+                  {t('org_page.add_photos')}
+                </Link>
+              )}
+              <Link
+                href={`/profile/organizer/${encodeURIComponent(organizer.id)}?preview=1`}
+                className="inline-flex items-center gap-1.5 text-fg-subtle hover:text-fg"
+              >
+                <Eye className="h-4 w-4" aria-hidden />
+                {t('org_page.preview')}
+              </Link>
+            </div>
+          )}
+
+          {/* Report / block (App Store 1.2): quiet text actions, never on your own page. */}
+          {userId !== organizer.id && !preview && (
+            <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2">
+              <ReportButton kind="organizer" targetId={organizer.id} userId={userId} person={!isHost} />
+              <BlockOrganizerButton
+                person={!isHost}
+                organizerId={organizer.id}
+                organizerName={organizer.name}
+                userId={userId}
+                initialBlocked={isBlocked}
+              />
+            </div>
+          )}
         </div>
       </header>
 
@@ -451,6 +493,14 @@ export default function OrganizerProfileClient({
             </div>
           )}
         </section>
+        )}
+
+        {/* Photos: a strip with a viewer. */}
+        {gallery.length > 0 && (
+          <section className="mt-10 border-t border-line pt-8 md:mt-14 md:pt-10">
+            <SectionHead title={t('org_page.photos')} />
+            <GalleryStrip photos={gallery} orgName={organizer.name} />
+          </section>
         )}
 
         {pastEvents && pastEvents.length > 0 && (

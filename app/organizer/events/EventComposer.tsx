@@ -104,6 +104,8 @@ import { incidenceForEvent, priceOrder } from '@/lib/checkout/buyer-pricing'
 import { fromCents, MAX_FREE_TICKETS_PER_PERSON } from '@/lib/ticketPricing'
 import { allowedPlusOnes, PLUS_ONES_SETTING_MAX } from '@/lib/events/approval'
 import { nationalDayForEventDate, nationalDayName } from '@/lib/nationalDays'
+import { ideaById, ideaDate, ideaText, parseOccasion, type OccasionKey } from '@/lib/occasions'
+import OccasionPicker from '@/components/occasions/OccasionPicker'
 import { isBelowMinPaidPrice, MIN_PAID_PRICE_ERROR_CODE, minPaidPriceFor } from '@/lib/min-paid-price'
 import { canLeaveDoorMode, composerModeOf, doorTierSaveFields, lowestDoorPrice, tierEditorPrice, type ComposerMode } from '@/lib/events/door-mode'
 import { TIER_SETS, isUntouchedDraft, tierNameFor, tierSetLabel, type TierSet } from '@/lib/ticketTypes'
@@ -113,14 +115,18 @@ import { SectionHeader } from '@/components/ui/EditorialRails'
 import {
   AGE_POLICIES,
   DRESS_CODE_MAX,
-  VENUE_AMENITIES,
+  VENUE_ACCESSIBILITY,
+  VENUE_FACILITIES,
   VENUE_SETTINGS,
+  amenityKeysOf,
+  venueDetailsCount,
   venueDetailsFields,
   venueDetailsOf,
   type VenueDetails,
 } from '@/lib/events/venue-details'
 import type { FlyerRead } from '@/lib/flyer/parse'
 import { useOrgRole } from '@/components/organizer/OrgRoleProvider'
+import { POSTER_ALT_MAX, cleanPosterAlt } from '@/lib/posterAlt'
 import {
   Accessibility,
   CalendarDays,
@@ -243,6 +249,17 @@ interface EventComposerProps {
    * event's country (composerSeedFromDefaults) before it prefills anything.
    */
   orgDefaults?: Record<string, any> | null
+  /**
+   * CREATE only: start tagged for this occasion (lib/occasions), from an
+   * occasion page's "Add an event" (?occasion=). Unknown keys are ignored.
+   */
+  initialOccasion?: string | null
+  /**
+   * CREATE only: an occasion idea (lib/occasions OCCASION_IDEAS id, ?idea=)
+   * that fills the title, a line of description, the category, the occasion
+   * and a date inside it.
+   */
+  initialIdea?: string | null
 }
 
 /** Where a signed-out composition survives the trip through sign-up. */
@@ -572,6 +589,8 @@ export default function EventComposer({
   defaultCountry,
   defaultCity,
   orgDefaults,
+  initialOccasion,
+  initialIdea,
 }: EventComposerProps) {
   // Payout and verification links are the org owner's to follow (owner_only);
   // a team member sees the notice without a link to a page that would bounce them.
@@ -595,7 +614,14 @@ export default function EventComposer({
   const [doorLockNotice, setDoorLockNotice] = useState(false)
   /** Tickets and pay-at-the-door both edit tier rows; RSVP has none. */
   const hasTierRows = sellMode === 'tickets' || sellMode === 'door'
-  const [title, setTitle] = useState(event?.title || '')
+  // An occasion idea to start from (create only), read once.
+  const [ideaSeed] = useState(() => {
+    const idea = event ? null : ideaById(initialIdea)
+    if (!idea) return null
+    const lang = (i18n.language || 'en').slice(0, 2)
+    return { ...ideaText(idea, lang), category: idea.category, occasion: idea.occasion, date: ideaDate(idea), time: idea.time }
+  })
+  const [title, setTitle] = useState(event?.title || ideaSeed?.title || '')
   const [summary, setSummary] = useState(event?.summary || '')
   const [showSummary, setShowSummary] = useState(!!event?.summary)
   const [bannerUrl, setBannerUrl] = useState(event?.banner_image_url || '')
@@ -617,8 +643,8 @@ export default function EventComposer({
   })
 
   // Dates
-  const [startDate, setStartDate] = useState(start0.date)
-  const [startTime, setStartTime] = useState(start0.time)
+  const [startDate, setStartDate] = useState(start0.date || ideaSeed?.date || '')
+  const [startTime, setStartTime] = useState(start0.time || ideaSeed?.time || '')
   const [endDate, setEndDate] = useState(end0.date)
   const [endTime, setEndTime] = useState(end0.time)
   // Recurrence is create-only; editing never regenerates a series, so the
@@ -632,14 +658,16 @@ export default function EventComposer({
   const [recurrenceEndDate, setRecurrenceEndDate] = useState('')
 
   // Details
-  const [showDescription, setShowDescription] = useState(!!event?.description)
-  const [description, setDescription] = useState(event?.description || '')
+  const [showDescription, setShowDescription] = useState(!!(event?.description || ideaSeed?.description))
+  const [description, setDescription] = useState(event?.description || ideaSeed?.description || '')
   const [address, setAddress] = useState(event?.address || '')
   const [venueName, setVenueName] = useState(event?.venue_name || '')
   // Venue details (parking, step-free…, age, dress code): all optional, shown
   // on the event page under "good to know" (lib/events/venue-details).
   const [venueDetails, setVenueDetails] = useState<VenueDetails>(() => venueDetailsOf(event))
   const patchVenueDetails = (patch: Partial<VenueDetails>) => setVenueDetails((d) => ({ ...d, ...patch }))
+  // Folded by default: one quiet row with a count (premium = quiet).
+  const [venueDetailsOpen, setVenueDetailsOpen] = useState(false)
   // Saved event defaults, for a NEW event in its starting country only.
   // Computed once: the defaults seed the first render and never re-apply.
   const [seed] = useState<ComposerSeed>(() =>
@@ -648,7 +676,7 @@ export default function EventComposer({
       : composerSeedFromDefaults(orgDefaults, pickDefaultComposerCountry(defaultCountry), CATEGORIES)
   )
   const seedCountry = pickDefaultComposerCountry(defaultCountry)
-  const [category, setCategory] = useState(event?.category || seed.category || 'Concert')
+  const [category, setCategory] = useState(event?.category || ideaSeed?.category || seed.category || 'Concert')
   const [isOnline, setIsOnline] = useState(!!event?.is_online)
 
   // Country — decides the currency, the default fee incidence, the timezone
@@ -902,6 +930,11 @@ export default function EventComposer({
   // national day's window (lib/nationalDays). Saved as `national_day`, the
   // day's eventTag, which the Home banners and rails read.
   const [nationalDayOn, setNationalDayOn] = useState(!!event?.national_day)
+  // The occasion it belongs to (lib/occasions), or null. Saved as `occasion`;
+  // the occasion pages and Home's occasion row read it.
+  const [occasion, setOccasion] = useState<OccasionKey | null>(() =>
+    event ? parseOccasion(event.occasion) : ideaSeed?.occasion ?? parseOccasion(initialOccasion)
+  )
 
   // WHO PAYS THE SERVICE FEE for this event. The default follows the country
   // (Haiti absorbs it into the organizer's proceeds, US/CA/FR adds it on top),
@@ -931,6 +964,9 @@ export default function EventComposer({
   const [spotifyUrl, setSpotifyUrl] = useState(event?.spotify_url || '')
   // Optional promo video link (default '').
   const [videoUrl, setVideoUrl] = useState(event?.video_url || '')
+  // "Describe the flyer": what a screen reader says for the poster
+  // (lib/posterAlt.ts). Optional; empty means one is built from the facts.
+  const [posterAlt, setPosterAlt] = useState<string>(typeof event?.poster_alt === 'string' ? event.poster_alt : '')
   // Poster-theme override ('' = Auto), no longer editable here — the swatch row
   // was removed (see below). It is still READ and written back so a theme the
   // organizer chose in the mobile composer, where the picker works, survives an
@@ -1064,12 +1100,14 @@ export default function EventComposer({
     if (d.requires_approval) setRequiresApproval(true)
     if (Number(d.plus_ones_max) > 0) setPlusOnesMax(Math.min(Math.floor(Number(d.plus_ones_max)), PLUS_ONES_SETTING_MAX))
     if (d.national_day) setNationalDayOn(true)
+    if (parseOccasion(d.occasion)) setOccasion(parseOccasion(d.occasion))
     setVenueDetails(venueDetailsOf(d))
     if (d.fee_incidence) setPassFeesToBuyer(d.fee_incidence === 'buyer')
     // `enable_waitlist` is now per tier; the event-level value in an older
     // draft is picked up as each tier's fallback in the tier mapping above.
     if (d.spotify_url) setSpotifyUrl(d.spotify_url)
     if (d.video_url) setVideoUrl(d.video_url)
+    if (typeof d.poster_alt === 'string') setPosterAlt(d.poster_alt)
     if (d.theme_key) setThemeKey(d.theme_key)
     if (d.accent_color) setAccentColor(d.accent_color)
     // The recurrence plan survives the round trip too (create-only controls).
@@ -1148,8 +1186,13 @@ export default function EventComposer({
             setEndDate(`${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`)
           } else if (day) setEndDate(day)
         })
+      // The read moves an online draft back in person when it names a place.
+      let onlineAfterRead = isOnline
       if (r.venue_name || r.address || r.city) {
-        if (isOnline && !venueName.trim() && !address.trim()) setIsOnline(false)
+        if (isOnline && !venueName.trim() && !address.trim()) {
+          setIsOnline(false)
+          onlineAfterRead = false
+        }
         if (r.venue_name) fill('venue_name', !venueName.trim(), () => setVenueName(r.venue_name!))
         if (r.address) fill('address', !address.trim(), () => setAddress(r.address!))
         if (r.city) fill('city', !city.trim() || isDefaultCity(city), () => setCity(r.city!))
@@ -1171,6 +1214,13 @@ export default function EventComposer({
       }
       if (r.age_policy) fill('age_policy', !venueDetails.age_policy, () => patchVenueDetails({ age_policy: r.age_policy }))
       if (r.dress_code) fill('dress_code', !venueDetails.dress_code, () => patchVenueDetails({ dress_code: r.dress_code }))
+      // Venue facts the flyer prints are added to what is ticked, never taken
+      // away; an online event has no venue to describe.
+      const foundAmenities = amenityKeysOf(r.amenities || []).filter((k) => !venueDetails.amenities.includes(k))
+      if (foundAmenities.length && !onlineAfterRead)
+        fill('amenities', true, () =>
+          setVenueDetails((d) => ({ ...d, amenities: amenityKeysOf([...d.amenities, ...foundAmenities]) }))
+        )
       setFlyerNote({
         filled,
         check: r.uncertain.filter((f) => filled.includes(f)),
@@ -1503,6 +1553,7 @@ export default function EventComposer({
       currency: normalizeEventCurrencyForCountry(country, currency),
       banner_image_url: bannerUrl || null,
       poster_template: posterSpec || null,
+      poster_alt: cleanPosterAlt(posterAlt) || null,
       is_online: isOnline,
       // Recurrence is create-only: on edit preserve the stored flag; on create it
       // reflects the chosen cadence (per-occurrence metadata is stamped below).
@@ -1531,6 +1582,8 @@ export default function EventComposer({
       // The national day it is tagged for, or null when the toggle is off or
       // the date moved out of every window.
       national_day: nationalDayOn && eligibleNationalDay ? eligibleNationalDay.eventTag : null,
+      // The occasion (lib/occasions), allow-listed again here and in firestore.rules.
+      occasion: parseOccasion(occasion),
       // Stamped on the event so checkout, the ticket record and the earnings
       // ledger all read the same answer. Free events carry it harmlessly.
       fee_incidence: passFeesToBuyer ? 'buyer' : 'organizer',
@@ -2584,6 +2637,9 @@ export default function EventComposer({
               </div>
             )}
 
+            {/* Occasion: None, the one the date falls in, and More. */}
+            <OccasionPicker value={occasion} onChange={setOccasion} startDate={startDate} chipClassName={chipCls} />
+
             {/* Repeats — create-only. Generates a series of independent events. */}
             {!isEdit && (
               <div className="mt-3 rounded-xl bg-surface-low px-4 py-3.5">
@@ -2789,77 +2845,108 @@ export default function EventComposer({
               )}
 
               {/* Venue details: optional facts people ask before they come.
-                  Chips, not switches, so seven answers fit in one quiet card.
-                  Access and setting describe a place, so an online event
-                  only keeps the age and the dress code. */}
-              <div className="space-y-3 rounded-xl bg-surface-low px-4 py-3.5">
-                <div className="flex items-center gap-2 text-meta font-medium text-fg-subtle">
-                  <Accessibility className="h-4 w-4" />{' '}
-                  {t('composer.venueDetails.title', { defaultValue: 'Venue details' })}
-                  <span className="font-normal">· {t('composer.venueDetails.hint')}</span>
-                </div>
-                {!isOnline && (
-                  <>
-                    <div className="flex flex-wrap gap-2" role="group" aria-label={t('composer.venueDetails.access')}>
-                      {VENUE_AMENITIES.map((k) => {
-                        const on = venueDetails.amenities.includes(k)
-                        return (
-                          <button
-                            key={k}
-                            type="button"
-                            aria-pressed={on}
-                            onClick={() =>
-                              patchVenueDetails({
-                                amenities: on ? venueDetails.amenities.filter((a) => a !== k) : [...venueDetails.amenities, k],
-                              })
-                            }
-                            className={chipCls(on)}
-                          >
-                            {t(`composer.venueDetails.amenities.${k}`)}
-                          </button>
-                        )
-                      })}
+                  Folded behind one quiet row (with a count) so the composer
+                  does not grow; chips, not switches, when open. What the place
+                  has, accessibility and the setting describe a place, so an
+                  online event only keeps the age and the dress code. */}
+              <div className="rounded-xl bg-surface-low px-4 py-3.5">
+                <button
+                  type="button"
+                  onClick={() => setVenueDetailsOpen((v) => !v)}
+                  aria-expanded={venueDetailsOpen}
+                  className="flex w-full items-center gap-2 text-left text-meta font-medium text-fg-subtle hover:text-fg-muted"
+                >
+                  <Accessibility className="h-4 w-4" aria-hidden="true" />
+                  <span>{t('composer.venueDetails.title', { defaultValue: 'Venue details' })}</span>
+                  <span className="font-normal">
+                    ·{' '}
+                    {venueDetailsCount(venueDetails) > 0
+                      ? t('composer.venueDetails.selected', { count: venueDetailsCount(venueDetails) })
+                      : t('composer.venueDetails.hint')}
+                  </span>
+                  <ChevronDown
+                    className={`ml-auto h-4 w-4 transition-transform ${venueDetailsOpen ? 'rotate-180' : ''}`}
+                    aria-hidden="true"
+                  />
+                </button>
+                {venueDetailsOpen && (
+                  <div className="mt-3 space-y-3">
+                    {!isOnline && (
+                      <>
+                        {(
+                          [
+                            ['facilities', VENUE_FACILITIES],
+                            ['accessibility', VENUE_ACCESSIBILITY],
+                          ] as const
+                        ).map(([group, keys]) => (
+                          <div key={group} className="space-y-2">
+                            <p className="text-meta text-fg-subtle">{t(`composer.venueDetails.${group}`)}</p>
+                            <div className="flex flex-wrap gap-2" role="group" aria-label={t(`composer.venueDetails.${group}`)}>
+                              {keys.map((k) => {
+                                const on = venueDetails.amenities.includes(k)
+                                return (
+                                  <button
+                                    key={k}
+                                    type="button"
+                                    aria-pressed={on}
+                                    onClick={() =>
+                                      patchVenueDetails({
+                                        amenities: on
+                                          ? venueDetails.amenities.filter((a) => a !== k)
+                                          : amenityKeysOf([...venueDetails.amenities, k]),
+                                      })
+                                    }
+                                    className={chipCls(on)}
+                                  >
+                                    {t(`composer.venueDetails.amenities.${k}`)}
+                                  </button>
+                                )
+                              })}
+                            </div>
+                          </div>
+                        ))}
+                        <div className="flex flex-wrap gap-2" role="group" aria-label={t('composer.venueDetails.setting')}>
+                          {VENUE_SETTINGS.map((k) => {
+                            const on = venueDetails.venue_setting === k
+                            return (
+                              <button
+                                key={k}
+                                type="button"
+                                aria-pressed={on}
+                                onClick={() => patchVenueDetails({ venue_setting: on ? null : k })}
+                                className={chipCls(on)}
+                              >
+                                {t(`composer.venueDetails.settings.${k}`)}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </>
+                    )}
+                    <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={t('composer.venueDetails.age')}>
+                      {([null, ...AGE_POLICIES] as const).map((k) => (
+                        <button
+                          key={k ?? 'all'}
+                          type="button"
+                          role="radio"
+                          aria-checked={venueDetails.age_policy === k}
+                          onClick={() => patchVenueDetails({ age_policy: k })}
+                          className={chipCls(venueDetails.age_policy === k)}
+                        >
+                          {t(`composer.venueDetails.ages.${k ? k.slice(0, 2) : 'all'}`)}
+                        </button>
+                      ))}
                     </div>
-                    <div className="flex flex-wrap gap-2" role="group" aria-label={t('composer.venueDetails.setting')}>
-                      {VENUE_SETTINGS.map((k) => {
-                        const on = venueDetails.venue_setting === k
-                        return (
-                          <button
-                            key={k}
-                            type="button"
-                            aria-pressed={on}
-                            onClick={() => patchVenueDetails({ venue_setting: on ? null : k })}
-                            className={chipCls(on)}
-                          >
-                            {t(`composer.venueDetails.settings.${k}`)}
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </>
+                    <input
+                      value={venueDetails.dress_code || ''}
+                      onChange={(e) => patchVenueDetails({ dress_code: e.target.value.slice(0, DRESS_CODE_MAX) || null })}
+                      maxLength={DRESS_CODE_MAX}
+                      placeholder={t('composer.venueDetails.dressCode')}
+                      aria-label={t('composer.venueDetails.dressCode')}
+                      className="w-full rounded bg-surface px-3 py-2.5 text-body text-fg placeholder:text-fg-subtle focus:bg-surface-raised focus:outline-none focus:ring-2 focus:ring-brand-400/50"
+                    />
+                  </div>
                 )}
-                <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={t('composer.venueDetails.age')}>
-                  {([null, ...AGE_POLICIES] as const).map((k) => (
-                    <button
-                      key={k ?? 'all'}
-                      type="button"
-                      role="radio"
-                      aria-checked={venueDetails.age_policy === k}
-                      onClick={() => patchVenueDetails({ age_policy: k })}
-                      className={chipCls(venueDetails.age_policy === k)}
-                    >
-                      {t(`composer.venueDetails.ages.${k ? k.slice(0, 2) : 'all'}`)}
-                    </button>
-                  ))}
-                </div>
-                <input
-                  value={venueDetails.dress_code || ''}
-                  onChange={(e) => patchVenueDetails({ dress_code: e.target.value.slice(0, DRESS_CODE_MAX) || null })}
-                  maxLength={DRESS_CODE_MAX}
-                  placeholder={t('composer.venueDetails.dressCode')}
-                  aria-label={t('composer.venueDetails.dressCode')}
-                  className="w-full rounded bg-surface px-3 py-2.5 text-body text-fg placeholder:text-fg-subtle focus:bg-surface-raised focus:outline-none focus:ring-2 focus:ring-brand-400/50"
-                />
               </div>
 
               {/* Category as a Posh-style row of chips */}
@@ -3819,6 +3906,29 @@ export default function EventComposer({
                     )}
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Describe the flyer (lib/posterAlt.ts): read aloud for the poster.
+                Quiet and optional; left empty, one is built from the facts. */}
+            {bannerUrl && (
+              <div className="rounded bg-surface-low px-4 py-3 transition-colors focus-within:bg-surface focus-within:ring-2 focus-within:ring-brand-400/50">
+                <label htmlFor="composer-poster-alt" className="block text-xs font-semibold text-fg-muted">
+                  {t('composer.posterAlt.label')}
+                </label>
+                <textarea
+                  id="composer-poster-alt"
+                  value={posterAlt}
+                  onChange={(e) => setPosterAlt(e.target.value.slice(0, POSTER_ALT_MAX))}
+                  maxLength={POSTER_ALT_MAX}
+                  rows={2}
+                  placeholder={t('composer.posterAlt.placeholder')}
+                  aria-describedby="composer-poster-alt-hint"
+                  className="mt-1 w-full resize-none bg-transparent text-body text-fg placeholder:text-fg-subtle focus:outline-none"
+                />
+                <p id="composer-poster-alt-hint" className="text-xs text-fg-subtle">
+                  {t('composer.posterAlt.hint')}
+                </p>
               </div>
             )}
 

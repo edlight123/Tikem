@@ -123,8 +123,28 @@
     "free_only": "Gratuit uniquement",
     "price_min": "Prix minimum",
     "price_max": "Prix maximum",
-    "access": "Accès",
-    "step_free": "Sans marches"
+    "at_the_venue": "Sur place",
+    "accessibility": "Accessibilité",
+    "amenities": {
+      "parking": "Parking",
+      "backup_power": "Groupe électrogène",
+      "air_conditioning": "Climatisation",
+      "security": "Sécurité",
+      "table_service": "Tables VIP",
+      "food": "Restauration",
+      "bar": "Bar",
+      "coat_check": "Vestiaire",
+      "step_free": "Sans marches",
+      "wheelchair": "Fauteuil roulant",
+      "elevator": "Ascenseur",
+      "accessible_washrooms": "Toilettes accessibles",
+      "accessible_parking": "Parking accessible",
+      "seating": "Places assises",
+      "sign_language": "Langue des signes",
+      "captions": "Sous-titres",
+      "quiet_room": "Espace calme",
+      "service_animals": "Animaux d’assistance"
+    }
   },
   "time": {
     "today": "Aujourd'hui",
@@ -671,7 +691,8 @@
     "language": "Langue",
     "instagram": "Tikèm sur Instagram",
     "built_by": "Conçu par {{labs}}",
-    "photo_credits": "Crédits photo"
+    "photo_credits": "Crédits photo",
+    "accessibility": "Accessibilité"
   },
   "admin": {
     "search_placeholder": "Rechercher des événements...",
@@ -1553,22 +1574,19 @@
         "city": "ville",
         "price": "prix",
         "age_policy": "âge",
-        "dress_code": "tenue"
+        "dress_code": "tenue",
+        "amenities": "infos pratiques"
       }
     },
     "venueDetails": {
       "title": "Infos pratiques",
       "hint": "Facultatif. Affiché sur la page de l’événement.",
-      "access": "Accès",
+      "selected": "{{count}} choix",
+      "facilities": "Sur place",
+      "accessibility": "Accessibilité",
       "setting": "Lieu",
       "age": "Âge",
       "dressCode": "Tenue, ex. Tout en blanc",
-      "amenities": {
-        "parking": "Parking",
-        "step_free": "Sans marches",
-        "accessible_washrooms": "Toilettes accessibles",
-        "coat_check": "Vestiaire"
-      },
       "settings": {
         "indoor": "Intérieur",
         "outdoor": "Extérieur",
@@ -1578,6 +1596,26 @@
         "all": "Tous âges",
         "18": "18+",
         "21": "21+"
+      },
+      "amenities": {
+        "parking": "Parking",
+        "backup_power": "Groupe électrogène",
+        "air_conditioning": "Climatisation",
+        "security": "Sécurité",
+        "table_service": "Tables VIP",
+        "food": "Restauration",
+        "bar": "Bar",
+        "coat_check": "Vestiaire",
+        "step_free": "Sans marches",
+        "wheelchair": "Fauteuil roulant",
+        "elevator": "Ascenseur",
+        "accessible_washrooms": "Toilettes accessibles",
+        "accessible_parking": "Parking accessible",
+        "seating": "Places assises",
+        "sign_language": "Langue des signes",
+        "captions": "Sous-titres",
+        "quiet_room": "Espace calme",
+        "service_animals": "Animaux d’assistance"
       }
     },
     "payAtDoor": "Payer à l’entrée",
@@ -1589,7 +1627,12 @@
     "familyHint": "Une personne inscrit sa famille ; chacun reçoit son billet.",
     "familyUpTo": "Personnes par inscription",
     "ticketTypes": "Types prêts",
-    "addTicketTypes": "Plusieurs types d’invités ? Ajoutez des types de billets"
+    "addTicketTypes": "Plusieurs types d’invités ? Ajoutez des types de billets",
+    "posterAlt": {
+      "label": "Décrire l'affiche",
+      "placeholder": "Ce qu'on y voit, pour les personnes qui utilisent un lecteur d'écran",
+      "hint": "Facultatif. Laissé vide, nous la décrivons à partir du titre, de la date et du lieu."
+    }
   },
   "promoter": {
     "portal_eyebrow": "Portail promoteur",
@@ -1761,6 +1804,14 @@
     "use": "Utiliser",
     "not_now_aria": "Pas maintenant",
     "region_aria": "Suggestion de lieu"
+  },
+  "current_location": {
+    "use_current": "Utiliser ma position actuelle",
+    "locating": "Recherche de votre position…",
+    "denied": "La localisation est bloquée pour ce site. Autorisez-la dans les réglages du navigateur, ou choisissez une ville.",
+    "unavailable": "Impossible de trouver votre position. Réessayez ou choisissez une ville.",
+    "unsupported": "Tikèm n’est pas encore près de chez vous. Choisissez une ville.",
+    "distance_away": "à {{distance}}"
   },
   "invite": {
     "title": "Invitation à un événement",
@@ -2225,15 +2276,150 @@
   },
   "venue_details": {
     "title": "bon à savoir",
-    "step_free": "Accès sans marches",
-    "accessible_washrooms": "Toilettes accessibles",
+    "accessibility_title": "accessibilité",
     "parking": "Parking",
+    "backup_power": "Courant assuré (groupe électrogène)",
+    "air_conditioning": "Climatisé",
+    "security": "Sécurité sur place",
+    "table_service": "Tables VIP et service bouteilles",
+    "food": "Restauration sur place",
+    "bar": "Bar sur place",
     "coat_check": "Vestiaire",
+    "step_free": "Accès sans marches",
+    "wheelchair": "Accessible en fauteuil roulant",
+    "elevator": "Ascenseur",
+    "accessible_washrooms": "Toilettes accessibles",
+    "accessible_parking": "Parking accessible",
+    "seating": "Places assises disponibles",
+    "sign_language": "Interprétation en langue des signes",
+    "captions": "Sous-titres à l’écran",
+    "quiet_room": "Espace calme",
+    "service_animals": "Animaux d’assistance bienvenus",
     "indoor": "En intérieur",
     "outdoor": "En extérieur",
     "mixed": "Intérieur et extérieur",
     "age_18": "18 ans et plus",
     "age_21": "21 ans et plus",
     "dress_code": "Tenue : {{value}}"
+  },
+  "community": {
+    "event": {
+      "shared": "Partagé par la communauté",
+      "from": "De {{name}}",
+      "source": "Voir l'original",
+      "claim": "C'est votre événement ? Réclamez-le",
+      "not_sold": "Les billets de cet événement ne sont pas vendus sur Tikèm.",
+      "tickets_elsewhere": "Billets sur le site de l'organisateur",
+      "tickets_elsewhere_note": "Tikèm ne vend pas les billets de cet événement. Vous les achetez auprès de l'organisateur.",
+      "price_unknown": "Prix non indiqué",
+      "price_note": "Tel qu'annoncé par l'organisateur"
+    },
+    "share": {
+      "entry": "Partager un événement",
+      "empty_entry": "Vous avez vu une affiche ? Partagez l'événement",
+      "title": "partager un événement",
+      "steps": {
+        "flyer": "L'affiche",
+        "when_where": "Quand et où",
+        "tickets": "Billets",
+        "source": "Où vous l'avez vu"
+      },
+      "reading": "Lecture de l'affiche…",
+      "filled": "Nous avons rempli ce que nous avons pu lire. Vérifiez.",
+      "nothing_read": "Impossible de lire cette affiche. Ajoutez ce que vous savez.",
+      "fields": {
+        "title": "Nom de l'événement",
+        "date": "Date",
+        "start": "Début",
+        "end": "Fin",
+        "venue": "Lieu",
+        "city": "Ville",
+        "country": "Pays",
+        "price": "Prix",
+        "currency": "Devise",
+        "ticket_url": "Lien des billets",
+        "category": "Catégorie",
+        "source_url": "Lien vers la publication ou le site",
+        "organizer": "Organisateur",
+        "handle": "Instagram",
+        "note": "Autre chose"
+      },
+      "not_sure": "Je ne sais pas",
+      "countries": {
+        "HT": "Haïti",
+        "US": "États-Unis",
+        "CA": "Canada",
+        "FR": "France"
+      },
+      "free": "Gratuit",
+      "paid": "Payant",
+      "send": "Envoyer",
+      "sending": "Envoi…",
+      "sent": "Merci. Nous allons vérifier et l'ajouter à Tikèm.",
+      "another": "En partager un autre",
+      "done": "Terminé",
+      "footnote": "Nous vérifions chaque événement avant sa mise en ligne et créditons son organisateur.",
+      "errors": {
+        "rate_limited": "Vous avez beaucoup partagé aujourd'hui. Réessayez demain.",
+        "bad_image": "Ajoutez d'abord l'affiche.",
+        "forbidden": "Ce compte ne peut pas partager d'événements.",
+        "generic": "Envoi impossible. Réessayez."
+      }
+    },
+    "claim": {
+      "title": "réclamer cet événement",
+      "how": "Montrez-nous qu'il est à vous",
+      "methods": {
+        "instagram": "Instagram",
+        "link": "Un lien",
+        "upload": "Un document"
+      },
+      "handle": "Votre compte Instagram",
+      "handle_hint": "Le compte qui a publié l'événement.",
+      "link": "Un lien qui montre qu'il est à vous",
+      "upload": "Téléverser une capture ou un document",
+      "uploading": "Téléversement…",
+      "upload_hint": "Seule l'équipe Tikèm le voit. Image ou PDF, 10 Mo max.",
+      "upload_errors": {
+        "type": "Utilisez une image ou un PDF.",
+        "size": "Ce fichier dépasse 10 Mo.",
+        "auth": "Reconnectez-vous, puis réessayez.",
+        "failed": "Échec du téléversement. Réessayez."
+      },
+      "message": "Note pour notre équipe (facultatif)",
+      "send": "Envoyer la demande",
+      "sending": "Envoi…",
+      "sent": "Demande envoyée. Nous vous répondrons bientôt.",
+      "back": "Retour à l'événement",
+      "footnote": "Une fois approuvé, l'événement passe sur votre compte organisateur et vous pouvez le modifier et vendre des billets.",
+      "errors": {
+        "invalid_proof": "Vérifiez votre preuve et réessayez.",
+        "not_claimable": "Cet événement ne peut pas être réclamé.",
+        "rate_limited": "Trop de demandes aujourd'hui. Réessayez demain.",
+        "forbidden": "Ce compte ne peut pas réclamer d'événements.",
+        "generic": "Envoi impossible. Réessayez."
+      }
+    }
+  },
+  "occasions": {
+    "label": "Occasion",
+    "none": "Aucune",
+    "suggested": "suggérée pour cette date",
+    "more": "Plus",
+    "less": "Moins",
+    "see_all": "Voir tout",
+    "under_way": "En cours",
+    "tomorrow": "Demain",
+    "in_days": "Dans {{count}} jours",
+    "pre_kanaval": "Dimanches pré-carnaval dès le {{date}}",
+    "add_event": "Ajouter un événement",
+    "events_title": "événements",
+    "empty": "Rien n’est encore annoncé.",
+    "ideas_title": "idées à organiser",
+    "use_idea": "Créer cet événement",
+    "part_of": "Pour {{name}}"
+  },
+  "a11y": {
+    "skipToContent": "Aller au contenu"
   }
 }

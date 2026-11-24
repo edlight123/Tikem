@@ -1,42 +1,31 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import Image from 'next/image'
 
 /**
- * An event poster that never crops a flyer badly (same rule as the app's
- * mobile/components/PosterImage).
+ * An event poster in its 4:5 frame (same rule as the app's
+ * mobile/lib/posterFit + components/PosterImage).
  *
- * Organizers upload flyers made for Instagram (square) or Stories (9:16);
- * every poster frame here is 4:5. `object-cover` cut the date or venue off
- * those flyers. A flyer close to the frame's shape still fills it; one that
- * isn't is shown whole, on one even, deep tone taken from the flyer
- * (/api/posters/tone). A blurred copy left uneven patches above and below
- * the art; a single tone reads as a deliberate mount.
+ * - Every poster fills the frame (zoomed to cover): photos, square flyers,
+ *   2:3 portraits (owner, 2026-11-23: "zoom the images so they fill the 4:5").
+ * - Only a very tall Stories flyer (9:16), which would lose about a third of
+ *   its height (usually the date), shows whole over a blurred, cover-filled
+ *   copy of itself, never an empty band.
  *
  * Renders inside a `relative` frame that sets the size (it uses `fill`).
  */
 
-// Relative shape difference that may still fill the frame: a sliver at the
-// edges, never a line of text.
-const FILL_TOLERANCE = 0.12
+// Narrower than this (width / height) is a Stories flyer: show it whole.
+// 9:16 = 0.5625; a 2:3 portrait (0.667) still fills.
+const STORIES_MAX_RATIO = 0.6
 
 const knownRatios = new Map<string, number>()
-const knownTones = new Map<string, Promise<string>>()
 
-// Neutral mount while the tone loads (and if it can't be read).
-const MOUNT = '#141414'
-
-function toneFor(src: string): Promise<string> {
-  let p = knownTones.get(src)
-  if (!p) {
-    p = fetch(`/api/posters/tone?url=${encodeURIComponent(src)}`)
-      .then((r) => r.json())
-      .then((j) => (typeof j?.tone === 'string' ? j.tone : MOUNT))
-      .catch(() => MOUNT)
-    knownTones.set(src, p)
-  }
-  return p
+export function posterFit(ratio: number | undefined, frameRatio: number): 'cover' | 'contain' {
+  if (ratio === undefined) return 'cover'
+  if (ratio < STORIES_MAX_RATIO && frameRatio >= STORIES_MAX_RATIO) return 'contain'
+  return 'cover'
 }
 
 interface Props {
@@ -63,17 +52,7 @@ export default function PosterImage({
   onError,
 }: Props) {
   const [ratio, setRatio] = useState<number | undefined>(knownRatios.get(src))
-  const fits = ratio === undefined || Math.abs(ratio - frameRatio) / frameRatio <= FILL_TOLERANCE
-  const [tone, setTone] = useState(MOUNT)
-
-  useEffect(() => {
-    if (fits) return
-    let live = true
-    toneFor(src).then((t) => live && setTone(t))
-    return () => {
-      live = false
-    }
-  }, [fits, src])
+  const fits = posterFit(ratio, frameRatio) === 'cover'
 
   const onLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
     const img = e.currentTarget
@@ -86,10 +65,15 @@ export default function PosterImage({
   return (
     <>
       {!fits && (
-        <div
+        // The same flyer, filled, blurred and dimmed, behind the whole one.
+        <Image
+          src={src}
+          alt=""
           aria-hidden
-          className="absolute inset-0 transition-colors duration-300"
-          style={{ backgroundColor: tone }}
+          fill
+          sizes={sizes}
+          quality={40}
+          className="scale-110 object-cover blur-2xl brightness-75"
         />
       )}
       <Image

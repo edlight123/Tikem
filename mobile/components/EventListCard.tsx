@@ -1,4 +1,6 @@
 import React from 'react';
+import { joinA11y } from '../lib/a11y';
+import { storedPosterAlt } from '../lib/usePosterAlt';
 import { View, Text, StyleSheet } from 'react-native';
 import { Touchable } from './ui/Touchable';
 import { Image } from 'expo-image';
@@ -51,7 +53,20 @@ export default function EventListCard({ event, onPress }: EventListCardProps) {
   const location = [event.venue_name, event.city].filter(Boolean).join(', ');
 
   return (
-    <Touchable scale={0.98} onPress={onPress} style={styles.card}>
+    <Touchable
+      scale={0.98}
+      onPress={onPress}
+      style={styles.card}
+      // One stop: the caption's facts, then the organizer's flyer description.
+      accessibilityRole="button"
+      accessibilityLabel={joinA11y(
+        event.title,
+        dateLabel,
+        location,
+        isFree ? t('common.free') : formatPrice(price, event.currency),
+        storedPosterAlt(event as any),
+      )}
+    >
       {/* LEFT: portrait poster with deterministic gradient fallback. */}
       <View style={styles.poster}>
         {/* Fallback art only — behind a LOADING image this flashed the teal
@@ -66,6 +81,7 @@ export default function EventListCard({ event, onPress }: EventListCardProps) {
         )}
         {event.banner_image_url ? (
           <Image
+            accessible={false}
             source={{ uri: event.banner_image_url }}
             style={StyleSheet.absoluteFill}
             contentFit="cover"

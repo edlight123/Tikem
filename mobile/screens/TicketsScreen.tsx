@@ -31,6 +31,8 @@ import { useTabTaps } from '../hooks/useTabTaps';
 import { consumeTicketsRefreshHint } from '../lib/ticketsRefreshHint';
 import { font, radius } from '../theme/tokens';
 import { Touchable } from '../components/ui/Touchable';
+import { joinA11y, useCaptionLines } from '../lib/a11y';
+import { storedPosterAlt } from '../lib/usePosterAlt';
 
 // Offline-first cache: the door-scan moment is exactly when signal is worst, so
 // we persist the resolved upcoming/past event lists per user and hydrate them
@@ -144,6 +146,7 @@ function TicketsListSkeleton({ styles }: { styles: ReturnType<typeof getStyles> 
 export default function TicketsScreen({ navigation }: any) {
   const { colors } = useTheme();
   const styles = getStyles(colors);
+  const metaLines = useCaptionLines(1);
   const { user } = useAuth();
   const { t, language } = useI18n();
   // The title bar is a blurred overlay now, so the tabs beneath it have to
@@ -424,7 +427,7 @@ export default function TicketsScreen({ navigation }: any) {
       <View style={styles.container}>
         <StatusBar barStyle="light-content" backgroundColor={colors.background} />
         <OverlayHeader onHeight={onHeaderHeight} style={styles.header} scrollY={scrollY}>
-          <Text style={styles.headerTitle}>{t('tickets.title')}</Text>
+          <Text style={styles.headerTitle} accessibilityRole="header">{t('tickets.title')}</Text>
         </OverlayHeader>
         {/* The header floats, so the tabs — the first in-flow row — carry its height. */}
         <View style={[styles.tabs, { marginTop: headerH }]}>
@@ -480,7 +483,7 @@ export default function TicketsScreen({ navigation }: any) {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={colors.background} />
       <OverlayHeader onHeight={onHeaderHeight} style={styles.header} scrollY={scrollY}>
-        <Text style={styles.headerTitle}>{t('tickets.title')}</Text>
+        <Text style={styles.headerTitle} accessibilityRole="header">{t('tickets.title')}</Text>
       </OverlayHeader>
 
       {/* Tabs — quiet token tabs (beta feedback: the old full-width teal-
@@ -606,6 +609,16 @@ export default function TicketsScreen({ navigation }: any) {
                             style={styles.row}
                             scale={0.98}
                             accessibilityRole="button"
+                            accessibilityLabel={joinA11y(
+                              event.title,
+                              metaLabel,
+                              isSaved
+                                ? withDictionaryFallback(t, 'tickets.savedLabel', 'Saved')
+                                : `${rowStatus.label}, ${event.ticketCount} ${
+                                    event.ticketCount === 1 ? t('tickets.ticketSingular') : t('tickets.ticketPlural')
+                                  }`,
+                              storedPosterAlt(event as any),
+                            )}
                             onPress={() =>
                               navigation.navigate(isSaved ? 'EventDetail' : 'EventTickets', {
                                 eventId: event.id,
@@ -629,6 +642,7 @@ export default function TicketsScreen({ navigation }: any) {
                               )}
                               {!!poster && (
                                 <Image
+                                  accessible={false}
                                   source={{ uri: poster }}
                                   style={StyleSheet.absoluteFill}
                                   contentFit="cover"
@@ -644,7 +658,7 @@ export default function TicketsScreen({ navigation }: any) {
                                 {event.title}
                               </Text>
                               {!!metaLabel && (
-                                <Text style={styles.rowMeta} numberOfLines={1}>
+                                <Text style={styles.rowMeta} numberOfLines={metaLines}>
                                   {metaLabel}
                                 </Text>
                               )}

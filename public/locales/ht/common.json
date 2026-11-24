@@ -123,8 +123,28 @@
     "free_only": "Gratis sèlman",
     "price_min": "Pri minimòm",
     "price_max": "Pri maksimòm",
-    "access": "Aksè",
-    "step_free": "San mach"
+    "at_the_venue": "Sou plas",
+    "accessibility": "Aksesibilite",
+    "amenities": {
+      "parking": "Pakin",
+      "backup_power": "Dèlko",
+      "air_conditioning": "Èkondisyone",
+      "security": "Sekirite",
+      "table_service": "Tab VIP",
+      "food": "Manje",
+      "bar": "Ba",
+      "coat_check": "Vestyè",
+      "step_free": "San mach",
+      "wheelchair": "Chèz woulant",
+      "elevator": "Asansè",
+      "accessible_washrooms": "Twalèt aksesib",
+      "accessible_parking": "Pakin aksesib",
+      "seating": "Plas pou chita",
+      "sign_language": "Lang siy",
+      "captions": "Soutit",
+      "quiet_room": "Espas trankil",
+      "service_animals": "Bèt asistans"
+    }
   },
   "time": {
     "today": "Jodi a",
@@ -671,7 +691,8 @@
     "language": "Lang",
     "instagram": "Tikèm sou Instagram",
     "built_by": "Se {{labs}} ki bati l",
-    "photo_credits": "Kredi foto"
+    "photo_credits": "Kredi foto",
+    "accessibility": "Aksesibilite"
   },
   "admin": {
     "search_placeholder": "Chèche evènman...",
@@ -1553,22 +1574,19 @@
         "city": "vil",
         "price": "pri",
         "age_policy": "laj",
-        "dress_code": "kòd abiman"
+        "dress_code": "kòd abiman",
+        "amenities": "detay kote a"
       }
     },
     "venueDetails": {
       "title": "Detay kote a",
       "hint": "Si ou vle. Li parèt sou paj evènman an.",
-      "access": "Aksè",
+      "selected": "{{count}} chwa",
+      "facilities": "Sou plas",
+      "accessibility": "Aksesibilite",
       "setting": "Anndan oswa deyò",
       "age": "Laj",
       "dressCode": "Kòd abiman, egz. Tout blan",
-      "amenities": {
-        "parking": "Pakin",
-        "step_free": "San mach",
-        "accessible_washrooms": "Twalèt aksesib",
-        "coat_check": "Vestyè"
-      },
       "settings": {
         "indoor": "Anndan",
         "outdoor": "Deyò",
@@ -1578,6 +1596,26 @@
         "all": "Tout laj",
         "18": "18+",
         "21": "21+"
+      },
+      "amenities": {
+        "parking": "Pakin",
+        "backup_power": "Dèlko",
+        "air_conditioning": "Èkondisyone",
+        "security": "Sekirite",
+        "table_service": "Tab VIP",
+        "food": "Manje",
+        "bar": "Ba",
+        "coat_check": "Vestyè",
+        "step_free": "San mach",
+        "wheelchair": "Chèz woulant",
+        "elevator": "Asansè",
+        "accessible_washrooms": "Twalèt aksesib",
+        "accessible_parking": "Pakin aksesib",
+        "seating": "Plas pou chita",
+        "sign_language": "Lang siy",
+        "captions": "Soutit",
+        "quiet_room": "Espas trankil",
+        "service_animals": "Bèt asistans"
       }
     },
     "payAtDoor": "Peye nan pòt la",
@@ -1589,7 +1627,12 @@
     "familyHint": "Yon moun enskri fanmi l; chak moun resevwa pwòp tikè pa l.",
     "familyUpTo": "Moun pa enskripsyon",
     "ticketTypes": "Kalite pare",
-    "addTicketTypes": "Plizyè kalite envite? Ajoute kalite tikè"
+    "addTicketTypes": "Plizyè kalite envite? Ajoute kalite tikè",
+    "posterAlt": {
+      "label": "Dekri afich la",
+      "placeholder": "Sa ki sou li, pou moun k ap itilize yon lektè ekran",
+      "hint": "Si ou vle. Si ou kite l vid, n ap dekri l ak tit la, dat la ak kote a."
+    }
   },
   "promoter": {
     "portal_eyebrow": "Pòtay pwomotè",
@@ -1761,6 +1804,14 @@
     "use": "Itilize",
     "not_now_aria": "Pa kounye a",
     "region_aria": "Sijesyon kote ou ye"
+  },
+  "current_location": {
+    "use_current": "Sèvi ak kote m ye kounye a",
+    "locating": "N ap chèche kote w ye…",
+    "denied": "Lokalizasyon bloke pou sit sa a. Pèmèt li nan paramèt navigatè w, oswa chwazi yon vil.",
+    "unavailable": "Nou pa jwenn kote w ye. Eseye ankò, oswa chwazi yon vil.",
+    "unsupported": "Tikèm poko toupre w. Chwazi yon vil.",
+    "distance_away": "a {{distance}}"
   },
   "invite": {
     "title": "Envitasyon evènman",
@@ -2225,15 +2276,150 @@
   },
   "venue_details": {
     "title": "bon pou konnen",
-    "step_free": "Aksè san mach",
-    "accessible_washrooms": "Twalèt aksesib",
+    "accessibility_title": "aksesibilite",
     "parking": "Pakin",
+    "backup_power": "Kouran garanti (dèlko)",
+    "air_conditioning": "Gen èkondisyone",
+    "security": "Sekirite sou plas",
+    "table_service": "Tab VIP ak sèvis boutèy",
+    "food": "Manje sou plas",
+    "bar": "Ba sou plas",
     "coat_check": "Vestyè",
+    "step_free": "Aksè san mach",
+    "wheelchair": "Aksesib pou chèz woulant",
+    "elevator": "Asansè",
+    "accessible_washrooms": "Twalèt aksesib",
+    "accessible_parking": "Pakin aksesib",
+    "seating": "Gen plas pou chita",
+    "sign_language": "Entèpretasyon an lang siy",
+    "captions": "Soutit sou ekran",
+    "quiet_room": "Espas trankil",
+    "service_animals": "Bèt asistans byenveni",
     "indoor": "Anndan",
     "outdoor": "Deyò",
     "mixed": "Anndan ak deyò",
     "age_18": "18 an oswa plis sèlman",
     "age_21": "21 an oswa plis sèlman",
     "dress_code": "Kòd abiman: {{value}}"
+  },
+  "community": {
+    "event": {
+      "shared": "Kominote a pataje l",
+      "from": "Soti nan {{name}}",
+      "source": "Gade orijinal la",
+      "claim": "Se evènman pa w? Reklame l",
+      "not_sold": "Tikèm pa vann tikè pou evènman sa a.",
+      "tickets_elsewhere": "Tikè sou sit òganizatè a",
+      "tickets_elsewhere_note": "Tikèm pa vann tikè pou evènman sa a. W ap achte yo nan men òganizatè a.",
+      "price_unknown": "Pri a pa endike",
+      "price_note": "Jan òganizatè a anonse l"
+    },
+    "share": {
+      "entry": "Pataje yon evènman",
+      "empty_entry": "Ou wè yon afich? Pataje evènman an",
+      "title": "pataje yon evènman",
+      "steps": {
+        "flyer": "Afich la",
+        "when_where": "Ki lè ak ki kote",
+        "tickets": "Tikè",
+        "source": "Kote w te wè l"
+      },
+      "reading": "N ap li afich la…",
+      "filled": "Nou ranpli sa nou te ka li. Verifye l.",
+      "nothing_read": "Nou pa t ka li afich sa a. Mete sa w konnen.",
+      "fields": {
+        "title": "Non evènman an",
+        "date": "Dat",
+        "start": "Kòmanse",
+        "end": "Fini",
+        "venue": "Kote",
+        "city": "Vil",
+        "country": "Peyi",
+        "price": "Pri",
+        "currency": "Lajan",
+        "ticket_url": "Lyen tikè yo",
+        "category": "Kategori",
+        "source_url": "Lyen piblikasyon an oswa sit la",
+        "organizer": "Òganizatè",
+        "handle": "Instagram",
+        "note": "Lòt bagay"
+      },
+      "not_sure": "Mwen pa konnen",
+      "countries": {
+        "HT": "Ayiti",
+        "US": "Etazini",
+        "CA": "Kanada",
+        "FR": "Lafrans"
+      },
+      "free": "Gratis",
+      "paid": "Peye",
+      "send": "Voye",
+      "sending": "N ap voye…",
+      "sent": "Mèsi. N ap verifye l epi mete l sou Tikèm.",
+      "another": "Pataje yon lòt",
+      "done": "Fini",
+      "footnote": "Nou verifye chak evènman anvan li parèt epi nou bay òganizatè a kredi.",
+      "errors": {
+        "rate_limited": "Ou pataje anpil jodi a. Eseye ankò demen.",
+        "bad_image": "Mete afich la anvan.",
+        "forbidden": "Kont sa a pa ka pataje evènman.",
+        "generic": "Nou pa t ka voye l. Eseye ankò."
+      }
+    },
+    "claim": {
+      "title": "reklame evènman sa a",
+      "how": "Montre nou se pa w",
+      "methods": {
+        "instagram": "Instagram",
+        "link": "Yon lyen",
+        "upload": "Yon dokiman"
+      },
+      "handle": "Kont Instagram ou",
+      "handle_hint": "Kont ki te pibliye evènman an.",
+      "link": "Yon lyen ki montre se pa w",
+      "upload": "Voye yon foto ekran oswa yon dokiman",
+      "uploading": "N ap voye l…",
+      "upload_hint": "Se ekip Tikèm sèlman ki wè l. Imaj oswa PDF, 10 MB maksimòm.",
+      "upload_errors": {
+        "type": "Sèvi ak yon imaj oswa yon PDF.",
+        "size": "Fichye sa a depase 10 MB.",
+        "auth": "Konekte ankò, epi eseye ankò.",
+        "failed": "Nou pa t ka voye l. Eseye ankò."
+      },
+      "message": "Nòt pou ekip nou an (si w vle)",
+      "send": "Voye demann lan",
+      "sending": "N ap voye…",
+      "sent": "Demann lan ale. N ap reponn ou byento.",
+      "back": "Tounen nan evènman an",
+      "footnote": "Lè nou apwouve l, evènman an pase nan kont òganizatè w epi ou ka modifye l e vann tikè.",
+      "errors": {
+        "invalid_proof": "Verifye prèv ou a epi eseye ankò.",
+        "not_claimable": "Yo pa ka reklame evènman sa a.",
+        "rate_limited": "Twòp demann jodi a. Eseye ankò demen.",
+        "forbidden": "Kont sa a pa ka reklame evènman.",
+        "generic": "Nou pa t ka voye l. Eseye ankò."
+      }
+    }
+  },
+  "occasions": {
+    "label": "Okazyon",
+    "none": "Okenn",
+    "suggested": "sijere pou dat sa a",
+    "more": "Plis",
+    "less": "Mwens",
+    "see_all": "Wè tout",
+    "under_way": "Ap fèt kounye a",
+    "tomorrow": "Demen",
+    "in_days": "Nan {{count}} jou",
+    "pre_kanaval": "Dimanch pre-kanaval depi {{date}}",
+    "add_event": "Ajoute yon evènman",
+    "events_title": "evènman",
+    "empty": "Poko gen anyen ki anonse.",
+    "ideas_title": "lide pou òganize",
+    "use_idea": "Kreye evènman sa a",
+    "part_of": "Pou {{name}}"
+  },
+  "a11y": {
+    "skipToContent": "Ale nan kontni an"
   }
 }

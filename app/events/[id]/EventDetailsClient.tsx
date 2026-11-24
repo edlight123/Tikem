@@ -1,10 +1,14 @@
 'use client'
 
+import OccasionTag from '@/components/occasions/OccasionTag'
+import { usePosterAlt } from '@/lib/usePosterAlt'
 import { DiscoverEventCard } from '@/components/discover/DiscoverEventCard'
 import { useTranslation } from 'react-i18next'
 import BuyTicketButton from './BuyTicketButton'
 import RequestToJoin from './RequestToJoin'
 import ExternalTicketsLink, { externalTicketsUrl } from './ExternalTicketsLink'
+import { CommunityCredit, CommunityPrice, CommunityTickets, communityPriceLabel } from './CommunityEvent'
+import { communityTicketsUrl, isCommunityEvent } from '@/lib/community/submissions'
 import JoinWaitlistButton from '@/components/events/JoinWaitlistButton'
 import { eventAllowedPlusOnes } from '@/lib/events/approval'
 import FavoriteButton from '@/components/FavoriteButton'
@@ -24,6 +28,7 @@ import { ticketScarcity, scarcityCopy, isUrgent } from '@/lib/ticketScarcity'
 import { guestlistVisibilityFrom } from '@/lib/guestlistVisibility'
 import SpotifyEmbed from '@/components/events/SpotifyEmbed'
 import VenueMap from '@/components/events/VenueMap'
+import { useVenueDistance } from '@/components/location/useVenueDistance'
 import EventLineup from '@/components/events/EventLineup'
 import { Shield } from 'lucide-react'
 import { formatInZone } from '@/lib/home/format'
@@ -54,7 +59,10 @@ interface EventDetailsClientProps {
 
 export default function EventDetailsClient({ event, user, isFavorite, isFollowing, relatedEvents, invitesEnabled = false, heldFreeTickets = 0 }: EventDetailsClientProps) {
   const { t, i18n } = useTranslation('common')
+  // "2.4 km away", only when this site already has the location permission.
+  const venueDistance = useVenueDistance(event)
   const dfLocale = dateLocaleFor(i18n.language)
+  const posterAlt = usePosterAlt()
   const numLocale = intlLocaleFor(i18n.language)
   // Every date on this page prints in the EVENT's zone. Formatting in the
   // runtime's zone printed UTC on the server and the reader's zone in the
@@ -66,6 +74,10 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
   const waitlistOpen = isSoldOut && (event as any).enable_waitlist === true
   // Kept in sync from Eventbrite: tickets are sold there, so the page links out.
   const externalTickets = externalTicketsUrl(event as any)
+  // Shared by the community (lib/community): nothing is sold here; the page
+  // credits the source and links out to the tickets if the member gave a link.
+  const community = isCommunityEvent(event as any)
+  const communityTickets = communityTicketsUrl(event as any)
   const ticketsRemaining = event.total_tickets ? event.total_tickets - (event.tickets_sold || 0) : null
   // Freeness comes from the TIER SET, never from `event.ticket_price` (which is the
   // lowest tier price, hence 0 whenever a free tier sits next to a paid one — that
@@ -130,7 +142,8 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
   const organizerLabel = event.users?.organization_name || event.users?.full_name || 'Event Organizer'
   // "Message the organizer": shown signed out too (it routes to sign-in), but
   // never on the organizer's own event, where the server refuses a self-contact.
-  const canContactOrganizer = !!event.organizer_id && user?.id !== event.organizer_id
+  // Never on a community-shared event: its host account has no inbox.
+  const canContactOrganizer = !community && !!event.organizer_id && user?.id !== event.organizer_id
 
   // The venue map tile opens exactly what the "Google Maps" text link opens —
   // same query, same destination — so a visitor never gets two different places
@@ -157,7 +170,9 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
       <MobileHero
         title={event.title}
         category={event.category}
+        occasion={(event as any).occasion}
         bannerUrl={event.banner_image_url}
+        posterAlt={posterAlt(event)}
         organizerName={organizerLabel}
         organizerLogo={event.users?.organization_logo}
         isVerified={event.users?.is_verified || false}
@@ -225,7 +240,7 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                 {event.banner_image_url ? (
                   <PosterImage
                     src={event.banner_image_url}
-                    alt={event.title}
+                    alt={posterAlt(event)}
                     sizes="(max-width: 1024px) 320px, 340px"
                     priority
                   />
@@ -263,6 +278,8 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                   {showCategory && event.category}
                   {showCategory && isTrending && <span className="text-fg-faint"> · </span>}
                   {isTrending && <span>{t('events.trending')}</span>}
+                  {(event as any).occasion && (showCategory || isTrending) && <span className="text-fg-faint"> · </span>}
+                  <OccasionTag occasion={(event as any).occasion} className="normal-case tracking-normal text-meta font-normal" />
                 </p>
                 {/* Save + share as one cluster, mirroring the mobile buy row.
                     The heart previously hung in a `mt-4` block under the
@@ -327,7 +344,9 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                       ? t('events.event_ended', { defaultValue: 'Event ended' })
                       : isSoldOut
                         ? t('ticket.sold_out')
-                        : isFree
+                        : community
+                          ? communityPriceLabel(event, t, numLocale)
+                          : isFree
                           ? t('common.free')
                           : payAtDoor && doorLabel
                             ? doorLabel
@@ -368,6 +387,8 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                   {t('ticket.sold_out_caps')}
                 </div>
               )
+            ) : community ? (
+              <CommunityTickets url={communityTickets} compact />
             ) : externalTickets ? (
               <ExternalTicketsLink url={externalTickets} compact />
             ) : (
@@ -412,6 +433,7 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
         city={event.city}
         address={event.address || ''}
         commune={event.commune || ''}
+        distance={venueDistance}
         isFree={isFree}
         hasFreeOption={pricing.kind === 'mixed'}
         // The all-in per-ticket price, for the same reason the sidebar shows it.
@@ -421,7 +443,7 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
         remainingTickets={ticketsRemaining || 0}
         isSoldOut={isSoldOut}
         scarcity={scarcity}
-        doorLabel={doorLabel}
+        doorLabel={community ? communityPriceLabel(event, t, numLocale) : doorLabel}
         note={familyNote}
       />
 
@@ -460,6 +482,8 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
           <FollowButton organizerId={event.organizer_id} userId={user?.id || null} initialIsFollowing={isFollowing} />
         )}
       </div>
+
+      {community && <CommunityCredit event={event} className="mx-4 mt-3 md:hidden" />}
 
       <MobileSections
         description={event.description}
@@ -549,6 +573,7 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                   {line}
                 </p>
               ))}
+              {venueDistance && <p className="mt-1 text-meta text-fg-subtle">{venueDistance}</p>}
               {/* The venue, as a picture. Sits between the address and the two
                   map links: the tile shows where, the links are the actions.
                   Renders nothing at all until a static-maps key exists, which
@@ -664,6 +689,7 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                   />
                 )}
               </div>
+              {community && <CommunityCredit event={event} className="mt-4" />}
             </div>
           </div>
 
@@ -676,7 +702,9 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                 an outline, and the one 4px radius. */}
             <div className="hidden md:block sticky top-24 max-h-[calc(100dvh-7.5rem)] overflow-y-auto overscroll-contain rounded bg-surface p-5 lg:p-6 [scrollbar-width:thin]">
               <div className="mb-6">
-                {payAtDoor ? (
+                {community ? (
+                  <CommunityPrice event={event} numLocale={numLocale} />
+                ) : payAtDoor ? (
                   // Pay at the door: reserve online for nothing, pay on arrival.
                   <div>
                     {/* Same shape as a paid price: small currency, the amount, then
@@ -763,6 +791,8 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                     </div>
                   )}
                 </div>
+              ) : community ? (
+                <CommunityTickets url={communityTickets} />
               ) : externalTickets ? (
                 <ExternalTicketsLink url={externalTickets} />
               ) : (

@@ -5,6 +5,7 @@
 // the page; it renders the server's instant first (so hydration matches) and
 // then follows the reader's clock. Hidden entirely when nothing is that close.
 
+import { usePosterAlt } from '@/lib/usePosterAlt'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -56,6 +57,7 @@ function Countdown({ start, now }: { start: string; now: number }) {
 
 export default function StartingSoon({ events, now: serverNow, zone }: { events: HomeEvent[]; now: number; zone: string }) {
   const { t, i18n } = useTranslation('common')
+  const posterAlt = usePosterAlt()
   const now = useNow(serverNow)
   if (!events.length) return null
 
@@ -74,7 +76,7 @@ export default function StartingSoon({ events, now: serverNow, zone }: { events:
               >
                 <span className="relative aspect-[4/5] w-16 shrink-0 overflow-hidden rounded bg-surface sm:w-20">
                   {ev.banner_image_url && (
-                    <Image src={ev.banner_image_url} alt={ev.title} fill sizes="80px" quality={60} className="object-cover" />
+                    <Image src={ev.banner_image_url} alt={posterAlt(ev)} fill sizes="80px" quality={60} className="object-cover" />
                   )}
                 </span>
                 <span className="min-w-0 flex-1">

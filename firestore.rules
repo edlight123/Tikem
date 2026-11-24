@@ -15,6 +15,13 @@ service cloud.firestore {
       return raw is string ? raw.upper() : '';
     }
 
+    // Flyer description (lib/posterAlt.ts, POSTER_ALT_MAX): optional text a
+    // screen reader reads for the poster. .get() so older events pass.
+    function validPosterAlt(d) {
+      return d.get('poster_alt', null) == null
+        || (d.get('poster_alt', null) is string && d.get('poster_alt', '').size() <= 300);
+    }
+
     // Venue details (lib/events/venue-details.ts): optional, and when present
     // exactly the shapes the event page knows how to show. .get() so a doc
     // without them (every event before this) passes untouched.
@@ -24,11 +31,24 @@ service cloud.firestore {
       let age = d.get('age_policy', null);
       let dress = d.get('dress_code', null);
       return amenities is list
-        && amenities.size() <= 4
-        && amenities.hasOnly(['parking', 'step_free', 'accessible_washrooms', 'coat_check'])
+        && amenities.size() <= 18
+        // Facilities, then accessibility (VENUE_FACILITIES + VENUE_ACCESSIBILITY).
+        && amenities.hasOnly([
+          'parking', 'backup_power', 'air_conditioning', 'security', 'table_service', 'food', 'bar', 'coat_check',
+          'step_free', 'wheelchair', 'elevator', 'accessible_washrooms', 'accessible_parking', 'seating',
+          'sign_language', 'captions', 'quiet_room', 'service_animals'
+        ])
         && (setting == null || setting in ['indoor', 'outdoor', 'mixed'])
         && (age == null || age in ['18+', '21+'])
         && (dress == null || (dress is string && dress.size() <= 60));
+    }
+
+    // Occasion (lib/occasions.ts): optional, and when present one of the
+    // known keys (the list is checked against OCCASION_KEYS by
+    // __tests__/occasions.test.ts). .get() so older docs pass untouched.
+    function validOccasion(d) {
+      let o = d.get('occasion', null);
+      return o == null || o in ['kanaval', 'rara', 'fet-endepandans', 'fet-drapo', 'fet-manman', 'fet-papa', 'fet-gede', 'vertieres', 'nwel', 'fen-ane', 'heritage-month', 'fet-chanpet'];
     }
 
     function isCurrencyAllowedForCountry(countryRaw, currencyRaw) {
@@ -223,7 +243,13 @@ service cloud.firestore {
                == get(/databases/$(database)/documents/users/$(uid)).data.get('rating', null))
           : (request.resource.data.get('is_verified', false) == false
              && request.resource.data.get('rating', null) == null)
-      );
+      )
+      // The org page's banner and photos are server-owned: written only by
+      // /api/organizer/settings/{cover,gallery} (owner or team admin), which
+      // check every URL. A client merge write leaves them as they are.
+      && request.resource.data.get('gallery', null) == (resource == null ? null : resource.data.get('gallery', null))
+      && request.resource.data.get('coverImageUrl', null) == (resource == null ? null : resource.data.get('coverImageUrl', null))
+      && request.resource.data.get('coverTemplate', null) == (resource == null ? null : resource.data.get('coverTemplate', null));
       allow delete: if false;
     }
 
@@ -306,6 +332,11 @@ service cloud.firestore {
         && request.resource.data.get('payouts_frozen', false) == false
         && request.resource.data.get('hidden_pending_review', false) == false
         && request.resource.data.get('reports_count', 0) == 0
+        // Showcase / sample events carry seed_batch, written only by the seed
+        // scripts (Admin SDK). The --delete/--revert scripts and the feed and
+        // follow-up filters (lib/home/feed, lib/postEvent) match on it, so a
+        // client must never be able to mint it.
+        && request.resource.data.get('seed_batch', null) == null
         // A new event has sold nothing. tickets_sold is the server's sales
         // counter (lib/tickets/inventory.ts); a client may only start it at 0.
         && request.resource.data.get('tickets_sold', 0) == 0
@@ -313,16 +344,31 @@ service cloud.firestore {
         // by the Admin SDK only: a lower count would hide shards from the
         // capacity check.
         && request.resource.data.get('inventory_shards_n', null) == null
+        && validPosterAlt(request.resource.data)
         // Import bookkeeping, the Eventbrite ticket link and Eventbrite's
         // public counts (lib/import): Admin SDK only, so a link out or an
         // attendance figure visitors see is never typed in by a client.
         && request.resource.data.get('imported', null) == null
         && request.resource.data.get('external_url', null) == null
         && request.resource.data.get('stats', null) == null
+        // Community-shared credit and claims (lib/community/submissions) are
+        // set only by the admin routes (Admin SDK): a client must not credit
+        // its event to another organizer, plant a source link, or open its
+        // event to claims.
+        && request.resource.data.get('community_shared', false) == false
+        && request.resource.data.get('claimable', false) == false
+        && request.resource.data.get('source_name', null) == null
+        && request.resource.data.get('source_handle', null) == null
+        && request.resource.data.get('source_url', null) == null
+        && request.resource.data.get('submission_id', null) == null
+        && request.resource.data.get('claimed_at', null) == null
+        && request.resource.data.get('claimed_by', null) == null
+        && request.resource.data.get('community_free', null) == null
         // Approval lists are for FREE events only (docs/specs/approval-lists-and-plus-ones.md).
         && !(request.resource.data.get('requires_approval', false) == true
              && request.resource.data.get('has_paid_tiers', false) == true)
         && validVenueDetails(request.resource.data)
+        && validOccasion(request.resource.data)
         && isCurrencyAllowedForCountry(request.resource.data.country, request.resource.data.currency);
 
       allow update: if isSignedIn() && (
@@ -338,6 +384,7 @@ service cloud.firestore {
           !(request.resource.data.get('requires_approval', false) == true &&
             request.resource.data.get('has_paid_tiers', false) == true) &&
           validVenueDetails(request.resource.data) &&
+          validOccasion(request.resource.data) &&
           // H3: moderation fields are client-immutable so a rejected/reported
           // organizer can't re-surface their event. Admin SDK still writes them
           // (it bypasses rules). .get() defaults keep legacy docs that predate
@@ -355,6 +402,9 @@ service cloud.firestore {
           (request.resource.data.get('status', '') == resource.data.get('status', '')
             || request.resource.data.get('status', '') in ['draft', 'pending']) &&
           request.resource.data.get('reports_count', 0) == resource.data.get('reports_count', 0) &&
+          // Showcase marker (see create): a client may neither add, change nor
+          // strip it, so a sample can't pass as a real event or vice versa.
+          request.resource.data.get('seed_batch', null) == resource.data.get('seed_batch', null) &&
           // Auto-hide after repeated reports (lib/moderation/reports.ts) is
           // likewise admin-only: an organizer must not un-hide their own event.
           request.resource.data.get('hidden_pending_review', false) == resource.data.get('hidden_pending_review', false) &&
@@ -366,6 +416,7 @@ service cloud.firestore {
           // Admin SDK when the event's shards are created. Lowering it would hide
           // shards (and the seats they hold or sold) from the capacity check.
           request.resource.data.get('inventory_shards_n', null) == resource.data.get('inventory_shards_n', null) &&
+          validPosterAlt(request.resource.data) &&
           // Import fields (lib/import) are the server's. The one client change
           // allowed: marking a synced Eventbrite copy as edited here
           // (imported.locally_edited = true), so the daily sync stops
@@ -378,6 +429,16 @@ service cloud.firestore {
              request.resource.data.imported.locally_edited == true)) &&
           request.resource.data.get('external_url', null) == resource.data.get('external_url', null) &&
           request.resource.data.get('stats', null) == resource.data.get('stats', null) &&
+          // Community-shared credit and claims (lib/community/submissions): Admin SDK only.
+          request.resource.data.get('community_shared', false) == resource.data.get('community_shared', false) &&
+          request.resource.data.get('claimable', false) == resource.data.get('claimable', false) &&
+          request.resource.data.get('source_name', null) == resource.data.get('source_name', null) &&
+          request.resource.data.get('source_handle', null) == resource.data.get('source_handle', null) &&
+          request.resource.data.get('source_url', null) == resource.data.get('source_url', null) &&
+          request.resource.data.get('submission_id', null) == resource.data.get('submission_id', null) &&
+          request.resource.data.get('claimed_at', null) == resource.data.get('claimed_at', null) &&
+          request.resource.data.get('claimed_by', null) == resource.data.get('claimed_by', null) &&
+          request.resource.data.get('community_free', null) == resource.data.get('community_free', null) &&
           // Payout safety (lib/payouts/availability.ts): a cancellation and its
           // payout freeze are set by lib/events/cancel.ts on the Admin SDK and
           // must not be undone from a client — un-cancelling would re-open money

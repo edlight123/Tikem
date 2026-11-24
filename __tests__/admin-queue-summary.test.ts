@@ -17,6 +17,8 @@ describe('QUEUE_KEYS', () => {
         'reportedEvents',
         'verifications',
         'withdrawals',
+        'communityShares',
+        'eventClaims',
       ].sort()
     )
   })
@@ -24,7 +26,7 @@ describe('QUEUE_KEYS', () => {
 
 describe('RAIL_GROUPS', () => {
   it('collapses the sources into the four rail entries', () => {
-    expect(RAIL_GROUPS.map((g) => g.key)).toEqual(['verifications', 'payouts', 'reported', 'disputes'])
+    expect(RAIL_GROUPS.map((g) => g.key)).toEqual(['verifications', 'payouts', 'reported', 'disputes', 'community'])
   })
   it('folds bank verifications into Verifications and withdrawals into Payouts', () => {
     const byKey = Object.fromEntries(RAIL_GROUPS.map((g) => [g.key, g.sources]))

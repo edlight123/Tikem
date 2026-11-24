@@ -3,6 +3,9 @@ import { adminDb } from '@/lib/firebase/admin';
 import { readOrgBrandAdmin } from '@/lib/firestore/org-brand-server';
 import OrganizationForm from './OrganizationForm';
 import { SettingsPageChrome } from '@/components/organizer/ui/SettingsPageChrome';
+import OrgPageEditor from '@/components/organizer/page/OrgPageEditor';
+import { resolveOrgCover } from '@/lib/organizer/cover';
+import { orgPagePrefix, ownStorageUrl, readGallery, storageBucketName } from '@/lib/gallery';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,6 +24,13 @@ export default async function OrganizationSettingsPage() {
   const orgId = ctx.orgId;
 
   const organizerData = await getOrganizerData(orgId);
+
+  // The page's banner and photos live on its public doc (lib/organizer/cover.ts, lib/gallery.ts).
+  const pageSnap = await adminDb.collection('public_profiles').doc(orgId).get().catch(() => null);
+  const pageDoc = pageSnap?.exists ? pageSnap.data() : null;
+  const cover = resolveOrgCover(orgId, pageDoc);
+  const bucket = storageBucketName();
+  const gallery = readGallery(pageDoc?.gallery, (u) => ownStorageUrl(u, bucket, orgPagePrefix(orgId)));
 
   return (
     <div className="min-h-screen bg-canvas py-8">
@@ -42,6 +52,18 @@ export default async function OrganizationSettingsPage() {
               twitter: organizerData?.social_media?.twitter || '',
               linkedin: organizerData?.social_media?.linkedin || '',
             }}
+          />
+        </div>
+
+        {/* What the public page shows: banner and photos (saved as you go). */}
+        <div className="mt-6">
+          <OrgPageEditor
+            orgId={orgId}
+            initialCover={{
+              coverTemplate: cover?.kind === 'template' ? cover.key : null,
+              coverImageUrl: cover?.kind === 'upload' ? cover.src : null,
+            }}
+            initialGallery={gallery}
           />
         </div>
       </div>

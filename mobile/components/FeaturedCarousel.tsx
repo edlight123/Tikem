@@ -12,6 +12,8 @@ import { font } from '../theme/tokens';
 
 import { formatDateForLanguage } from '../lib/dates';
 import { primeEventPreviews } from '../lib/eventPreviewCache';
+import { useReducedMotion } from '../lib/a11y';
+import { usePosterAlt } from '../lib/usePosterAlt';
 
 interface Event {
   id: string;
@@ -44,10 +46,14 @@ export default function FeaturedCarousel({ events, onEventPress }: FeaturedCarou
   const { t, language } = useI18n();
   const [currentIndex, setCurrentIndex] = useState(0);
   const scrollX = useRef(new Animated.Value(0)).current;
+  const posterAlt = usePosterAlt();
   const scrollViewRef = useRef<ScrollView>(null);
 
+  // Reduce Motion: the carousel never turns on its own (swipe still works).
+  const reduced = useReducedMotion();
+
   useEffect(() => {
-    if (events.length <= 1) return;
+    if (events.length <= 1 || reduced) return;
     
     const interval = setInterval(() => {
       const nextIndex = (currentIndex + 1) % events.length;
@@ -60,7 +66,7 @@ export default function FeaturedCarousel({ events, onEventPress }: FeaturedCarou
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [currentIndex, events.length]);
+  }, [currentIndex, events.length, reduced]);
 
   if (!events || events.length === 0) return null;
 
@@ -92,6 +98,9 @@ export default function FeaturedCarousel({ events, onEventPress }: FeaturedCarou
             style={styles.card}
             onPress={() => onEventPress(event.id)}
             activeOpacity={0.95}
+            // The card reads as its poster (lib/posterAlt): title, date, place.
+            accessibilityRole="button"
+            accessibilityLabel={posterAlt(event as any)}
           >
             {/* Full-bleed poster — image only, no scrim */}
             <View style={styles.poster}>

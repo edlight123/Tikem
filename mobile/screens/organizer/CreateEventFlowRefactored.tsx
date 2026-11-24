@@ -48,10 +48,21 @@ import { useI18n } from '../../contexts/I18nContext';
 import GuestlistVisibilityPicker from '../../components/GuestlistVisibilityPicker';
 import { guestlistVisibilityFrom, type GuestlistVisibility } from '../../lib/guestlistVisibility';
 import { createEvent, updateEvent, uploadEventFlyer, SaveEventOptions } from '../../lib/api/events';
-import { AGE_POLICIES, DRESS_CODE_MAX, VENUE_AMENITIES, VENUE_SETTINGS, venueDetailsOf } from '../../lib/venueDetails';
+import {
+  AGE_POLICIES,
+  DRESS_CODE_MAX,
+  VENUE_ACCESSIBILITY,
+  VENUE_FACILITIES,
+  VENUE_SETTINGS,
+  amenityKeysOf,
+  venueDetailsCount,
+  venueDetailsOf,
+} from '../../lib/venueDetails';
 import { flyerDraftPatch, type FlyerRead } from '../../lib/flyerFill';
 import { isDeviceOnlyImageUri } from '../../lib/localImageUri';
 import { nationalDayForEventDate, nationalDayName } from '../../lib/nationalDays';
+import { OCCASION_KEYS, ideaById, ideaDate, ideaText, occasionByKey, occasionName, parseOccasion, suggestOccasion } from '../../lib/occasions';
+import OccasionIcon from '../../components/OccasionIcon';
 import { getEventById } from '../../lib/api/organizer';
 import { db } from '../../config/firebase';
 import { collection, getDocs, query, where } from 'firebase/firestore';
@@ -86,6 +97,7 @@ import StatusChip from '../../components/StatusChip';
 import FeeIncidenceCard from '../../components/organizer/FeeIncidenceCard';
 import LineupEditor from '../../components/organizer/LineupEditor';
 import MirrorBallDropzone from '../../components/organizer/MirrorBallDropzone';
+import { POSTER_ALT_MAX } from '../../lib/posterAlt';
 import PosterTemplateSheet, { makePoster, type PosterFacts, type PosterSpec } from '../../components/organizer/PosterTemplateSheet';
 import { incidenceForEvent, type FeeIncidence } from '../../lib/buyerPricing';
 import { isBelowMinPaidPrice, minPaidPriceFor } from '../../lib/minPaidPrice';
@@ -191,6 +203,7 @@ export interface EventDraft {
   // Advanced settings (POSH secondary sections).
   show_on_explore: boolean;   // false = share-by-link only, hidden from Discover
   video_url: string;          // optional promo video link
+  poster_alt: string;         // "Describe the flyer" (lib/posterAlt), optional
   // Spotify track URL (https://open.spotify.com/track/{id}) — rendered as the
   // official embed on the event page. Picked via song search, or pasted when
   // the search route has no credentials.
@@ -204,6 +217,9 @@ export interface EventDraft {
   // The national day it is tagged for (lib/nationalDays eventTag), '' = none.
   // Offered only while the start date is near a day; see the toggle.
   national_day: string;
+
+  // The occasion it belongs to (lib/occasions key), '' = none.
+  occasion: string;
 
   // Poster-theme override. '' = Auto (deterministic pick from seed/category);
   // a valid PosterThemeKey pins the poster gradient for this event everywhere.
@@ -313,6 +329,7 @@ function InlineTextRow({
           { color: colors.text },
         ]}
         placeholder={placeholder}
+        accessibilityLabel={placeholder.replace(/\s*\*$/, '')}
         placeholderTextColor={error ? colors.error : colors.textSecondary}
         selectionColor={colors.primary}
         value={value}
@@ -497,6 +514,8 @@ export default function CreateEventFlowRefactored() {
   const [communeListOpen, setCommuneListOpen] = useState(false);
   // Advanced-settings disclosure (POSH Show/Hide advanced settings).
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  // Venue details start folded: one quiet row with a count (premium = quiet).
+  const [venueDetailsOpen, setVenueDetailsOpen] = useState(false);
   // Natural aspect ratio of the uploaded poster (width / height), measured on
   // load so the preview renders at the flyer's TRUE proportions (posh shows
   // the poster as-is rather than forcing 2:3). Clamped to a sane band so a
@@ -576,10 +595,12 @@ export default function CreateEventFlowRefactored() {
     capacity: '100',
     show_on_explore: true,
     video_url: '',
+    poster_alt: '',
     spotify_url: '',
     guestlist_visibility: 'faces',
     show_going_count: false,
     national_day: '',
+    occasion: '',
     theme_key: '',
     recurrence: 'none',
     recurrence_count: 4,
@@ -764,11 +785,13 @@ export default function CreateEventFlowRefactored() {
           // Advanced settings — default to visible/on when the field is absent.
           show_on_explore: (event as any).show_on_explore !== false,
           video_url: (event as any).video_url || '',
+          poster_alt: typeof (event as any).poster_alt === 'string' ? (event as any).poster_alt : '',
           spotify_url: (event as any).spotify_url || '',
           // New field first, then the legacy boolean for older events.
           guestlist_visibility: guestlistVisibilityFrom(event as any),
           show_going_count: (event as any).show_going_count === true,
           national_day: typeof (event as any).national_day === 'string' ? (event as any).national_day : '',
+          occasion: parseOccasion((event as any).occasion) || '',
           // Poster-theme override; default '' (Auto) when the field is absent.
           theme_key: (event as any).theme_key || '',
           // Recurrence is create-only; editing never regenerates a series. The
@@ -904,6 +927,30 @@ export default function CreateEventFlowRefactored() {
       updateDraft({ is_rsvp: true });
     }
   }, [eventDraft.country, eventDraft.is_rsvp, eventDraft.pay_at_door]);
+
+  // From an occasion page (OccasionScreen): tagged for it, or filled in from
+  // one of its ideas (title, a line, category, a date inside it). Once.
+  const occasionParam = (route.params as any)?.occasion as string | undefined;
+  const ideaParam = (route.params as any)?.idea as string | undefined;
+  useEffect(() => {
+    if (isEditMode) return;
+    const idea = ideaById(ideaParam);
+    if (idea) {
+      const copy = ideaText(idea, language);
+      updateDraft({
+        title: copy.title,
+        description: copy.description,
+        category: CATEGORIES.includes(idea.appCategory) ? idea.appCategory : 'Other',
+        occasion: idea.occasion,
+        start_date: ideaDate(idea),
+        start_time: idea.time,
+      });
+    } else if (parseOccasion(occasionParam)) {
+      updateDraft({ occasion: parseOccasion(occasionParam)! });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [occasionParam, ideaParam]);
+  const [occasionsOpen, setOccasionsOpen] = useState(false);
 
   // Choose the entry mode (sell tickets vs free RSVP) and enter the canvas.
   const chooseMode = (mode: ComposerMode) => {
@@ -1683,6 +1730,8 @@ export default function CreateEventFlowRefactored() {
       // Kept only while the date still sits near that same day.
       national_day:
         draft.national_day && eligibleNationalDay?.eventTag === draft.national_day ? draft.national_day : null,
+      // Allow-listed (lib/occasions); firestore.rules refuses anything else.
+      occasion: parseOccasion(draft.occasion),
       ...(draft.is_online
         ? { venue_name: '', address: '', city: '', commune: '', department: '' }
         : {}),
@@ -1991,6 +2040,8 @@ export default function CreateEventFlowRefactored() {
                     style={styles.stepperBtnOnRaised}
                     onPress={() => step(-1)}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('a11y.decrease')}
                   >
                     <Ionicons name="remove" size={20} color={colors.text} />
                   </TouchableOpacity>
@@ -2010,6 +2061,8 @@ export default function CreateEventFlowRefactored() {
                     style={styles.stepperBtnOnRaised}
                     onPress={() => step(1)}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('a11y.increase')}
                   >
                     <Ionicons name="add" size={20} color={colors.text} />
                   </TouchableOpacity>
@@ -2120,6 +2173,8 @@ export default function CreateEventFlowRefactored() {
             <TouchableOpacity
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               onPress={() => navigation.goBack()}
+              accessibilityRole="button"
+              accessibilityLabel={t('common.back')}
             >
               <Ionicons name="chevron-back" size={26} color={colors.text} />
             </TouchableOpacity>
@@ -2206,10 +2261,12 @@ export default function CreateEventFlowRefactored() {
             <TouchableOpacity
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               onPress={confirmExit}
+              accessibilityRole="button"
+              accessibilityLabel={t('common.close')}
             >
               <Ionicons name="close" size={24} color={colors.text} />
             </TouchableOpacity>
-            <Text style={styles.headerTitle} numberOfLines={1}>
+            <Text style={styles.headerTitle} numberOfLines={1} accessibilityRole="header">
               {isEditMode ? t('organizerCreateEventFlow.headerEdit') : t('organizerCreateEventFlow.headerCreate')}
             </Text>
             <View style={{ width: 24 }} />
@@ -2233,6 +2290,9 @@ export default function CreateEventFlowRefactored() {
               paddingBottom: isKeyboardVisible ? keyboardHeight + 24 : footerHeight + 24,
             }}
             keyboardShouldPersistTaps="handled"
+            // A drag puts the keyboard away. Safe with the manual pad above: the
+            // dismiss fires keyboardWillHide, which drops keyboardHeight to 0.
+            keyboardDismissMode="on-drag"
             showsVerticalScrollIndicator={false}
             automaticallyAdjustKeyboardInsets={false}
           >
@@ -2556,77 +2616,109 @@ export default function CreateEventFlowRefactored() {
                 </>
               )}
 
-              {/* Venue details: optional access, setting, age, dress code
-                  (lib/venueDetails), shown on the event page. Access and
-                  setting describe a place, so an online event keeps only the
-                  age and the dress code. */}
+              {/* Venue details: optional facts people ask before they come
+                  (lib/venueDetails), shown on the event page. Folded behind
+                  one quiet row so the composer does not grow; the row says
+                  how many answers are set. What the place has, accessibility
+                  and the setting describe a place, so an online event keeps
+                  only the age and the dress code. */}
               <View style={styles.chipBlock}>
-                <Text style={styles.chipLabel}>{t('venueDetails.composerTitle')}</Text>
-                {!eventDraft.is_online && (
+                <TouchableOpacity
+                  style={styles.venueDetailsToggle}
+                  onPress={() => setVenueDetailsOpen((v) => !v)}
+                  activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityState={{ expanded: venueDetailsOpen }}
+                >
+                  <Text style={styles.chipLabel}>
+                    {t('venueDetails.composerTitle')}
+                    {venueDetailsCount(venueDetailsOf(eventDraft)) > 0
+                      ? ` · ${t('venueDetails.selectedCount', { n: venueDetailsCount(venueDetailsOf(eventDraft)) })}`
+                      : ''}
+                  </Text>
+                  <Ionicons name={venueDetailsOpen ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textSecondary} />
+                </TouchableOpacity>
+                {venueDetailsOpen && (
                   <>
+                    {!eventDraft.is_online && (
+                      <>
+                        {([
+                          ['facilitiesLabel', VENUE_FACILITIES],
+                          ['accessibilityLabel', VENUE_ACCESSIBILITY],
+                        ] as const).map(([label, keys]) => (
+                          <View key={label} style={styles.venueDetailsGroup}>
+                            <Text style={styles.venueDetailsGroupLabel}>{t(`venueDetails.${label}`)}</Text>
+                            <View style={[styles.chipScroll, styles.chipWrap]}>
+                              {keys.map((k) => {
+                                const selected = eventDraft.amenities.includes(k);
+                                return (
+                                  <TouchableOpacity
+                                    key={k}
+                                    style={[styles.chip, selected && styles.chipActive]}
+                                    onPress={() =>
+                                      updateDraft({
+                                        amenities: selected
+                                          ? eventDraft.amenities.filter((a) => a !== k)
+                                          : amenityKeysOf([...eventDraft.amenities, k]),
+                                      })
+                                    }
+                                    accessibilityRole="button"
+                                    accessibilityState={{ selected }}
+                                  >
+                                    <Text style={[styles.chipText, selected && styles.chipTextActive]}>
+                                      {t(`venueDetails.amenities.${k}`)}
+                                    </Text>
+                                  </TouchableOpacity>
+                                );
+                              })}
+                            </View>
+                          </View>
+                        ))}
+                        <View style={[styles.chipScroll, styles.chipWrap]}>
+                          {VENUE_SETTINGS.map((k) => {
+                            const selected = eventDraft.venue_setting === k;
+                            return (
+                              <TouchableOpacity
+                                key={k}
+                                style={[styles.chip, selected && styles.chipActive]}
+                                onPress={() => updateDraft({ venue_setting: selected ? null : k })}
+                                accessibilityRole="button"
+                                accessibilityState={{ selected }}
+                              >
+                                <Text style={[styles.chipText, selected && styles.chipTextActive]}>{t(`venueDetails.settings.${k}`)}</Text>
+                              </TouchableOpacity>
+                            );
+                          })}
+                        </View>
+                      </>
+                    )}
                     <View style={[styles.chipScroll, styles.chipWrap]}>
-                      {VENUE_AMENITIES.map((k) => {
-                        const selected = eventDraft.amenities.includes(k);
+                      {([null, ...AGE_POLICIES] as const).map((k) => {
+                        const selected = eventDraft.age_policy === k;
                         return (
                           <TouchableOpacity
-                            key={k}
+                            key={k ?? 'all'}
                             style={[styles.chip, selected && styles.chipActive]}
-                            onPress={() =>
-                              updateDraft({
-                                amenities: selected ? eventDraft.amenities.filter((a) => a !== k) : [...eventDraft.amenities, k],
-                              })
-                            }
-                            accessibilityRole="button"
+                            onPress={() => updateDraft({ age_policy: k })}
+                            accessibilityRole="radio"
                             accessibilityState={{ selected }}
                           >
-                            <Text style={[styles.chipText, selected && styles.chipTextActive]}>{t(`venueDetails.amenities.${k}`)}</Text>
+                            <Text style={[styles.chipText, selected && styles.chipTextActive]}>
+                              {k ? k : t('venueDetails.ages.all')}
+                            </Text>
                           </TouchableOpacity>
                         );
                       })}
                     </View>
-                    <View style={[styles.chipScroll, styles.chipWrap]}>
-                      {VENUE_SETTINGS.map((k) => {
-                        const selected = eventDraft.venue_setting === k;
-                        return (
-                          <TouchableOpacity
-                            key={k}
-                            style={[styles.chip, selected && styles.chipActive]}
-                            onPress={() => updateDraft({ venue_setting: selected ? null : k })}
-                            accessibilityRole="button"
-                            accessibilityState={{ selected }}
-                          >
-                            <Text style={[styles.chipText, selected && styles.chipTextActive]}>{t(`venueDetails.settings.${k}`)}</Text>
-                          </TouchableOpacity>
-                        );
-                      })}
-                    </View>
+                    <InlineTextRow
+                      colors={colors}
+                      placeholder={t('venueDetails.dressCodePlaceholder')}
+                      value={eventDraft.dress_code || ''}
+                      onChangeText={(text) => updateDraft({ dress_code: text.slice(0, DRESS_CODE_MAX) || null })}
+                      maxLength={DRESS_CODE_MAX}
+                    />
                   </>
                 )}
-                <View style={[styles.chipScroll, styles.chipWrap]}>
-                  {([null, ...AGE_POLICIES] as const).map((k) => {
-                    const selected = eventDraft.age_policy === k;
-                    return (
-                      <TouchableOpacity
-                        key={k ?? 'all'}
-                        style={[styles.chip, selected && styles.chipActive]}
-                        onPress={() => updateDraft({ age_policy: k })}
-                        accessibilityRole="radio"
-                        accessibilityState={{ selected }}
-                      >
-                        <Text style={[styles.chipText, selected && styles.chipTextActive]}>
-                          {k ? k : t('venueDetails.ages.all')}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-                <InlineTextRow
-                  colors={colors}
-                  placeholder={t('venueDetails.dressCodePlaceholder')}
-                  value={eventDraft.dress_code || ''}
-                  onChangeText={(text) => updateDraft({ dress_code: text.slice(0, DRESS_CODE_MAX) || null })}
-                  maxLength={DRESS_CODE_MAX}
-                />
               </View>
 
               {/* Category */}
@@ -2646,6 +2738,49 @@ export default function CreateEventFlowRefactored() {
                   ))}
                 </ScrollView>
               </View>
+
+              {/* Occasion (lib/occasions): None, the one the date falls in
+                  (dot), the one chosen, and More for the full list. */}
+              {(() => {
+                const suggested = suggestOccasion(eventDraft.start_date || null);
+                const chosen = parseOccasion(eventDraft.occasion);
+                const keys = occasionsOpen
+                  ? [...(suggested ? [suggested] : []), ...OCCASION_KEYS.filter((k) => k !== suggested)]
+                  : Array.from(new Set([suggested, chosen].filter((k): k is NonNullable<typeof k> => !!k)));
+                return (
+                  <View style={styles.chipBlock}>
+                    <Text style={styles.chipLabel}>{t('occasions.label')}</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipScroll}>
+                      <TouchableOpacity
+                        style={[styles.chip, !chosen && styles.chipActive]}
+                        onPress={() => updateDraft({ occasion: '' })}
+                        accessibilityState={{ selected: !chosen }}
+                      >
+                        <Text style={[styles.chipText, !chosen && styles.chipTextActive]}>{t('occasions.none')}</Text>
+                      </TouchableOpacity>
+                      {keys.map((k) => {
+                        const on = chosen === k;
+                        return (
+                          <TouchableOpacity
+                            key={k}
+                            style={[styles.chip, styles.occasionChip, on && styles.chipActive]}
+                            onPress={() => updateDraft({ occasion: on ? '' : k })}
+                            accessibilityState={{ selected: on }}
+                            accessibilityLabel={k === suggested ? `${occasionName(k, language)}, ${t('occasions.suggested')}` : occasionName(k, language)}
+                          >
+                            <OccasionIcon name={occasionByKey(k)!.icon} color={on ? colors.onPrimary : colors.textSecondary} />
+                            <Text style={[styles.chipText, on && styles.chipTextActive]}>{occasionName(k, language)}</Text>
+                            {k === suggested && <View style={[styles.occasionDot, on && { backgroundColor: colors.onPrimary }]} />}
+                          </TouchableOpacity>
+                        );
+                      })}
+                      <TouchableOpacity style={styles.occasionMore} onPress={() => setOccasionsOpen((v) => !v)}>
+                        <Text style={styles.chipLabel}>{occasionsOpen ? t('occasions.less') : t('occasions.more')}</Text>
+                      </TouchableOpacity>
+                    </ScrollView>
+                  </View>
+                );
+              })()}
             </View>
 
             {/* Additional Details */}
@@ -2666,7 +2801,12 @@ export default function CreateEventFlowRefactored() {
               <View style={styles.sectionHeaderRow}>
                 <Text style={styles.sectionHeader}>{t('organizerCreateEventFlow.canvas.ticketsHeader')}</Text>
                 {!eventDraft.is_rsvp && (!countryComingSoon || eventDraft.pay_at_door) && (
-                  <TouchableOpacity onPress={addTier} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <TouchableOpacity
+                    onPress={addTier}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('a11y.addTicketType')}
+                  >
                     <Ionicons name="add-circle" size={26} color={colors.text} />
                   </TouchableOpacity>
                 )}
@@ -2810,6 +2950,8 @@ export default function CreateEventFlowRefactored() {
                           <TouchableOpacity
                             onPress={() => removeTier(index)}
                             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                            accessibilityRole="button"
+                            accessibilityLabel={t('a11y.removeTicketType')}
                           >
                             <Ionicons name="trash-outline" size={18} color={colors.error} />
                           </TouchableOpacity>
@@ -3119,6 +3261,8 @@ export default function CreateEventFlowRefactored() {
                                     style={styles.stepperBtn}
                                     onPress={() => updateDraft({ recurrence_count: Math.max(2, eventDraft.recurrence_count - 1) })}
                                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                    accessibilityRole="button"
+                                    accessibilityLabel={t('a11y.decrease')}
                                   >
                                     <Ionicons name="remove" size={20} color={colors.text} />
                                   </TouchableOpacity>
@@ -3127,6 +3271,8 @@ export default function CreateEventFlowRefactored() {
                                     style={styles.stepperBtn}
                                     onPress={() => updateDraft({ recurrence_count: Math.min(52, eventDraft.recurrence_count + 1) })}
                                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                    accessibilityRole="button"
+                                    accessibilityLabel={t('a11y.increase')}
                                   >
                                     <Ionicons name="add" size={20} color={colors.text} />
                                   </TouchableOpacity>
@@ -3204,6 +3350,22 @@ export default function CreateEventFlowRefactored() {
                     keyboardType="url"
                     autoCapitalize="none"
                   />
+
+                  {/* Describe the flyer: what a screen reader says for the
+                      poster (lib/posterAlt). Empty = built from the facts. */}
+                  {!!eventDraft.banner_image_url && (
+                    <InlineTextRow
+                      colors={colors}
+                      placeholder={t('a11y.posterAltPlaceholder')}
+                      value={eventDraft.poster_alt}
+                      onChangeText={(text) => updateDraft({ poster_alt: text })}
+                      multiline
+                      compact
+                      maxLength={POSTER_ALT_MAX}
+                      autoCapitalize="sentences"
+                      autoCorrect
+                    />
+                  )}
 
                   {/* Song — a real Spotify search; degrades to pasting a link
                       when /api/spotify/search has no credentials. */}
@@ -3387,7 +3549,7 @@ export default function CreateEventFlowRefactored() {
                       </TouchableOpacity>
 
                       {/* One swatch per theme, rendered in that theme's gradient */}
-                      {POSTER_THEME_KEYS.map((key) => {
+                      {POSTER_THEME_KEYS.map((key, i) => {
                         const selected = eventDraft.theme_key === key;
                         const theme = resolvePosterTheme({ theme_key: key });
                         return (
@@ -3396,6 +3558,9 @@ export default function CreateEventFlowRefactored() {
                             style={[styles.themeSwatch, selected && styles.themeSwatchSelected]}
                             activeOpacity={0.8}
                             onPress={() => updateDraft({ theme_key: key })}
+                            accessibilityRole="radio"
+                            accessibilityState={{ selected }}
+                            accessibilityLabel={t('a11y.posterColour', { n: i + 1 })}
                           >
                             <LinearGradient
                               colors={theme.colors}
@@ -3548,6 +3713,8 @@ export default function CreateEventFlowRefactored() {
             style={StyleSheet.absoluteFill}
             activeOpacity={1}
             onPress={() => !saving && setConfirmVisible(false)}
+            accessibilityRole="button"
+            accessibilityLabel={t('common.close')}
           />
           <Animated.View style={[styles.sheet, confirmSwipe.sheetStyle, { paddingBottom: insets.bottom + 20 }]}>
             {/* Handle + title drag the sheet down; not while the save is running. */}
@@ -3825,6 +3992,14 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     flexDirection: 'row',
     flexWrap: 'wrap',
   },
+  venueDetailsToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: 24,
+  },
+  venueDetailsGroup: { gap: 8 },
+  venueDetailsGroupLabel: { fontSize: 12, color: colors.textTertiary },
   payoutRegimeNote: {
     fontSize: 12,
     lineHeight: 17,
@@ -3855,6 +4030,21 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   chipTextActive: {
     color: colors.onPrimary,
+  },
+  occasionChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  occasionDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.primary,
+  },
+  occasionMore: {
+    justifyContent: 'center',
+    paddingHorizontal: 6,
   },
 
   // ── Poster-theme swatches ──

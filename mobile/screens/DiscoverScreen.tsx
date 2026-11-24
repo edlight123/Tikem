@@ -13,7 +13,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTabBarSpace } from '../hooks/useTabBarSpace';
-import { Search, SlidersHorizontal, Users, CloudOff, MapPin, ChevronDown } from 'lucide-react-native';
+import { Search, SlidersHorizontal, Users, CloudOff, MapPin, ChevronDown, Megaphone } from 'lucide-react-native';
 import { collection, query, where, getDocs, addDoc, deleteDoc, doc, Timestamp } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { filterExploreEvents } from '../lib/api/events';
@@ -616,7 +616,14 @@ export default function DiscoverScreen({ navigation, route }: any) {
               </Text>
             </Touchable>
             </View>
-            <Touchable style={styles.filterBtn} onPress={openFiltersModal}>
+            <Touchable
+            style={styles.filterBtn}
+            onPress={openFiltersModal}
+            accessibilityRole="button"
+            accessibilityLabel={
+              countActiveFilters() > 0 ? `${t('a11y.filters')}, ${countActiveFilters()}` : t('a11y.filters')
+            }
+          >
               <SlidersHorizontal size={20} color={colors.text} />
               {countActiveFilters() > 0 && (
                 <View style={styles.filterCountBadge}>
@@ -655,6 +662,8 @@ export default function DiscoverScreen({ navigation, route }: any) {
           <Touchable
             style={styles.filterBtn}
             onPress={() => navigation.navigate('Search')}
+            accessibilityRole="button"
+            accessibilityLabel={t('a11y.search')}
           >
             <Search size={20} color={colors.text} />
           </Touchable>
@@ -721,6 +730,19 @@ export default function DiscoverScreen({ navigation, route }: any) {
                       themedArt(artForPlace(activeMetro, activeCity)).key,
                     )}
 
+                {/* Nothing listed here yet: the one quiet way to add what the
+                    member has seen around (lib/community, admin-reviewed). */}
+                {feedEvents.length === 0 && (
+                  <Touchable
+                    style={styles.shareRow}
+                    onPress={() => navigation.navigate('ShareEvent')}
+                    accessibilityRole="button"
+                  >
+                    <Megaphone size={16} color={colors.textSecondary} strokeWidth={1.75} />
+                    <Text style={styles.shareRowText}>{t('community.share.discoverEntry')}</Text>
+                  </Touchable>
+                )}
+
                 <ElsewhereRail
                   events={elsewhere}
                   metro={activeMetro}
@@ -783,6 +805,17 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     flex: 1,
     backgroundColor: colors.background,
   },
+  // "Seen an event? Share it" under an empty feed: a quiet line, not a card.
+  shareRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    minHeight: 44,
+    marginTop: 4,
+    marginHorizontal: 16,
+  },
+  shareRowText: { fontSize: 13, fontWeight: '600', color: colors.textSecondary },
   // The feed fills the whole screen (behind the absolute header) so posters
   // scroll up under the translucent header.
   contentUnderHeader: {

@@ -1,22 +1,21 @@
 /**
- * How an event poster sits in its frame (components/PosterImage).
+ * How an event poster sits in its frame (components/PosterImage). Same rule as
+ * the website's components/ui/PosterImage.
  *
- * - Close to the frame's shape: fill it (`cover`).
- * - Landscape (wider than tall) in a portrait frame: a photo, fill it too.
- * - A square or Stories flyer: show it whole (`contain`) so a crop never cuts
- *   its date or venue; PosterImage puts a blurred copy behind it.
+ * - Every poster fills the frame (`cover`): photos, square flyers, 2:3
+ *   portraits (owner, 2026-11-23: "zoom the images so they fill the 4:5").
+ * - Only a very tall Stories flyer (9:16), which would lose about a third of
+ *   its height (usually the date), shows whole (`contain`); PosterImage puts a
+ *   blurred copy behind it.
  */
 
-// How far (relative) an image's shape may differ from the frame and still
-// fill it. 12% loses a sliver at the edges, never a line of text.
-const FILL_TOLERANCE = 0.12;
-// Wider than this (width / height) reads as a photo: always fill.
-const PHOTO_MIN_RATIO = 1.15;
+// Narrower than this (width / height) is a Stories flyer: show it whole.
+// 9:16 = 0.5625; a 2:3 portrait (0.667) still fills.
+const STORIES_MAX_RATIO = 0.6;
 
 /** `ratio` and `frameRatio` are width / height; undefined = not loaded yet. */
 export function posterFit(ratio: number | undefined, frameRatio: number): 'cover' | 'contain' {
   if (ratio === undefined) return 'cover';
-  if (Math.abs(ratio - frameRatio) / frameRatio <= FILL_TOLERANCE) return 'cover';
-  if (ratio >= PHOTO_MIN_RATIO && frameRatio < PHOTO_MIN_RATIO) return 'cover';
-  return 'contain';
+  if (ratio < STORIES_MAX_RATIO && frameRatio >= STORIES_MAX_RATIO) return 'contain';
+  return 'cover';
 }

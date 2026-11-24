@@ -52,6 +52,8 @@ describe('linking config', () => {
       Notifications: 'notifications',
       TicketDetail: 'tickets/:ticketId',
       EventDetail: 'events/:eventId',
+      // Occasion pages: tikem://occasions/<key> and https://www.tikem.co/occasions/<key>.
+      Occasion: 'occasions/:key',
       EventFeedback: 'events/:eventId/feedback',
       CategoryEvents: 'national-day/:nationalDay',
       // Push notification targets (lib/pushNotifications maps relative URLs to tikem://).

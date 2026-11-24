@@ -39,6 +39,7 @@ import { artForPlace } from '../lib/artLibrary';
 import NationalDayBanner from '../components/NationalDayBanner';
 import AttendanceDefaultNotice from '../components/AttendanceDefaultNotice';
 import { eventMatchesNationalDay, nationalDayName } from '../lib/nationalDays';
+import { homeOccasion, occasionName } from '../lib/occasions';
 import {
   dismissNationalDay,
   isNationalDayDismissed,
@@ -120,6 +121,13 @@ export default function HomeScreen({ navigation }: any) {
   const openNationalDay = () =>
     nationalDay &&
     navigation.navigate('CategoryEvents', { nationalDay: nationalDay.day.key, title: dayName });
+  // The occasion row (lib/occasions): an occasion under way or within 30
+  // days with at least two tagged events here. When the national day's own
+  // rail is already showing, that day's occasion is left out.
+  const occasionRow = homeOccasion(events, Date.now(), {
+    skipNationalDay: nationalDay && dayEvents.length >= MIN_RAIL_EVENTS ? nationalDay.day.eventTag : null,
+    max: 10,
+  });
 
   // Seeded with a close estimate of the header's height (safe-area + 10pt
   // padding + 33pt wordmark line + 12pt bottom padding) instead of 0: starting
@@ -510,6 +518,18 @@ export default function HomeScreen({ navigation }: any) {
                   events={dayEvents.slice(0, 10)}
                   onEventPress={(eventId) => navigation.navigate('EventDetail', { eventId })}
                   onViewAll={openNationalDay}
+                />
+              </View>
+            )}
+
+            {/* Occasion (Kanaval, Fèt Manman…): one compact header, its events, "See all" to its page. */}
+            {occasionRow && (
+              <View style={styles.firstSection}>
+                <EventRail
+                  title={occasionName(occasionRow.key, language)}
+                  events={occasionRow.events}
+                  onEventPress={(eventId) => navigation.navigate('EventDetail', { eventId })}
+                  onViewAll={() => navigation.navigate('Occasion', { key: occasionRow.key })}
                 />
               </View>
             )}

@@ -251,5 +251,19 @@
     "profile_placeholder": "pwofil.ou",
     "notice": "Lyen sa yo parèt sou pwofil piblik ou jan ou tape yo a. Nou pa verifye si kont yo se pou ou.",
     "save_error": "Nou pa t ka anrejistre. Tanpri eseye ankò."
+  },
+  "org_page": {
+    "photos": "foto",
+    "photo_of": "Foto {{n}} sou {{total}}, {{name}}",
+    "close": "Fèmen",
+    "previous": "Foto anvan an",
+    "next": "Foto apre a",
+    "add_banner": "Mete yon banyè",
+    "change_banner": "Chanje banyè a",
+    "add_photos": "Mete foto",
+    "preview": "Gade paj mwen",
+    "preview_note": "Men paj ou jan vizitè yo wè l",
+    "exit_preview": "Fini",
+    "also_runs": "Li dirije {{name}} tou"
   }
 }

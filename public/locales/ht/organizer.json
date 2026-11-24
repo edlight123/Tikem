@@ -1493,7 +1493,14 @@
     "drafts_free_note": "Bouyon yo gratis. Pou pibliye evènman peyan, ou dwe verifye.",
     "setup_once_note": "Konfigire òganizasyon ou yon sèl fwa, apre sa kreye evènman, vann tikè, epi resevwa lajan.",
     "brand_visible_note": "Se mak sa a patisipan yo ap wè. Ou ka chanje l nenpòt lè nan paramèt yo.",
-    "what_is_org_called": "Kijan òganizasyon ou rele?"
+    "what_is_org_called": "Kijan òganizasyon ou rele?",
+    "optional": "si ou vle",
+    "logo_label": "Logo",
+    "one_line": "Nan yon liy",
+    "one_line_placeholder": "Swarè konpa ak day party nan Pòtoprens",
+    "links_label": "Kote moun ka jwenn ou",
+    "website": "Sit entènèt",
+    "website_placeholder": "sitou.com"
   },
   "verification_review": {
     "business_details": "Enfòmasyon sou biznis la",
@@ -1867,5 +1874,27 @@
     "eb_sync_done_other": "Senkwonize. {{count}} evènman ajou.",
     "eb_none": "Pa gen evènman Eventbrite k ap vini pou pote.",
     "eb_drafts_body": "Oswa pote evènman kòm bouyon, ak kalite tikè yo, pou vann sou Tikèm."
+  },
+  "org_page": {
+    "error_title": "Pa anrejistre",
+    "error_body": "Gen yon pwoblèm. Eseye ankò.",
+    "too_large": "Foto yo dwe pi piti pase 4 MB.",
+    "banner_title": "banyè",
+    "preview": "Gade paj mwen",
+    "no_banner": "Pa gen banyè",
+    "template_label": "Foto {{n}}",
+    "upload_banner": "Voye yon foto",
+    "remove_banner": "Retire",
+    "photos_title": "foto",
+    "photos_empty_title": "montre anbyans lan",
+    "photos_empty_line": "Jiska 12 foto nan evènman ou yo. Yo parèt sou paj ou.",
+    "add_photos": "Mete foto",
+    "photos_full": "12 foto, se maksimòm nan",
+    "photo_menu": "Opsyon foto {{n}}",
+    "move_first": "Mete l an premye",
+    "move_up": "Monte l",
+    "move_down": "Desann li",
+    "move_last": "Mete l an dènye",
+    "remove_photo": "Retire"
   }
 }

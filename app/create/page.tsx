@@ -18,17 +18,29 @@ export const dynamic = 'force-dynamic'
 // autosaves locally; sign-up happens at the very end and the draft follows
 // them through it (see EventComposer's guest mode). Organizers who land here
 // go straight to the real composer.
-export default async function CreatePage() {
+export default async function CreatePage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ occasion?: string | string[]; idea?: string | string[] }>
+}) {
   const user = await getCurrentUser()
+  // From an occasion page: carried through to whichever composer opens.
+  const sp = (await searchParams) || {}
+  const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) || null
+  const occasion = first(sp.occasion)
+  const idea = first(sp.idea)
 
   if (user?.role === 'organizer') {
-    redirect('/organizer/events/new')
+    const qs = new URLSearchParams()
+    if (occasion) qs.set('occasion', occasion)
+    if (idea) qs.set('idea', idea)
+    redirect(`/organizer/events/new${qs.size ? `?${qs}` : ''}`)
   }
 
   return (
     <div className="surface-dark min-h-screen pb-mobile-nav">
       <Navbar user={user} isAdmin={isAdmin(((user as any)?.email_verified) ? user?.email : null)} />
-      <EventComposer userId={user?.id || ''} guest authed={!!user} />
+      <EventComposer userId={user?.id || ''} guest authed={!!user} initialOccasion={occasion} initialIdea={idea} />
       <MobileNavWrapper user={user} isAdmin={isAdmin(((user as any)?.email_verified) ? user?.email : null)} />
     </div>
   )

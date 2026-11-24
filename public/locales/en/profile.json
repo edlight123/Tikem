@@ -251,5 +251,19 @@
     "profile_placeholder": "your.profile",
     "notice": "These links are shown on your public profile exactly as you enter them. We don't verify account ownership.",
     "save_error": "Could not save. Please try again."
+  },
+  "org_page": {
+    "photos": "photos",
+    "photo_of": "Photo {{n}} of {{total}}, {{name}}",
+    "close": "Close",
+    "previous": "Previous photo",
+    "next": "Next photo",
+    "add_banner": "Add a banner",
+    "change_banner": "Change banner",
+    "add_photos": "Add photos",
+    "preview": "Preview my page",
+    "preview_note": "This is your page as visitors see it",
+    "exit_preview": "Done",
+    "also_runs": "Also runs {{name}}"
   }
 }

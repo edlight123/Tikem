@@ -201,7 +201,13 @@ export default function EventTicketsScreen({ route, navigation }: any) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} hitSlop={8}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.backButton}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={t('common.back')}
+          >
             <ArrowLeft size={24} color={colors.white} />
           </TouchableOpacity>
         </View>
@@ -276,7 +282,7 @@ export default function EventTicketsScreen({ route, navigation }: any) {
           ticket={item}
           event={event}
           user={user}
-          ticketNumber={index + 1}
+          ticketNumber={tickets.length > 1 ? index + 1 : undefined}
           onQRPress={() => handleQRPress(item)}
           onViewEvent={handleViewEvent}
           onTransferPress={() => handleTransferPress(item)}
@@ -321,9 +327,12 @@ export default function EventTicketsScreen({ route, navigation }: any) {
         {/* Event Info Section */}
         <View style={styles.eventInfoSection}>
           <Text style={styles.eventTitle} numberOfLines={2}>{event.title}</Text>
-          <Text style={styles.currentTicketIndicator}>
-            {t('tickets.ticketSingular')} {currentIndex + 1} {t('common.of')} {tickets.length}
-          </Text>
+          {/* "Ticket 1 of 1" says nothing: only count when there are several. */}
+          {tickets.length > 1 ? (
+            <Text style={styles.currentTicketIndicator}>
+              {t('tickets.ticketSingular')} {currentIndex + 1} {t('common.of')} {tickets.length}
+            </Text>
+          ) : null}
         </View>
 
         {/* Horizontal Pager */}

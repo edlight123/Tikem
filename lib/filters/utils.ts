@@ -4,6 +4,7 @@
 
 import { EventFilters, DEFAULT_FILTERS, DateFilter, PriceFilter } from './types'
 import { PRICE_FILTERS } from './config'
+import { amenityKeysOf, wantedAmenities } from '@/lib/events/venue-details'
 
 /** The legacy discrete price values, which URLs in the wild still carry. */
 const LEGACY_PRICE_VALUES = ['any', 'free', '<=500', '>500'] as const
@@ -189,7 +190,8 @@ export function countActiveFilters(filters: EventFilters): number {
   // Event type
   if (filters.eventType !== DEFAULT_FILTERS.eventType) count++
 
-  if (filters.stepFree) count++
+  // One per chosen venue fact (and the older Step-free switch).
+  count += wantedAmenities(filters).length
   
   return count
 }
@@ -238,7 +240,9 @@ export function serializeFilters(filters: EventFilters): URLSearchParams {
     params.set('eventType', filters.eventType)
   }
 
-  if (filters.stepFree) params.set('stepFree', '1')
+  // Venue facts, the older Step-free switch folded in.
+  const amenities = wantedAmenities(filters)
+  if (amenities.length) params.set('amenities', amenities.join(','))
   
   // Sort
   if (filters.sortBy !== 'relevance') {
@@ -267,7 +271,14 @@ export function parseFiltersFromURL(searchParams?: SearchParamsLike | null): Eve
     categories: params.getAll('category'),
     price: normalizePriceFilter(params.get('price')),
     eventType: params.get('eventType') || DEFAULT_FILTERS.eventType,
-    ...(params.get('stepFree') === '1' ? { stepFree: true } : {}),
+    // `?stepFree=1` (older links) reads as the step_free venue fact.
+    ...(() => {
+      const amenities = amenityKeysOf([
+        ...amenityKeysOf(params.get('amenities') || ''),
+        ...(params.get('stepFree') === '1' ? ['step_free'] : []),
+      ])
+      return amenities.length ? { amenities } : {}
+    })(),
     sortBy: params.get('sort') || DEFAULT_FILTERS.sortBy,
   } as EventFilters
 }
@@ -284,7 +295,7 @@ export function filtersEqual(a: EventFilters, b: EventFilters): boolean {
     a.categories.join(',') === b.categories.join(',') &&
     a.price === b.price &&
     a.eventType === b.eventType &&
-    !!a.stepFree === !!b.stepFree &&
+    wantedAmenities(a).join(',') === wantedAmenities(b).join(',') &&
     a.sortBy === b.sortBy
   )
 }

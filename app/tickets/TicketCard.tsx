@@ -1,5 +1,6 @@
 'use client'
 
+import { usePosterAlt } from '@/lib/usePosterAlt'
 import Link from 'next/link'
 import Image from 'next/image'
 import { isValid } from 'date-fns'
@@ -17,6 +18,8 @@ interface TicketCardProps {
   city?: string
   country?: string
   timezone?: string
+  /** The organizer's flyer description (lib/posterAlt.ts), when written. */
+  posterAlt?: string
   ticketCount: number
 }
 
@@ -43,11 +46,13 @@ export default function TicketCard({
   city,
   country,
   timezone,
+  posterAlt: posterAltProp,
   ticketCount,
 }: TicketCardProps) {
   const cleanTitle = title.replace(/^\[[^\]]*\]\s*/, '')
   const hasImage = Boolean(bannerImageUrl)
   const theme = getPosterTheme(eventId || title)
+  const posterAlt = usePosterAlt()
   const dateLabel = ticketCardDateLabel(startDatetime, { timezone, city, country })
   const locationLabel = [venueName, city].filter(Boolean).join(', ') || 'Location TBA'
 
@@ -62,7 +67,7 @@ export default function TicketCard({
             <>
               <Image
                 src={bannerImageUrl as string}
-                alt={cleanTitle}
+                alt={posterAlt({ title: cleanTitle, start_datetime: startDatetime, venue_name: venueName, city, country, timezone, poster_alt: posterAltProp })}
                 fill
                 quality={78}
                 sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 280px"

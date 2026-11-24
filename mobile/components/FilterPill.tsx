@@ -3,6 +3,7 @@ import { Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Touchable } from './ui/Touchable';
 import { ChevronDown, X } from 'lucide-react-native';
 import { useTheme } from '../contexts/ThemeContext';
+import { useI18n } from '../contexts/I18nContext';
 import { radius } from '../theme/tokens';
 
 interface FilterPillProps {
@@ -20,6 +21,7 @@ interface FilterPillProps {
  * solid white with the chosen value when active (teal stays a rare accent).
  */
 export default function FilterPill({ label, value, onPress, onClear }: FilterPillProps) {
+  const { t } = useI18n();
   const { colors } = useTheme();
   const styles = getStyles(colors);
   const active = !!value;
@@ -39,6 +41,8 @@ export default function FilterPill({ label, value, onPress, onClear }: FilterPil
           onPress={onClear}
           hitSlop={{ top: 8, bottom: 8, left: 6, right: 8 }}
           style={styles.clearBtn}
+          accessibilityRole="button"
+          accessibilityLabel={`${t('a11y.clear')}, ${label}`}
         >
           <X size={14} color="#000000" />
         </TouchableOpacity>

@@ -29,6 +29,7 @@ import QuotedMessage from '../components/messages/QuotedMessage';
 import ReplyPreview from '../components/messages/ReplyPreview';
 import SwipeToReply from '../components/messages/SwipeToReply';
 import HeartPop from '../components/messages/HeartPop';
+import { isJumboEmoji } from '../components/messages/emoji';
 import {
   QUICK_REACTION,
   emojiSafe,
@@ -101,6 +102,8 @@ const NEAR_BOTTOM_PX = 120;
 const COPIED_MS = 1400;
 
 const isLocal = (m: Message) => m.id.startsWith('local-');
+/** One to three emoji on their own render large, without a bubble. Never with a quote: the quote needs the bubble. */
+const isJumbo = (m: Message) => !m.reply_to && isJumboEmoji(m.body);
 
 /** True while the keyboard is up (no home-indicator inset under the composer then). */
 function useKeyboardUp(): boolean {
@@ -226,7 +229,12 @@ export default function MessageThreadScreen({ navigation, route }: any) {
   /** The name and photo open the other side's page: the attendee as a person, or the organization. */
   const openOtherProfile = () => {
     if (!thread?.other_id) return;
-    navigation.navigate('OrganizerProfile', { organizerId: thread.other_id });
+    // An attendee is a person (their personal page, even when they also run
+    // an organization); for the attendee, the other side is the organization.
+    navigation.navigate(
+      'OrganizerProfile',
+      isOrganizer ? { organizerId: thread.other_id, view: 'person' } : { organizerId: thread.other_id }
+    );
   };
 
   /** A 403 from any write: the thread is closed by a block from here on. */
@@ -264,7 +272,8 @@ export default function MessageThreadScreen({ navigation, route }: any) {
       setThread((th) =>
         th ? { ...th, reply_count: th.reply_count + 1, messages: [...th.messages, saved] } : th,
       );
-      setDraft('');
+      // The input stays live while sending, so only clear what was sent.
+      setDraft((d) => (d.trim() === body ? '' : d));
       setReplyingTo(null);
       nearBottom.current = true;
       requestAnimationFrame(() => scrollRef.current?.scrollToEnd({ animated: true }));
@@ -378,7 +387,10 @@ export default function MessageThreadScreen({ navigation, route }: any) {
       {/* Android (Samsung especially) clipped the last glyph of a line, which
           dropped a trailing emoji: simple line breaking, a trailing hair space
           (emojiSafe) and a 1pt end padding make the measured width cover it. */}
-      <Text style={[styles.bubbleText, mine && styles.bubbleTextMine]} textBreakStrategy="simple">
+      <Text
+        style={[styles.bubbleText, mine && styles.bubbleTextMine, isJumbo(m) && styles.jumboText]}
+        textBreakStrategy="simple"
+      >
         {emojiSafe(m.body)}
       </Text>
     </>
@@ -528,6 +540,7 @@ export default function MessageThreadScreen({ navigation, route }: any) {
                     : m.author_name || otherName;
                 const local = isLocal(m);
                 const flashing = flashId === m.id;
+                const jumbo = isJumbo(m);
                 return (
                   <View
                     key={m.id}
@@ -560,8 +573,8 @@ export default function MessageThreadScreen({ navigation, route }: any) {
                         <View
                           style={[
                             styles.bubble,
-                            mine ? styles.bubbleMine : styles.bubbleTheirs,
-                            flashing && (mine ? styles.bubbleFlashMine : styles.bubbleFlashTheirs),
+                            jumbo ? styles.bubbleJumbo : mine ? styles.bubbleMine : styles.bubbleTheirs,
+                            flashing && (mine && !jumbo ? styles.bubbleFlashMine : styles.bubbleFlashTheirs),
                           ]}
                           accessible
                           accessibilityLabel={`${senderName}: ${m.body}`}
@@ -598,7 +611,10 @@ export default function MessageThreadScreen({ navigation, route }: any) {
                               />
                             </View>
                           ) : null}
-                          <Text style={[styles.bubbleText, mine && styles.bubbleTextMine]} textBreakStrategy="simple">
+                          <Text
+                            style={[styles.bubbleText, mine && styles.bubbleTextMine, jumbo && styles.jumboText]}
+                            textBreakStrategy="simple"
+                          >
                             {emojiSafe(m.body)}
                           </Text>
                           {pop?.id === m.id ? (
@@ -676,7 +692,8 @@ export default function MessageThreadScreen({ navigation, route }: any) {
                     selectionColor={colors.primary}
                     multiline
                     maxLength={maxLength}
-                    editable={!sending}
+                    // Stays editable while sending: toggling editable blurs the
+                    // input on iOS and drops the keyboard after every message.
                     accessibilityLabel={t('attendeeMessages.replyLabel')}
                   />
                   <Touchable
@@ -701,7 +718,16 @@ export default function MessageThreadScreen({ navigation, route }: any) {
               anchor={actionFor?.rect ?? null}
               preview={
                 actionFor ? (
-                  <View style={[styles.bubble, actionFor.mine ? styles.bubbleMine : styles.bubbleTheirs]}>
+                  <View
+                    style={[
+                      styles.bubble,
+                      isJumbo(actionFor.message)
+                        ? styles.bubbleJumbo
+                        : actionFor.mine
+                          ? styles.bubbleMine
+                          : styles.bubbleTheirs,
+                    ]}
+                  >
                     {bubbleBody(actionFor.message, actionFor.mine)}
                   </View>
                 ) : null
@@ -805,6 +831,9 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     bubbleFlashTheirs: { backgroundColor: T.neutralMuted },
     bubbleText: { fontSize: 15, lineHeight: 21, color: colors.text, paddingRight: 1 },
     bubbleTextMine: { color: T.onWhite },
+    // Emoji-only (1 to 3): no fill, just the big glyphs in the system font.
+    bubbleJumbo: { paddingHorizontal: 2, paddingVertical: 0 },
+    jumboText: { fontSize: 40, lineHeight: 50, color: colors.text, fontFamily: undefined, paddingRight: 2 },
     bubbleMeta: { marginTop: 5, marginBottom: 4, fontSize: 11, color: colors.textTertiary },
     bubbleMetaMine: { alignSelf: 'flex-end' },
     composer: { paddingHorizontal: 12, paddingTop: 10, backgroundColor: colors.background },

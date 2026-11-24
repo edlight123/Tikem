@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
+import OccasionLink from '../components/OccasionLink';
 import PosterImage from '../components/PosterImage';
+import { usePosterAlt } from '../lib/usePosterAlt';
 import OrgMark from '../components/OrgMark';
 import { 
   View, 
@@ -48,6 +50,7 @@ import WhitePillCTA from '../components/WhitePillCTA';
 import VerifiedBadge from '../components/VerifiedBadge';
 import PaymentModal from '../components/PaymentModal';
 import { externalTicketsUrl } from '../lib/integrationWeb';
+import { communityTicketsUrl, isCommunityEvent, isSafeHttpUrl } from '../lib/community';
 import TieredTicketSelector, { PurchaseSelectionMeta } from '../components/TieredTicketSelector';
 import { resolveEventPricing } from '../lib/ticketPricing';
 import { doorPriceLabel, isDoorEvent, isDoorTier, lowestDoorPrice } from '../lib/payAtDoor';
@@ -62,6 +65,7 @@ import JoinWaitlistButton from '../components/JoinWaitlistButton';
 import FollowButton from '../components/FollowButton';
 import CountdownTimer from '../components/CountdownTimer';
 import VenueStaticMap from '../components/VenueStaticMap';
+import { useVenueDistance } from '../hooks/useVenueDistance';
 import WhosGoing from '../components/WhosGoing';
 import SectionHeader from '../components/SectionHeader';
 import VenueDetailsLines from '../components/VenueDetailsLines';
@@ -178,6 +182,7 @@ export default function EventDetailScreen({ route, navigation }: any) {
   }, [eventId]);
   const { user, userProfile } = useAuth();
   const { t, language } = useI18n();
+  const posterAlt = usePosterAlt();
   const { colors } = useTheme();
   const styles = getStyles(colors);
   const showAlert = useAppAlert();
@@ -190,6 +195,8 @@ export default function EventDetailScreen({ route, navigation }: any) {
   });
   const [loading, setLoading] = useState(() => !getEventPreview(eventId));
   const [fresh, setFresh] = useState(false);
+  // "2.4 km away", only once the person shared their location (never asks here).
+  const venueDistance = useVenueDistance(event);
   const [purchasing, setPurchasing] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
   const [favoriteLoading, setFavoriteLoading] = useState(false);
@@ -616,6 +623,13 @@ export default function EventDetailScreen({ route, navigation }: any) {
   };
 
   const handlePurchaseTicket = async () => {
+    // Shared by the community (lib/community): nothing is sold here. The CTA
+    // links out to the organizer's own tickets when the share carried a link.
+    if (isCommunityEvent(event)) {
+      const url = communityTicketsUrl(event);
+      if (url && !isPastEvent) Linking.openURL(url).catch(() => undefined);
+      return;
+    }
     // Tickets sold on Eventbrite (a synced event): no account needed here.
     if (outsideTicketsUrl && !isPastEvent) {
       Linking.openURL(outsideTicketsUrl).catch(() => undefined);
@@ -831,6 +845,11 @@ export default function EventDetailScreen({ route, navigation }: any) {
   const requiresApproval = eventNeedsApproval && freeOnly;
   // Kept in sync from Eventbrite: tickets are sold there, so the CTA links out.
   const outsideTicketsUrl = externalTicketsUrl(event);
+  // Shared by the community, not posted by its organizer (lib/community): no
+  // sales on Tikèm, a credit with the source link, and "Claim it".
+  const communityShared = isCommunityEvent(event);
+  const communityTickets = communityTicketsUrl(event);
+  const communitySource = communityShared ? isSafeHttpUrl((event as any).source_url) : null;
   const allowedPlusOnesHere = attendAllowedPlusOnes ?? eventAllowedPlusOnes(event);
 
   // Prevent purchase only after the event has ended (not after it has started).
@@ -913,6 +932,7 @@ export default function EventDetailScreen({ route, navigation }: any) {
           />
           {(event.banner_image_url || event.cover_image_url) && (
             <ExpoImage
+              accessible={false}
               source={{ uri: event.banner_image_url || event.cover_image_url }}
               style={StyleSheet.absoluteFill}
               contentFit="cover"
@@ -952,6 +972,7 @@ export default function EventDetailScreen({ route, navigation }: any) {
                 frameRatio={4 / 5}
                 transition={120}
                 recyclingKey={event.id ? String(event.id) : undefined}
+                accessibilityLabel={posterAlt(event as any)}
               />
             )}
           </View>
@@ -961,10 +982,12 @@ export default function EventDetailScreen({ route, navigation }: any) {
 
         <View style={styles.content}>
           {/* Title block — text-first, under the poster */}
-          <Text style={styles.title}>{event.title}</Text>
+          <Text style={styles.title} accessibilityRole="header">{event.title}</Text>
           {familySize > 0 && (
             <Text style={styles.familyText}>{t('eventDetail.familyBadge', { count: familySize })}</Text>
           )}
+          {/* The occasion it is tagged for (Kanaval, Fèt Manman…), linking to its page. */}
+          <OccasionLink occasion={(event as any).occasion} onPress={(key) => navigation.navigate('Occasion', { key })} />
 
           {/* Date, then where, at the same size (owner, 2026-11-18, from a
               Stitch reference: "the date is above, the location immediately
@@ -995,6 +1018,7 @@ export default function EventDetailScreen({ route, navigation }: any) {
                       const area = (event as any).commune || event.city;
                       return event.venue_name && area && !String(event.venue_name).includes(String(area)) ? area : '';
                     })(),
+                    venueDistance,
                   ]
                     .filter(Boolean)
                     .join(' · ')}
@@ -1052,7 +1076,7 @@ export default function EventDetailScreen({ route, navigation }: any) {
                   (owner, 2026-11-17: the full-width "Message the organizer"
                   button was "too prominent ... maybe just an icon"). Hidden on
                   the organizer's own event and when signed out. */}
-              {!!event.organizer_id && event.organizer_id !== user?.uid && !!user && (
+              {!!event.organizer_id && event.organizer_id !== user?.uid && !!user && !communityShared && (
                 <TouchableOpacity
                   style={styles.orgMessageIcon}
                   onPress={() => setShowContactOrganizer(true)}
@@ -1068,6 +1092,35 @@ export default function EventDetailScreen({ route, navigation }: any) {
                 <FollowButton organizerId={event.organizer_id} style={styles.orgFollow} />
               )}
             </View>
+            {communityShared ? (
+              <View style={styles.communityCredit}>
+                <Text style={styles.communityCreditText}>
+                  {(event as any).source_name
+                    ? t('community.event.sharedFrom', { name: String((event as any).source_name) })
+                    : t('community.event.shared')}
+                </Text>
+                <View style={styles.communityLinks}>
+                  {communitySource ? (
+                    <TouchableOpacity
+                      onPress={() => Linking.openURL(communitySource).catch(() => undefined)}
+                      accessibilityRole="link"
+                      hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+                    >
+                      <Text style={styles.communityLink}>{t('community.event.seeOriginal')}</Text>
+                    </TouchableOpacity>
+                  ) : null}
+                  {(event as any).claimable === true ? (
+                    <TouchableOpacity
+                      onPress={() => navigation.navigate('ClaimEvent', { eventId, eventTitle: event.title })}
+                      accessibilityRole="button"
+                      hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+                    >
+                      <Text style={styles.communityLink}>{t('community.event.claim')}</Text>
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+              </View>
+            ) : null}
           </View>
 
           {/* Waitlist (Add to Calendar moved to the header as an icon). Only
@@ -1234,6 +1287,7 @@ export default function EventDetailScreen({ route, navigation }: any) {
             disabled={favoriteLoading}
             hitSlop={4}
             accessibilityRole="button"
+            accessibilityLabel={t('a11y.save')}
             accessibilityState={{ selected: isFavorite }}
           >
             <Heart size={19} color="#FFF" fill={isFavorite ? '#FFF' : 'transparent'} />
@@ -1279,6 +1333,18 @@ export default function EventDetailScreen({ route, navigation }: any) {
               {isCancelled ? t('eventDetail.floating.eventCancelled') : t('eventDetail.floating.notOnSale')}
             </Text>
           </View>
+        ) : communityShared ? (
+          communityTickets ? (
+            <WhitePillCTA
+              label={t('community.event.ticketsOnSite')}
+              onPress={() => Linking.openURL(communityTickets).catch(() => undefined)}
+              style={styles.floatingCtaPill}
+            />
+          ) : (
+            <View style={[styles.ctaDisabled, styles.floatingCtaPill]}>
+              <Text style={styles.ctaDisabledText}>{t('community.event.notSoldHere')}</Text>
+            </View>
+          )
         ) : freeOnly && !requiresApproval && heldFreeTickets > 0 ? (
           // Already holds this free-only event's claim: no claim sheet to open.
           // Dot + label status (never a pill badge) and one way to the tickets.
@@ -1488,6 +1554,8 @@ export default function EventDetailScreen({ route, navigation }: any) {
             style={StyleSheet.absoluteFill}
             activeOpacity={1}
             onPress={() => !unlocking && setShowAccessGate(false)}
+            accessibilityRole="button"
+            accessibilityLabel={t('common.close')}
           />
           <View style={styles.accessCard}>
             <TouchableOpacity
@@ -1853,6 +1921,11 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     borderColor: colors.border,
   },
   orgLine: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  // Community credit under the host line: quiet meta, two text links.
+  communityCredit: { gap: 6 },
+  communityCreditText: { fontSize: 13, lineHeight: 18, color: colors.textSecondary },
+  communityLinks: { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
+  communityLink: { fontSize: 13, fontWeight: '600', color: colors.text, textDecorationLine: 'underline' },
   // Follow at the end of the identity line: its own white / "Following"
   // fills (FollowButton), sized to sit level with the 44pt avatar.
   orgFollow: { height: 36, minWidth: 96, paddingHorizontal: 16 },

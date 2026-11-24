@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, View, ViewStyle, DimensionValue, Dimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../contexts/ThemeContext';
+import { useReducedMotion } from '../lib/a11y';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 
@@ -32,8 +33,14 @@ interface SkeletonProps {
 export function Skeleton({ width = '100%', height, radius = 4, aspectRatio, style }: SkeletonProps) {
   const { colors, isDark } = useTheme();
   const shimmer = useRef(new Animated.Value(0)).current;
+  const reduced = useReducedMotion();
 
   useEffect(() => {
+    // Reduce Motion: a still placeholder at mid-tone, no pulsing.
+    if (reduced) {
+      shimmer.setValue(0.5);
+      return;
+    }
     const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(shimmer, { toValue: 1, duration: 850, useNativeDriver: true }),
@@ -42,7 +49,7 @@ export function Skeleton({ width = '100%', height, radius = 4, aspectRatio, styl
     );
     loop.start();
     return () => loop.stop();
-  }, [shimmer]);
+  }, [shimmer, reduced]);
 
   const opacity = shimmer.interpolate({ inputRange: [0, 1], outputRange: [0.45, 0.9] });
 

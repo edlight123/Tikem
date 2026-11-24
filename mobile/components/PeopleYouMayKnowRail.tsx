@@ -57,7 +57,7 @@ export default function PeopleYouMayKnowRail({ style }: { style?: any }) {
 
   if (!on || items.length < MIN_RAIL_SUGGESTIONS) return null;
 
-  const openProfile = (uid: string) => navigation.navigate('OrganizerProfile', { organizerId: uid });
+  const openProfile = (uid: string) => navigation.navigate('OrganizerProfile', { organizerId: uid, view: 'person' });
 
   return (
     <View style={style}>

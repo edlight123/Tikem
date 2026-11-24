@@ -298,7 +298,13 @@ export default function CategoryEventsScreen({ navigation, route }: any) {
         {/* Fixed 32pt box + extra gap: the 30pt italic serif's 'g' swash leans
             left past its text box and was colliding with the chevron's tap
             square ("blocking part of the g in gratuit"). */}
-        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12} style={styles.backBox}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          hitSlop={12}
+          style={styles.backBox}
+          accessibilityRole="button"
+          accessibilityLabel={t('common.back')}
+        >
           <ChevronLeft size={24} color={colors.text} />
         </TouchableOpacity>
         <View style={styles.headerText}>

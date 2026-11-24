@@ -6,6 +6,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Share2, Bookmark } from 'lucide-react-native';
 import { useTheme } from '../contexts/ThemeContext';
 import { useI18n } from '../contexts/I18nContext';
+import { usePosterAlt } from '../lib/usePosterAlt';
+import { useCaptionLines } from '../lib/a11y';
 import { safeFormatForLanguage } from '../lib/dates';
 import { resolvePosterTheme } from '../lib/posterGradient';
 import { formatPrice } from '../lib/currency';
@@ -41,6 +43,8 @@ export default function DiscoverEventCard({
   const { colors } = useTheme();
   const { t, language } = useI18n();
   const styles = getStyles(colors);
+  const posterAlt = usePosterAlt();
+  const orgLines = useCaptionLines(1);
 
   const theme = resolvePosterTheme(event, event.id || event.title, event.category);
   const hasImage = Boolean(event.banner_image_url || event.cover_image_url);
@@ -70,7 +74,15 @@ export default function DiscoverEventCard({
   return (
     <View style={styles.wrap}>
       {/* Poster */}
-      <Touchable scale={0.98} onPress={onPress} style={[styles.poster, { aspectRatio }]}>
+      <Touchable
+        scale={0.98}
+        onPress={onPress}
+        style={[styles.poster, { aspectRatio }]}
+        // The poster speaks for itself: the organizer's description, else one
+        // built from the facts (lib/posterAlt).
+        accessibilityRole="imagebutton"
+        accessibilityLabel={posterAlt(event as any)}
+      >
         {/* Fallback art only — behind a LOADING image this flashed the teal
             gradient between skeleton and poster (same bug as PosterEventCard). */}
         {!hasImage && (
@@ -83,6 +95,7 @@ export default function DiscoverEventCard({
         )}
         {hasImage && (
           <Image
+            accessible={false}
             source={{ uri: event.banner_image_url || event.cover_image_url }}
             style={StyleSheet.absoluteFill}
             contentFit="contain"
@@ -104,12 +117,12 @@ export default function DiscoverEventCard({
       {/* Title + organizer + meta, with share/save on the right */}
       <View style={styles.body}>
         <View style={styles.bodyText}>
-          <Touchable scale={false} haptic={false} onPress={onPress}>
+          <Touchable scale={false} haptic={false} onPress={onPress} accessibilityRole="button">
             <Text style={styles.title} numberOfLines={2}>{event.title}</Text>
           </Touchable>
           {!!organizer && (
             <View style={styles.orgRow}>
-              <Text style={styles.org} numberOfLines={1}>{organizer}</Text>
+              <Text style={styles.org} numberOfLines={orgLines}>{organizer}</Text>
               {event.users?.is_verified && <VerifiedBadge size="medium" />}
             </View>
           )}
@@ -120,10 +133,23 @@ export default function DiscoverEventCard({
           )}
         </View>
         <View style={styles.actions}>
-          <Touchable onPress={onShare} hitSlop={8} style={styles.actionBtn}>
+          <Touchable
+            onPress={onShare}
+            hitSlop={8}
+            style={styles.actionBtn}
+            accessibilityRole="button"
+            accessibilityLabel={t('common.share')}
+          >
             <Share2 size={20} color={colors.textSecondary} />
           </Touchable>
-          <Touchable onPress={onToggleSave} hitSlop={8} style={styles.actionBtn}>
+          <Touchable
+            onPress={onToggleSave}
+            hitSlop={8}
+            style={styles.actionBtn}
+            accessibilityRole="button"
+            accessibilityLabel={t('a11y.save')}
+            accessibilityState={{ selected: !!saved }}
+          >
             <Bookmark size={20} color={saved ? colors.primary : colors.textSecondary} fill={saved ? colors.primary : 'transparent'} />
           </Touchable>
         </View>

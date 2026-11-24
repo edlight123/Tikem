@@ -9,10 +9,14 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Animated,
+  ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { useSwipeToClose } from '../hooks/useSwipeToClose';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { MapPin, Check, X, Search as SearchIcon } from 'lucide-react-native';
+import { MapPin, Check, X, LocateFixed, Search as SearchIcon } from 'lucide-react-native';
+import { LocationError } from '../lib/currentLocation';
+import { Switch } from './ui/Switch';
 import { useTheme } from '../contexts/ThemeContext';
 import { useI18n } from '../contexts/I18nContext';
 import { useFilters } from '../contexts/FiltersContext';
@@ -58,7 +62,15 @@ export default function LocationPickerSheet({
 }: LocationPickerSheetProps) {
   const { colors } = useTheme();
   const { t } = useI18n();
-  const { userCountry, setUserCountry } = useFilters();
+  const {
+    userCountry,
+    setUserCountry,
+    activeLocationLabel,
+    locationAvailable,
+    followLocation,
+    setFollowLocation,
+    applyCurrentLocation,
+  } = useFilters();
   const { user, userProfile, updateUserProfile } = useAuth();
 
   // Signed in, the choice also goes on the profile: FiltersContext re-applies
@@ -117,6 +129,35 @@ export default function LocationPickerSheet({
     if (!visible) setAreaQuery('');
   }, [visible]);
 
+  // "Use my current location": the ONLY place the permission prompt comes from.
+  // Never asked on launch. Hidden entirely on builds without expo-location.
+  const [locating, setLocating] = useState(false);
+  const [locateError, setLocateError] = useState<null | 'denied' | 'unavailable' | 'unsupported'>(null);
+  useEffect(() => {
+    if (!visible) setLocateError(null);
+  }, [visible]);
+  const locateMe = async (follow: boolean) => {
+    if (locating) return;
+    setLocating(true);
+    setLocateError(null);
+    try {
+      // Switches the country if needed, browses the nearest area and saves it
+      // (device + profile) like a manual pick. Coordinates stay on the phone.
+      const area = await applyCurrentLocation({ ask: true, follow });
+      if (area.unsupported) {
+        setLocateError('unsupported');
+        return;
+      }
+      setAreaQuery('');
+      setPickingCountry(false);
+      onClose();
+    } catch (e) {
+      setLocateError(e instanceof LocationError && e.code === 'denied' ? 'denied' : 'unavailable');
+    } finally {
+      setLocating(false);
+    }
+  };
+
   const renderCityRow = (label: string, value: string, hint?: string) => {
     const active = selectedCity === value;
     return (
@@ -152,7 +193,12 @@ export default function LocationPickerSheet({
         style={styles.overlay}
         behavior="padding"
       >
-        <Pressable style={styles.backdrop} onPress={onClose} />
+        <Pressable
+          style={styles.backdrop}
+          onPress={onClose}
+          accessibilityRole="button"
+          accessibilityLabel={t('common.close')}
+        />
         <Animated.View style={[styles.sheet, swipe.sheetStyle, { paddingBottom: insets.bottom + 16 }]}>
           <View {...swipe.panHandlers}>
           <View style={styles.handle} />
@@ -166,6 +212,66 @@ export default function LocationPickerSheet({
             </Touchable>
           </View>
           </View>
+
+          {locationAvailable && (
+            <View style={styles.locateBlock}>
+              <Touchable
+                scale={false}
+                pressedColor={colors.surfaceRaised}
+                style={styles.locateRow}
+                onPress={() => locateMe(followLocation)}
+                disabled={locating}
+                accessibilityRole="button"
+                accessibilityState={{ busy: locating }}
+                accessibilityLabel={t('location.useCurrent')}
+              >
+                {locating ? (
+                  <ActivityIndicator size="small" color={colors.textSecondary} />
+                ) : (
+                  <LocateFixed size={18} color={colors.text} />
+                )}
+                <Text style={styles.locateText} numberOfLines={1}>
+                  {locating ? t('location.locating') : t('location.useCurrent')}
+                </Text>
+              </Touchable>
+              <View style={styles.followRow}>
+                <View style={styles.cityTextWrap}>
+                  <Text style={styles.followText}>{t('location.follow')}</Text>
+                  <Text style={styles.cityHint} numberOfLines={1}>
+                    {followLocation && activeLocationLabel
+                      ? t('location.followingNear', { city: activeLocationLabel })
+                      : t('location.followHint')}
+                  </Text>
+                </View>
+                <Switch
+                  value={followLocation}
+                  disabled={locating}
+                  onValueChange={(on) => (on ? locateMe(true) : setFollowLocation(false))}
+                  accessibilityLabel={t('location.follow')}
+                />
+              </View>
+              {locateError && (
+                <View style={styles.locateNote} accessibilityLiveRegion="polite">
+                  <Text style={styles.locateNoteText}>
+                    {locateError === 'denied'
+                      ? t('location.denied')
+                      : locateError === 'unsupported'
+                        ? t('location.unsupported')
+                        : t('location.unavailable')}
+                    {locateError === 'denied' && (
+                      <Text
+                        style={styles.locateNoteLink}
+                        onPress={() => Linking.openSettings().catch(() => {})}
+                        accessibilityRole="link"
+                      >
+                        {`  ${t('location.openSettings')}`}
+                      </Text>
+                    )}
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
 
           {/*
             THE ACTIVE COUNTRY, not a rack of five.
@@ -448,5 +554,49 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     cityTextActive: {
       color: colors.text,
       fontWeight: '700',
+    },
+    // "Use my current location": one filled 40pt row, then the follow switch.
+    locateBlock: {
+      marginBottom: 18,
+    },
+    locateRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      minHeight: 40,
+      paddingHorizontal: 12,
+      borderRadius: RADIUS.sm,
+      backgroundColor: colors.surfaceMuted,
+    },
+    locateText: {
+      flex: 1,
+      fontSize: 15,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    followRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      paddingTop: 12,
+    },
+    followText: {
+      fontSize: 15,
+      fontWeight: '500',
+      color: colors.text,
+    },
+    // One quiet line, no box.
+    locateNote: {
+      paddingTop: 10,
+    },
+    locateNoteText: {
+      fontSize: 13,
+      lineHeight: 18,
+      color: colors.textSecondary,
+    },
+    locateNoteLink: {
+      fontWeight: '600',
+      color: colors.text,
+      textDecorationLine: 'underline',
     },
   });

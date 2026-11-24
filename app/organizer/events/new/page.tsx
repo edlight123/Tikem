@@ -49,7 +49,14 @@ async function startingLocation(
   }
 }
 
-export default async function NewEventPage() {
+export default async function NewEventPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ occasion?: string | string[]; idea?: string | string[] }>
+}) {
+  // From an occasion page: ?occasion=<key> tags it, ?idea=<id> fills it in.
+  const sp = (await searchParams) || {}
+  const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) || null
   // Owner, or an admin/manager of the acting org: the new event belongs to
   // the org (organizer_id = orgId) and records who made it (created_by).
   const ctx = await requireOrgPage('manage_events', '/organizer/events/new')
@@ -71,6 +78,8 @@ export default async function NewEventPage() {
       defaultCountry={start.country}
       defaultCity={start.city}
       orgDefaults={start.defaults || null}
+      initialOccasion={first(sp.occasion)}
+      initialIdea={first(sp.idea)}
     />
   )
 }

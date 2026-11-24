@@ -30,6 +30,16 @@ import { useImageChooser } from '../hooks/useImageChooser';
 import { defaultAvatar } from '../lib/defaultAvatar';
 import OverlayHeader, { useOverlayHeaderInset } from '../components/OverlayHeader';
 import SectionHeader from '../components/SectionHeader';
+import OrgCoverSheet from '../components/organizer/OrgCoverSheet';
+import { ListGroup, ListRow } from '../components/ui/ListRow';
+import { Eye, Image as ImageIcon, Images } from 'lucide-react-native';
+import {
+  fetchOrgCover,
+  fetchOrgPageDetails,
+  saveOrgPageDetails,
+  type OrgCoverState,
+  type OrgPageDetails,
+} from '../lib/orgPage';
 import SelectField from '../components/organizer/SelectField';
 import { useAppAlert } from '../components/AppAlert';
 import { Touchable } from '../components/ui/Touchable';
@@ -59,6 +69,49 @@ export default function EditProfileScreen() {
 
   const canEditOrganization =
     route?.params?.organizer === true || userProfile?.role === 'organizer' || userProfile?.role === 'admin';
+
+  // The organization's PAGE (description, links, banner, photos) belongs to
+  // the org, so it is read and saved through the server for the owner's own
+  // org (uid), never whichever org the switcher is on (lib/orgPage.ts).
+  const ownsOrgPage = !!user?.uid && (userProfile?.role === 'organizer' || userProfile?.role === 'admin');
+  const [pageLoaded, setPageLoaded] = useState(false);
+  const [pageInitial, setPageInitial] = useState<OrgPageDetails | null>(null);
+  const [orgAbout, setOrgAbout] = useState('');
+  const [orgWebsite, setOrgWebsite] = useState('');
+  const [orgInstagram, setOrgInstagram] = useState('');
+  const [orgFacebook, setOrgFacebook] = useState('');
+  const [cover, setCover] = useState<OrgCoverState>({ coverTemplate: null, coverImageUrl: null });
+  const [showCover, setShowCover] = useState(false);
+
+  useEffect(() => {
+    if (!ownsOrgPage || !user?.uid) return;
+    let alive = true;
+    (async () => {
+      try {
+        const [d, c] = await Promise.all([fetchOrgPageDetails(user.uid), fetchOrgCover(user.uid).catch(() => null)]);
+        if (!alive) return;
+        setPageInitial(d);
+        setOrgAbout(d.organization_description);
+        setOrgWebsite(d.website);
+        setOrgInstagram(d.instagram);
+        setOrgFacebook(d.facebook);
+        if (c) setCover(c);
+        setPageLoaded(true);
+      } catch {
+        // Offline or not allowed: the page section stays hidden.
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [ownsOrgPage, user?.uid]);
+
+  const pageDirty =
+    !!pageInitial &&
+    (orgAbout !== pageInitial.organization_description ||
+      orgWebsite !== pageInitial.website ||
+      orgInstagram !== pageInitial.instagram ||
+      orgFacebook !== pageInitial.facebook);
 
   // Seeded once from the profile; the form owns its state from here on.
   const initial = useMemo(() => {
@@ -109,7 +162,8 @@ export default function EditProfileScreen() {
     instagram !== initial.instagram ||
     tiktok !== initial.tiktok ||
     twitter !== initial.twitter ||
-    facebook !== initial.facebook;
+    facebook !== initial.facebook ||
+    pageDirty;
 
   // Back with unsaved edits asks first. A successful save sets `leaving` so
   // its own goBack is not intercepted.
@@ -228,6 +282,20 @@ export default function EditProfileScreen() {
           facebook: normalizeSocialHandle(facebook),
         },
       });
+      if (pageDirty && user?.uid) {
+        try {
+          await saveOrgPageDetails(user.uid, {
+            organization_description: orgAbout,
+            website: orgWebsite,
+            instagram: orgInstagram,
+            facebook: orgFacebook,
+          });
+        } catch (e: any) {
+          // A link the server cannot read: say which, keep the form open.
+          showAlert(t('orgPage.errors.title'), t('orgPage.errors.badLink'));
+          return;
+        }
+      }
       await refreshUserProfile();
       // Move the ONE active browse location with the profile, but only to a
       // city we know (a typo would scope browsing to a place with no events).
@@ -240,7 +308,7 @@ export default function EditProfileScreen() {
     } finally {
       setSaving(false);
     }
-  }, [bio, canEditOrganization, city, country, dial, facebook, instagram, name, national, navigation, orgLogo, orgName, refreshUserProfile, setActiveCity, setUserCountry, showAlert, t, tiktok, twitter, updateUserProfile, user?.uid]);
+  }, [bio, canEditOrganization, city, country, dial, facebook, instagram, name, national, navigation, orgAbout, orgFacebook, orgInstagram, orgLogo, orgName, orgWebsite, pageDirty, refreshUserProfile, setActiveCity, setUserCountry, showAlert, t, tiktok, twitter, updateUserProfile, user?.uid]);
 
   const field = (props: React.ComponentProps<typeof TextInput>) => (
     <TextInput
@@ -270,7 +338,7 @@ export default function EditProfileScreen() {
       </OverlayHeader>
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
-        <ScrollView
+        <ScrollView keyboardDismissMode="on-drag"
           contentContainerStyle={[styles.content, { paddingTop: headerH + 12 }]}
           keyboardShouldPersistTaps="handled"
         >
@@ -403,7 +471,59 @@ export default function EditProfileScreen() {
 
                 <Text style={styles.label}>{t('profile.organization.nameLabel')}</Text>
                 {field({ value: orgName, onChangeText: setOrgName, placeholder: t('profile.organization.namePlaceholder') })}
+
+                {ownsOrgPage && pageLoaded ? (
+                  <>
+                    <Text style={styles.label}>{t('orgPage.oneLineLabel')}</Text>
+                    {field({
+                      value: orgAbout,
+                      onChangeText: (v: string) => setOrgAbout(v.slice(0, 300)),
+                      placeholder: t('orgPage.oneLinePlaceholder'),
+                      multiline: true,
+                      maxLength: 300,
+                      style: styles.bioInput,
+                    })}
+                    <Text style={styles.label}>{t('orgPage.websiteLabel')}</Text>
+                    {field({
+                      value: orgWebsite,
+                      onChangeText: setOrgWebsite,
+                      placeholder: t('orgPage.websitePlaceholder'),
+                      keyboardType: 'url',
+                      autoCapitalize: 'none',
+                      autoCorrect: false,
+                    })}
+                    <Text style={styles.label}>Instagram</Text>
+                    {field({ value: orgInstagram, onChangeText: setOrgInstagram, placeholder: '@instagram', autoCapitalize: 'none', autoCorrect: false })}
+                    <Text style={styles.label}>Facebook</Text>
+                    {field({
+                      value: orgFacebook,
+                      onChangeText: setOrgFacebook,
+                      placeholder: 'facebook.com/yourpage',
+                      keyboardType: 'url',
+                      autoCapitalize: 'none',
+                      autoCorrect: false,
+                    })}
+                  </>
+                ) : null}
               </View>
+
+              {/* The page itself: banner, photos, and the visitor's view. */}
+              {ownsOrgPage && pageLoaded && user?.uid ? (
+                <ListGroup style={styles.pageRows}>
+                  <ListRow
+                    icon={ImageIcon}
+                    title={t('orgPage.bannerRow')}
+                    value={cover.coverTemplate || cover.coverImageUrl ? t('orgPage.bannerSet') : t('orgPage.bannerNone')}
+                    onPress={() => setShowCover(true)}
+                  />
+                  <ListRow icon={Images} title={t('orgPage.photosRow')} onPress={() => navigation.navigate('OrgGallery', { orgId: user.uid })} />
+                  <ListRow
+                    icon={Eye}
+                    title={t('orgPage.preview')}
+                    onPress={() => navigation.navigate('OrganizerProfile', { organizerId: user.uid, preview: true })}
+                  />
+                </ListGroup>
+              ) : null}
             </>
           ) : null}
 
@@ -435,6 +555,16 @@ export default function EditProfileScreen() {
             ))}
           </View>
         </ScrollView>
+
+        {showCover && user?.uid ? (
+          <OrgCoverSheet
+            visible={showCover}
+            orgId={user.uid}
+            current={cover}
+            onClose={() => setShowCover(false)}
+            onChanged={setCover}
+          />
+        ) : null}
 
         {/* Sticky Save: the one primary action on this screen. */}
         <View style={[styles.saveBar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
@@ -481,6 +611,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     },
     photoAction: { fontSize: 13, fontWeight: '600', color: colors.text },
     group: { marginTop: 4, marginBottom: 32 },
+    pageRows: { marginTop: -16, marginBottom: 32 },
     label: { marginTop: 16, marginBottom: 8, fontSize: 13, fontWeight: '600', color: colors.textSecondary },
     // A fill, no hairline (POSH ladder: a form field sits one step up).
     input: {

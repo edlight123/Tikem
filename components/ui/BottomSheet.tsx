@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useState, ReactNode } from 'react'
+import { useEffect, useId, useRef, useState, ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { X } from 'lucide-react'
+import { useDialogFocus } from '@/lib/a11y/useDialogFocus'
 
 interface BottomSheetProps {
   isOpen: boolean
@@ -25,6 +26,11 @@ export default function BottomSheet({
   // client pass agree (document does not exist during SSR).
   const [mounted, setMounted] = useState(false)
   useEffect(() => setMounted(true), [])
+  // Keyboard: focus moves into the sheet, Tab stays inside, Escape closes,
+  // and focus goes back to whatever opened it (lib/a11y/useDialogFocus).
+  const panelRef = useRef<HTMLDivElement>(null)
+  const titleId = useId()
+  useDialogFocus(panelRef, isOpen && mounted, { onEscape: onClose })
 
   useEffect(() => {
     if (isOpen) {
@@ -60,6 +66,7 @@ export default function BottomSheet({
       {/* Backdrop */}
       <div
         className="fixed inset-0 h-[100dvh] bg-scrim-light z-[100] transition-opacity duration-300"
+        aria-hidden="true"
         onClick={onClose}
       />
 
@@ -79,17 +86,24 @@ export default function BottomSheet({
             straight through the sheet, text over text. That is exactly what
             happened when a surface sweep treated it as a card, which broke
             guest checkout. #1c1c1c (the sheet token) lifts it off the page's own black. */}
-        <div className="bg-surface-raised-solid rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-lg max-h-[88vh] sm:max-h-[85vh] flex flex-col">
+        <div
+          ref={panelRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={title ? titleId : undefined}
+          className="bg-surface-raised-solid rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-lg max-h-[88vh] sm:max-h-[85vh] flex flex-col outline-none"
+        >
           {/* Header */}
           {(title || showCloseButton) && (
             // Same header as the app's sheets: an editorial serif lowercase title
             // and a filled close tile, no hairline divider (fill, not a hairline).
             <div className="flex items-center justify-between gap-4 px-4 sm:px-6 pt-5 pb-2 flex-shrink-0">
               {title && (
-                <h3 className="font-display lowercase italic !text-headline !leading-snug text-fg">{title}</h3>
+                <h3 id={titleId} className="font-display lowercase italic !text-headline !leading-snug text-fg">{title}</h3>
               )}
               {showCloseButton && (
                 <button
+                  type="button"
                   onClick={onClose}
                   aria-label={t('common.close', { defaultValue: 'Close' })}
                   className="grid h-11 w-11 shrink-0 place-items-center rounded bg-surface hover:bg-surface-raised transition-colors ml-auto sm:h-9 sm:w-9"

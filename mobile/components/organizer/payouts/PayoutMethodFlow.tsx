@@ -335,7 +335,7 @@ export default function PayoutMethodFlow(props: PayoutMethodFlowProps) {
         </View>
 
         <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
-          <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
+          <ScrollView keyboardDismissMode="on-drag" contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
             <Text style={styles.title}>{title}</Text>
             {step === 1 ? (
               <>

@@ -241,7 +241,7 @@ export default function EventOrdersScreen() {
   return (
     <View style={styles.container}>
       {header}
-      <FlatList
+      <FlatList keyboardDismissMode="on-drag"
         data={visible}
         keyExtractor={(o) => o.id}
         renderItem={renderOrder}
