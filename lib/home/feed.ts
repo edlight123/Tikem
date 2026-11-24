@@ -475,7 +475,9 @@ export function buildWeek(
   const daySeries = new Map<string, Set<string>>()
   for (const e of events) {
     if (hasEnded(e, now)) continue
-    const day = index.get(dayKey(e.start_datetime, zone))
+    // The event's own calendar day, the day its card prints: a Friday 10 PM
+    // show in Los Angeles is a Friday event, even on a New York calendar.
+    const day = index.get(dayKey(e.start_datetime, eventZone(e)))
     if (!day) continue
     day.count += 1
     daySeries.set(day.date, (daySeries.get(day.date) || new Set()).add(seriesKey(e)))

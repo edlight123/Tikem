@@ -37,7 +37,10 @@ async function ensureWebSessionCookie(idToken: string): Promise<boolean> {
     const res = await fetch(`${API_URL}/api/auth/session`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ idToken }),
+      // bridge: an app sign-in older than 5 minutes still gets a web session,
+      // one that ends when this ID token does (app/api/auth/session). A 401
+      // below re-mints it from a fresh token.
+      body: JSON.stringify({ idToken, bridge: true }),
       // RN fetch cookie behavior differs by platform; best-effort include.
       credentials: 'include',
     })

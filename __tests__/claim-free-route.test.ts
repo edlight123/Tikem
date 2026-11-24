@@ -90,6 +90,7 @@ const rateLimited = { value: false }
 jest.mock('@/lib/rate-limit', () => ({
   consumeRateLimit: jest.fn(async () => ({ limited: rateLimited.value })),
   clientIp: () => '203.0.113.9',
+  clientIpKey: () => '203.0.113.9',
 }))
 jest.mock('@/lib/tickets/confirmation', () => ({
   sendTicketConfirmation: jest.fn(async () => ({ emailSent: true, smsSent: false, whatsappSent: false })),
@@ -859,6 +860,15 @@ describe('guest claim — no account required', () => {
     expect(res.status).toBe(400)
     expect((await res.json()).code).toBe('guest_email_invalid')
     expect(state.added).toHaveLength(0)
+  })
+
+  it('junk guest requests never spend the event-wide budget (no lockout of real guests)', async () => {
+    const { consumeRateLimit } = jest.requireMock('@/lib/rate-limit') as { consumeRateLimit: jest.Mock }
+    consumeRateLimit.mockClear()
+    asGuest()
+    await POST(req({ eventId: 'evt1', tierId: 'freeA', guest: { name: 'X', email: 'not-an-email' } }))
+    const keys = consumeRateLimit.mock.calls.map((c: any[]) => c[0].key)
+    expect(keys.some((k: string) => k.startsWith('guest-free-claim:event:'))).toBe(false)
   })
 
   it('requires a phone number for a Haiti event — it is the identifier that reaches people', async () => {
