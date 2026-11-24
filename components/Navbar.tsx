@@ -224,7 +224,7 @@ export default function Navbar({ user, isAdmin = false, flush = false, solid = f
   const accountMenuItemClass =
     'block w-full text-left px-4 py-2 text-meta text-fg-muted hover:bg-surface hover:text-fg transition-colors duration-200'
   const topLinkClass = (active: boolean) =>
-    `hidden h-10 items-center rounded px-2.5 text-meta font-medium transition-colors duration-200 lg:inline-flex ${
+    `hidden h-10 items-center rounded px-2.5 text-meta font-medium transition-colors duration-200 md:inline-flex ${
       active ? 'text-fg' : 'text-fg-muted hover:text-fg'
     }`
   const mobileItemClass = (active: boolean) =>
@@ -253,16 +253,30 @@ export default function Navbar({ user, isAdmin = false, flush = false, solid = f
             <form
               action="/discover"
               role="search"
-              className={`mx-4 hidden h-10 max-w-xl flex-1 items-center gap-2 rounded bg-surface pl-3 ${location ? 'pr-0' : 'pr-3'} transition-colors duration-150 focus-within:bg-surface-raised focus-within:ring-1 focus-within:ring-line-strong hover:bg-surface-raised md:flex lg:mx-8`}
+              className={`mx-2 hidden h-10 max-w-xl min-w-0 flex-1 items-center gap-2 rounded bg-surface pl-3 ${location ? 'pr-0' : 'pr-3'} transition-colors duration-150 focus-within:bg-surface-raised focus-within:ring-1 focus-within:ring-line-strong hover:bg-surface-raised md:flex lg:mx-8`}
             >
               <Search aria-hidden className="h-4 w-4 flex-none text-fg-subtle" />
-              <input
-                type="search"
-                name="search"
-                aria-label={t('nav.searchPlaceholder', { defaultValue: 'Search events, organizers, venues' })}
-                placeholder={t('nav.searchPlaceholder', { defaultValue: 'Search events, organizers, venues' })}
-                className="nav-search h-10 min-w-0 flex-1 bg-transparent text-meta text-fg outline-none placeholder:text-fg-subtle focus-visible:!outline-none"
-              />
+              {/* The hint is drawn, not a placeholder, so a narrow bar (tablets,
+                  or beside the place menu) says "Search" instead of a cut-off
+                  sentence. */}
+              <div className="relative flex h-10 min-w-0 flex-1 items-center">
+                <input
+                  type="search"
+                  name="search"
+                  aria-label={t('nav.searchPlaceholder', { defaultValue: 'Search events, organizers, venues' })}
+                  placeholder=" "
+                  className="nav-search peer h-10 w-full min-w-0 bg-transparent text-meta text-fg outline-none focus-visible:!outline-none"
+                />
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute inset-y-0 left-0 right-0 hidden items-center truncate text-meta text-fg-subtle peer-placeholder-shown:flex"
+                >
+                  <span className={`truncate ${location ? 'xl:hidden' : 'lg:hidden'}`}>{t('nav.searchShort', { defaultValue: 'Search' })}</span>
+                  <span className={`hidden truncate ${location ? 'xl:inline' : 'lg:inline'}`}>
+                    {t('nav.searchPlaceholder', { defaultValue: 'Search events, organizers, venues' })}
+                  </span>
+                </span>
+              </div>
               {location && (
                 <>
                   <span aria-hidden className="h-5 w-px flex-none bg-surface-high" />
