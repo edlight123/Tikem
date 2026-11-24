@@ -90,7 +90,8 @@
     "door_readmitted": "Li antre ankò kounye a",
     "door_reentry_refused": "LI PA KA ANTRE ANKÒ",
     "door_overriding": "N ap verifye…",
-    "door_scan_next": "Eskane pwochen an"
+    "door_scan_next": "Eskane pwochen an",
+    "tab_printed": "Tikè enprime"
   },
   "your_events": "Evènman ou yo",
   "view_all_events": "Gade tout evènman yo →",
@@ -644,7 +645,9 @@
     "mark_paid": "Make peye",
     "undo_payment": "Anile",
     "payment_needs_connection": "Ou bezwen koneksyon pou anrejistre peman an.",
-    "child": "Timoun"
+    "child": "Timoun",
+    "reason_not_sold": "Pa vann. Pa valab.",
+    "reason_voided": "Yo anile tikè enprime sa a."
   },
   "markets": {
     "title": "Kote w fè evènman",
@@ -1374,7 +1377,9 @@
     "remove_failed": "Nou pa t ka retire manm sa a.",
     "role_failed": "Nou pa t ka chanje wòl la.",
     "load_failed": "Lis ekip la pa t chaje. Rafrechi paj la pou eseye ankò.",
-    "invite_note": "N ap voye yon lyen ba li pa imel ki bon pou 7 jou. Li antre nan ekip la lè li louvri l epi li konekte."
+    "invite_note": "N ap voye yon lyen ba li pa imel ki bon pou 7 jou. Li antre nan ekip la lè li louvri l epi li konekte.",
+    "tile_seller": "Aktive tikè enprime ki nan seri yo ba li yo.",
+    "access_seller": "Tikè enprime sèlman: li aktive seri yo ba li yo, ak non moun ki achte a. Pa gen kòmand, envite ni lajan."
   },
   "defaults_form": {
     "select_a_city": "Chwazi yon vil",
@@ -1780,7 +1785,8 @@
     "owner": "Pwopriyetè",
     "admin": "Administratè",
     "manager": "Jeran",
-    "staff": "Anplwaye"
+    "staff": "Anplwaye",
+    "seller": "Vandè"
   },
   "org_switcher": {
     "acting_for": "W ap travay pou",

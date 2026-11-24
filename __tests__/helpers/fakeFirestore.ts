@@ -34,7 +34,8 @@ export class FakeFirestore {
   collection(name: string): any {
     const self = this
     return {
-      doc: (id: string) => self.ref(`${name}/${id}`),
+      // doc() with no id mints one, like the Admin SDK.
+      doc: (id?: string) => self.ref(`${name}/${id ?? `auto_${++self.autoId}`}`),
       add: async (data: Doc) => {
         const ref = self.ref(`${name}/auto_${++self.autoId}`)
         self.write(ref._path, data)
@@ -107,6 +108,7 @@ export class FakeFirestore {
     const writes: [string, Doc, any][] = []
     return {
       set: (ref: any, data: Doc, opts?: any) => writes.push([ref._path, data, opts]),
+      update: (ref: any, data: Doc) => writes.push([ref._path, data, { merge: true }]),
       commit: async () => {
         for (const [p, d, o] of writes) this.write(p, d, o)
       },

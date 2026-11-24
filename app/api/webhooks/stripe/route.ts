@@ -241,6 +241,26 @@ export async function POST(request: Request) {
       return NextResponse.json({ received: true, payout: { matched: result.matched, status: result.status } })
     }
 
+    // A printed-ticket batch paid on the PLATFORM account (lib/physical/payments):
+    // never a ticket order, so it must not reach the fulfilment paths below.
+    if (
+      (event.type === 'checkout.session.completed' || event.type === 'payment_intent.succeeded') &&
+      event.data?.object?.metadata?.kind === 'physical_batch'
+    ) {
+      const obj = event.data.object
+      let paid = false
+      if (event.type === 'checkout.session.completed') {
+        const { verifyCardBatchPayment } = await import('@/lib/physical/payments')
+        paid = (await verifyCardBatchPayment(String(obj.id), String(obj.metadata?.batchId || ''))).paid
+      }
+      await markWebhookEventCompleted({
+        provider: 'stripe',
+        eventId: event.id,
+        metadata: { type: event.type, kind: 'physical_batch', batchId: obj.metadata?.batchId || null, paid },
+      })
+      return NextResponse.json({ received: true, physicalBatch: true, paid })
+    }
+
     // Connect: the organizer's account requirements / capabilities changed.
     if (event.type === 'account.updated') {
       const account = event.data.object

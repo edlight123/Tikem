@@ -30,6 +30,7 @@
 
 import crypto from 'node:crypto'
 import { parseSignedTicketQr, ticketQrVersionOf, type ScannedCodeCheck } from '@/lib/scan/doorRules'
+import { checkPhysicalCode, isPhysicalTicket } from '@/lib/physical/rules'
 
 export { parseSignedTicketQr, ticketQrVersionOf }
 export type { ScannedCodeCheck }
@@ -111,6 +112,9 @@ export function verifyScannedTicketCode(
 ): ScannedCodeCheck {
   const raw = String(scanned ?? '').trim()
   if (!raw) return 'OK'
+  // A printed ticket's code carries a random token, not an HMAC (lib/physical/rules):
+  // only its CURRENT stored payload admits; a reprinted (older) one never does.
+  if (isPhysicalTicket(ticket)) return checkPhysicalCode(raw, ticketId, ticket) === 'OK' ? 'OK' : 'INVALID_CODE'
   const current = ticketQrVersionOf(ticket)
   const signed = parseSignedTicketQr(raw)
   if (signed) {

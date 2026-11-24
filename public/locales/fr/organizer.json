@@ -90,7 +90,8 @@
     "door_readmitted": "Réadmis maintenant",
     "door_reentry_refused": "RÉADMISSION REFUSÉE",
     "door_overriding": "Vérification…",
-    "door_scan_next": "Scanner le suivant"
+    "door_scan_next": "Scanner le suivant",
+    "tab_printed": "Billets imprimés"
   },
   "your_events": "Vos événements",
   "view_all_events": "Voir tous les événements →",
@@ -644,7 +645,9 @@
     "mark_paid": "Marquer payé",
     "undo_payment": "Annuler",
     "payment_needs_connection": "Connexion requise pour enregistrer le paiement.",
-    "child": "Enfant"
+    "child": "Enfant",
+    "reason_not_sold": "Non vendu. Non valide.",
+    "reason_voided": "Ce billet imprimé a été annulé."
   },
   "markets": {
     "title": "Où vous organisez vos événements",
@@ -1374,7 +1377,9 @@
     "remove_failed": "Impossible de retirer ce membre.",
     "role_failed": "Impossible de changer le rôle.",
     "load_failed": "La liste de l'équipe n'a pas pu être chargée. Actualisez pour réessayer.",
-    "invite_note": "Nous lui envoyons par e-mail un lien valable 7 jours. Elle rejoint l'équipe en l'ouvrant et en se connectant."
+    "invite_note": "Nous lui envoyons par e-mail un lien valable 7 jours. Elle rejoint l'équipe en l'ouvrant et en se connectant.",
+    "tile_seller": "Active les billets imprimés des séries qui lui sont confiées.",
+    "access_seller": "Billets imprimés uniquement : active les séries qui lui sont confiées, avec le nom de l'acheteur. Ni commandes, ni invités, ni argent."
   },
   "defaults_form": {
     "select_a_city": "Sélectionner une ville",
@@ -1780,7 +1785,8 @@
     "owner": "Propriétaire",
     "admin": "Administrateur",
     "manager": "Gestionnaire",
-    "staff": "Personnel"
+    "staff": "Personnel",
+    "seller": "Vendeur"
   },
   "org_switcher": {
     "acting_for": "Vous agissez pour",

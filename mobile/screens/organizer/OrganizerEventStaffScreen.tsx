@@ -332,7 +332,7 @@ export default function OrganizerEventStaffScreen() {
   // ------------------------------------------------------------------ parts
 
   const roleLabel = (role: string) =>
-    role === 'admin' || role === 'manager' || role === 'staff' ? t(`organizerOrgTeam.roles.${role}` as any) : ''
+    role === 'admin' || role === 'manager' || role === 'staff' || role === 'seller' ? t(`organizerOrgTeam.roles.${role}` as any) : ''
 
   const inviteButton = (
     <Touchable

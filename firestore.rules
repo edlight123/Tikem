@@ -986,6 +986,26 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Printed (physical) tickets (lib/physical). Server-only: organizers,
+    // sellers and the print room go through /api/organizer/events/{id}/physical-batches,
+    // /api/staff/events/{id}/physical/activate and /api/admin/physical-tickets
+    // (Admin SDK). The printed tickets themselves live in /tickets with
+    // kind 'physical' and qr_version >= 1, so the ticket update rule above
+    // already refuses any client check-in write on them.
+    match /physical_batches/{batchId} {
+      allow read, write: if false;
+    }
+    match /physical_batch_orders/{orderId} {
+      allow read, write: if false;
+    }
+    // The printing price list and its change history: admin console only.
+    match /config/physical_tickets {
+      allow read, write: if false;
+      match /history/{changeId} {
+        allow read, write: if false;
+      }
+    }
+
     // Default deny for everything else
     // KYC exemptions for internal accounts (the store-review demo organizer).
     // Server-only: lib/kyc/identity.ts reads it with the Admin SDK.

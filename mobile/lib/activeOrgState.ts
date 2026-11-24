@@ -44,7 +44,8 @@ export interface OrgsResponse {
 /**
  * The orgs this account can run in organizer mode: its own (when it is an
  * organizer) and every team where it is admin or manager. Staff memberships
- * are left out: staff get door access per event, in the staff tools.
+ * are left out: staff get door access per event, in the staff tools. Seller
+ * memberships too: sellers only activate printed tickets (staff tools).
  */
 export function orgOptionsFrom(res: OrgsResponse | null | undefined): OrgOption[] {
   const out: OrgOption[] = [];
@@ -52,7 +53,9 @@ export function orgOptionsFrom(res: OrgsResponse | null | undefined): OrgOption[
     out.push({ orgId: String(res.own.orgId), orgName: String(res.own.orgName || ''), role: 'owner', financeView: true });
   }
   for (const m of res?.memberships || []) {
-    if (!m?.orgId || !isTeamRole(m.role) || m.role === 'staff') continue;
+    // Staff and sellers never run the org: staff get door access per event,
+    // sellers activate printed tickets from the staff tools.
+    if (!m?.orgId || !isTeamRole(m.role) || m.role === 'staff' || m.role === 'seller') continue;
     if (out.some((o) => o.orgId === m.orgId)) continue;
     out.push({
       orgId: String(m.orgId),

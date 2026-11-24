@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,6 +14,8 @@ import { radius } from '../../theme/tokens';
 import StaffEventCard from '../../components/organizer/StaffEventCard';
 import SectionHeader from '../../components/SectionHeader';
 import { Skeleton } from '../../components/Skeleton';
+import { fetchSellerAssignments, type SellerAssignment } from '../../lib/physicalTicketsApi';
+import { useFocusEffect } from '@react-navigation/native';
 
 import { Touchable } from '../../components/ui/Touchable';
 /** Firestore Timestamp | {seconds} | ISO string | Date → Date (or null). */
@@ -59,6 +61,21 @@ export default function StaffEventsScreen() {
 
   const openScanner = (eventId: string) =>
     (navigation as any).navigate('TicketScanner', { eventId });
+
+  // Printed tickets this account may sell (org role 'seller', or any team
+  // member a range was assigned to). Opens the scanner in sell-only mode.
+  const [sales, setSales] = useState<SellerAssignment[]>([]);
+  useFocusEffect(
+    useCallback(() => {
+      let live = true;
+      if (uid) fetchSellerAssignments().then((a) => live && setSales(a));
+      return () => {
+        live = false;
+      };
+    }, [uid]),
+  );
+  const openSell = (eventId: string) =>
+    (navigation as any).navigate('TicketScanner', { eventId, sellOnly: true });
 
   // Display grouping only: the soonest event from today on is featured, the
   // rest of the upcoming ones follow, past assignments go last.
@@ -157,7 +174,28 @@ export default function StaffEventsScreen() {
     );
   };
 
-  const hasEvents = events.length > 0;
+  const hasEvents = events.length > 0 || sales.length > 0;
+
+  const renderSale = (a: SellerAssignment) => (
+    <Touchable
+      key={a.batchId}
+      style={styles.saleRow}
+      onPress={() => openSell(a.eventId)}
+      accessibilityRole="button"
+      accessibilityLabel={`${t('physicalSell.sellFor')} ${a.eventTitle}`}
+    >
+      <View style={styles.saleText}>
+        <Text style={styles.saleTitle} numberOfLines={1}>{a.eventTitle}</Text>
+        <Text style={styles.saleMeta} numberOfLines={2}>
+          {[a.tierName, ...a.ranges.map((r) => `${r.fromSerial} – ${r.toSerial}`)].filter(Boolean).join(' · ')}
+        </Text>
+      </View>
+      <View style={styles.saleAction}>
+        <Ticket size={16} color={colors.textSecondary} strokeWidth={1.75} />
+        <Text style={styles.saleActionText}>{t('physicalSell.sell')}</Text>
+      </View>
+    </Touchable>
+  );
 
   return (
     <View style={styles.container}>
@@ -200,6 +238,12 @@ export default function StaffEventsScreen() {
           renderEmpty()
         ) : (
           <>
+            {sales.length > 0 && (
+              <View style={styles.section}>
+                <SectionHeader title={t('physicalSell.toSell')} />
+                <View style={styles.rows}>{sales.map(renderSale)}</View>
+              </View>
+            )}
             {featured && (
               <View style={styles.section}>
                 <SectionHeader
@@ -338,5 +382,40 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   emptyCta: {
     alignSelf: 'stretch',
     marginTop: 24,
+  },
+  saleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 16,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+  },
+  saleText: {
+    flex: 1,
+  },
+  saleTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  saleMeta: {
+    marginTop: 4,
+    fontSize: 13,
+    color: colors.textSecondary,
+  },
+  saleAction: {
+    minHeight: 40,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    borderRadius: radius.button,
+    backgroundColor: colors.surfaceRaised,
+  },
+  saleActionText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.text,
   },
 });

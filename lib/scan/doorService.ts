@@ -26,6 +26,7 @@ import {
 } from '@/lib/scan/doorRules'
 import { verifyScannedTicketCode } from '@/lib/tickets/qr'
 import { eventOrgId, teamRoleIn } from '@/lib/organizer/context'
+import { physicalDoorReason } from '@/lib/physical/rules'
 
 export type DoorAccess =
   | {
@@ -141,7 +142,7 @@ export type DoorCheckInResult = {
    * Why a code was refused, when the verdict had to be sent as CANCELLED to a
    * client that predates the TRANSFERRED / INVALID_CODE verdicts.
    */
-  reason?: 'TRANSFERRED' | 'INVALID_CODE' | 'REFUNDED'
+  reason?: 'TRANSFERRED' | 'INVALID_CODE' | 'REFUNDED' | 'NOT_SOLD' | 'VOIDED'
 }
 
 /** Find the ticket ref by id, then by the code its QR encodes, within the event. */
@@ -214,6 +215,12 @@ export async function performDoorCheckIn(req: DoorCheckInRequest): Promise<DoorC
         // Older clients map unknown verdicts to "valid"; CANCELLED is one they
         // all render as a refusal.
         return { verdict: 'CANCELLED', row, reason: judgement.verdict } as DoorCheckInResult
+      }
+      if (judgement.verdict === 'CANCELLED') {
+        // A printed ticket: "not sold, not valid" (or voided / released). Still
+        // CANCELLED so every client build renders a refusal; the reason says why.
+        const physical = physicalDoorReason(ticket)
+        if (physical) return { verdict: 'CANCELLED', row, reason: physical === 'NOT_SOLD' ? 'NOT_SOLD' : 'VOIDED' } as DoorCheckInResult
       }
       if (judgement.verdict === 'CANCELLED' && isRefundInFlight(ticket)) {
         // Still CANCELLED (every client renders it as a refusal); the reason
