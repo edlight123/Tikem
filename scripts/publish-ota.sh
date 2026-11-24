@@ -31,7 +31,7 @@ COMMIT="$(git -C "$ROOT" rev-parse "${2:-HEAD}")"
 WT="$ROOT/.claude/worktrees/ota-bb449303"
 BUILD_46_COMMIT=6476fd20   # last native change; runtimes 1.0.0, 1.0.1 and 1.0.2 all carry it
 # runtime:platforms. 1.0.2 also has an Android build (versionCode 5).
-LEGACY_RUNTIMES="1.0.2:all 1.0.1:ios 1.0.0:ios"
+LEGACY_RUNTIMES="1.0.3:all 1.0.2:all 1.0.1:ios 1.0.0:ios"
 # Native modules added after build 46 that the JS only reaches through
 # requireOptionalNativeModule (absent on old binaries = feature off, no crash).
 # They don't count as native drift for the legacy publishes.
