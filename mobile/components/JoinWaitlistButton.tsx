@@ -11,6 +11,8 @@ import { useAndroidBottomInset } from '../hooks/useAndroidBottomInset';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useNavigation } from '@react-navigation/native';
+import { requireAuth } from '../lib/authGate';
 import { useI18n } from '../contexts/I18nContext';
 import { backendFetch } from '../lib/api/backend';
 import { useAppAlert } from './AppAlert';
@@ -38,6 +40,7 @@ export default function JoinWaitlistButton({
   const bottomInset = useAndroidBottomInset(24, 24);
   const { user } = useAuth();
   const { t } = useI18n();
+  const navigation = useNavigation<any>();
   const [isOnWaitlist, setIsOnWaitlist] = useState(false);
   const [position, setPosition] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -72,13 +75,7 @@ export default function JoinWaitlistButton({
   };
 
   const handleJoinWaitlist = async () => {
-    if (!user) {
-      showAlert(
-        t('auth.loginRequiredTitle') || 'Login Required',
-        t('waitlist.loginBody') || 'Please log in to join the waitlist'
-      );
-      return;
-    }
+    if (!requireAuth(user, navigation)) return;
 
     setJoining(true);
     try {

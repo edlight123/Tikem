@@ -5,7 +5,8 @@
 // nothing — the tester's "it opened the app but wouldn't let me go back".
 // The linking config seeds `Main` underneath deep-linked screens, but this is
 // the belt to that braces: if there is genuinely no history, reset to the
-// home tabs (or Auth when signed out) instead of leaving the user stuck.
+// home tabs instead of leaving the user stuck. Guests have `Main` too since
+// guest browsing (2026-11-23); Auth is only the fallback of a stack without it.
 
 type NavLike = {
   canGoBack: () => boolean;

@@ -8,7 +8,7 @@ import { colors as T, radius, font } from '../theme/tokens';
 import { useI18n } from '../contexts/I18nContext';
 import GuestlistSheet from './GuestlistSheet';
 import { useAuth } from '../contexts/AuthContext';
-import { useAppAlert } from './AppAlert';
+import { requireAuth } from '../lib/authGate';
 import type { GuestlistVisibility } from '../lib/guestlistVisibility';
 import type { EventSocialAttendance, PublicUserSummary } from '../types/social';
 import { shouldShowGoingCount } from '../lib/socialProof';
@@ -57,7 +57,6 @@ export default function WhosGoing({ eventId, visibility = 'faces', capacity, alw
   const [loading, setLoading] = useState(true);
   const [sheetOpen, setSheetOpen] = useState(false);
   const { user } = useAuth();
-  const showAlert = useAppAlert();
 
   useEffect(() => {
     if (visibility === 'hidden') {
@@ -180,10 +179,8 @@ export default function WhosGoing({ eventId, visibility = 'faces', capacity, alw
   const FACE = 30;
 
   const openList = () => {
-    if (!user) {
-      showAlert(t('auth.loginRequiredTitle'), t('whosGoing.gateSub'));
-      return;
-    }
+    // The guest list is for members (privacy): a guest signs in first.
+    if (!requireAuth(user, navigation)) return;
     setSheetOpen(true);
   };
 

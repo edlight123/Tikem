@@ -234,6 +234,13 @@ export default {
     continue: 'Continue',
     done: 'Done',
   },
+  // A signed-out guest on an account tab (components/GuestPanel).
+  guest: {
+    signIn: "Sign in",
+    createAccount: "Create an account",
+    ticketsTitle: "Sign in to see your tickets",
+    profileTitle: "Sign in to see your profile",
+  },
   auth: {
     // Terms acceptance line on Signup + Login (App Store 1.2).
     terms: {
@@ -244,6 +251,8 @@ export default {
       suffix: ". There is no tolerance for objectionable content or abusive users.",
     },
     loginRequiredTitle: 'Login Required',
+    // The sign-in sheet's way back to browsing (lib/authGate).
+    notNow: "Not now",
     apple: {
       title: 'Sign in with Apple',
       genericError: 'Could not sign in with Apple.',

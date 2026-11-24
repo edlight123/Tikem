@@ -261,6 +261,13 @@ export default {
     continue: 'Continuer',
     done: 'Terminé',
   },
+  // A signed-out guest on an account tab (components/GuestPanel).
+  guest: {
+    signIn: "Se connecter",
+    createAccount: "Créer un compte",
+    ticketsTitle: "Connectez-vous pour voir vos billets",
+    profileTitle: "Connectez-vous pour voir votre profil",
+  },
   auth: {
     // Terms acceptance line on Signup + Login (App Store 1.2).
     terms: {
@@ -271,6 +278,8 @@ export default {
       suffix: ". Aucun contenu répréhensible ni comportement abusif ne sera toléré.",
     },
     loginRequiredTitle: 'Connexion requise',
+    // The sign-in sheet's way back to browsing (lib/authGate).
+    notNow: "Pas maintenant",
     apple: {
       title: 'Se connecter avec Apple',
       genericError: 'Impossible de se connecter avec Apple.',

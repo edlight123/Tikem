@@ -38,6 +38,7 @@ import {
 import { doc, getDoc, collection, query, where, getDocs, addDoc, deleteDoc, Timestamp } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { useAuth } from '../contexts/AuthContext';
+import { requireAuth, takePendingAuthIntent } from '../lib/authGate';
 import { useI18n } from '../contexts/I18nContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { radius, font } from '../theme/tokens';
@@ -186,6 +187,19 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
     checkFollowStatus();
   }, [organizerId]);
 
+  // Signed in from this page (the sheet over it): read their follow state now
+  // there is an account, which also finishes a Follow tapped as a guest. The
+  // focus listener below holds the pre-sign-in closure, so it cannot.
+  const followUidRef = React.useRef(user?.uid);
+  useEffect(() => {
+    const prev = followUidRef.current;
+    followUidRef.current = user?.uid;
+    if (!user?.uid || prev === user.uid) return;
+    const timer = setTimeout(() => checkFollowStatus(), 700);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.uid]);
+
   // Refetch on screen focus to ensure fresh data
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
@@ -311,6 +325,9 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
       if (!snapshot.empty) {
         setIsFollowing(true);
         setFollowDocId(snapshot.docs[0].id);
+      } else if (takePendingAuthIntent('follow', organizerId)) {
+        // A guest tapped Follow, signed in, and is back on this page.
+        handleFollow();
       }
     } catch (error) {
       console.error('Error checking follow status:', error);
@@ -318,10 +335,7 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
   };
 
   const handleFollow = async () => {
-    if (!user) {
-      navigation.navigate('Auth');
-      return;
-    }
+    if (!requireAuth(user, navigation, { kind: 'follow', key: organizerId })) return;
     // Blocking dropped the follow server-side; re-following is refused.
     if (isBlocked && !isFollowing) return;
 
@@ -348,10 +362,7 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
 
   // "…" menu: report or block this organizer (App Store 1.2).
   const handleMore = () => {
-    if (!user) {
-      showAlert(t('auth.loginRequiredTitle'), t('moderation.signInToReport'));
-      return;
-    }
+    if (!requireAuth(user, navigation)) return;
     const name = organizer?.organization_name || organizer?.full_name || '';
     showAlert(t('moderation.moreTitle'), undefined, [
       {
@@ -881,7 +892,7 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
                 size="sm"
                 variant="secondary"
                 onChange={setFriendship}
-                onRequireAuth={() => navigation.navigate('Auth')}
+                onRequireAuth={() => requireAuth(null, navigation)}
               />
             </View>
           ) : null}

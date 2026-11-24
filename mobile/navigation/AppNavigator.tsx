@@ -7,7 +7,7 @@ import { NavigationContainer, useNavigationContainerRef } from '@react-navigatio
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator, BottomTabBarHeightCallbackContext } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
-import { CalendarDays, ChartNoAxesColumnIncreasing, Inbox, ScanLine, UserRound } from 'lucide-react-native';
+import { CalendarDays, ChartNoAxesColumnIncreasing, Inbox, ScanLine, Ticket, UserRound } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../contexts/AuthContext';
@@ -15,6 +15,10 @@ import { useAppMode } from '../contexts/AppModeContext';
 import { ThemeProvider, useTheme } from '../contexts/ThemeContext';
 import { COLORS } from '../config/brand';
 import { LINKING_CONFIG, WEB_LINK_PREFIXES } from './linkingConfig';
+import { ACCOUNT_ROUTES, ROUTE_INTENT, TAB_INTENT } from './guestRoutes';
+import { ACCOUNT_TABS, clearPendingAuthIntent, justSignedOut, noteSignedOut, requireAuth, setPendingAuthIntent, takePendingAuthIntent } from '../lib/authGate';
+import { auth } from '../config/firebase';
+import GuestPanel from '../components/GuestPanel';
 import { withAlpha, colors as T } from '../theme/tokens';
 import { getVerificationRequest } from '../lib/verification';
 import { useActiveOrg } from '../lib/activeOrg';
@@ -122,7 +126,8 @@ import SelfieUploadScreen from '../screens/verification/SelfieUploadScreen';
 import type { OrganizerEvent } from '../lib/api/organizer';
 
 export type RootStackParamList = {
-  Auth: undefined;
+  // A modal sheet for a guest (lib/authGate); `screen` opens Signup directly.
+  Auth: { screen?: 'Login' | 'Signup' } | undefined;
   Main: undefined;
   InviteRedeem: { eventId?: string; token?: string };
   // A friend's personal invite link, tikem://i/{code}?e={eventId} (lib/inviteLink).
@@ -261,12 +266,59 @@ const OrganizerTab = createBottomTabNavigator<OrganizerTabParamList>();
 const StaffTab = createBottomTabNavigator<StaffTabParamList>();
 
 function AuthNavigator() {
+  // The sheet can also be swiped away. If it closes and nobody signed in, the
+  // guest chose to keep browsing: forget what they were about to do, so a
+  // later sign-in (from the Profile tab, say) does not fire it out of nowhere.
+  // Deferred a tick: on a real sign-in this unmount and the account arriving
+  // land in the same commit, and auth.currentUser is set by then.
+  useEffect(
+    () => () => {
+      setTimeout(() => {
+        if (!auth.currentUser) clearPendingAuthIntent();
+      }, 0);
+    },
+    [],
+  );
   return (
     <AuthStack.Navigator screenOptions={{ headerShown: false }}>
       <AuthStack.Screen name="Login" component={LoginScreen} />
       <AuthStack.Screen name="Signup" component={SignupScreen} />
     </AuthStack.Navigator>
   );
+}
+
+// What a guest gets for any route that needs an account (navigation/
+// guestRoutes ACCOUNT_ROUTES): the sign-in sheet, in place of this route. Once
+// signed in, AppNavigator carries on to the route that was asked for, with its
+// params (a ticket push, a 'Message the organizer' tap, the + tab…).
+function SignInGate({ navigation, route }: any) {
+  useEffect(() => {
+    // A tick later, so a sign-out (which keeps this route for a moment before
+    // AppNavigator resets to Home) does not pop the sheet on its way out.
+    const timer = setTimeout(() => {
+      if (justSignedOut()) return;
+      setPendingAuthIntent(ROUTE_INTENT, route.name, { name: route.name, params: route.params });
+      navigation.replace('Auth');
+    }, 0);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return <View style={{ flex: 1, backgroundColor: T.bg }} />;
+}
+
+// The account tabs, for a guest who lands on one without tapping it (signing
+// out from it, a sheet dismissed mid-switch): a quiet sign-in panel.
+function TicketsTab(props: any) {
+  const { user } = useAuth();
+  const { t } = useI18n();
+  if (!user) return <GuestPanel icon={Ticket} title={t('guest.ticketsTitle')} tab="Tickets" />;
+  return <TicketsScreen {...props} />;
+}
+function ProfileTab(props: any) {
+  const { user } = useAuth();
+  const { t } = useI18n();
+  if (!user) return <GuestPanel icon={UserRound} title={t('guest.profileTitle')} tab="Profile" />;
+  return <ProfileScreen {...props} />;
 }
 
 // ─── Custom Animated Tab Bar ───────────────────────────────────────────────
@@ -310,6 +362,10 @@ const GatedIntegrationWebView = withOrgAccess(IntegrationWebViewScreen, 'manage_
 
 function CustomTabBar({ state, descriptors, navigation, tabs }: TabBarProps) {
   const { colors, isDark } = useTheme();
+  // A guest browses Home and Discover; Tickets and Profile open the sign-in
+  // sheet and, once signed in, land on that tab (lib/authGate). The + tab
+  // reaches CreateEvent, which for a guest is a SignInGate.
+  const { user: tabUser } = useAuth();
   const { mode, setMode } = useAppMode();
   const canSwitchMode = React.useContext(OrganizerAccessContext);
   const anims = useRef(tabs.map(() => new Animated.Value(0))).current;
@@ -436,6 +492,10 @@ function CustomTabBar({ state, descriptors, navigation, tabs }: TabBarProps) {
         const onPress = () => {
           const route = state.routes.find((r: { name: string; key: string }) => r.name === tab.name);
           if (!route) return;
+          if (!tabUser && (ACCOUNT_TABS as readonly string[]).includes(tab.name)) {
+            requireAuth(null, navigation, { kind: TAB_INTENT, key: tab.name });
+            return;
+          }
 
           // Double-tap the Profile tab (organizer-capable accounts only) to
           // switch between attendee and organizer mode. A single tap keeps its
@@ -674,8 +734,8 @@ function AttendeeTabNavigator() {
     >
       <AttendeeTab.Screen name="Home" component={HomeScreen} />
       <AttendeeTab.Screen name="Discover" component={DiscoverScreen} />
-      <AttendeeTab.Screen name="Tickets" component={TicketsScreen} />
-      <AttendeeTab.Screen name="Profile" component={ProfileScreen} />
+      <AttendeeTab.Screen name="Tickets" component={TicketsTab} />
+      <AttendeeTab.Screen name="Profile" component={ProfileTab} />
     </AttendeeTab.Navigator>
   );
 }
@@ -846,6 +906,43 @@ export default function AppNavigator() {
     maybeResumeInvite();
   }, [user, navigationRef]);
 
+  // Guest browsing (lib/authGate). Signing in keeps the guest on the screen
+  // they were on (shared route names); carry on to what they asked for when
+  // it was a whole route (SignInGate) or an account tab. Screen-level intents
+  // (buy, save, follow, message) are picked up by those screens. Signing out
+  // goes back to browsing from Home, never to a login wall.
+  const authUidRef = useRef<string | null | undefined>(undefined);
+  useEffect(() => {
+    if (loading) return;
+    const uid = user?.uid ?? null;
+    const prev = authUidRef.current;
+    authUidRef.current = uid;
+    if (prev === undefined || prev === uid) return;
+    if (prev && !uid) {
+      noteSignedOut();
+      if (navigationRef.isReady()) {
+        navigationRef.reset({ index: 0, routes: [{ name: 'Main' as any, params: { screen: 'Home' } } as any] });
+      }
+      return;
+    }
+    if (!prev && uid) {
+      const routeIntent = takePendingAuthIntent(ROUTE_INTENT);
+      const tabIntent = routeIntent ? null : takePendingAuthIntent(TAB_INTENT);
+      if (!routeIntent && !tabIntent) return;
+      // After the sign-in sheet has slid away: a push on top of a dismissing
+      // native modal can be dropped on iOS.
+      const timer = setTimeout(() => {
+        if (!navigationRef.isReady()) return;
+        if (routeIntent?.payload?.name) {
+          navigationRef.navigate(routeIntent.payload.name as any, routeIntent.payload.params as any);
+        } else if (tabIntent?.key) {
+          navigationRef.navigate('Main' as any, { screen: tabIntent.key } as any);
+        }
+      }, 450);
+      return () => clearTimeout(timer);
+    }
+  }, [loading, user?.uid, navigationRef]);
+
   // The app mode lives in memory (AppModeProvider never remounts on sign-out),
   // so it survived sign-out: a staff session left 'staff' set and the NEXT account to
   // sign in on the device got the Staff tabs. Back to attendee on sign-out.
@@ -970,6 +1067,11 @@ export default function AppNavigator() {
   // When the mode changes (via Account actions), always jump to the first tab.
   useEffect(() => {
     if (loading || modeLoading) return;
+    // Track the mode while signed out too: signing out of organizer mode sets
+    // 'attendee', and a stale 'organizer' here made the next sign-in look like
+    // a mode switch and reset a guest off the event they had signed in from.
+    const prevMode = prevModeRef.current;
+    prevModeRef.current = mode;
     if (!user) return;
 
     // Reset ONLY when the mode itself changed. The old guard skipped just the
@@ -978,8 +1080,6 @@ export default function AppNavigator() {
     // the navigator mounts, the dep flipped, and reset() replaced Main with
     // Main — the whole Home screen (skeletons and all) visibly slid off to the
     // left mid-load, which a tester caught on a screen recording.
-    const prevMode = prevModeRef.current;
-    prevModeRef.current = mode;
     if (prevMode === null || prevMode === mode) return;
 
     const initialTab =
@@ -1038,8 +1138,33 @@ export default function AppNavigator() {
       >
         {!user ? (
           <>
-            <Stack.Screen name="Auth" component={AuthNavigator} />
+            {/* Guests browse (owner, 2026-11-23, like Tikra): Home, Discover,
+                events, organizers, search, occasions. The route names match
+                the signed-in stack below, so signing in keeps the guest where
+                they are and only drops `Auth` (navigation/guestRoutes). */}
+            <Stack.Screen name="Main" component={AttendeeTabNavigator} />
+            <Stack.Screen name="EventDetail" component={EventDetailScreen} />
+            <Stack.Screen name="Search" component={SearchScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="CategoryEvents" component={CategoryEventsScreen} />
+            <Stack.Screen name="Occasion" component={OccasionScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="OrganizerProfile" component={OrganizerProfileScreen} />
+            <Stack.Screen name="ContentPage" component={ContentPageScreen} options={{ headerShown: false }} />
+            <Stack.Screen
+              name="InAppWebView"
+              component={InAppWebViewScreen}
+              options={({ route }) => ({
+                headerShown: true,
+                headerTitle: (route as any)?.params?.title || '',
+              })}
+            />
             <Stack.Screen name="InviteRedeem" component={InviteRedeemScreen} options={{ headerShown: false }} />
+            {/* Sign-in as a sheet over what the guest was looking at. */}
+            <Stack.Screen name="Auth" component={AuthNavigator} options={{ presentation: 'modal' }} />
+            {/* Everything that needs an account opens that sheet instead and
+                carries on there after sign-in. */}
+            {ACCOUNT_ROUTES.map((name) => (
+              <Stack.Screen key={name} name={name as any} component={SignInGate} options={{ animation: 'none' }} />
+            ))}
           </>
         ) : (
           <>

@@ -1,4 +1,5 @@
 import { collapseSeries } from '../lib/eventSeries';
+import { requireAuth, takePendingAuthIntent } from '../lib/authGate';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { themedArt } from '../lib/nationalDaysRemote';
 import { 
@@ -35,7 +36,6 @@ import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import DiscoverEventCard from '../components/DiscoverEventCard';
 import ElsewhereRail from '../components/ElsewhereRail';
-import { useAppAlert } from '../components/AppAlert';
 import { applyFilters } from '../utils/filterUtils';
 import { DEFAULT_FILTERS } from '../types/filters';
 import { getDateRange } from '../utils/filters';
@@ -72,7 +72,6 @@ export default function DiscoverScreen({ navigation, route }: any) {
   const { t, language } = useI18n();
   // The active location, in words — every empty state and the header chip.
   const locationCopy = useActiveLocationCopy();
-  const showAlert = useAppAlert();
   
   const [allEvents, setAllEvents] = useState<any[]>([]);
   const [friendsGoingCounts, setFriendsGoingCounts] = useState<Record<string, number>>({});
@@ -292,6 +291,18 @@ export default function DiscoverScreen({ navigation, route }: any) {
 
   useEffect(() => { loadSavedIds(); }, [loadSavedIds]);
 
+  // Following and Saved are about the account: a guest signs in first (sheet
+  // over Discover) and lands on the tab they tapped once signed in.
+  const openDiscoverTab = (key: 'forYou' | 'following' | 'saved') => {
+    if (key !== 'forYou' && !requireAuth(user, navigation, { kind: 'discoverTab', key })) return;
+    setDiscoverTab(key);
+  };
+  useEffect(() => {
+    if (!user) return;
+    const intent = takePendingAuthIntent('discoverTab');
+    if (intent?.key === 'following' || intent?.key === 'saved') setDiscoverTab(intent.key);
+  }, [user]);
+
   // Share an event (native share sheet) via the shared, localized helper.
   const handleShareEvent = useCallback((event: any) => shareEvent(event, language), [language]);
 
@@ -306,10 +317,8 @@ export default function DiscoverScreen({ navigation, route }: any) {
 
   // Toggle bookmark: optimistic UI + event_favorites write (add/remove).
   const toggleSaveEvent = useCallback(async (event: any) => {
-    if (!user) {
-      showAlert(t('auth.loginRequiredTitle'), t('eventDetail.favorites.loginBody'));
-      return;
-    }
+    // A guest signs in first (sheet over Discover).
+    if (!requireAuth(user, navigation)) return;
     const id = event.id;
     const wasSaved = savedIds.has(id);
     setSavedIds((prev) => {
@@ -342,7 +351,7 @@ export default function DiscoverScreen({ navigation, route }: any) {
         return next;
       });
     }
-  }, [user, savedIds, t]);
+  }, [user, savedIds, t, navigation]);
 
   // Saved tab — the user's favorited events, matched against the loaded set.
   useEffect(() => {
@@ -641,7 +650,7 @@ export default function DiscoverScreen({ navigation, route }: any) {
             ] as const).map((tab) => (
               <Touchable
                 key={tab.key}
-                onPress={() => setDiscoverTab(tab.key)}
+                onPress={() => openDiscoverTab(tab.key)}
                 hitSlop={8}
                 accessibilityRole="tab"
                 accessibilityState={{ selected: discoverTab === tab.key }}
