@@ -35,7 +35,7 @@ LEGACY_RUNTIMES="1.0.2:all 1.0.1:ios 1.0.0:ios"
 # Native modules added after build 46 that the JS only reaches through
 # requireOptionalNativeModule (absent on old binaries = feature off, no crash).
 # They don't count as native drift for the legacy publishes.
-OPTIONAL_NATIVE="expo-media-library"
+OPTIONAL_NATIVE="expo-media-library expo-location"
 
 if [ ! -d "$WT" ]; then
   git -C "$ROOT" worktree add --detach "$WT" "$COMMIT" >/dev/null
