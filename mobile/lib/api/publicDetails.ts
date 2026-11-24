@@ -31,9 +31,22 @@ export interface PersonIdentity {
   joined_at: string | null;
 }
 
+export interface OrgCard {
+  organization_name: string;
+  organization_logo: string;
+  is_verified: boolean;
+  coverTemplate: string | null;
+  coverImageUrl: string | null;
+  gallery: unknown[];
+  city: string;
+  country: string;
+}
+
 export interface PublicProfileDetails {
   kind: 'org' | 'person';
   org?: OrgPublicDetails;
+  /** Org only: the page's display card (public_profiles' safe fields), for guests. */
+  card?: OrgCard;
   person?: PersonPublicDetails | null;
   /** The person view (view: 'person'), also for an organization's owner. */
   view?: 'person';

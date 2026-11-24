@@ -86,6 +86,13 @@ export interface PublicProfileDetails {
   kind: ProfileKind
   /** Present when kind is 'org'. */
   org?: OrgPublicDetails
+  /**
+   * Present when kind is 'org': the page's display card (name, logo, badge,
+   * banner, photos, place), the same safe fields public_profiles holds. That
+   * projection is readable only when signed in (firestore.rules), so a guest
+   * browsing the app gets them here instead.
+   */
+  card?: OrgCard
   /** Present when kind is 'person': null when their privacy hides it from this viewer. */
   person?: PersonPublicDetails | null
   /** 'person' when the person view was asked for. */
@@ -96,7 +103,36 @@ export interface PublicProfileDetails {
   also_runs?: { name: string; logo: string } | null
 }
 
+export interface OrgCard {
+  organization_name: string
+  organization_logo: string
+  is_verified: boolean
+  coverTemplate: string | null
+  coverImageUrl: string | null
+  gallery: unknown[]
+  city: string
+  country: string
+}
+
 export type ProfileView = 'default' | 'person'
+
+/** Pure: an org's display card from its public projection (organizers/{uid} as fallback). */
+export function buildOrgCard(publicDoc: Doc, orgDoc: Doc): OrgCard {
+  const name = str(publicDoc?.organization_name) || str(orgDoc?.organization_name)
+  const logo = safeExternalUrl(str(publicDoc?.organization_logo) || str(orgDoc?.organization_logo)) || ''
+  const cover = str(publicDoc?.coverImageUrl)
+  return {
+    organization_name: name,
+    organization_logo: logo,
+    is_verified: publicDoc?.is_verified === true,
+    coverTemplate: str(publicDoc?.coverTemplate) || null,
+    coverImageUrl: cover ? safeExternalUrl(cover) || null : null,
+    // Re-checked by the readers (lib/gallery, mobile/lib/galleryRules).
+    gallery: Array.isArray(publicDoc?.gallery) ? publicDoc!.gallery.slice(0, 12) : [],
+    city: str(publicDoc?.city),
+    country: str(publicDoc?.country),
+  }
+}
 
 type Doc = Record<string, any> | null | undefined
 
@@ -194,7 +230,9 @@ export function buildPublicProfileDetails(input: {
   friendship: FriendshipState
 }): PublicProfileDetails {
   const kind = resolveProfileKind(input)
-  if (kind === 'org') return { kind, org: resolveOrgDetails(input.orgDoc, input.publicDoc) }
+  if (kind === 'org') {
+    return { kind, org: resolveOrgDetails(input.orgDoc, input.publicDoc), card: buildOrgCard(input.publicDoc, input.orgDoc) }
+  }
   return {
     kind,
     person: canViewPersonDetails(input.userDoc, input.friendship) ? resolvePersonDetails(input.userDoc) : null,
