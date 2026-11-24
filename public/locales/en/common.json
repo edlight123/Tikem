@@ -1551,7 +1551,8 @@
       "colour": "Colour {{n}}",
       "use": "Use this poster",
       "failed": "Could not make the poster. Try again.",
-      "sampleTitle": "Your event"
+      "sampleTitle": "Your event",
+      "forOccasion": "For {{name}}"
     },
     "flyerRead": {
       "button": "Fill from flyer",
@@ -2417,6 +2418,7 @@
     "empty": "Nothing listed for it yet.",
     "ideas_title": "ideas to host",
     "use_idea": "Create this event",
+    "posters_title": "posters",
     "part_of": "Part of {{name}}"
   },
   "a11y": {

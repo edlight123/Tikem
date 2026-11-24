@@ -2,16 +2,17 @@
  * What an unset notification switch means, as the server reads it
  * (lib/notifications/userPreferences.ts readUserNotifyPref; keep in step).
  *
- * Unset is on, except "events near you" and the weekend digest for people in
- * Canada or France: promotional messages there need an express yes (CASL,
- * CNIL), so those two start off until the person turns them on. An explicit
- * true/false on the user doc always wins.
+ * Unset is on, except "events near you", the weekend digest and the organizer
+ * season nudge for people in Canada or France: promotional messages there need
+ * an express yes (CASL, CNIL), so those start off until the person turns them
+ * on. An explicit true/false on the user doc always wins.
  */
 export const CONSENT_MARKETS: ReadonlySet<string> = new Set(['CA', 'FR']);
 
 export const CONSENT_MARKET_OPT_IN_FIELDS: ReadonlySet<string> = new Set([
   'notify_discovery',
   'notify_weekend_digest',
+  'notify_organizer_season',
 ]);
 
 export function inConsentMarket(data: Record<string, any> | null | undefined): boolean {

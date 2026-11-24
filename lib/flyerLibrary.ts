@@ -22,6 +22,9 @@
  * `tags` below (which carry the search) already speak Kreyòl and French.
  */
 
+import { HOLIDAY_TEMPLATES, occasionsWithTemplates } from './holidayTemplates'
+import { OCCASIONS, occasionsInSeason, type OccasionKey, type OccasionText } from './occasions'
+
 export interface FlyerLibraryItem {
   /** Stable key, also the i18n suffix. */
   id: string
@@ -38,6 +41,10 @@ export interface FlyerLibraryItem {
    * an ASCII tag is found by an accented query and a bare one alike.
    */
   tags: string[]
+  /** A seasonal piece's caption in each language (holiday templates carry their own). */
+  labels?: OccasionText
+  /** The occasion a seasonal piece belongs to. */
+  occasion?: OccasionKey
 }
 
 const unsplash = (photo: string, w: number, h: number) =>
@@ -164,3 +171,34 @@ export const FLYER_LIBRARY: readonly FlyerLibraryItem[] = [
   { id: 'networking', photo: '1515169067868-5387ec356754', label: 'Networking', tags: ['networking','mixer','business','biznis','reception','sware','drinks','meetup','professional'] },
   { id: 'galaBallroom', photo: '1780542900375-0cf459e38fbb', label: 'Ballroom', tags: ['gala','ballroom','fundraiser','benefit','banquet','dinner','manje','awards','elegant','sware'] },
 ]
+
+const fold = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+
+/**
+ * The library as it should read on `now`: for the 30 days before an occasion
+ * that has holiday templates (lib/holidayTemplates), and while it is on, that
+ * season's photos come first (soonest occasion first), then the everyday
+ * library. A photo appears once. Pure: pass `now` to test it.
+ */
+export function seasonalFlyerLibrary(now: Date | number = Date.now()): FlyerLibraryItem[] {
+  const season = occasionsInSeason(now, occasionsWithTemplates())
+  const seen = new Set<string>()
+  const lead: FlyerLibraryItem[] = []
+  for (const occasion of season) {
+    const o = OCCASIONS.find((x) => x.key === occasion)!
+    const words = [...new Set(Object.values(o.name).map(fold))]
+    for (const t of HOLIDAY_TEMPLATES) {
+      if (t.occasion !== occasion || seen.has(t.photo)) continue
+      seen.add(t.photo)
+      lead.push({
+        id: `holiday-${t.id}`,
+        photo: t.photo,
+        label: t.title.en,
+        labels: t.title,
+        occasion,
+        tags: [...words, occasion, fold(t.title.ht), fold(t.title.fr), fold(t.category)],
+      })
+    }
+  }
+  return [...lead, ...FLYER_LIBRARY.filter((f) => !seen.has(f.photo))]
+}

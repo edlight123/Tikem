@@ -16,6 +16,7 @@ export default {
     emptyTitle: 'poko gen anyen',
     emptyBody: 'Evènman ki pou okazyon sa a ap parèt la a.',
     ideasTitle: 'lide pou òganize',
+    postersTitle: 'afich',
     useIdea: 'kreye evènman sa a',
     partOf: 'Pou {name}',
     notFound: 'Okazyon sa a pa egziste',
@@ -3352,6 +3353,7 @@ export default {
     use: 'Sèvi ak afich sa a',
     failed: 'Nou pa t ka fè afich la. Eseye ankò.',
     sampleTitle: 'Evènman ou',
+    forOccasion: 'Pou {name}',
   },
   flyerLibrary: {
     title: 'Chwazi yon flayè',
@@ -3973,6 +3975,7 @@ export default {
       milestones: 'Etap vant',
       milestonesBody: 'Lè yon evènman depase mwatye vann oswa fin vann.',
       nudges: 'Konsèy vant',
+      season: 'Rapèl sezon',
       nudgesBody: 'Yon ti rapèl ak lyen pwomotè ou lè vant yo ralanti.',
     },
   },

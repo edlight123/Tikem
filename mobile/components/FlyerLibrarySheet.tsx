@@ -24,6 +24,8 @@ import { radius, spacing } from '../theme/tokens';
 interface LibraryFlyer {
   id: string;
   label: string;
+  /** A seasonal piece's caption per language (the season's photos lead for a month before an occasion). */
+  labels?: { en: string; fr: string; ht: string };
   tags: string[];
   thumbUrl: string;
   fullUrl: string;
@@ -76,7 +78,8 @@ function pairs<T>(items: T[]): T[][] {
  */
 export default function FlyerLibrarySheet({ visible, onClose, onSelect, onUpload }: FlyerLibrarySheetProps) {
   const { colors } = useTheme();
-  const { t } = useI18n();
+  const { t, language } = useI18n();
+  const labelOf = (item: LibraryFlyer) => item.labels?.[(['en', 'fr', 'ht'].includes(language) ? language : 'en') as 'en' | 'fr' | 'ht'] || item.label;
   const styles = getStyles(colors);
   // Clear of Android's system bar (edge to edge).
   const bottomInset = useAndroidBottomInset(spacing.xl);
@@ -131,7 +134,7 @@ export default function FlyerLibrarySheet({ visible, onClose, onSelect, onUpload
       activeOpacity={0.85}
       onPress={() => handleSelect(item)}
       accessibilityRole="imagebutton"
-      accessibilityLabel={item.label}
+      accessibilityLabel={labelOf(item)}
     >
       <Image
         source={{ uri: item.thumbUrl }}
@@ -147,7 +150,7 @@ export default function FlyerLibrarySheet({ visible, onClose, onSelect, onUpload
       />
       <View style={styles.credit} pointerEvents="none">
         <Text style={styles.creditText} numberOfLines={1}>
-          {item.label}
+          {labelOf(item)}
         </Text>
       </View>
     </TouchableOpacity>

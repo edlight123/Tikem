@@ -4,8 +4,10 @@ import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { Check, Loader2, X } from 'lucide-react'
-import { FLYER_LIBRARY, flyerLibraryFullUrl, flyerLibraryThumbUrl } from '@/lib/flyerLibrary'
-import { TEMPLATES, defaultPalette } from '@/lib/posters/templates'
+import { flyerLibraryFullUrl, flyerLibraryThumbUrl, seasonalFlyerLibrary } from '@/lib/flyerLibrary'
+import { TEMPLATES, defaultPalette, type PhotoTreatment } from '@/lib/posters/templates'
+import { holidayPhotoUrl, holidayPosterSpec, holidayTemplatesFor, type HolidayTemplate } from '@/lib/holidayTemplates'
+import { occasionName, type OccasionKey } from '@/lib/occasions'
 
 /**
  * "Make a poster": the event's own facts set in a designed template.
@@ -17,6 +19,11 @@ import { TEMPLATES, defaultPalette } from '@/lib/posters/templates'
  *
  * Every template has three colourways and starts on one picked from the
  * event, so two events on the same layout still look different.
+ *
+ * When the event belongs to an occasion (tagged, or its date falls in one),
+ * that occasion's holiday templates (lib/holidayTemplates: a real photo, a
+ * layout and a colourway chosen together) come first, as a "For Nwèl" row,
+ * drawn with the event's own title and date.
  */
 
 export interface PosterFacts {
@@ -35,11 +42,15 @@ export interface PosterSpec {
   template: string
   palette: number
   photo: string | null
+  /** The photo treatment, when it isn't the layout's own (holiday templates). */
+  treatment?: PhotoTreatment
+  /** The holiday template it came from (lib/holidayTemplates id). */
+  holiday?: string
 }
 
 /** Draws `spec` with `facts` full size and stores it; resolves to the image URL. */
 export async function makePoster(facts: PosterFacts, spec: PosterSpec, locale: string): Promise<string> {
-  const q = query(facts, spec.template, spec.palette, spec.photo, locale)
+  const q = query(facts, spec.template, spec.palette, spec.photo, locale, spec.treatment)
   const body: Record<string, unknown> = Object.fromEntries(q.entries())
   body.lineup = facts.lineup || []
   const res = await fetch('/api/posters/create', {
@@ -52,7 +63,7 @@ export async function makePoster(facts: PosterFacts, spec: PosterSpec, locale: s
   return json.url as string
 }
 
-function query(facts: PosterFacts, template: string, palette: number, photo: string | null, locale: string) {
+export function query(facts: PosterFacts, template: string, palette: number, photo: string | null, locale: string, treatment?: PhotoTreatment) {
   const q = new URLSearchParams({
     template,
     palette: String(palette),
@@ -65,29 +76,40 @@ function query(facts: PosterFacts, template: string, palette: number, photo: str
     locale: ['ht', 'fr', 'en'].includes(locale) ? locale : 'ht',
   })
   if (photo) q.set('photo', photo)
+  if (treatment) q.set('treatment', treatment)
   return q
+}
+
+/** A holiday template's live preview with this event's facts (the picker tile, the composer's first poster). */
+export function holidayPreviewSrc(facts: PosterFacts, t: HolidayTemplate, locale: string): string {
+  return `/api/posters/preview?${query(facts, t.layout, t.palette, holidayPhotoUrl(t), locale, t.treatment)}`
 }
 
 export default function PosterTemplatePicker({
   facts,
   photo: initialPhoto,
+  occasion,
   onPick,
   onClose,
 }: {
   facts: PosterFacts
   /** The organizer's own photo, used as the default background. */
   photo?: string | null
+  /** The occasion whose holiday templates lead (lib/occasions posterOccasion), or none. */
+  occasion?: OccasionKey | null
   onPick: (url: string, spec: PosterSpec) => void
   onClose: () => void
 }) {
   const { t, i18n } = useTranslation('common')
   const locale = (i18n.language || 'ht').slice(0, 2)
   const photos = useMemo(() => {
-    const lib = FLYER_LIBRARY.slice(0, 10).map((f) => ({ full: flyerLibraryFullUrl(f), thumb: flyerLibraryThumbUrl(f) }))
+    const lib = seasonalFlyerLibrary().slice(0, 10).map((f) => ({ full: flyerLibraryFullUrl(f), thumb: flyerLibraryThumbUrl(f) }))
     return initialPhoto ? [{ full: initialPhoto, thumb: initialPhoto }, ...lib] : lib
   }, [initialPhoto])
   const [photo, setPhoto] = useState<string>(photos[0]?.full || '')
-  const [selected, setSelected] = useState<string>(TEMPLATES[0].id)
+  const holidays = useMemo(() => holidayTemplatesFor(occasion), [occasion])
+  // A holiday template is selected as "holiday:<id>", a plain layout by its id.
+  const [selected, setSelected] = useState<string>(() => (holidays[0] ? `holiday:${holidays[0].id}` : TEMPLATES[0].id))
   const seed = `${facts.title}|${facts.date}`
   const [palettes, setPalettes] = useState<Record<string, number>>({})
   const paletteOf = (id: string) => palettes[id] ?? defaultPalette(`${seed}|${id}`)
@@ -112,12 +134,15 @@ export default function PosterTemplatePicker({
   }, [])
 
   async function use() {
+    const holiday = selected.startsWith('holiday:') ? holidays.find((h) => `holiday:${h.id}` === selected) : null
     const tpl = TEMPLATES.find((x) => x.id === selected)
-    if (!tpl) return
+    if (!holiday && !tpl) return
     setSaving(true)
     setError('')
     try {
-      const spec: PosterSpec = { template: selected, palette: paletteOf(selected), photo: tpl.usesPhoto ? photo : null }
+      const spec: PosterSpec = holiday
+        ? holidayPosterSpec(holiday)
+        : { template: selected, palette: paletteOf(selected), photo: tpl!.usesPhoto ? photo : null }
       onPick(await makePoster(facts, spec, locale), spec)
     } catch {
       setError(t('composer.posterTemplates.failed', { defaultValue: 'Could not make the poster. Try again.' }))
@@ -160,6 +185,41 @@ export default function PosterTemplatePicker({
             <X className="h-4 w-4" />
           </button>
         </div>
+
+        {/* The occasion's own posters first: photo, layout and colour chosen together. */}
+        {occasion && holidays.length > 0 && (
+          <div className="shrink-0 px-5 pb-4">
+            <p className="text-caption font-medium uppercase tracking-wider text-fg-subtle">
+              {t('composer.posterTemplates.forOccasion', {
+                defaultValue: 'For {{name}}',
+                name: occasionName(occasion, locale),
+              })}
+            </p>
+            <div className="scrollbar-hide mt-2 flex gap-3 overflow-x-auto pb-1">
+              {holidays.map((h) => {
+                const on = selected === `holiday:${h.id}`
+                return (
+                  <button
+                    key={h.id}
+                    type="button"
+                    onClick={() => setSelected(`holiday:${h.id}`)}
+                    aria-pressed={on}
+                    aria-label={h.title[locale === 'fr' || locale === 'ht' ? locale : 'en']}
+                    className={`relative aspect-[4/5] w-28 shrink-0 overflow-hidden rounded bg-surface-low sm:w-32 ${on ? 'ring-2 ring-white ring-offset-2 ring-offset-surface-raised-solid' : ''}`}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={holidayPreviewSrc(facts, h, locale)} alt="" loading="lazy" className="h-full w-full object-cover" />
+                    {on && (
+                      <span className="absolute right-1.5 top-1.5 grid h-5 w-5 place-items-center rounded-full bg-inverse text-on-inverse">
+                        <Check className="h-3 w-3" />
+                      </span>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Background photo for the layouts that use one. */}
         <div className="shrink-0 px-5">

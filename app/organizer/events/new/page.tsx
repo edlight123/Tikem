@@ -52,7 +52,7 @@ async function startingLocation(
 export default async function NewEventPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ occasion?: string | string[]; idea?: string | string[] }>
+  searchParams?: Promise<{ occasion?: string | string[]; idea?: string | string[]; holiday?: string | string[] }>
 }) {
   // From an occasion page: ?occasion=<key> tags it, ?idea=<id> fills it in.
   const sp = (await searchParams) || {}
@@ -80,6 +80,7 @@ export default async function NewEventPage({
       orgDefaults={start.defaults || null}
       initialOccasion={first(sp.occasion)}
       initialIdea={first(sp.idea)}
+      initialHoliday={first(sp.holiday)}
     />
   )
 }

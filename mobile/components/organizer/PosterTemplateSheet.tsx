@@ -19,6 +19,7 @@ import { radius, spacing } from '../../theme/tokens';
 import { Touchable } from '../ui/Touchable';
 import { Text as UIText } from '../ui/Text';
 import { Skeleton } from '../Skeleton';
+import { occasionName, posterOccasion, type OccasionKey, type OccasionText } from '../../lib/occasions';
 
 /**
  * "Make a poster" (mobile twin of the web composer's PosterTemplatePicker).
@@ -27,6 +28,10 @@ import { Skeleton } from '../Skeleton';
  * reads the list from /api/posters/catalog, shows each one as a live preview
  * drawn with this event's facts (/api/posters/preview), and on "Use" has the
  * server draw it full size and store it (/api/posters/create).
+ *
+ * When the event belongs to an occasion (tagged, or its date falls in one),
+ * that occasion's holiday templates (/api/posters/holidays: a real photo, a
+ * layout and a colour chosen together) lead, as a "For Nwèl" row.
  */
 
 export interface PosterFacts {
@@ -43,6 +48,49 @@ export interface PosterSpec {
   template: string;
   palette: number;
   photo: string | null;
+  /** The photo treatment when it isn't the layout's own (holiday templates). */
+  treatment?: 'darken' | 'mono' | 'duotone' | 'none';
+  /** The holiday template it came from (website lib/holidayTemplates id). */
+  holiday?: string;
+}
+
+/** One holiday template as GET /api/posters/holidays serves it. */
+export interface HolidayTemplate {
+  id: string;
+  occasion: OccasionKey;
+  layout: string;
+  palette: number;
+  treatment: NonNullable<PosterSpec['treatment']>;
+  photoUrl: string;
+  thumbUrl: string;
+  title: OccasionText;
+  subtitle: OccasionText;
+  category: string;
+  appCategory: string;
+  time: string;
+}
+
+/** The spec a holiday template applies. */
+export const holidaySpec = (h: HolidayTemplate): PosterSpec => ({
+  template: h.layout,
+  palette: h.palette,
+  photo: h.photoUrl,
+  treatment: h.treatment,
+  holiday: h.id,
+});
+
+/** Every holiday template (cached for the session: the list changes with a deploy, not by the minute). */
+let holidayCache: Promise<HolidayTemplate[]> | null = null;
+export function loadHolidayTemplates(): Promise<HolidayTemplate[]> {
+  if (!holidayCache) {
+    holidayCache = backendJson<{ templates: HolidayTemplate[] }>('/api/posters/holidays')
+      .then((j) => j.templates || [])
+      .catch((e) => {
+        holidayCache = null;
+        throw e;
+      });
+  }
+  return holidayCache;
 }
 
 interface CatalogTemplate {
@@ -63,7 +111,7 @@ function defaultPalette(seed: string): number {
   return h % 3;
 }
 
-function query(facts: PosterFacts, spec: PosterSpec, locale: string) {
+export function posterQuery(facts: PosterFacts, spec: PosterSpec, locale: string) {
   const q = new URLSearchParams({
     template: spec.template,
     palette: String(spec.palette),
@@ -75,12 +123,13 @@ function query(facts: PosterFacts, spec: PosterSpec, locale: string) {
     locale: ['ht', 'fr', 'en'].includes(locale) ? locale : 'ht',
   });
   if (spec.photo) q.set('photo', spec.photo);
+  if (spec.treatment) q.set('treatment', spec.treatment);
   return q;
 }
 
 /** Draws `spec` with `facts` full size and stores it; resolves to the image URL. */
 export async function makePoster(facts: PosterFacts, spec: PosterSpec, locale: string): Promise<string> {
-  const body: Record<string, unknown> = Object.fromEntries(query(facts, spec, locale).entries());
+  const body: Record<string, unknown> = Object.fromEntries(posterQuery(facts, spec, locale).entries());
   body.lineup = facts.lineup || [];
   const json = await backendJson<{ url?: string }>('/api/posters/create', {
     method: 'POST',
@@ -98,12 +147,15 @@ export default function PosterTemplateSheet({
   visible,
   facts,
   photo: ownPhoto,
+  occasion: taggedOccasion,
   onClose,
   onPick,
 }: {
   visible: boolean;
   facts: PosterFacts;
   photo?: string | null;
+  /** The occasion the event is tagged for ('' or null = none; its date is checked too). */
+  occasion?: string | null;
   onClose: () => void;
   onPick: (url: string, spec: PosterSpec) => void;
 }) {
@@ -113,6 +165,7 @@ export default function PosterTemplateSheet({
 
   const [templates, setTemplates] = useState<CatalogTemplate[]>([]);
   const [library, setLibrary] = useState<LibraryFlyer[]>([]);
+  const [holidayAll, setHolidayAll] = useState<HolidayTemplate[]>([]);
   const [selected, setSelected] = useState<string>('');
   const [palettes, setPalettes] = useState<Record<string, number>>({});
   const [photo, setPhoto] = useState<string | null>(null);
@@ -131,7 +184,23 @@ export default function PosterTemplateSheet({
     backendJson<{ items: LibraryFlyer[] }>('/api/flyers/library')
       .then((j) => setLibrary((j.items || []).slice(0, 10)))
       .catch(() => {});
+    loadHolidayTemplates()
+      .then(setHolidayAll)
+      .catch(() => {});
   }, [visible, t]);
+
+  // The occasion row: the tagged occasion, else the one the date falls in,
+  // among occasions that have templates. Leads, and starts selected.
+  const rowOccasion = useMemo(
+    () => posterOccasion(taggedOccasion, facts.date, [...new Set(holidayAll.map((h) => h.occasion))]),
+    [taggedOccasion, facts.date, holidayAll],
+  );
+  const holidays = useMemo(() => holidayAll.filter((h) => h.occasion === rowOccasion), [holidayAll, rowOccasion]);
+  useEffect(() => {
+    if (visible && holidays[0]) setSelected((cur) => (cur && !cur.startsWith('holiday:') && cur !== templates[0]?.id ? cur : `holiday:${holidays[0].id}`));
+    // Only when the row first appears.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible, holidays.length > 0]);
 
   const photos = useMemo(() => {
     const lib = library.map((f) => ({ full: f.fullUrl, thumb: f.thumbUrl }));
@@ -151,12 +220,13 @@ export default function PosterTemplateSheet({
   });
 
   const use = async () => {
+    const holiday = selected.startsWith('holiday:') ? holidays.find((h) => `holiday:${h.id}` === selected) : null;
     const tpl = templates.find((x) => x.id === selected);
-    if (!tpl) return;
+    if (!holiday && !tpl) return;
     setSaving(true);
     setError('');
     try {
-      const spec = specFor(tpl);
+      const spec = holiday ? holidaySpec(holiday) : specFor(tpl!);
       onPick(await makePoster(facts, spec, language), spec);
     } catch {
       setError(t('posterTemplates.failed'));
@@ -189,6 +259,38 @@ export default function PosterTemplateSheet({
             </Touchable>
           </View>
           </View>
+
+          {rowOccasion && holidays.length > 0 ? (
+            <>
+              <UIText variant="eyebrow" style={styles.label}>
+                {t('posterTemplates.forOccasion', { name: occasionName(rowOccasion, language) })}
+              </UIText>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.holidayRow} contentContainerStyle={{ gap: spacing.sm }}>
+                {holidays.map((h) => {
+                  const on = selected === `holiday:${h.id}`;
+                  const uri = `${API_BASE_URL}/api/posters/preview?${posterQuery(facts, holidaySpec(h), language)}`;
+                  return (
+                    <Touchable
+                      key={h.id}
+                      scale={0.98}
+                      onPress={() => setSelected(`holiday:${h.id}`)}
+                      accessibilityRole="button"
+                      accessibilityLabel={h.title[(['en', 'fr', 'ht'].includes(language) ? language : 'en') as 'en' | 'fr' | 'ht']}
+                      accessibilityState={{ selected: on }}
+                      style={[styles.holidayTile, !on && styles.holidayTileOff]}
+                    >
+                      <Image source={{ uri }} style={StyleSheet.absoluteFill} contentFit="cover" transition={150} cachePolicy="memory-disk" />
+                      {on ? (
+                        <View style={styles.check}>
+                          <Check size={14} color="#0A0A0A" />
+                        </View>
+                      ) : null}
+                    </Touchable>
+                  );
+                })}
+              </ScrollView>
+            </>
+          ) : null}
 
           <UIText variant="eyebrow" style={styles.label}>{t('posterTemplates.photo')}</UIText>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photoRow} contentContainerStyle={{ gap: 8 }}>
@@ -224,7 +326,7 @@ export default function PosterTemplateSheet({
                 {row.map((tpl) => {
                   const on = selected === tpl.id;
                   const spec = specFor(tpl);
-                  const uri = `${API_BASE_URL}/api/posters/preview?${query(facts, spec, language)}`;
+                  const uri = `${API_BASE_URL}/api/posters/preview?${posterQuery(facts, spec, language)}`;
                   return (
                     <View key={tpl.id} style={{ flex: 1 }}>
                       <Touchable
@@ -307,6 +409,10 @@ const getStyles = (colors: any) =>
       marginBottom: 8,
     },
     photoRow: { flexGrow: 0, marginBottom: spacing.lg },
+    holidayRow: { flexGrow: 0, marginBottom: spacing.lg },
+    holidayTile: { width: 112, aspectRatio: 4 / 5, borderRadius: radius.sm, overflow: 'hidden', backgroundColor: colors.surfaceRaised },
+    // Selection is fill/strength, not an outline (house rule).
+    holidayTileOff: { opacity: 0.6 },
     photoThumb: { width: 44, height: 56, borderRadius: radius.sm, overflow: 'hidden', backgroundColor: colors.surfaceRaised },
     // Selection is fill/size, not an outline (house rule): the chosen photo
     // is full strength, the rest recede.

@@ -452,44 +452,51 @@ export interface OccasionIdea {
   day: number
   /** Start time, 24h. */
   time: string
+  /**
+   * The holiday poster template (lib/holidayTemplates id) Create Event opens
+   * with already applied, photo and all. Optional: an idea without one opens
+   * with no poster. __tests__/holidayTemplates.test.ts checks each one exists
+   * and belongs to the same occasion.
+   */
+  poster?: string
 }
 
 // prettier-ignore
 export const OCCASION_IDEAS: OccasionIdea[] = [
-  { id: 'kanaval-bal', occasion: 'kanaval', category: 'Party', appCategory: 'Music', day: -7, time: '21:00',
+  { id: 'kanaval-bal', occasion: 'kanaval', category: 'Party', appCategory: 'Music', day: -7, time: '21:00', poster: 'kan-bal',
     title: { en: 'Pre-kanaval bal', fr: 'Bal pré-carnaval', ht: 'Bal pre-kanaval' },
     description: { en: 'A night of konpa and kanaval meringues before the fat days.', fr: 'Une soirée konpa et méringues de carnaval avant les jours gras.', ht: 'Yon swa konpa ak mereng kanaval anvan jou gra yo.' } },
-  { id: 'kanaval-mask', occasion: 'kanaval', category: 'Workshop', appCategory: 'Arts', day: -14, time: '10:00',
+  { id: 'kanaval-mask', occasion: 'kanaval', category: 'Workshop', appCategory: 'Arts', day: -14, time: '10:00', poster: 'kan-atelye-mask',
     title: { en: 'Kanaval mask workshop', fr: 'Atelier de masques de carnaval', ht: 'Atelye mask kanaval' },
     description: { en: 'Papier-mâché masks in the Jacmel style, for kids and parents.', fr: 'Des masques en papier mâché façon Jacmel, pour les enfants et les parents.', ht: 'Mask papye mache tankou Jakmèl, pou timoun ak paran.' } },
-  { id: 'rara-night', occasion: 'rara', category: 'Festival', appCategory: 'Music', day: 44, time: '17:00',
+  { id: 'rara-night', occasion: 'rara', category: 'Festival', appCategory: 'Music', day: 44, time: '17:00', poster: 'rar-lari',
     title: { en: 'Rara on the road', fr: 'Rara dans la rue', ht: 'Rara nan lari' },
     description: { en: 'Vaksen, drums and a band to follow through the streets.', fr: 'Vaksens, tambours et une bande à suivre dans les rues.', ht: 'Vaksen, tanbou ak yon bann pou suiv nan lari.' } },
-  { id: 'soup-joumou', occasion: 'fet-endepandans', category: 'Food & Drink', appCategory: 'Food & Drink', day: 0, time: '09:00',
+  { id: 'soup-joumou', occasion: 'fet-endepandans', category: 'Food & Drink', appCategory: 'Food & Drink', day: 0, time: '09:00', poster: 'end-soup-maten',
     title: { en: 'Soup joumou morning', fr: 'Matinée soupe joumou', ht: 'Maten soup joumou' },
     description: { en: 'Soup joumou for everyone on the first of January.', fr: 'De la soupe joumou pour tout le monde le 1er janvier.', ht: 'Soup joumou pou tout moun premye janvye.' } },
-  { id: 'drapo-konse', occasion: 'fet-drapo', category: 'Concert', appCategory: 'Music', day: 0, time: '19:00',
+  { id: 'drapo-konse', occasion: 'fet-drapo', category: 'Concert', appCategory: 'Music', day: 0, time: '19:00', poster: 'drp-konse',
     title: { en: 'Fèt Drapo concert', fr: 'Concert de la Fête du Drapeau', ht: 'Konsè Fèt Drapo' },
     description: { en: 'Blue and red on stage for the 18th of May.', fr: 'Le bleu et rouge sur scène pour le 18 mai.', ht: 'Ble ak wouj sou sèn pou 18 me.' } },
-  { id: 'manman-brunch', occasion: 'fet-manman', category: 'Food & Drink', appCategory: 'Food & Drink', day: 0, time: '11:00',
+  { id: 'manman-brunch', occasion: 'fet-manman', category: 'Food & Drink', appCategory: 'Food & Drink', day: 0, time: '11:00', poster: 'man-brunch',
     title: { en: 'Fèt Manman brunch', fr: 'Brunch de la Fête des Mères', ht: 'Brunch Fèt Manman' },
     description: { en: 'A table for the mothers, with music and flowers.', fr: 'Une table pour les mamans, avec musique et fleurs.', ht: 'Yon tab pou manman yo, ak mizik ak flè.' } },
-  { id: 'papa-domino', occasion: 'fet-papa', category: 'Food & Drink', appCategory: 'Food & Drink', day: 0, time: '14:00',
+  { id: 'papa-domino', occasion: 'fet-papa', category: 'Food & Drink', appCategory: 'Food & Drink', day: 0, time: '14:00', poster: 'pap-babekyou',
     title: { en: 'Fèt Papa grill and dominoes', fr: 'Grillades et dominos pour la Fête des Pères', ht: 'Fèt Papa: babekyou ak domino' },
     description: { en: 'An afternoon for the fathers: grill, dominoes and konpa.', fr: 'Un après-midi pour les papas : grillades, dominos et konpa.', ht: 'Yon apremidi pou papa yo: babekyou, domino ak konpa.' } },
-  { id: 'vertieres-talk', occasion: 'vertieres', category: 'Conference', appCategory: 'Education', day: 0, time: '18:00',
+  { id: 'vertieres-talk', occasion: 'vertieres', category: 'Conference', appCategory: 'Education', day: 0, time: '18:00', poster: 'ver-istwa',
     title: { en: 'Vertières, 1803: a history evening', fr: 'Vertières, 1803 : soirée d’histoire', ht: 'Vètyè 1803: yon swa istwa' },
     description: { en: 'The battle that led to 1804, told by a historian.', fr: 'La bataille qui a mené à 1804, racontée par un historien.', ht: 'Batay ki mennen nou nan 1804, yon istoryen ap rakonte l.' } },
-  { id: 'nwel-reveyon', occasion: 'nwel', category: 'Food & Drink', appCategory: 'Food & Drink', day: 0, time: '20:00',
+  { id: 'nwel-reveyon', occasion: 'nwel', category: 'Food & Drink', appCategory: 'Food & Drink', day: 0, time: '20:00', poster: 'nwel-reveyon',
     title: { en: 'Christmas Eve réveillon', fr: 'Réveillon de Noël', ht: 'Revèyon Nwèl' },
     description: { en: 'Dinner and music on the night of the 24th.', fr: 'Dîner et musique le soir du 24.', ht: 'Manje ak mizik nan swa 24 la.' } },
-  { id: 'fen-ane-bal', occasion: 'fen-ane', category: 'Party', appCategory: 'Music', day: 0, time: '21:00',
+  { id: 'fen-ane-bal', occasion: 'fen-ane', category: 'Party', appCategory: 'Music', day: 0, time: '21:00', poster: 'fen-bal',
     title: { en: 'New Year’s Eve bal', fr: 'Bal du réveillon', ht: 'Bal fen ane' },
     description: { en: 'Dance into the new year, soup joumou at dawn.', fr: 'Danser jusqu’à la nouvelle année, soupe joumou à l’aube.', ht: 'Danse rive nan nouvo ane a, soup joumou granmaten.' } },
-  { id: 'heritage-fest', occasion: 'heritage-month', category: 'Festival', appCategory: 'Community', day: 16, time: '13:00',
+  { id: 'heritage-fest', occasion: 'heritage-month', category: 'Festival', appCategory: 'Community', day: 16, time: '13:00', poster: 'her-katye',
     title: { en: 'Heritage Month block party', fr: 'Fête de quartier du Mois du patrimoine', ht: 'Fèt katye Mwa Eritaj' },
     description: { en: 'Food, flags, konpa and kids’ games for Haitian Heritage Month.', fr: 'Cuisine, drapeaux, konpa et jeux d’enfants pour le Mois du patrimoine haïtien.', ht: 'Manje, drapo, konpa ak jwèt timoun pou Mwa Eritaj Ayisyen.' } },
-  { id: 'chanpet-lakou', occasion: 'fet-chanpet', category: 'Festival', appCategory: 'Community', day: 14, time: '15:00',
+  { id: 'chanpet-lakou', occasion: 'fet-chanpet', category: 'Festival', appCategory: 'Community', day: 14, time: '15:00', poster: 'cha-fet',
     title: { en: 'Fèt chanpèt in the lakou', fr: 'Fête champêtre au lakou', ht: 'Fèt chanpèt nan lakou a' },
     description: { en: 'A patron saint’s day with food stalls, music and games.', fr: 'Une fête patronale avec stands de cuisine, musique et jeux.', ht: 'Yon fèt patwonal ak machann manje, mizik ak jwèt.' } },
 ]
@@ -521,4 +528,48 @@ export function ideaDate(idea: OccasionIdea, now: Date | number | IsoDay = Date.
     day = isoOf(dayNum(next.mainStart) + idea.day)
   }
   return day
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Seasons (holiday poster templates)                                         */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The occasion whose holiday posters (lib/holidayTemplates) a poster picker
+ * shows first: the one the event is tagged for, else the first occasion its
+ * start day falls in (most specific first). Only occasions in `withPosters`
+ * count, so a date in an occasion with no templates yet shows no row. Null
+ * when none applies.
+ */
+export function posterOccasion(
+  tagged: unknown,
+  date: Date | IsoDay | null | undefined,
+  withPosters: readonly string[],
+  timeZone?: string
+): OccasionKey | null {
+  const has = new Set(withPosters)
+  const own = parseOccasion(tagged)
+  if (own && has.has(own)) return own
+  return occasionsOn(date, timeZone).find((k) => has.has(k)) ?? null
+}
+
+/** An occasion is "in season" from this many days before it starts until it ends. */
+export const SEASON_LEAD_DAYS = 30
+
+/**
+ * The occasions in season on `now`: under way, or starting within
+ * SEASON_LEAD_DAYS. Soonest first (an under-way one before one still to
+ * come). Pure: pass `now` to test it.
+ */
+export function occasionsInSeason(
+  now: Date | number | IsoDay = Date.now(),
+  keys: readonly OccasionKey[] = OCCASION_KEYS,
+  options: { leadDays?: number; timeZone?: string } = {}
+): OccasionKey[] {
+  const lead = options.leadDays ?? SEASON_LEAD_DAYS
+  return keys
+    .map((k) => ({ k, r: occasionWindow(k, now, options.timeZone) }))
+    .filter(({ r }) => occasionDaysUntil(r, now, options.timeZone) <= lead)
+    .sort((a, b) => a.r.start.localeCompare(b.r.start) || a.r.end.localeCompare(b.r.end))
+    .map(({ k }) => k)
 }

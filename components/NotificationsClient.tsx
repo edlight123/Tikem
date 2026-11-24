@@ -81,6 +81,7 @@ function markFor(type: string): { Icon: LucideIcon; tone: Tone; family: Family }
     case 'weekend_digest':
       return { Icon: Compass, tone: 'neutral', family: 'events' }
     case 'national_day':
+    case 'organizer_season':
       return { Icon: Flag, tone: 'neutral', family: 'events' }
     case 'organizer_milestone':
       return { Icon: Ticket, tone: 'neutral', family: 'events' }

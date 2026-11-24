@@ -16,6 +16,7 @@ export default {
     emptyTitle: 'nothing listed yet',
     emptyBody: 'Events tagged for it will show here.',
     ideasTitle: 'ideas to host',
+    postersTitle: 'posters',
     useIdea: 'create this event',
     partOf: 'Part of {name}',
     notFound: 'This occasion does not exist',
@@ -3422,6 +3423,7 @@ export default {
     use: 'Use this poster',
     failed: 'Could not make the poster. Try again.',
     sampleTitle: 'Your event',
+    forOccasion: 'For {name}',
   },
   flyerLibrary: {
     title: 'Select a flyer',
@@ -3986,6 +3988,7 @@ export default {
       milestones: 'Sales milestones',
       milestonesBody: 'When an event passes half sold or sells out.',
       nudges: 'Sales tips',
+      season: 'Season reminders',
       nudgesBody: 'A nudge with your promoter link when sales are slow.',
     },
   },

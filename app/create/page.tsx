@@ -21,7 +21,7 @@ export const dynamic = 'force-dynamic'
 export default async function CreatePage({
   searchParams,
 }: {
-  searchParams?: Promise<{ occasion?: string | string[]; idea?: string | string[] }>
+  searchParams?: Promise<{ occasion?: string | string[]; idea?: string | string[]; holiday?: string | string[] }>
 }) {
   const user = await getCurrentUser()
   // From an occasion page: carried through to whichever composer opens.
@@ -29,18 +29,20 @@ export default async function CreatePage({
   const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) || null
   const occasion = first(sp.occasion)
   const idea = first(sp.idea)
+  const holiday = first(sp.holiday)
 
   if (user?.role === 'organizer') {
     const qs = new URLSearchParams()
     if (occasion) qs.set('occasion', occasion)
     if (idea) qs.set('idea', idea)
+    if (holiday) qs.set('holiday', holiday)
     redirect(`/organizer/events/new${qs.size ? `?${qs}` : ''}`)
   }
 
   return (
     <div className="surface-dark min-h-screen pb-mobile-nav">
       <Navbar user={user} isAdmin={isAdmin(((user as any)?.email_verified) ? user?.email : null)} />
-      <EventComposer userId={user?.id || ''} guest authed={!!user} initialOccasion={occasion} initialIdea={idea} />
+      <EventComposer userId={user?.id || ''} guest authed={!!user} initialOccasion={occasion} initialIdea={idea} initialHoliday={holiday} />
       <MobileNavWrapper user={user} isAdmin={isAdmin(((user as any)?.email_verified) ? user?.email : null)} />
     </div>
   )

@@ -38,7 +38,9 @@ import WhitePillCTA from '../components/WhitePillCTA';
 import OccasionIcon from '../components/OccasionIcon';
 import { GridSkeleton } from '../components/Skeleton';
 import { ListGroup, ListRow } from '../components/ui';
-import { withAlpha, font } from '../theme/tokens';
+import { withAlpha, font, radius } from '../theme/tokens';
+import { API_BASE_URL } from '../lib/api/backend';
+import { loadHolidayTemplates, posterQuery, holidaySpec, type HolidayTemplate } from '../components/organizer/PosterTemplateSheet';
 
 /**
  * An occasion's page (lib/occasions: Kanaval, Fèt Manman…). Opened from Home's
@@ -47,7 +49,9 @@ import { withAlpha, font } from '../theme/tokens';
  * status bar with the countdown, name and dates on it; the occasion's line and
  * "Add an event"; its events in the poster grid (tagged ones, plus untagged
  * ones on the main days of a short occasion); and a few ideas that open
- * Create Event filled in. Mirrors the website's app/occasions/[key].
+ * Create Event filled in (with the poster an idea names already applied), and
+ * a strip of the occasion's holiday posters, each opening Create Event with
+ * that poster. Mirrors the website's app/occasions/[key].
  */
 
 const COLUMN_WIDTH = (Dimensions.get('window').width - 32 - 12) / 2;
@@ -76,6 +80,18 @@ export default function OccasionScreen({ navigation, route }: any) {
   const key = parseOccasion(route.params?.key);
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [posters, setPosters] = useState<HolidayTemplate[]>([]);
+
+  useEffect(() => {
+    if (!key) return;
+    let alive = true;
+    loadHolidayTemplates()
+      .then((all) => alive && setPosters(all.filter((h) => h.occasion === key)))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [key]);
 
   const now = Date.now();
   const range = key ? occasionWindow(key, now) : null;
@@ -143,6 +159,15 @@ export default function OccasionScreen({ navigation, route }: any) {
   const heroH = Math.round(Math.min(width * 1.05, 460)) + insets.top;
   const photo = occasionPhoto(key);
   const addEvent = (idea?: string) => navigation.navigate('CreateEvent', idea ? { occasion: key, idea } : { occasion: key });
+  const lang = (['en', 'fr', 'ht'].includes(language) ? language : 'en') as 'en' | 'fr' | 'ht';
+  // Each poster drawn with its own suggested title on the occasion's next main day.
+  const posterSrc = (h: HolidayTemplate) =>
+    `${API_BASE_URL}/api/posters/preview?${posterQuery(
+      { title: h.title[lang], date: range.mainStart < today ? range.mainEnd : range.mainStart, time: h.time },
+      holidaySpec(h),
+      language,
+    )}`;
+  const posterW = Math.round((width - 32 - 24) / 2.6);
 
   return (
     <View style={styles.container}>
@@ -204,6 +229,26 @@ export default function OccasionScreen({ navigation, route }: any) {
           )}
         </View>
 
+        {posters.length > 0 && (
+          <View style={styles.section}>
+            <SectionHeader title={t('occasions.postersTitle')} />
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.posterRow} contentContainerStyle={{ gap: 12, paddingHorizontal: 16 }}>
+              {posters.map((h) => (
+                <TouchableOpacity
+                  key={h.id}
+                  activeOpacity={0.85}
+                  onPress={() => navigation.navigate('CreateEvent', { occasion: key, holiday: h.id })}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${h.title[lang]}, ${t('occasions.useIdea')}`}
+                  style={[styles.poster, { width: posterW }]}
+                >
+                  <Image source={{ uri: posterSrc(h) }} style={StyleSheet.absoluteFill} contentFit="cover" transition={150} cachePolicy="memory-disk" />
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
         {ideas.length > 0 && (
           <View style={styles.section}>
             <SectionHeader title={t('occasions.ideasTitle')} />
@@ -257,5 +302,8 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     cta: { alignSelf: 'flex-start' },
     section: { paddingHorizontal: 16, marginTop: 32 },
     grid: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 12, rowGap: 24 },
+    // Full-bleed strip: cancels the section's side padding, keeps it as inset.
+    posterRow: { marginHorizontal: -16 },
+    poster: { aspectRatio: 4 / 5, borderRadius: radius.poster, overflow: 'hidden', backgroundColor: colors.surface },
     back: { position: 'absolute', left: 16, zIndex: 10 },
   });

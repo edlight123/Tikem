@@ -1,5 +1,9 @@
 import type { Metadata } from 'next'
 import { PHOTO_CREDITS } from '@/lib/photoCredits'
+import { HOLIDAY_TEMPLATES } from '@/lib/holidayTemplates'
+
+// Each holiday poster photo once (a photo can serve two templates).
+const HOLIDAY_CREDITS = [...new Map(HOLIDAY_TEMPLATES.map((t) => [t.photo, t])).values()]
 
 export const metadata: Metadata = {
   title: 'Photo credits · Tikèm',
@@ -36,6 +40,30 @@ export default function PhotoCreditsPage() {
               ) : (
                 c.license
               )}
+            </p>
+          </li>
+        ))}
+      </ul>
+
+      {/* The holiday poster templates' photos (lib/holidayTemplates), all Unsplash License. */}
+      <h2 className="mt-14 font-display text-title italic leading-tight text-fg">holiday posters</h2>
+      <ul className="mt-4 divide-y divide-line">
+        {HOLIDAY_CREDITS.map((t) => (
+          <li key={t.photo} className="py-4">
+            <a
+              href={t.credit.source}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-body font-semibold text-fg hover:underline"
+            >
+              {t.title.en}
+            </a>
+            <p className="mt-1 text-meta text-fg-muted">
+              {t.credit.author}
+              {' · '}
+              <a href="https://unsplash.com/license" target="_blank" rel="noopener noreferrer" className="underline">
+                Unsplash License
+              </a>
             </p>
           </li>
         ))}

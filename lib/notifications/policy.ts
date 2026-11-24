@@ -25,6 +25,7 @@ export type NotificationCategory =
   | 'organizer_sale' // you sold a ticket
   | 'organizer_milestone' // 50% sold, sold out
   | 'organizer_nudge' // sales are slow, here is your promoter link
+  | 'organizer_season' // an occasion is three weeks out: make your poster (lib/notifications/seasonNudge)
   | 'national_day' // a short note on a Haitian holiday (lib/nationalDays)
   | 'friend_invite' // a connection invited you to an event / joined from your invite (lib/invites)
   | 'event_feedback' // the morning after: "how was it?" (checked-in attendees only)
@@ -61,6 +62,8 @@ const PREFERENCE_FIELD: Record<NotificationCategory, string | null> = {
   organizer_sale: 'notify_ticket_purchase',
   organizer_milestone: 'notify_organizer_milestones',
   organizer_nudge: 'notify_organizer_nudges',
+  // Its own switch: a promotional note, opt-in in Canada and France.
+  organizer_season: 'notify_organizer_season',
   national_day: 'notify_national_day',
   friend_invite: 'notify_friend_invites',
   // "How was it?" is part of the event's own lifecycle: off with reminders.

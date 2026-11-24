@@ -16,6 +16,7 @@ export default {
     emptyTitle: 'rien pour l’instant',
     emptyBody: 'Les événements associés apparaîtront ici.',
     ideasTitle: 'idées à organiser',
+    postersTitle: 'affiches',
     useIdea: 'créer cet événement',
     partOf: 'Pour {name}',
     notFound: 'Cette occasion n’existe pas',
@@ -3385,6 +3386,7 @@ export default {
     use: 'Utiliser cette affiche',
     failed: 'Impossible de créer l’affiche. Réessayez.',
     sampleTitle: 'Votre événement',
+    forOccasion: 'Pour {name}',
   },
   flyerLibrary: {
     title: 'Choisir un visuel',
@@ -4006,6 +4008,7 @@ export default {
       milestones: 'Étapes de vente',
       milestonesBody: 'Quand un événement dépasse la moitié des ventes ou affiche complet.',
       nudges: 'Conseils de vente',
+      season: 'Rappels de saison',
       nudgesBody: 'Un rappel avec votre lien promoteur quand les ventes ralentissent.',
     },
   },
