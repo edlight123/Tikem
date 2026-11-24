@@ -192,6 +192,18 @@ export default function EventTicketsScreen({ route, navigation }: any) {
   if (loading) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
+        {/* The loaded page's top bar, with its working back button. */}
+        <View style={styles.topBar}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.backButton}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={t('common.back')}
+          >
+            <ArrowLeft size={24} color={colors.white} />
+          </TouchableOpacity>
+        </View>
         <TicketPassSkeleton />
       </SafeAreaView>
     );

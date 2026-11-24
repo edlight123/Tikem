@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
   StatusBar,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -26,6 +25,7 @@ import OrganizerScreenHeader from '../../components/organizer/OrganizerScreenHea
 import SectionHeader from '../../components/SectionHeader';
 import WhitePillCTA from '../../components/WhitePillCTA';
 import StatusChip from '../../components/StatusChip';
+import { Skeleton } from '../../components/Skeleton';
 import { radius } from '../../theme/tokens';
 
 const SUBMITTED_STATUSES = ['pending', 'pending_review', 'in_review', 'approved'] as const;
@@ -124,9 +124,35 @@ export default function OrganizerVerificationScreen() {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.loadingText}>{t('verification.organizerVerification.loading')}</Text>
+      // The loaded page's header and rows (section title + two-line note,
+      // progress line and track, the three filled step rows), not a spinner.
+      <View style={styles.container}>
+        <OrganizerScreenHeader
+          title={t('verification.organizerVerification.title')}
+          onBack={() => navigation.goBack()}
+          overlay
+          onHeight={onHeight}
+        />
+        <View style={[styles.content, { paddingTop: headerH + 8 }]}>
+          <Skeleton width={150} height={22} radius={4} />
+          <Skeleton width="92%" height={13} radius={4} style={{ marginTop: 6 }} />
+          <Skeleton width="64%" height={13} radius={4} style={{ marginTop: 5, marginBottom: 12 }} />
+          <View style={styles.progressRow}>
+            <Skeleton width={110} height={13} radius={4} />
+          </View>
+          <View style={styles.progressTrack} />
+          {[0, 1, 2].map((i) => (
+            <View key={i} style={styles.stepRow}>
+              <View style={styles.stepIcon}>
+                <Skeleton width={22} height={22} radius={11} />
+              </View>
+              <View style={[styles.stepContent, { gap: 6 }]}>
+                <Skeleton width="56%" height={14} radius={4} />
+                <Skeleton width="78%" height={12} radius={4} />
+              </View>
+            </View>
+          ))}
+        </View>
       </View>
     );
   }

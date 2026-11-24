@@ -27,7 +27,7 @@ import {
   OrganizerStats,
   TodayEvent,
 } from '../../lib/api/organizer';
-import { Skeleton } from '../../components/Skeleton';
+import { Skeleton, ShimmerImage } from '../../components/Skeleton';
 import { Touchable } from '../../components/ui/Touchable';
 import { Text as UIText } from '../../components/ui/Text';
 import StatTriplet from '../../components/StatTriplet';
@@ -335,14 +335,8 @@ export default function OrganizerDashboardScreen() {
     wordmarkSize: number,
   ) =>
     uri ? (
-      <Image
-        source={{ uri }}
-        style={StyleSheet.absoluteFill}
-        contentFit="cover"
-        cachePolicy="memory-disk"
-        transition={200}
-        recyclingKey={id}
-      />
+      // Shimmers until it paints, not a flat raised box.
+      <ShimmerImage uri={uri} recyclingKey={id} />
     ) : (
       <>
         <LinearGradient
@@ -480,11 +474,9 @@ export default function OrganizerDashboardScreen() {
     return (
       <View style={styles.container}>
         {greeting}
-        {/* Tonight: a poster-led hero, poster straight on the canvas. */}
-        <View style={styles.section}>
-          <Skeleton width={110} height={22} radius={4} style={{ marginBottom: 12 }} />
-          <Skeleton width={heroWidth} aspectRatio={heroRatio} radius={radius.poster} style={{ alignSelf: 'center' }} />
-        </View>
+        {/* The sections every dashboard has, in order. No "Tonight" hero: it
+            only exists on a day with an event, so a placeholder for it made
+            the whole page jump up by a poster's height on most days. */}
         {/* This week: section title + the metric triplet (••• while loading). */}
         <View style={styles.section}>
           <Skeleton width={120} height={22} radius={4} style={{ marginBottom: 12 }} />
@@ -495,6 +487,41 @@ export default function OrganizerDashboardScreen() {
               { label: t('organizerDashboard.statUpcoming'), value: null },
             ]}
           />
+        </View>
+        {/* Upcoming: the 160pt poster rail (4:5, two-line serif title, meta, sold). */}
+        <View style={styles.railSection}>
+          <View style={[styles.railHeader, { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }]}>
+            <Skeleton width={110} height={22} radius={4} />
+            <Skeleton width={46} height={13} radius={4} />
+          </View>
+          <View style={[styles.railContent, { flexDirection: 'row', overflow: 'hidden' }]}>
+            {[0, 1, 2].map((i) => (
+              <View key={i} style={styles.railCard}>
+                <Skeleton aspectRatio={4 / 5} radius={radius.poster} />
+                <Skeleton width="86%" height={18} radius={4} style={{ marginTop: 10 }} />
+                <Skeleton width="64%" height={12} radius={4} style={{ marginTop: 8 }} />
+                <Skeleton width="34%" height={12} radius={4} style={{ marginTop: 6 }} />
+              </View>
+            ))}
+          </View>
+        </View>
+        {/* Manage: the filled list group of icon rows. */}
+        <View style={styles.section}>
+          <Skeleton width={96} height={22} radius={4} style={{ marginBottom: 12 }} />
+          <View style={{ backgroundColor: colors.surface, borderRadius: radius.md, overflow: 'hidden' }}>
+            {[0, 1, 2, 3].map((i) => (
+              <View
+                key={i}
+                style={[
+                  { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, minHeight: 52 },
+                  i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border, marginLeft: 0 },
+                ]}
+              >
+                <Skeleton width={32} height={32} radius={4} />
+                <Skeleton width={i % 2 ? '38%' : '50%'} height={14} radius={4} />
+              </View>
+            ))}
+          </View>
         </View>
       </View>
     );

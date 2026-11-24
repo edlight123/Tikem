@@ -8,7 +8,6 @@ import {
   TouchableOpacity,
   RefreshControl,
 } from 'react-native';
-import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTabBarSpace } from '../../hooks/useTabBarSpace';
 import { Ionicons } from '@expo/vector-icons';
@@ -26,7 +25,7 @@ import { useI18n } from '../../contexts/I18nContext';
 import { getOrganizerEvents, OrganizerEvent } from '../../lib/api/organizer';
 import { resolvePosterTheme } from '../../lib/posterGradient';
 import { radius, font } from '../../theme/tokens';
-import { Skeleton } from '../../components/Skeleton';
+import { Skeleton, ShimmerImage } from '../../components/Skeleton';
 import { Touchable } from '../../components/ui/Touchable';
 import { select as hapticSelect } from '../../lib/haptics';
 import EmptyState from '../../components/EmptyState';
@@ -218,7 +217,15 @@ export default function OrganizerEventsScreen() {
       {/* Rounded-rectangle segmented control: surface track, raised fill on
           the selected half. Never a pill. */}
       {loading ? (
-        <Skeleton width="60%" height={30} radius={radius.sm} />
+        // The same underline-tab track as the loaded control (two labels,
+        // 24pt apart, 4/10 padding over the hairline), not a 30pt slab.
+        <View style={styles.segmentTrack}>
+          {[96, 64].map((w) => (
+            <View key={w} style={styles.segment}>
+              <Skeleton width={w} height={15} radius={4} style={{ marginVertical: 2 }} />
+            </View>
+          ))}
+        </View>
       ) : (
         <View style={styles.segmentTrack} accessibilityRole="tablist">
           {([
@@ -381,12 +388,8 @@ export default function OrganizerEventsScreen() {
                     />
                   )}
                   {posterUri ? (
-                    <Image
-                      source={{ uri: posterUri }}
-                      style={StyleSheet.absoluteFill}
-                      contentFit="cover"
-                      cachePolicy="memory-disk"
-                      transition={200}
+                    <ShimmerImage
+                      uri={posterUri}
                       recyclingKey={event.id ? String(event.id) : undefined}
                     />
                   ) : (

@@ -1,6 +1,5 @@
 import React, { useCallback, useRef, useState } from 'react';
 import { Animated, RefreshControl, StatusBar, StyleSheet, Text, View } from 'react-native';
-import { Image } from 'expo-image';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft, MessageCircle } from 'lucide-react-native';
@@ -8,7 +7,7 @@ import { useI18n } from '../contexts/I18nContext';
 import { useTheme } from '../contexts/ThemeContext';
 import EmptyState from '../components/EmptyState';
 import OverlayHeader, { useOverlayHeaderInset } from '../components/OverlayHeader';
-import { Skeleton } from '../components/Skeleton';
+import { Skeleton, ShimmerImage } from '../components/Skeleton';
 import { refreshAttendeeUnread } from '../lib/attendeeUnread';
 import { backendJson } from '../lib/api/backend';
 import { safeFormatForLanguage } from '../lib/dates';
@@ -106,16 +105,26 @@ export default function MessagesScreen({ navigation }: any) {
       </OverlayHeader>
 
       {loading ? (
+        // The loaded list's exact frame: the same filled card, 16pt row gutter
+        // and hairlines between rows, serif title with its date on the right,
+        // two preview lines. (The old rows sat bare on the canvas with no
+        // card, so the list jumped inward when it loaded.)
         <View style={{ paddingTop: headerH + 16, paddingHorizontal: 16 }}>
-          {[0, 1, 2, 3].map((i) => (
-            <View key={i} style={styles.skeletonRow}>
-              <Skeleton width={48} height={60} radius={radius.poster} />
-              <View style={{ flex: 1, gap: 8 }}>
-                <Skeleton width="60%" height={16} radius={4} />
-                <Skeleton width="85%" height={12} radius={4} />
+          <View style={styles.card}>
+            {[0, 1, 2, 3, 4].map((i) => (
+              <View key={i} style={[styles.row, i > 0 && styles.rowDivided]}>
+                <Skeleton width={48} height={60} radius={radius.poster} />
+                <View style={styles.rowText}>
+                  <View style={styles.skeletonHead}>
+                    <Skeleton width={i % 2 ? '52%' : '64%'} height={16} radius={4} />
+                    <Skeleton width={34} height={11} radius={4} />
+                  </View>
+                  <Skeleton width="88%" height={12} radius={4} style={{ marginTop: 6 }} />
+                  <Skeleton width={i % 2 ? '40%' : '58%'} height={12} radius={4} style={{ marginTop: 6 }} />
+                </View>
               </View>
-            </View>
-          ))}
+            ))}
+          </View>
         </View>
       ) : threads.length === 0 ? (
         <View style={[styles.emptyWrap, { paddingTop: headerH }]}>
@@ -163,7 +172,9 @@ export default function MessagesScreen({ navigation }: any) {
                   accessibilityLabel={`${th.event_title}. ${who}${th.last_message_preview}${th.unread ? `. ${t('attendeeMessages.newReply')}` : ''}`}
                 >
                   {th.event_poster ? (
-                    <Image source={{ uri: th.event_poster }} style={styles.poster} contentFit="cover" />
+                    <View style={[styles.poster, styles.posterFrame]}>
+                      <ShimmerImage uri={th.event_poster} recyclingKey={th.id} />
+                    </View>
                   ) : (
                     <View style={[styles.poster, styles.posterFallback]}>
                       <MessageCircle size={18} color={colors.textTertiary} />
@@ -209,7 +220,8 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       backgroundColor: colors.surface,
     },
     retryText: { color: colors.text, fontSize: 15, fontWeight: '600' },
-    skeletonRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
+    skeletonHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, height: 22 },
+    posterFrame: { overflow: 'hidden' },
     card: { backgroundColor: colors.surface, borderRadius: radius.lg, overflow: 'hidden' },
     row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 16 },
     rowDivided: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },

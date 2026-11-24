@@ -1,6 +1,9 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Animated, StyleSheet, View, ViewStyle, DimensionValue, Dimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
+import { withAlpha } from '../theme/tokens';
 import { useTheme } from '../contexts/ThemeContext';
 import { useReducedMotion } from '../lib/a11y';
 
@@ -68,6 +71,40 @@ export function Skeleton({ width = '100%', height, radius = 4, aspectRatio, styl
         style as ViewStyle,
       ]}
     />
+  );
+}
+
+/**
+ * An expo-image that fills its (sized, overflow-hidden) parent and shimmers
+ * until it paints, instead of showing a flat grey or teal box. Tracked per
+ * URI, so a recycled row shimmers again for its new image. Event posters with
+ * fit logic use PosterImage, which carries the same shimmer.
+ */
+export function ShimmerImage({
+  uri,
+  recyclingKey,
+  transition = 200,
+}: {
+  uri: string;
+  recyclingKey?: string;
+  transition?: number;
+}) {
+  const [paintedUri, setPaintedUri] = useState<string | null>(null);
+  return (
+    <>
+      {paintedUri !== uri && <Skeleton radius={0} style={StyleSheet.absoluteFill as ViewStyle} />}
+      <Image
+        accessible={false}
+        source={{ uri }}
+        style={StyleSheet.absoluteFill}
+        contentFit="cover"
+        cachePolicy="memory-disk"
+        transition={transition}
+        recyclingKey={recyclingKey}
+        onLoad={() => setPaintedUri(uri)}
+        onError={() => setPaintedUri(uri)}
+      />
+    </>
   );
 }
 
@@ -203,10 +240,30 @@ export function ListSkeleton({ count = 7 }: { count?: number }) {
   );
 }
 
-/** A two-column grid of poster-card skeletons (Favorites page). */
-export function GridSkeleton({ count = 6 }: { count?: number }) {
+/**
+ * A two-column grid of poster-card skeletons (Favorites, Category, Occasion).
+ * `topPad` is the grid's own top padding (16); a screen that already pads the
+ * top (Category's list header) passes 0 so the grid lands where the real one
+ * does. `chips` adds the Category page's row of three 36pt filter chips.
+ */
+export function GridSkeleton({
+  count = 6,
+  topPad = 16,
+  chips = false,
+}: {
+  count?: number;
+  topPad?: number;
+  chips?: boolean;
+}) {
   return (
-    <View style={styles.grid}>
+    <View style={[styles.grid, { paddingTop: topPad }]}>
+      {chips ? (
+        <View style={styles.gridChips}>
+          {[92, 78, 104].map((w, i) => (
+            <Skeleton key={i} width={w} height={36} radius={4} />
+          ))}
+        </View>
+      ) : null}
       {Array.from({ length: count }).map((_, i) => (
         <PosterCardSkeleton key={i} width={FAV_COLUMN_WIDTH} />
       ))}
@@ -214,7 +271,10 @@ export function GridSkeleton({ count = 6 }: { count?: number }) {
   );
 }
 
-const EVENT_POSTER_W = SCREEN_W * 0.86; // EventDetailScreen POSTER_W
+// EventDetailScreen geometry: a full-bleed 4:5 poster under the 52pt header
+// bar, 28pt of backdrop bleed beneath it (POSTER_W / HEADER_BAR / HERO_BLEED).
+const EVENT_HEADER_BAR = 52;
+const EVENT_HERO_BLEED = 28;
 
 /** Three evenly-spaced stat columns (value over label) — mirrors StatTriplet. */
 function StatTripletSkeleton() {
@@ -231,29 +291,45 @@ function StatTripletSkeleton() {
 }
 
 /**
- * EventDetailScreen initial load: a centered poster hero, a two-line title,
- * a couple of meta rows, an about block, and a floating CTA pill.
+ * EventDetailScreen initial load, in the loaded page's exact geometry: the
+ * full-width 4:5 poster under the header bar, the serif title (34/38), the
+ * date and place lines (15/21), the organizer line (44pt mark, name, Follow),
+ * the About heading and copy, and the floating 50pt CTA over the bottom inset.
  */
 export function EventDetailSkeleton() {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   return (
     <View style={{ flex: 1 }}>
-      <View style={[styles.eventHero, { backgroundColor: colors.surfaceMuted }]}>
-        <Skeleton radius={4} aspectRatio={4 / 5} style={{ width: EVENT_POSTER_W } as ViewStyle} />
+      <View
+        style={[
+          styles.eventHero,
+          { backgroundColor: colors.surfaceMuted, paddingTop: insets.top + EVENT_HEADER_BAR },
+        ]}
+      >
+        <Skeleton radius={4} aspectRatio={4 / 5} style={{ width: SCREEN_W } as ViewStyle} />
       </View>
       <View style={styles.eventContent}>
-        <Skeleton width={'82%'} height={30} radius={4} />
-        <Skeleton width={'54%'} height={30} radius={4} style={{ marginTop: 8 } as ViewStyle} />
+        {/* Two 38pt title lines: most event names wrap at 34pt serif. */}
+        <View style={styles.eventTitleLine}>
+          <Skeleton width={'84%'} height={30} radius={4} />
+        </View>
+        <View style={styles.eventTitleLine}>
+          <Skeleton width={'52%'} height={30} radius={4} />
+        </View>
         <View style={styles.eventFacts}>
-          {Array.from({ length: 2 }).map((_, i) => (
-            <View key={i} style={styles.eventFactRow}>
-              <Skeleton width={18} height={18} radius={4} />
-              <View style={styles.eventFactText}>
-                <Skeleton width={'62%'} height={13} radius={4} />
-                <Skeleton width={'40%'} height={11} radius={4} />
-              </View>
-            </View>
-          ))}
+          <View style={styles.eventFactLine}>
+            <Skeleton width={'62%'} height={14} radius={4} />
+          </View>
+          <View style={styles.eventFactLine}>
+            <Skeleton width={'48%'} height={14} radius={4} />
+          </View>
+        </View>
+        <View style={[styles.eventOrgLine, { borderTopColor: colors.border }]}>
+          <Skeleton width={44} height={44} radius={4} />
+          <Skeleton width={'38%'} height={15} radius={4} />
+          <View style={{ flex: 1 }} />
+          <Skeleton width={92} height={36} radius={4} />
         </View>
         <View style={styles.eventSection}>
           <Skeleton width={120} height={18} radius={4} />
@@ -262,29 +338,60 @@ export function EventDetailSkeleton() {
           <Skeleton width={'70%'} height={13} radius={4} style={{ marginTop: 8 } as ViewStyle} />
         </View>
       </View>
-      <View style={styles.eventFloatingCta}>
-        <Skeleton height={54} radius={4} />
+      <View style={[styles.eventFloatingCta, { bottom: insets.bottom + 8 }]}>
+        {/* Same scrim as the loaded page, so the placeholder rows fade out
+            under the pill instead of overlapping it. */}
+        <LinearGradient
+          colors={[withAlpha(colors.background, 0), withAlpha(colors.background, 0.85), colors.background]}
+          locations={[0, 0.55, 1]}
+          style={styles.eventCtaScrim}
+          pointerEvents="none"
+        />
+        <Skeleton height={50} radius={4} />
       </View>
     </View>
   );
 }
 
-/** TicketDetailScreen initial load: title, status chip, QR-card block, info rows. */
-export function TicketDetailSkeleton() {
+/**
+ * TicketDetailScreen initial load, in the loaded page's order and sizes: the
+ * header row (the screen's real back button + a two-line 28/34 serif title),
+ * the status chip, the QR stub (~432 tall) with its instruction line, the
+ * Transfer row, then ONE filled info surface of three rows split by hairlines
+ * (it used to be three separate cards with bigger icons, so the page reflowed).
+ */
+export function TicketDetailSkeleton({ backButton }: { backButton?: React.ReactNode }) {
   const { colors } = useTheme();
   return (
     <View style={styles.ticketDetail}>
-      <Skeleton width={'70%'} height={28} radius={4} />
-      <Skeleton width={96} height={26} radius={4} style={{ alignSelf: 'center', marginTop: 18 } as ViewStyle} />
-      <Skeleton height={360} radius={4} style={{ width: '86%', alignSelf: 'center', marginTop: 24 } as ViewStyle} />
-      <Skeleton width={'60%'} height={13} radius={4} style={{ alignSelf: 'center', marginTop: 16 } as ViewStyle} />
-      <View style={styles.ticketInfoCards}>
+      <View style={styles.ticketHeader}>
+        {backButton ?? <View style={{ width: 24, height: 24 }} />}
+        <View style={styles.ticketTitle}>
+          <Skeleton width={'100%'} height={26} radius={4} style={{ marginTop: 4 } as ViewStyle} />
+          <Skeleton width={'62%'} height={26} radius={4} style={{ marginTop: 8 } as ViewStyle} />
+        </View>
+      </View>
+      <Skeleton width={96} height={24} radius={4} style={{ alignSelf: 'center', marginBottom: 20 } as ViewStyle} />
+      <Skeleton height={432} radius={4} style={{ width: '86%', alignSelf: 'center' } as ViewStyle} />
+      <Skeleton width={'60%'} height={15} radius={4} style={{ alignSelf: 'center', marginTop: 4, marginBottom: 32 } as ViewStyle} />
+      <View style={[styles.ticketTransfer, { backgroundColor: colors.surface }]}>
+        <Skeleton width={40} height={40} radius={4} />
+        <Skeleton width={'46%'} height={17} radius={4} />
+      </View>
+      <View style={[styles.ticketInfoCards, { backgroundColor: colors.surface }]}>
         {Array.from({ length: 3 }).map((_, i) => (
-          <View key={i} style={[styles.ticketInfoCard, { backgroundColor: colors.surface }]}>
-            <Skeleton width={40} height={40} radius={4} />
+          <View
+            key={i}
+            style={[
+              styles.ticketInfoCard,
+              i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
+            ]}
+          >
+            <Skeleton width={36} height={36} radius={4} />
             <View style={styles.ticketInfoText}>
-              <Skeleton width={'40%'} height={11} radius={4} />
-              <Skeleton width={'70%'} height={14} radius={4} />
+              <Skeleton width={'30%'} height={11} radius={4} />
+              <Skeleton width={'62%'} height={15} radius={4} />
+              <Skeleton width={'40%'} height={13} radius={4} />
             </View>
           </View>
         ))}
@@ -293,55 +400,94 @@ export function TicketDetailSkeleton() {
   );
 }
 
-/** EventTicketsScreen initial load: centered event title + a large ticket-pass card. */
+/**
+ * EventTicketsScreen initial load, below the screen's own 44pt top bar: the
+ * TicketPassCard centred in its 16pt page — status chip, the QR stub (24pt
+ * padding, 27pt title, date, 200pt QR in a 16pt frame, tier/holder/ref ≈ 432),
+ * then the Wallet button and the row of four square quick actions. The pass
+ * names the event, so there is no title above it (the old placeholder had one).
+ */
 export function TicketPassSkeleton() {
   return (
     <View style={styles.ticketPass}>
-      <Skeleton width={'70%'} height={24} radius={4} style={{ alignSelf: 'center' } as ViewStyle} />
-      <Skeleton width={120} height={12} radius={4} style={{ alignSelf: 'center', marginTop: 10 } as ViewStyle} />
-      <Skeleton height={480} radius={4} style={{ width: '100%', marginTop: 28 } as ViewStyle} />
-    </View>
-  );
-}
-
-/** NotificationsScreen initial load: elevated cards with an icon and two text lines. */
-export function NotificationsSkeleton({ count = 6 }: { count?: number }) {
-  const { colors } = useTheme();
-  return (
-    <View style={styles.notifList}>
-      {Array.from({ length: count }).map((_, i) => (
-        <View key={i} style={[styles.notifCard, { backgroundColor: colors.surfaceRaised }]}>
-          <Skeleton width={40} height={40} radius={4} />
-          <View style={styles.notifBody}>
-            <Skeleton width={'70%'} height={14} radius={4} />
-            <Skeleton width={'92%'} height={12} radius={4} />
-            <Skeleton width={90} height={11} radius={4} style={{ marginTop: 2 } as ViewStyle} />
+      <Skeleton width={84} height={24} radius={4} style={{ alignSelf: 'center', marginBottom: 12 } as ViewStyle} />
+      <Skeleton height={432} radius={4} style={{ width: '100%' } as ViewStyle} />
+      <Skeleton height={50} radius={4} style={{ width: '100%', marginTop: 20 } as ViewStyle} />
+      <View style={styles.ticketQuickRow}>
+        {Array.from({ length: 4 }).map((_, i) => (
+          <View key={i} style={styles.ticketQuick}>
+            <Skeleton width={48} height={48} radius={4} />
+            <Skeleton width={44} height={11} radius={4} />
           </View>
-        </View>
-      ))}
+        ))}
+      </View>
     </View>
   );
 }
 
-/** People rows (Connections): a card of avatar + name + connect-pill rows. */
-export function PeopleRowsSkeleton({ count = 7 }: { count?: number }) {
+/**
+ * NotificationsScreen initial load, matching the plain rows the screen now
+ * draws (TestFlight 2026-11-14 retired the old 40pt-icon cards): the
+ * "mark all read · clear all" bar, then rows of an unread-dot gutter, a 15pt
+ * title with its time on the right, and two 18pt lines of detail.
+ */
+export function NotificationsSkeleton({ count = 8 }: { count?: number }) {
+  return (
+    <View>
+      <View style={styles.notifBar}>
+        <Skeleton width={132} height={13} radius={4} />
+        <Skeleton width={58} height={13} radius={4} />
+      </View>
+      <View style={styles.notifList}>
+        {Array.from({ length: count }).map((_, i) => (
+          <View key={i} style={styles.notifRow}>
+            <View style={{ width: 7 }} />
+            <View style={styles.notifBody}>
+              <View style={styles.notifHead}>
+                <Skeleton width={i % 2 ? '54%' : '66%'} height={14} radius={4} />
+                <Skeleton width={26} height={11} radius={4} />
+              </View>
+              <View style={styles.notifLine}>
+                <Skeleton width={'94%'} height={12} radius={4} />
+              </View>
+              <View style={styles.notifLine}>
+                <Skeleton width={i % 2 ? '48%' : '72%'} height={12} radius={4} />
+              </View>
+            </View>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+/**
+ * People rows. `list` (Connections): plain rows on the canvas (that screen is
+ * "a list, not a card"), hairlines between, a Connect button at the end.
+ * `card` (Followers, Subscriptions): ONE filled card with 16pt row gutters and
+ * a chevron at the end, exactly like those screens draw it. The old single
+ * shape put Connections in a card and Followers' rows 2pt off with a pill.
+ */
+export function PeopleRowsSkeleton({ count = 7, variant = 'list' }: { count?: number; variant?: 'list' | 'card' }) {
   const { colors } = useTheme();
+  const card = variant === 'card';
   return (
     <View style={styles.peopleWrap}>
-      <View style={[styles.peopleCard, { backgroundColor: colors.surface }]}>
+      <View style={card ? [styles.peopleCard, { backgroundColor: colors.surface }] : undefined}>
         {Array.from({ length: count }).map((_, i) => (
           <View
             key={i}
             style={[
               styles.peopleRow,
+              card && { paddingHorizontal: 16 },
               i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
             ]}
           >
             <Skeleton width={44} height={44} radius={22} />
             <View style={{ flex: 1 }}>
-              <Skeleton width={'55%'} height={14} radius={4} />
+              <Skeleton width={i % 2 ? '42%' : '55%'} height={14} radius={4} />
             </View>
-            <Skeleton width={74} height={32} radius={4} />
+            {card ? <Skeleton width={10} height={16} radius={4} /> : <Skeleton width={84} height={32} radius={4} />}
           </View>
         ))}
       </View>
@@ -368,10 +514,61 @@ export function EarningsSkeleton() {
   );
 }
 
-/** OrganizerProfileScreen initial load: hero (avatar + name), stat triplet, event grid. */
-export function OrganizerProfileSkeleton() {
+// OrganizerProfileScreen org hero: plain banner 128 (+ inset), a 64pt logo
+// riding half over it, counts beside the logo.
+const ORG_BANNER_H = 128;
+const ORG_LOGO = 64;
+
+/**
+ * OrganizerProfileScreen initial load. `org` (the default: every organizer
+ * link) mirrors the org page — banner, the logo overlapping it with the two
+ * counts beside it, the 28/34 serif name, the meta line, two lines of about,
+ * then "upcoming" and a two-column poster grid. `person` (links that pass
+ * view: 'person') mirrors the compact person header. The old placeholder only
+ * had the person layout, so every organizer page jumped when it loaded.
+ */
+export function OrganizerProfileSkeleton({ variant = 'org' }: { variant?: 'org' | 'person' }) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  if (variant === 'org') {
+    return (
+      <View style={{ flex: 1 }}>
+        <View style={{ height: insets.top + ORG_BANNER_H, backgroundColor: colors.surfaceRaised }} />
+        <View style={styles.orgHead}>
+          <View style={styles.orgLogoRow}>
+            {/* The logo tile keeps the page-colour ring the real one has. */}
+            <View style={[styles.orgLogoRing, { backgroundColor: colors.background }]}>
+              <Skeleton width={ORG_LOGO - 6} height={ORG_LOGO - 6} radius={4} />
+            </View>
+            <View style={styles.orgStats}>
+              {Array.from({ length: 2 }).map((_, i) => (
+                <View key={i} style={{ gap: 5 }}>
+                  <Skeleton width={28} height={14} radius={4} />
+                  <Skeleton width={56} height={11} radius={4} />
+                </View>
+              ))}
+            </View>
+          </View>
+          <View style={styles.orgNameLine}>
+            <Skeleton width={'62%'} height={26} radius={4} />
+          </View>
+          <Skeleton width={'42%'} height={12} radius={4} style={{ marginTop: 2 } as ViewStyle} />
+          <Skeleton width={'94%'} height={13} radius={4} style={{ marginTop: 15 } as ViewStyle} />
+          <Skeleton width={'70%'} height={13} radius={4} style={{ marginTop: 9 } as ViewStyle} />
+        </View>
+        <View style={styles.orgContent}>
+          <View style={{ marginHorizontal: -16 }}>
+            <SectionHeaderSkeleton />
+          </View>
+          <View style={styles.orgGrid}>
+            {Array.from({ length: 4 }).map((_, i) => (
+              <PosterCardSkeleton key={i} width={FAV_COLUMN_WIDTH} />
+            ))}
+          </View>
+        </View>
+      </View>
+    );
+  }
   return (
     <View style={{ flex: 1 }}>
       {/* Mirrors the compacted header: a 52px avatar INLINE beside the name,
@@ -594,6 +791,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 16,
   },
+  // CategoryEventsScreen filterRow: 8 gap, marginBottom 16 (the grid's row
+  // gap supplies 24, so this takes the difference back).
+  gridChips: {
+    width: '100%',
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 16 - 24,
+  },
 
   // StatTriplet: three centered columns spread across the row.
   statTriplet: {
@@ -605,82 +810,147 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 
-  // EventDetailScreen: hero (height 600, centered poster), content pad 18.
+  // EventDetailScreen: full-bleed hero (paddingTop applied inline from the
+  // inset + header bar), content gutter 18 / top 9.
   eventHero: {
-    height: 600,
+    paddingBottom: EVENT_HERO_BLEED,
     alignItems: 'center',
-    justifyContent: 'center',
   },
   eventContent: {
     paddingHorizontal: 18,
-    paddingTop: 12,
+    paddingTop: 9,
   },
+  eventTitleLine: {
+    height: 38,
+    justifyContent: 'center',
+  },
+  // factList: marginTop 12 / bottom 4; each line 21pt tall.
   eventFacts: {
-    marginTop: 22,
-    gap: 22,
+    marginTop: 12,
+    marginBottom: 4,
   },
-  eventFactRow: {
+  eventFactLine: {
+    height: 21,
+    justifyContent: 'center',
+  },
+  // orgBlock: hairline divider above, paddingTop 16 / bottom 18, 12pt gaps.
+  eventOrgLine: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 14,
-  },
-  eventFactText: {
-    flex: 1,
-    gap: 8,
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 12,
+    paddingTop: 16,
+    paddingBottom: 18,
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
   eventSection: {
-    marginTop: 24,
+    marginTop: 12,
   },
   eventFloatingCta: {
     position: 'absolute',
-    left: 16,
-    right: 16,
-    bottom: 28,
+    left: 20,
+    right: 20,
+  },
+  eventCtaScrim: {
+    position: 'absolute',
+    left: -20,
+    right: -20,
+    top: -56,
+    bottom: -40,
   },
 
-  // TicketDetailScreen: content padding 20.
+  // TicketDetailScreen: content padding 20; header row then centred blocks.
   ticketDetail: {
     flex: 1,
     padding: 20,
   },
+  ticketHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    marginBottom: 16,
+  },
+  ticketTitle: {
+    flex: 1,
+    height: 68,
+  },
+  ticketTransfer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 16,
+    borderRadius: 4,
+    marginBottom: 32,
+  },
+  // infoCards: one filled surface, 16 gutter, rows of 16pt vertical padding.
   ticketInfoCards: {
-    marginTop: 28,
-    gap: 16,
+    borderRadius: 4,
+    paddingHorizontal: 16,
   },
   ticketInfoCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    borderRadius: 4,
+    paddingVertical: 16,
     gap: 12,
   },
   ticketInfoText: {
     flex: 1,
-    gap: 8,
+    gap: 4,
   },
 
-  // EventTicketsScreen: pass card pager.
+  // EventTicketsScreen: pass card page (pageScroll: 16 gutter, centred).
   ticketPass: {
     flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    justifyContent: 'center',
+  },
+  // TicketPassCard quickRow: marginTop 12 (gap) + 8, spread around.
+  ticketQuickRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginTop: 20,
+  },
+  ticketQuick: {
+    alignItems: 'center',
+    gap: 6,
+    minWidth: 64,
   },
 
-  // NotificationsScreen list: gutter 16, top 16, gap 8.
-  notifList: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    gap: 8,
-  },
-  notifCard: {
+  // NotificationsScreen: header bar (12 gutter + 12/6 button padding), list
+  // paddingTop 4, rows 14/16 padding with a 10pt gap after the dot gutter.
+  notifBar: {
     flexDirection: 'row',
-    borderRadius: 4,
-    padding: 16,
-    gap: 12,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 4,
+    height: 38,
+  },
+  notifList: {
+    paddingTop: 4,
+  },
+  notifRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    gap: 10,
   },
   notifBody: {
     flex: 1,
-    gap: 6,
+    gap: 3,
+  },
+  notifHead: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 8,
+    height: 18,
+  },
+  notifLine: {
+    height: 18,
+    justifyContent: 'center',
   },
 
   // ConnectionsScreen people rows.
@@ -689,7 +959,7 @@ const styles = StyleSheet.create({
   },
   peopleCard: {
     borderRadius: 4,
-    paddingHorizontal: 14,
+    overflow: 'hidden',
   },
   peopleRow: {
     flexDirection: 'row',
@@ -716,6 +986,41 @@ const styles = StyleSheet.create({
   profileIdentityRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 12,
+  },
+  // Org page: orgHead (20 gutter, pulled up half the logo), content 16.
+  orgHead: {
+    paddingHorizontal: 20,
+    marginTop: -ORG_LOGO / 2,
+    paddingBottom: 4,
+  },
+  orgLogoRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 18,
+  },
+  orgLogoRing: {
+    width: ORG_LOGO,
+    height: ORG_LOGO,
+    borderRadius: 4,
+    padding: 3,
+  },
+  orgStats: {
+    flexDirection: 'row',
+    gap: 18,
+    paddingBottom: 2,
+  },
+  orgNameLine: {
+    marginTop: 12,
+    height: 34,
+    justifyContent: 'center',
+  },
+  orgContent: {
+    padding: 16,
+  },
+  orgGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 12,
   },
   profileContent: {

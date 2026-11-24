@@ -21,7 +21,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import EmptyState from '../components/EmptyState';
 import OverlayHeader, { useOverlayHeaderInset } from '../components/OverlayHeader';
-import { Skeleton } from '../components/Skeleton';
+import { Skeleton, ShimmerImage } from '../components/Skeleton';
 import ReportContentModal from '../components/ReportContentModal';
 import MessageActionsSheet, { type BubbleRect } from '../components/messages/MessageActionsSheet';
 import ReactionPills from '../components/messages/ReactionPills';
@@ -444,14 +444,17 @@ export default function MessageThreadScreen({ navigation, route }: any) {
                 cachePolicy="memory-disk"
                 accessibilityIgnoresInvertColors
               />
-            ) : null}
+            ) : (
+              <Skeleton width={30} height={30} radius={15} />
+            )}
           </Touchable>
         </OverlayHeader>
 
         {status === 'loading' ? (
           // Mirrors the loaded layout: event card, a day label, their bubble,
           // then mine, so nothing jumps when the conversation arrives.
-          <View style={{ paddingTop: headerH + 12, paddingHorizontal: 16 }}>
+          <>
+            <View style={{ flex: 1, paddingTop: headerH + 12, paddingHorizontal: 16 }}>
             <View style={styles.eventRow}>
               <Skeleton width={44} height={55} radius={radius.poster} />
               <View style={{ flex: 1, gap: 8 }}>
@@ -464,7 +467,15 @@ export default function MessageThreadScreen({ navigation, route }: any) {
             <Skeleton width={56} height={10} radius={radius.sm} style={{ marginBottom: 16 }} />
             <Skeleton width="58%" height={44} radius={radius.md} style={{ alignSelf: 'flex-end', marginBottom: 6 }} />
             <Skeleton width={56} height={10} radius={radius.sm} style={{ alignSelf: 'flex-end' }} />
-          </View>
+            </View>
+            {/* The composer is part of the page, so it is there from the start. */}
+            <View style={[styles.composer, { paddingBottom: 10 + insets.bottom }]}>
+              <View style={styles.inputRow}>
+                <Skeleton height={44} radius={radius.md} style={{ flex: 1 }} />
+                <Skeleton width={44} height={44} radius={radius.button} />
+              </View>
+            </View>
+          </>
         ) : status === 'error' || !thread ? (
           <View style={[styles.emptyWrap, { paddingTop: headerH }]}>
             <EmptyState icon={MessageCircle} title={t('attendeeMessages.threadFailed')} />
@@ -497,7 +508,9 @@ export default function MessageThreadScreen({ navigation, route }: any) {
                 accessibilityLabel={thread.event_title}
               >
                 {thread.event_poster ? (
-                  <Image source={{ uri: thread.event_poster }} style={styles.poster} contentFit="cover" />
+                  <View style={[styles.poster, { overflow: 'hidden' }]}>
+                    <ShimmerImage uri={thread.event_poster} />
+                  </View>
                 ) : (
                   <View style={styles.poster} />
                 )}

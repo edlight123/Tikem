@@ -160,7 +160,20 @@ export default function FavoritesScreen({ navigation }: any) {
     return (
       <View style={styles.container}>
         <StatusBar barStyle="light-content" backgroundColor={colors.background} />
+        {/* Same header as the loaded page, back button included, so the
+            title does not shift right when the favourites land. */}
         <OverlayHeader onHeight={onHeaderHeight} style={styles.header} scrollY={scrollY}>
+          {navigation.canGoBack() && (
+            <Touchable
+              onPress={() => navigation.goBack()}
+              style={styles.backButton}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={t('common.back')}
+            >
+              <ArrowLeft size={24} color={colors.text} />
+            </Touchable>
+          )}
           <Text style={styles.headerTitle}>{t('favorites.title')}</Text>
         </OverlayHeader>
         {/* No scroll container here — pad the placeholder grid by hand. */}

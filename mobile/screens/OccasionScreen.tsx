@@ -217,7 +217,12 @@ export default function OccasionScreen({ navigation, route }: any) {
         <View style={styles.section}>
           <SectionHeader title={t('occasions.eventsTitle')} />
           {loading ? (
-            <GridSkeleton />
+            // The section already pads 16 and the real grid adds no top pad:
+            // the skeleton's own gutter squeezed two fixed-width columns into
+            // one, so it showed a single column of posters.
+            <View style={{ marginHorizontal: -16 }}>
+              <GridSkeleton topPad={0} count={4} />
+            </View>
           ) : events.length > 0 ? (
             <View style={styles.grid}>
               {events.map((e) => (

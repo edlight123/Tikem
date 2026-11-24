@@ -528,7 +528,17 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
   if (loading) {
     return (
       <SafeAreaView style={styles.container} edges={['bottom']}>
-        <OrganizerProfileSkeleton />
+        <OrganizerProfileSkeleton variant={personView ? 'person' : 'org'} />
+        {/* The real back button, where the loaded page puts it. */}
+        <TouchableOpacity
+          style={[styles.backButton, { top: insets.top + HERO_CONTROL_TOP }]}
+          onPress={() => goBackOrHome(navigation)}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          accessibilityRole="button"
+          accessibilityLabel={t('common.back')}
+        >
+          <Ionicons name="chevron-back" size={26} color={colors.white} />
+        </TouchableOpacity>
       </SafeAreaView>
     );
   }

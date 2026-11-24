@@ -22,6 +22,7 @@ import {
   getVerificationRequest,
 } from '../../lib/verification';
 import { useAppAlert } from '../../components/AppAlert';
+import { Skeleton } from '../../components/Skeleton';
 import { radius } from '../../theme/tokens';
 
 type RouteParams = {
@@ -132,8 +133,42 @@ export default function OrganizerInfoFormScreen() {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
+      // The form's own header and fields (three inputs, the two type
+      // options, the description box, the save bar), not a spinner.
+      <View style={styles.container}>
+        <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>{t('verification.organizerInfo.title')}</Text>
+          <View style={{ width: 40 }} />
+        </View>
+        <View style={[styles.content, styles.contentContainer]}>
+          {[0, 1, 2].map((i) => (
+            <View key={i} style={styles.fieldGroup}>
+              <Skeleton width={i === 2 ? 150 : 110} height={13} radius={4} style={{ marginBottom: 10 }} />
+              <Skeleton height={46} radius={4} />
+            </View>
+          ))}
+          <View style={styles.fieldGroup}>
+            <Skeleton width={130} height={13} radius={4} style={{ marginBottom: 10 }} />
+            <View style={styles.radioGroup}>
+              <Skeleton height={46} radius={4} style={{ flex: 1 }} />
+              <Skeleton height={46} radius={4} style={{ flex: 1 }} />
+            </View>
+          </View>
+          <View style={styles.fieldGroup}>
+            <Skeleton width={160} height={13} radius={4} style={{ marginBottom: 10 }} />
+            <Skeleton height={100} radius={4} />
+          </View>
+        </View>
+        <View style={[styles.footer, { paddingBottom: 16 + insets.bottom }]}>
+          <Skeleton height={56} radius={4} />
+        </View>
       </View>
     );
   }

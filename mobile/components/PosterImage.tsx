@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Image, ImageLoadEventData } from 'expo-image';
 import { posterFit } from '../lib/posterFit';
+import { Skeleton } from './Skeleton';
 
 /**
  * An event poster that fills its frame and never crops a flyer badly.
@@ -40,8 +41,19 @@ export default function PosterImage({ uri, frameRatio, recyclingKey, transition 
     ? ({ accessible: true, accessibilityRole: 'image', accessibilityLabel } as const)
     : ({ accessible: false, accessibilityElementsHidden: true, importantForAccessibility: 'no-hide-descendants' } as const);
   const [ratio, setRatio] = useState<number | undefined>(knownRatios.get(uri));
+  // The poster shimmers until it paints (like the feed skeleton it replaces)
+  // instead of showing a flat grey frame. Tracked per URI so a recycled card
+  // starts shimmering again; a URL that has loaded before is in the memory
+  // cache, so it skips the shimmer rather than flicker for one frame.
+  const [paintedUri, setPaintedUri] = useState<string | null>(knownRatios.has(uri) ? uri : null);
+  const painted = paintedUri === uri || knownRatios.has(uri);
+  const shimmer = painted ? null : (
+    <Skeleton radius={0} style={StyleSheet.absoluteFill as any} />
+  );
+  const onError = () => setPaintedUri(uri);
 
   const onLoad = (e: ImageLoadEventData) => {
+    setPaintedUri(uri);
     const { width, height } = e.source;
     if (!width || !height) return;
     const r = width / height;
@@ -51,21 +63,26 @@ export default function PosterImage({ uri, frameRatio, recyclingKey, transition 
 
   if (posterFit(ratio, frameRatio) === 'cover') {
     return (
-      <Image
-        {...a11y}
-        source={{ uri }}
-        style={StyleSheet.absoluteFill}
-        contentFit="cover"
-        cachePolicy="memory-disk"
-        transition={transition}
-        recyclingKey={recyclingKey}
-        onLoad={onLoad}
-      />
+      <>
+        {shimmer}
+        <Image
+          {...a11y}
+          source={{ uri }}
+          style={StyleSheet.absoluteFill}
+          contentFit="cover"
+          cachePolicy="memory-disk"
+          transition={transition}
+          recyclingKey={recyclingKey}
+          onLoad={onLoad}
+          onError={onError}
+        />
+      </>
     );
   }
 
   return (
     <View style={StyleSheet.absoluteFill} {...a11y}>
+      {shimmer}
       {/* The same flyer, filled and blurred, behind the whole one. */}
       <Image
         source={{ uri }}
@@ -85,6 +102,7 @@ export default function PosterImage({ uri, frameRatio, recyclingKey, transition 
         transition={transition}
         recyclingKey={recyclingKey}
         onLoad={onLoad}
+        onError={onError}
       />
     </View>
   );

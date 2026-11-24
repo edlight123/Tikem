@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
   KeyboardAvoidingView,
   ScrollView,
   StyleSheet,
@@ -20,6 +19,7 @@ import { Touchable } from '../components/ui/Touchable';
 import WhitePillCTA from '../components/WhitePillCTA';
 import FollowButton from '../components/FollowButton';
 import { FEEDBACK_FACES } from '../components/FeedbackFace';
+import { Skeleton } from '../components/Skeleton';
 
 /**
  * "How was it?" — opened from the morning-after notification. Three faces, an
@@ -112,7 +112,22 @@ export default function EventFeedbackScreen() {
         </View>
 
         {loading ? (
-          <ActivityIndicator color={colors.textSecondary} style={{ marginTop: 80 }} />
+          // The form in its loaded shape (poster, title, question, the face
+          // tiles, the comment box, the CTA), not a lone spinner.
+          <View>
+            <Skeleton width={120} aspectRatio={4 / 5} radius={radius.button} style={{ alignSelf: 'center' }} />
+            <Skeleton width="62%" height={30} radius={4} style={{ alignSelf: 'center', marginTop: 19 }} />
+            <Skeleton width="48%" height={24} radius={4} style={{ alignSelf: 'center', marginTop: 30, marginBottom: 20 }} />
+            <View style={styles.faces}>
+              {FEEDBACK_FACES.map((f) => (
+                <View key={f.rating} style={styles.faceCell}>
+                  <Skeleton height={104} radius={radius.button} />
+                </View>
+              ))}
+            </View>
+            <Skeleton height={72} radius={radius.button} style={{ marginTop: 16 }} />
+            <Skeleton height={56} radius={radius.button} style={{ marginTop: 24 }} />
+          </View>
         ) : !ev ? (
           <Text style={styles.muted}>{t('eventFeedback.loadFailed')}</Text>
         ) : (

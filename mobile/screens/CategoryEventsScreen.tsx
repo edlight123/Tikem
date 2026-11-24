@@ -325,8 +325,11 @@ export default function CategoryEventsScreen({ navigation, route }: any) {
       {loading ? (
         <View style={{ paddingTop: hasHero ? 0 : headerH + 16 }}>
           {Hero}
+          {/* The real list pads the top once (header + 16, or the hero's 16
+              margin); the grid skeleton used to add its own 16 on top, and
+              had no filter-chip row, so the posters jumped up on load. */}
           <View style={hasHero ? styles.heroGridPad : null}>
-            <GridSkeleton />
+            <GridSkeleton topPad={0} chips={isCategoryPage} />
           </View>
         </View>
       ) : (

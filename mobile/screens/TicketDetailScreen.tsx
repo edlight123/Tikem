@@ -204,7 +204,18 @@ export default function TicketDetailScreen({ route }: any) {
   if (loading) {
     return (
       <View style={styles.container}>
-        <TicketDetailSkeleton />
+        <TicketDetailSkeleton
+          backButton={
+            <Touchable
+              onPress={() => goBackOrHome(navigation)}
+              style={styles.backBtn}
+              accessibilityRole="button"
+              accessibilityLabel={t('common.back')}
+            >
+              <ChevronLeft size={24} color={colors.text} />
+            </Touchable>
+          }
+        />
       </View>
     );
   }
