@@ -10,6 +10,7 @@
 
 import { format as dfFormat, type Locale } from 'date-fns'
 import { intlLocaleFor } from '@/lib/dateLocale'
+import { formatEventClock } from '@/lib/datetime/eventClock'
 
 /** An instant's calendar and clock fields as read in `zone`. */
 function zoneParts(at: Date | string | number, zone: string) {
@@ -91,12 +92,9 @@ export function eventDay(iso: string, zone: string, lang?: string): string {
   )
 }
 
+/** The event's clock: "8:00 PM" for Haiti in every language (lib/datetime/eventClock). */
 export function eventTime(iso: string, zone: string, lang?: string): string {
-  return new Intl.DateTimeFormat(intlLocaleFor(lang), {
-    timeZone: zone,
-    hour: 'numeric',
-    minute: '2-digit',
-  }).format(new Date(iso))
+  return formatEventClock(iso, { zone, lang })
 }
 
 /** "FRI OCT 2 · 6:00 PM" (uppercased by CSS). */

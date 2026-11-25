@@ -50,6 +50,8 @@ export default async function DoorModeScanPage({ params }: { params: Promise<{ e
     end_datetime: eventData.end_datetime?.toDate?.()?.toISOString() || eventData.end_datetime,
     venue_name: eventData.venue_name,
     city: eventData.city,
+    country: typeof eventData.country === 'string' ? eventData.country : null,
+    timezone: typeof eventData.timezone === 'string' ? eventData.timezone : null,
     entry_points: eventData.entry_points
   }
 
@@ -167,6 +169,7 @@ export default async function DoorModeScanPage({ params }: { params: Promise<{ e
     <DoorModeInterface
       eventId={eventId}
       eventTitle={event.title}
+      eventPlace={{ country: event.country, timezone: event.timezone, city: event.city ?? null }}
       scannedBy={authUser.uid}
       tickets={tickets}
       defaultEntryPoints={entryPoints}

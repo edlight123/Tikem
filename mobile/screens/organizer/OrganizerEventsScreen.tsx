@@ -33,6 +33,7 @@ import { artByKey } from '../../lib/artLibrary';
 import StatusChip from '../../components/StatusChip';
 import { TikemWordmark } from '../../components/TikemWordmark';
 import { displayCapacity } from '../../lib/ticketPricing';
+import { formatEventClock } from '../../lib/eventClock';
 import { soldForPeople } from '../../lib/printedBundle';
 
 type EventStatus =
@@ -325,7 +326,7 @@ export default function OrganizerEventsScreen() {
                 })
               : '';
             const timeLabel = hasDate
-              ? eventDate.toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' })
+              ? formatEventClock(eventDate, event as any, locale)
               : '';
 
             const displayStatus = getDisplayStatus(event, eventTab === 'past');

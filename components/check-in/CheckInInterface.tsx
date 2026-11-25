@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation'
 import { Camera, Search, Users, CheckCircle, XCircle, Clock, AlertCircle, Menu } from 'lucide-react'
 import { QRScanner } from './QRScanner'
 import { useTranslation } from 'react-i18next'
+import { clock12, isHaitiEvent } from '@/lib/datetime/eventClock'
+import { eventZone } from '@/lib/home/feed'
 
 interface Ticket {
   id: string
@@ -44,6 +46,10 @@ type ScanResult = {
 }
 
 export function CheckInInterface({ event, tickets, onCheckIn }: CheckInInterfaceProps) {
+  // A Haiti event's check-in times read "8:00 PM" on its own clock
+  // (lib/datetime/eventClock); others keep the browser's convention.
+  const checkInClock = (at: string | number | Date, opts?: Intl.DateTimeFormatOptions) =>
+    isHaitiEvent(event as any) ? clock12(at, eventZone(event as any)) : new Date(at).toLocaleTimeString([], opts)
   const { t } = useTranslation('organizer')
   const router = useRouter()
   const [showScanner, setShowScanner] = useState(false)
@@ -224,7 +230,7 @@ export function CheckInInterface({ event, tickets, onCheckIn }: CheckInInterface
                 <p className="text-sm opacity-90 mt-1">{scanResult.ticket.ticket_type}</p>
                 {scanResult.ticket.checked_in_at && (
                   <p className="text-xs opacity-75 mt-2">
-                    Checked in at {new Date(scanResult.ticket.checked_in_at).toLocaleTimeString()}
+                    Checked in at {checkInClock(scanResult.ticket.checked_in_at)}
                   </p>
                 )}
               </div>
@@ -273,10 +279,7 @@ export function CheckInInterface({ event, tickets, onCheckIn }: CheckInInterface
                 <div className="text-right ml-4">
                   <CheckCircle className="w-5 h-5 text-success mb-1" />
                   <p className="text-xs text-fg-muted">
-                    {ticket.checked_in_at && new Date(ticket.checked_in_at).toLocaleTimeString([], { 
-                      hour: '2-digit', 
-                      minute: '2-digit' 
-                    })}
+                    {ticket.checked_in_at && checkInClock(ticket.checked_in_at, { hour: '2-digit', minute: '2-digit' })}
                   </p>
                 </div>
               </div>

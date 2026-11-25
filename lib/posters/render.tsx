@@ -23,6 +23,11 @@ export interface PosterInput {
   lineup?: string[]
   presenter?: string
   locale?: 'ht' | 'fr' | 'en'
+  /**
+   * A Haiti event: a French flyer reads "20 h" otherwise; Haiti reads AM/PM
+   * (owner, 2026-11-25), so its time prints "8:00 PM". From `country=HT`.
+   */
+  haiti?: boolean
   /** Background photo (our bucket or an Unsplash photo). */
   photo?: string
   /**
@@ -57,6 +62,7 @@ export function cleanInput(raw: Partial<Record<keyof PosterInput, unknown>>): Po
     presenter: s(raw.presenter, LIMITS.presenter),
     lineup: lineupRaw.map((x) => s(x, LIMITS.lineupItem)).filter(Boolean).slice(0, LIMITS.lineupItems),
     locale,
+    haiti: String((raw as Record<string, unknown>).country ?? '').trim().toUpperCase() === 'HT',
     photo: s(raw.photo, 1000) || undefined,
     treatment: TREATMENTS.includes(raw.treatment as PhotoTreatment) ? (raw.treatment as PhotoTreatment) : undefined,
   }
@@ -88,7 +94,7 @@ const DAYS_SHORT = {
 
 const cap = (x: string) => x.charAt(0).toUpperCase() + x.slice(1)
 
-function dateParts(start: string, locale: 'ht' | 'fr' | 'en') {
+export function dateParts(start: string, locale: 'ht' | 'fr' | 'en', haiti = false) {
   const [y, m, d] = start.slice(0, 10).split('-').map(Number)
   const [hh, mm] = start.slice(11, 16).split(':').map(Number)
   // Weekday from the calendar date alone (UTC noon avoids any DST edge).
@@ -96,7 +102,9 @@ function dateParts(start: string, locale: 'ht' | 'fr' | 'en') {
   const time =
     locale === 'en'
       ? `${((hh + 11) % 12) + 1}${mm ? `:${String(mm).padStart(2, '0')}` : ''}${hh < 12 ? 'AM' : 'PM'}`
-      : locale === 'fr'
+      : locale === 'fr' && haiti
+        ? `${((hh + 11) % 12) + 1}:${String(mm).padStart(2, '0')} ${hh < 12 ? 'AM' : 'PM'}`
+        : locale === 'fr'
         ? `${hh}h${mm ? String(mm).padStart(2, '0') : ''}`
         : `${((hh + 11) % 12) + 1}${mm ? `:${String(mm).padStart(2, '0')}` : ''}${hh < 12 ? 'è dimaten' : hh < 18 ? 'è' : 'è diswa'}`
   return {
@@ -173,7 +181,7 @@ export async function renderPoster(input: PosterInput): Promise<Buffer> {
   const [fonts, photo] = await Promise.all([loadFonts(), preparePhoto(input.photo, t, palette.accent, input.treatment)])
   const data: PosterData = {
     title: input.title,
-    ...dateParts(input.start, input.locale || 'ht'),
+    ...dateParts(input.start, input.locale || 'ht', input.haiti),
     venue: input.venue || '',
     city: input.city || '',
     lineup: input.lineup || [],

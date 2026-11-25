@@ -883,6 +883,7 @@ export default function EventComposer({
     venue: venueName,
     city,
     lineup: guests.map((g) => g.name).filter(Boolean),
+    country,
   })
 
   // Started from a holiday template: show its live preview straight away,

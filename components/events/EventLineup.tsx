@@ -28,9 +28,12 @@ import {
 export default function EventLineup({
   guestlist,
   className = '',
+  twelveHour = false,
 }: {
   guestlist: unknown
   className?: string
+  /** A Haiti event: set times read "8:00 PM", never "20:00". */
+  twelveHour?: boolean
 }) {
   const { t } = useTranslation('common')
 
@@ -47,7 +50,7 @@ export default function EventLineup({
       <ul className="space-y-1">
         {entries.map((g) => {
           const href = safeLineupLink(g.link)
-          const when = lineupTimeRange(g.startTime, g.endTime)
+          const when = lineupTimeRange(g.startTime, g.endTime, twelveHour)
 
           const body = (
             <>

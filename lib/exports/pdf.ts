@@ -12,6 +12,7 @@ import {
   widthHint,
 } from './cells'
 import type { CellValue, ExportColumn, ExportReport } from './types'
+import { haitiHourOptions, isHaitiZone } from '@/lib/datetime/eventClock'
 
 /**
  * An ExportReport as a printable PDF, in the family of the attendee door
@@ -62,7 +63,7 @@ export function renderReportPdf(report: ExportReport): Uint8Array {
 
   const fmtDate = (d: Date, withTime: boolean) => {
     const o: Intl.DateTimeFormatOptions = withTime
-      ? { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' }
+      ? { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit', ...haitiHourOptions(isHaitiZone(report.timeZone)) }
       : { day: 'numeric', month: 'short', year: 'numeric' }
     try {
       return pdfText(new Intl.DateTimeFormat(report.locale, { timeZone: report.timeZone, ...o }).format(d))

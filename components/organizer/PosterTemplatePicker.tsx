@@ -35,6 +35,8 @@ export interface PosterFacts {
   city?: string
   lineup?: string[]
   presenter?: string
+  /** The event's country: 'HT' prints the flyer's time as "8:00 PM" in French too. */
+  country?: string
 }
 
 /** What was chosen, so the composer can redraw it when the facts change. */
@@ -75,6 +77,7 @@ export function query(facts: PosterFacts, template: string, palette: number, pho
     presenter: facts.presenter || '',
     locale: ['ht', 'fr', 'en'].includes(locale) ? locale : 'ht',
   })
+  if (facts.country) q.set('country', facts.country)
   if (photo) q.set('photo', photo)
   if (treatment) q.set('treatment', treatment)
   return q

@@ -12,10 +12,13 @@ import { performCheckIn, performOverrideCheckIn } from '@/app/organizer/scan/act
 import type { CheckInParams, CheckInResult } from '@/lib/scan/checkInTicket'
 import { DoorCollectBar } from '@/components/scan/DoorCollectBar'
 import { doorBalance } from '@/lib/tickets/pay-at-door'
+import type { ClockEvent } from '@/lib/datetime/eventClock'
 
 interface DoorModeInterfaceProps {
   eventId: string
   eventTitle: string
+  /** Country + zone + city: a Haiti event's times read "8:00 PM" (lib/datetime/eventClock). */
+  eventPlace?: ClockEvent
   scannedBy: string
   tickets: any[]
   defaultEntryPoints?: string[]
@@ -25,6 +28,7 @@ interface DoorModeInterfaceProps {
 export function DoorModeInterface({
   eventId,
   eventTitle,
+  eventPlace,
   scannedBy,
   tickets,
   defaultEntryPoints = ['Main Entrance', 'VIP Entrance', 'Gate A', 'Gate B'],
@@ -164,11 +168,12 @@ export function DoorModeInterface({
 
       {/* Result Overlay: the override's verdict replaces the scan's. */}
       {overrideResult ? (
-        <ScanResultOverlay result={overrideResult} onClose={closeOverride} reentry />
+        <ScanResultOverlay result={overrideResult} onClose={closeOverride} reentry eventPlace={eventPlace} />
       ) : (
         result && (
           <ScanResultOverlay
             result={result}
+            eventPlace={eventPlace}
             onClose={reset}
             onOverride={handleOverride}
             overriding={overriding}

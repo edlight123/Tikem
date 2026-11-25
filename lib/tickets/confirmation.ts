@@ -10,6 +10,8 @@
 import { generateTicketQRCodeBuffer } from '@/lib/qrcode'
 import { sendEmail, getTicketConfirmationEmail, emailSubjects, TICKET_QR_CID } from '@/lib/email'
 import { formatEventWhen } from '@/lib/email-kit/i18n'
+import { formatEventClock, hhmmTo12, isHaitiEvent } from '@/lib/datetime/eventClock'
+import { eventZone } from '@/lib/home/feed'
 import { resolveEmailLang } from '@/lib/email-kit/recipient'
 import { sendSms, getTicketConfirmationSms } from '@/lib/sms'
 import { sendWhatsAppMessage, getTicketConfirmationWhatsApp } from '@/lib/whatsapp'
@@ -43,16 +45,21 @@ export interface SendTicketConfirmationResult {
   whatsappSent: boolean
 }
 
-function formatShortEventDate(value: unknown): string {
+/** The doors time as the ticket shows it: "8:00 PM" for Haiti, else as typed. */
+function doorsClock(event: ConfirmationEvent | null, lang: 'en' | 'fr' | 'ht'): string | undefined {
+  const raw = String(event?.doors_open_time || '').trim()
+  if (!raw) return undefined
+  if (/^\d{4}-\d{2}-\d{2}T/.test(raw)) return formatEventWhen(raw, lang, event)?.time || undefined
+  return isHaitiEvent(event) ? hhmmTo12(raw) : raw
+}
+
+/** "Saturday, June 21 · 8:00 PM" on the EVENT's clock (the server runs in UTC). */
+function formatShortEventDate(value: unknown, event?: ConfirmationEvent | null): string {
   const date = value ? new Date(String(value)) : null
   if (!date || Number.isNaN(date.getTime())) return 'TBA'
-  return date.toLocaleDateString('en-US', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  })
+  const zone = eventZone(event || null)
+  const day = date.toLocaleDateString('en-US', { timeZone: zone, weekday: 'long', month: 'long', day: 'numeric' })
+  return `${day} · ${formatEventClock(date, { zone, lang: 'en', haiti: isHaitiEvent(event) || undefined })}`
 }
 
 /**
@@ -101,11 +108,15 @@ export async function sendTicketConfirmation(params: {
 
   if (params.recipient.email) {
     try {
-      const lang = await resolveEmailLang({
-        userId: params.recipient.isGuest ? null : params.recipient.userId,
-        email: params.recipient.isGuest ? null : params.recipient.email,
-        event: params.event,
-      })
+      // A Haiti event's ticket is in French whatever the buyer's language
+      // (owner, 2026-11-25); everywhere else the buyer's own language.
+      const lang = isHaitiEvent(params.event)
+        ? 'fr'
+        : await resolveEmailLang({
+            userId: params.recipient.isGuest ? null : params.recipient.userId,
+            email: params.recipient.isGuest ? null : params.recipient.email,
+            event: params.event,
+          })
       const when = formatEventWhen(params.event?.start_datetime, lang, params.event)
       const poster = String(params.event?.banner_image_url || '').trim() || null
       const guestNote = {
@@ -131,7 +142,7 @@ export async function sendTicketConfirmation(params: {
           currency: params.currency || undefined,
           quantity,
           posterUrl: poster,
-          doorsTime: String(params.event?.doors_open_time || '').trim() || undefined,
+          doorsTime: doorsClock(params.event, lang),
           approved: params.approved === true,
           ...(guestUrl ? { ticketsUrl: guestUrl, ticketsUrlNote: guestNote } : {}),
         }),
@@ -163,7 +174,7 @@ export async function sendTicketConfirmation(params: {
             to: phone,
             message: getTicketConfirmationSms({
               eventTitle,
-              eventDate: formatShortEventDate(params.event?.start_datetime),
+              eventDate: formatShortEventDate(params.event?.start_datetime, params.event),
               ticketUrl: smsUrl,
               quantity,
             }),
@@ -180,7 +191,7 @@ export async function sendTicketConfirmation(params: {
           message: getTicketConfirmationWhatsApp(
             params.recipient.name || 'Guest',
             eventTitle,
-            formatShortEventDate(params.event?.start_datetime),
+            formatShortEventDate(params.event?.start_datetime, params.event),
             venue,
             String(params.ticketId)
           ),

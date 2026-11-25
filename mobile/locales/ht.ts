@@ -3664,6 +3664,7 @@ export default {
     eventShort: "Evènman",
     ticketNumber: 'Biyè {count}',
     admit: 'Admèt:',
+    orderRef: 'Kòmand #{ref}',
     tapHint: 'Peze biyè a pou agrandi l · montre l nan antre a',
     checkedIn: 'Chèk-in fèt',
     addToCalendar: 'Ajoute nan kalandriye',

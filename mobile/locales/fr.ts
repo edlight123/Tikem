@@ -3697,6 +3697,7 @@ export default {
     eventShort: "Événement",
     ticketNumber: 'Billet {count}',
     admit: 'Admis :',
+    orderRef: 'Commande n° {ref}',
     tapHint: 'Touchez le billet pour l’agrandir · à présenter à l’entrée',
     checkedIn: 'Enregistré le',
     addToCalendar: 'Ajouter au calendrier',
