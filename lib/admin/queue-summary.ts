@@ -127,6 +127,7 @@ export async function getQueueSummary(): Promise<QueueSummary> {
     reportedEvents,
     communityShares,
     eventClaims,
+    accountMerges,
   ] = await Promise.all([
     statFor(
       () =>
@@ -159,6 +160,7 @@ export async function getQueueSummary(): Promise<QueueSummary> {
     statFor(() => adminDb.collection('events').where('reports_count', '>', 0), 'created_at'),
     statFor(() => adminDb.collection('event_submissions').where('status', '==', 'pending'), 'created_at'),
     statFor(() => adminDb.collection('event_claims').where('status', '==', 'pending'), 'created_at'),
+    statFor(() => adminDb.collection('account_merge_reviews').where('status', '==', 'pending'), 'created_at'),
   ])
 
   return {
@@ -172,5 +174,6 @@ export async function getQueueSummary(): Promise<QueueSummary> {
     reportedEvents,
     communityShares,
     eventClaims,
+    accountMerges,
   }
 }

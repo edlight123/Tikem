@@ -115,7 +115,7 @@ export function PhoneLoginPanel({ redirectTo }: { redirectTo: string }) {
     setBusy(true)
     setError(null)
     try {
-      const { token } = await post('/api/auth/phone/verify', { phone, country: iso, code: value, locale })
+      const { token, needsProfile } = await post('/api/auth/phone/verify', { phone, country: iso, code: value, locale })
       const cred = await signInWithCustomToken(auth, token)
       const idToken = await cred.user.getIdToken()
       await fetch('/api/auth/session', {
@@ -123,7 +123,12 @@ export function PhoneLoginPanel({ redirectTo }: { redirectTo: string }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ idToken }),
       })
-      window.location.href = safeSameOriginPath(redirectTo, window.location.origin)
+      const target = safeSameOriginPath(redirectTo, window.location.origin)
+      // A new (or nameless / email-less) phone account finishes its profile
+      // first: name, email, email code or "Verify later".
+      window.location.href = needsProfile
+        ? `/auth/complete-profile?redirect=${encodeURIComponent(target)}`
+        : target
     } catch (err: any) {
       setError(describe(err?.code))
       setCode('')

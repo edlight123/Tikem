@@ -142,6 +142,16 @@ const QUEUE_SPECS: QueueSpec[] = [
     href: '/admin/events?tab=reported',
     subject: (d) => firstString(d, ['title']) ?? 'Untitled event',
   },
+  {
+    // lib/auth/account/merge.ts: the phone account owns an organization, so
+    // combining it needs a human (organizer money never moves automatically).
+    queue: 'accountMerges',
+    build: () => adminDb.collection('account_merge_reviews').where('status', '==', 'pending'),
+    ageField: 'created_at',
+    decision: () => 'combine two accounts',
+    href: '/admin/people',
+    userId: (d) => firstString(d, ['target_uid']),
+  },
 ]
 
 async function readQueue(spec: QueueSpec): Promise<RawRow[]> {

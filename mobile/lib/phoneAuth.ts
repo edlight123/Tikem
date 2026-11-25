@@ -112,7 +112,8 @@ export function usePhoneAuthEnabled(): boolean {
 // ── API ──────────────────────────────────────────────────────────────────────
 
 export class PhoneAuthError extends Error {
-  constructor(readonly code: string, readonly retryAfterSec?: number) {
+  /** `payload` carries extras, e.g. a merge offer on phone_in_use ({ mergeId, mergeStatus }). */
+  constructor(readonly code: string, readonly retryAfterSec?: number, readonly payload?: any) {
     super(code);
     this.name = 'PhoneAuthError';
   }
@@ -147,6 +148,7 @@ async function postAuthed(path: string, body: Record<string, unknown>): Promise<
     throw new PhoneAuthError(
       status === 404 ? 'unavailable' : typeof err?.code === 'string' ? err.code : 'generic',
       typeof err?.payload?.retryAfterSec === 'number' ? err.payload.retryAfterSec : undefined,
+      err?.payload,
     );
   }
 }

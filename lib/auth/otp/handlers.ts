@@ -51,6 +51,17 @@ export interface PhoneAuthDeps {
   bearerUid: (idToken: string) => Promise<string | null>
   /** Is this Origin header value allowed? Defaults to isAllowedOrigin(process.env). */
   allowedOrigin?: (origin: string) => boolean
+  /**
+   * The number is verified but on ANOTHER account: open a merge session (the
+   * code just proved the caller holds the number) so the app can offer to
+   * combine the two accounts. Optional; without it the route answers a plain
+   * 409 phone_in_use as before.
+   */
+  onPhoneInUse?: (
+    callerUid: string,
+    ownerUid: string,
+    e164: string
+  ) => Promise<{ mergeId: string; mergeStatus: 'merge_available' | 'needs_review' | 'blocked'; blockedCode?: string } | null>
   /** Security notice after a number is linked (best-effort; awaited, never throws). */
   onPhoneLinked?: (uid: string, e164: string) => Promise<void>
   secret?: () => string | null
@@ -265,7 +276,7 @@ export async function handleVerify(req: Request, deps: PhoneAuthDeps) {
       locale: normalizeLocale(checked.body.locale),
     })
     if (!resolved.ok) return fail(resolved.code, 403)
-    return ok({ token: resolved.token, isNewUser: resolved.isNewUser })
+    return ok({ token: resolved.token, isNewUser: resolved.isNewUser, needsProfile: resolved.needsProfile })
   } catch (err) {
     console.error('[otp] sign-in after verified code failed', (err as Error)?.message)
     return fail('unavailable', 500)
@@ -291,7 +302,16 @@ export async function handleLinkVerify(req: Request, deps: PhoneAuthDeps) {
       uid,
       e164: checked.e164,
     })
-    if (!linked.ok) return fail(linked.code, 409)
+    if (!linked.ok) {
+      if (linked.code === 'phone_in_use' && linked.ownerUid && deps.onPhoneInUse) {
+        const merge = await deps.onPhoneInUse(uid, linked.ownerUid, checked.e164).catch((err) => {
+          console.warn('[otp] merge session failed', (err as Error)?.message)
+          return null
+        })
+        if (merge) return fail('phone_in_use', 409, merge)
+      }
+      return fail(linked.code, 409)
+    }
     if (deps.onPhoneLinked) {
       await deps.onPhoneLinked(uid, linked.phoneNumber).catch((err) =>
         console.warn('[otp] phone-linked notice failed', (err as Error)?.message)

@@ -13,6 +13,7 @@ import { adminProfileWriter } from './users'
 import { allowedCountries } from './phone'
 import { notifyPhoneLinked } from './notify'
 import type { PhoneAuthDeps } from './handlers'
+import { phoneInUseMergeHook } from '@/lib/auth/account/deps'
 
 export function productionPhoneAuthDeps(): PhoneAuthDeps {
   return {
@@ -28,6 +29,7 @@ export function productionPhoneAuthDeps(): PhoneAuthDeps {
       return decoded?.uid ?? null
     },
     onPhoneLinked: (uid, e164) => notifyPhoneLinked(uid, e164),
+    onPhoneInUse: phoneInUseMergeHook(),
     limits: () => limitsFromEnv(),
     allowedCountries: () => allowedCountries(),
   }

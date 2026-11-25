@@ -72,6 +72,7 @@ import { Skeleton, PosterCardSkeleton } from '../components/Skeleton';
 import { useAppAlert } from '../components/AppAlert';
 import DeleteAccountSheet from '../components/DeleteAccountSheet';
 import PhoneLinkSheet from '../components/auth/PhoneLinkSheet';
+import VerifyEmailStrip from '../components/auth/VerifyEmailStrip';
 import InviteSummary from '../components/InviteSummary';
 import { usePhoneAuthEnabled } from '../lib/phoneAuth';
 import { useOpenAttendeeTab } from '../hooks/useOpenAttendeeTab';
@@ -457,6 +458,9 @@ export default function ProfileScreen() {
           {/* Messages up top, not only in the list below (Tikra ef0062d4). */}
           <MessagesButton />
         </View>
+
+        {/* After "Verify later" at onboarding: a quiet 40pt strip, nothing more. */}
+        <VerifyEmailStrip />
 
         {/* Identity */}
         <View style={styles.hero}>

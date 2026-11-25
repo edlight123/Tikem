@@ -23,6 +23,10 @@ export class FakeFirestore {
         self.store.delete(path)
       },
       collection: (name: string) => self.collection(`${path}/${name}`),
+      // The containing collection, like DocumentReference.parent.
+      get parent() {
+        return self.collection(path.split('/').slice(0, -1).join('/'))
+      },
     }
   }
 
@@ -97,6 +101,24 @@ export class FakeFirestore {
     return q
   }
 
+  /** collectionGroup(name).where(...): every collection whose last segment is `name`. */
+  collectionGroup(name: string): any {
+    const self = this
+    const query = (filters: Array<[string, unknown]>): any => ({
+      where: (field: string, _op: string, value: unknown) => query([...filters, [field, value]]),
+      get: async () => {
+        const docs = Array.from(self.store.entries())
+          .filter(([p, d]) => {
+            const parts = p.split('/')
+            return parts.length >= 2 && parts[parts.length - 2] === name && filters.every(([f, v]) => d[f] === v)
+          })
+          .map(([p]) => self.snap(p))
+        return { docs, empty: docs.length === 0, size: docs.length }
+      },
+    })
+    return query([])
+  }
+
   docsIn(name: string): [string, Doc][] {
     return Array.from(this.store.entries()).filter(
       ([p]) => p.startsWith(`${name}/`) && p.split('/').length === name.split('/').length + 1
@@ -130,12 +152,16 @@ export class FakeFirestore {
       set: (ref: any, data: Doc, opts?: any) => writes.push([ref._path, data, opts]),
       update: (ref: any, data: Doc) => writes.push([ref._path, data, { merge: true, update: true }]),
       create: (ref: any, data: Doc) => writes.push([ref._path, data, { create: true }]),
+      delete: (ref: any) => writes.push([ref._path, {}, { delete: true }]),
       commit: async () => {
         // All-or-nothing, like a WriteBatch: one existing create fails the batch.
         if (writes.some(([p, , o]) => o?.create && this.store.has(p))) {
           throw Object.assign(new Error('6 ALREADY_EXISTS: document already exists'), { code: 6 })
         }
-        for (const [p, d, o] of writes) this.write(p, d, o?.create ? undefined : o)
+        for (const [p, d, o] of writes) {
+          if (o?.delete) this.store.delete(p)
+          else this.write(p, d, o?.create ? undefined : o)
+        }
       },
     }
   }

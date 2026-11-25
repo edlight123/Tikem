@@ -104,6 +104,9 @@ import { claimInviteCode } from '../lib/api/invites';
 import PaymentWebViewScreen from '../screens/PaymentWebViewScreen';
 import StripeConnectWebViewScreen from '../screens/StripeConnectWebViewScreen';
 import StripeOnboardingScreen from '../screens/organizer/StripeOnboardingScreen';
+import CompleteProfileScreen from '../screens/auth/CompleteProfileScreen';
+import { shouldGateForCompletion } from '../lib/profileCompletion';
+import { isDemoMode } from '../config/firebase';
 import InAppWebViewScreen from '../screens/InAppWebViewScreen';
 import IntegrationWebViewScreen from '../screens/IntegrationWebViewScreen';
 import ImportEventsScreen from '../screens/organizer/ImportEventsScreen';
@@ -129,6 +132,8 @@ export type RootStackParamList = {
   // A modal sheet for a guest (lib/authGate); `screen` opens Signup directly.
   Auth: { screen?: 'Login' | 'Signup' } | undefined;
   Main: undefined;
+  CompleteProfile: undefined;
+  VerifyEmail: { mode?: 'verify' } | undefined;
   InviteRedeem: { eventId?: string; token?: string };
   // A friend's personal invite link, tikem://i/{code}?e={eventId} (lib/inviteLink).
   InviteLink: { code: string; e?: string };
@@ -1102,6 +1107,17 @@ export default function AppNavigator() {
     return <BootScreen />;
   }
 
+  // The completion gate (lib/profileCompletion): only once THIS user's
+  // profile has loaded, so an offline or slow profile never blocks the app.
+  const needsCompletion = shouldGateForCompletion({
+    uid: user?.uid,
+    profileId: userProfile?.id,
+    fullName: userProfile?.full_name,
+    authEmail: user?.email || (userProfile?.email_verified ? userProfile?.email : null),
+    pendingEmail: userProfile?.pending_email,
+    demo: isDemoMode,
+  });
+
   const MainTabNavigator = 
     mode === 'staff'
       ? StaffTabNavigator
@@ -1166,9 +1182,14 @@ export default function AppNavigator() {
               <Stack.Screen key={name} name={name as any} component={SignInGate} options={{ animation: 'none' }} />
             ))}
           </>
+        ) : needsCompletion ? (
+          // Phone sign-in (owner, 2026-11-25): name and email BEFORE the app.
+          // The stack swaps to the app by itself once the profile is complete.
+          <Stack.Screen name="CompleteProfile" component={CompleteProfileScreen} />
         ) : (
           <>
             <Stack.Screen name="Main" component={MainTabNavigator} />
+            <Stack.Screen name="VerifyEmail" component={CompleteProfileScreen} initialParams={{ mode: 'verify' }} />
             <Stack.Screen name="InviteRedeem" component={InviteRedeemScreen} options={{ headerShown: false }} />
             <Stack.Screen name="InviteLink" component={InviteLinkScreen} options={{ headerShown: false }} />
             <Stack.Screen

@@ -253,7 +253,8 @@ export async function verifyOtp(p: VerifyParams): Promise<VerifyResult> {
     if (!doc || !doc.codeHash || doc.purpose !== p.purpose) {
       return { ok: false as const, code: 'invalid_code' as const }
     }
-    if (p.purpose === 'link' && doc.uid !== p.uid) {
+    // Account-bound codes (link, email) only verify for the account that asked.
+    if (p.purpose !== 'signin' && doc.uid !== p.uid) {
       return { ok: false as const, code: 'invalid_code' as const }
     }
     if (Number(doc.expiresAt) <= now) {
