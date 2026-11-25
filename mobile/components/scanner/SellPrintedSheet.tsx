@@ -157,7 +157,7 @@ export default function SellPrintedSheet({ visible, eventId, uid, code, onClose,
                   <TextInput
                     value={serial || typedFromCode}
                     onChangeText={setSerial}
-                    placeholder="FETE-VIP-0001"
+                    placeholder="FETE-VIP-B1-0001"
                     placeholderTextColor={colors.textTertiary}
                     autoCapitalize="characters"
                     autoCorrect={false}

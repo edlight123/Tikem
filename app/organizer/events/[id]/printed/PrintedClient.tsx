@@ -136,7 +136,7 @@ export default function PrintedClient({ eventId, currency, tiers }: { eventId: s
         description={config ? t('physical.subtitle', { min: nf(config.minBatch) }) : undefined}
         actions={batches.length > 0 ? <div className="hidden sm:block">{orderButton}</div> : undefined}
       />
-      {batches.length > 0 && <div className="-mt-2 mb-6 sm:hidden">{orderButton}</div>}
+      {batches.length > 0 && <div className="-mt-2 mb-6 sm:hidden [&>button]:w-full">{orderButton}</div>}
 
       {notice && <p className="mb-6 rounded bg-surface px-4 py-3 text-sm text-fg-soft">{notice}</p>}
       {config && !config.enabled && <p className="mb-6 text-sm text-fg-muted">{t('physical.disabled')}</p>}
@@ -257,8 +257,8 @@ function BatchCard({
       </div>
 
       {unpaid ? (
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-          <div className="mr-auto">
+        <div className="mt-4 flex flex-col gap-4 lg:flex-row lg:items-center">
+          <div className="min-w-0 lg:mr-auto">
             <p className="text-sm text-fg-muted">{t('physical.awaiting_payment_line', { total: nf(batch.total_htg) })}</p>
             {batch.payment_expires_at && (
               <p className="mt-0.5 text-caption text-fg-subtle">
@@ -268,20 +268,23 @@ function BatchCard({
               </p>
             )}
           </div>
-          <button type="button" className={btnQuiet} disabled={busy} onClick={() => act({ action: 'check_payment' })}>
-            {t('physical.check_payment')}
-          </button>
-          <button type="button" className={btnQuiet} disabled={busy} onClick={() => act({ action: 'cancel' })}>
-            {t('physical.cancel_batch')}
-          </button>
-          <button
-            type="button"
-            className={btnPrimary}
-            disabled={busy}
-            onClick={() => act({ action: 'pay', method: batch.payment?.method === 'card' ? 'card' : batch.payment?.method === 'balance' ? 'balance' : 'moncash' })}
-          >
-            {t('physical.pay_now')}
-          </button>
+          {/* Phones: the main action first and full width; wider: one row. */}
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+            <button
+              type="button"
+              className={`${btnPrimary} w-full sm:order-last sm:w-auto`}
+              disabled={busy}
+              onClick={() => act({ action: 'pay', method: batch.payment?.method === 'card' ? 'card' : batch.payment?.method === 'balance' ? 'balance' : 'moncash' })}
+            >
+              {t('physical.pay_now')}
+            </button>
+            <button type="button" className={`${btnQuiet} w-full sm:w-auto`} disabled={busy} onClick={() => act({ action: 'check_payment' })}>
+              {t('physical.check_payment')}
+            </button>
+            <button type="button" className={`${btnQuiet} w-full sm:w-auto`} disabled={busy} onClick={() => act({ action: 'cancel' })}>
+              {t('physical.cancel_batch')}
+            </button>
+          </div>
         </div>
       ) : batch.status === 'cancelled' ? (
         batch.payment?.refunded_to_balance_at ? (
@@ -290,14 +293,14 @@ function BatchCard({
       ) : (
         <>
           {batch.status === 'paid' && batch.payment?.funds_rail === 'balance_offset' && (
-            <div className="mt-4 flex flex-wrap items-center gap-3">
-              <p className="mr-auto text-sm text-fg-muted">{t('physical.paid_from_balance')}</p>
-              <button type="button" className={btnQuiet} disabled={busy} onClick={() => act({ action: 'cancel' })}>
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+              <p className="text-sm text-fg-muted sm:mr-auto">{t('physical.paid_from_balance')}</p>
+              <button type="button" className={`${btnQuiet} w-full sm:w-auto`} disabled={busy} onClick={() => act({ action: 'cancel' })}>
                 {t('physical.cancel_credit_balance')}
               </button>
             </div>
           )}
-          <div className="mt-5 flex flex-wrap gap-x-8 gap-y-4">
+          <div className="mt-5 grid grid-cols-3 gap-x-4 gap-y-4 sm:grid-cols-6">
             <Stat label={t('physical.count_printed')} value={counts.printed} />
             <Stat label={t('physical.count_sold')} value={counts.activated} />
             <Stat label={t('physical.count_unsold')} value={counts.unsold} />
@@ -307,7 +310,30 @@ function BatchCard({
           </div>
 
           {(batch.assignments?.length || 0) > 0 && (
-            <div className="mt-5 overflow-x-auto">
+            <ul className="mt-5 space-y-2 sm:hidden">
+              {batch.assignments!.map((a) => {
+                const c = bySeller.find((s) => s.uid === a.uid)?.counts
+                return (
+                  <li key={`m-${a.uid}-${a.from}`} className="rounded bg-surface px-3 py-2.5">
+                    <p className="text-sm font-semibold text-fg">{a.name || t('physical.seller_unnamed')}</p>
+                    <p className="mt-0.5 font-mono text-caption text-fg-muted">
+                      <span className="whitespace-nowrap">{formatSerial(batch.serial_prefix, a.from, batch.quantity)}</span>{' '}
+                      – <span className="whitespace-nowrap">{formatSerial(batch.serial_prefix, a.to, batch.quantity)}</span>
+                    </p>
+                    <p className="mt-1 text-caption text-fg-subtle">
+                      {t('physical.count_sold')} <span className="font-mono tabular-nums text-fg">{nf(c?.activated || 0)}</span>
+                      {' · '}
+                      {t('physical.count_unsold')} <span className="font-mono tabular-nums text-fg-soft">{nf(c?.unsold || 0)}</span>
+                      {' · '}
+                      {t('physical.count_checked_in')} <span className="font-mono tabular-nums text-fg-soft">{nf(c?.checkedIn || 0)}</span>
+                    </p>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+          {(batch.assignments?.length || 0) > 0 && (
+            <div className="mt-5 hidden overflow-x-auto sm:block">
               <table className="w-full min-w-[480px] text-left text-sm">
                 <thead>
                   <tr className="text-caption text-fg-subtle">
@@ -324,7 +350,7 @@ function BatchCard({
                     return (
                       <tr key={`${a.uid}-${a.from}`} className="odd:bg-surface-low">
                         <td className="py-2 pr-4 text-fg">{a.name || t('physical.seller_unnamed')}</td>
-                        <td className="py-2 pr-4 font-mono text-meta text-fg-muted">
+                        <td className="whitespace-nowrap py-2 pr-4 font-mono text-meta text-fg-muted">
                           {formatSerial(batch.serial_prefix, a.from, batch.quantity)} – {formatSerial(batch.serial_prefix, a.to, batch.quantity)}
                         </td>
                         <td className="py-2 pr-4 text-right font-mono tabular-nums text-fg">{nf(c?.activated || 0)}</td>
@@ -338,7 +364,7 @@ function BatchCard({
             </div>
           )}
 
-          <div className="mt-5 flex flex-wrap gap-3">
+          <div className="mt-5 grid grid-cols-1 gap-2 sm:flex sm:flex-wrap sm:gap-3">
             <button type="button" className={btnQuiet} onClick={() => onPanel({ kind: 'assign', batch })}>
               {t('physical.assign_range')}
             </button>

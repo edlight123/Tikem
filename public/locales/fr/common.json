@@ -2513,7 +2513,7 @@
       "title": "vendre un billet imprimé",
       "intro": "Saisissez le numéro imprimé sur le billet (ou collez son code scanné), puis le nom de l'acheteur.",
       "code": "Numéro ou code",
-      "code_ph": "FETE-VIP-0001",
+      "code_ph": "FETE-VIP-B1-0001",
       "name": "Nom de l'acheteur",
       "phone": "Téléphone (facultatif)",
       "method": "Payé par",
