@@ -19,8 +19,8 @@ import RefundRequestAction from '@/components/tickets/RefundRequestAction'
 import { StatusChip } from '@/components/ui/kit'
 import { Ticket } from 'lucide-react'
 import { resolveServerLanguage, tServer } from '@/lib/serverT'
-import { intlLocaleFor } from '@/lib/dateLocale'
 import { isSmsConfigured } from '@/lib/sms'
+import { formatEventDateTime, type ClockEvent } from '@/lib/datetime/eventClock'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -37,18 +37,22 @@ function toIso(value: any): string | null {
   return String(value)
 }
 
-function formatDate(iso: string | null, locale: string, fallback: string): string {
+/**
+ * On the EVENT's clock (this page renders on a UTC server), and "8:00 PM" for
+ * a Haiti event in every language (lib/datetime/eventClock).
+ */
+function formatDate(iso: string | null, event: ClockEvent, lang: string, fallback: string): string {
   if (!iso) return fallback
-  const date = new Date(iso)
-  if (Number.isNaN(date.getTime())) return fallback
-  return date.toLocaleDateString(locale, {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  })
+  return (
+    formatEventDateTime(iso, event, lang, {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    }) || fallback
+  )
 }
 
 export default async function GuestTicketsPage({
@@ -152,7 +156,7 @@ export default async function GuestTicketsPage({
           <h1 className="font-display italic !text-display md:!text-hero !leading-[1.05] text-fg">
             {event?.title || t('guest_tickets.your_event', 'Your event')}
           </h1>
-          <p className="text-fg-muted mt-2">{formatDate(startIso, intlLocaleFor(lang), dateFallback)}</p>
+          <p className="text-fg-muted mt-2">{formatDate(startIso, event, lang, dateFallback)}</p>
           {(event?.venue_name || event?.city) && (
             <p className="text-fg-muted">
               {[event?.venue_name, event?.city].filter(Boolean).join(', ')}

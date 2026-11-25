@@ -101,6 +101,9 @@ export interface TodayEvent {
   ticketsSold: number;
   ticketsCheckedIn: number;
   capacity: number;
+  /** Country + zone: a Haiti event's times print "8:00 PM" (lib/eventClock). */
+  country?: string;
+  timezone?: string;
 }
 
 /**
@@ -326,6 +329,8 @@ export async function getTodayEvents(
           start_datetime: event.start_datetime,
           location: eventLocationLabel(event),
           posterUri: event.banner_image_url || event.cover_image_url || null,
+          country: typeof (event as any).country === 'string' ? (event as any).country : undefined,
+          timezone: typeof (event as any).timezone === 'string' ? (event as any).timezone : undefined,
           category: event.category,
           ticketsSold: event.tickets_sold || 0,
           capacity: event.total_tickets || 0,

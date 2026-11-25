@@ -13,6 +13,11 @@ interface TicketQRCardProps {
   holderName?: string;
   /** Short order reference, e.g. "TKM-4821". */
   orderRef?: string;
+  /**
+   * The order line, already in the TICKET's language ("Commande n° 4821" on a
+   * Haiti ticket). Defaults to the English "Order #<ref>".
+   */
+  orderLabel?: string;
   style?: ViewStyle;
 }
 
@@ -40,6 +45,7 @@ export default function TicketQRCard({
   tierName,
   holderName,
   orderRef,
+  orderLabel,
   style,
 }: TicketQRCardProps) {
   const date = cleanLabel(dateLabel);
@@ -69,7 +75,7 @@ export default function TicketQRCard({
 
       {tier ? <Text style={styles.tier}>{tier}</Text> : null}
       {holder ? <Text style={styles.holder}>{holder}</Text> : null}
-      {ref ? <Text style={styles.orderRef}>Order #{ref}</Text> : null}
+      {ref ? <Text style={styles.orderRef}>{cleanLabel(orderLabel) || `Order #${ref}`}</Text> : null}
     </View>
   );
 }

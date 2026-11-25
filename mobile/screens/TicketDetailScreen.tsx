@@ -6,12 +6,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { auth, db } from '../config/firebase';
 import { backendJson } from '../lib/api/backend';
 import { useTheme } from '../contexts/ThemeContext';
-import { safeFormatForLanguage } from '../lib/dates';
+import { formatEventTime, safeFormatForLanguage } from '../lib/dates';
+import { ticketLanguage } from '../lib/eventClock';
 import TransferTicketModal from '../components/TransferTicketModal';
 import AddToWalletButton from '../components/AddToWalletButton';
 import TicketQRCard from '../components/TicketQRCard';
 import StatusChip from '../components/StatusChip';
-import { useI18n } from '../contexts/I18nContext';
+import { useI18n, translateIn } from '../contexts/I18nContext';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { font, radius } from '../theme/tokens';
 import { formatCurrency } from '../lib/currency';
@@ -43,6 +44,8 @@ export default function TicketDetailScreen({ route }: any) {
   // Tier validity window, resolved from the event's tier list by matching the
   // ticket's tier NAME. Null until (and unless) a window is found.
   const [tierValidity, setTierValidity] = useState<{ from?: Date; until?: Date } | null>(null);
+  // The event's country + zone: a Haiti ticket is French with "8:00 PM" times.
+  const [eventPlace, setEventPlace] = useState<{ country?: string; timezone?: string } | null>(null);
 
   // Reload on every focus, not just mount: returning from RefundRequest (or a
   // transfer) must pick up the new refund_status so the button disappears.
@@ -116,10 +119,16 @@ export default function TicketDetailScreen({ route }: any) {
         ticketData.ticketType ||
         ticketData.tierName ||
         '';
-      if (!eventId || !tierName) return;
+      if (!eventId) return;
 
       const eventDoc = await getDoc(doc(db, 'events', eventId));
       if (!eventDoc.exists()) return;
+      const ev = eventDoc.data() as any;
+      setEventPlace({
+        country: typeof ev?.country === 'string' ? ev.country : undefined,
+        timezone: typeof ev?.timezone === 'string' ? ev.timezone : undefined,
+      });
+      if (!tierName) return;
 
       const tiers = eventDoc.data()?.ticket_tiers;
       if (!Array.isArray(tiers)) return;
@@ -228,6 +237,12 @@ export default function TicketDetailScreen({ route }: any) {
     );
   }
 
+  const ticketPlace = {
+    country: ticket.country || eventPlace?.country,
+    timezone: eventPlace?.timezone || ticket.timezone,
+  };
+  const ticketLang = ticketLanguage(ticketPlace, language);
+
   // Check if event has ended (ticket expired)
   const now = new Date();
   const eventEnd = new Date(ticket.end_datetime || ticket.event_date || ticket.start_datetime);
@@ -275,10 +290,11 @@ export default function TicketDetailScreen({ route }: any) {
             <TicketQRCard
               qrValue={ticketQrValue(ticket, ticketId)}
               eventTitle={ticket.event_title}
-              dateLabel={ticket.event_date ? safeFormatForLanguage(ticket.event_date, 'EEE, MMM d · h:mm a', language) : undefined}
+              dateLabel={ticket.event_date ? formatEventTime(ticket.event_date, ticketPlace, 'EEE, MMM d · h:mm a', ticketLang) : undefined}
               tierName={ticketTierLabel(ticket)}
-              holderName={ticket.user_name ? `${t('ticketDetail.admit')} ${ticket.user_name}` : undefined}
+              holderName={ticket.user_name ? `${translateIn(ticketLang, 'ticketDetail.admit')} ${ticket.user_name}` : undefined}
               orderRef={ticketOrderRef(ticket).replace(/^TKM-/, '')}
+              orderLabel={translateIn(ticketLang, 'ticketPass.orderRef', { ref: ticketOrderRef(ticket).replace(/^TKM-/, '') })}
             />
             <Text style={styles.qrInstruction}>
               {isExpired
@@ -347,10 +363,10 @@ export default function TicketDetailScreen({ route }: any) {
               <View style={styles.infoCardContent}>
                 <UIText variant="eyebrow" style={styles.infoCardLabel}>{t('ticketDetail.labels.dateTime')}</UIText>
                 <Text style={styles.infoCardValue}>
-                  {ticket.event_date && safeFormatForLanguage(ticket.event_date, 'MMM dd, yyyy', language)}
+                  {ticket.event_date && formatEventTime(ticket.event_date, ticketPlace, 'MMM dd, yyyy', language)}
                 </Text>
                 <Text style={styles.infoCardSubvalue}>
-                  {ticket.event_date && safeFormatForLanguage(ticket.event_date, 'h:mm a', language)}
+                  {ticket.event_date && formatEventTime(ticket.event_date, ticketPlace, 'h:mm a', language)}
                 </Text>
               </View>
             </View>
@@ -443,7 +459,7 @@ export default function TicketDetailScreen({ route }: any) {
                 ticketId={ticket.id}
                 qrCodeData={ticketQrValue(ticket, ticketId)}
                 eventTitle={ticket.event_title}
-                eventDate={ticket.event_date ? safeFormatForLanguage(ticket.event_date, 'MMMM dd, yyyy h:mm a', language) : ''}
+                eventDate={ticket.event_date ? formatEventTime(ticket.event_date, ticketPlace, 'MMMM dd, yyyy h:mm a', ticketLang) : ''}
                 venueName={ticket.venue_name}
                 ticketNumber={1}
                 totalTickets={ticket.quantity || 1}

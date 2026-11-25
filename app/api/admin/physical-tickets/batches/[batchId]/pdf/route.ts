@@ -5,6 +5,7 @@ import { logAdminAction } from '@/lib/admin/audit-log'
 import { formatEventWhen } from '@/lib/email-kit/i18n'
 import { getBatch, loadBatchTickets, markBatchPrinted } from '@/lib/physical/batches'
 import { renderBatchPdf } from '@/lib/physical/pdf'
+import { isHaitiEvent, ticketDateLine } from '@/lib/datetime/eventClock'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -12,6 +13,8 @@ export const maxDuration = 60
 
 /**
  * GET /api/admin/physical-tickets/batches/:batchId/pdf?paper=letter|a4&lang=fr|en|ht
+ * (`lang` is ignored for a Haiti event: its tickets are always French, with
+ * the 12-hour clock: "samedi 21 juin 2026 · 8:00 PM". Owner, 2026-11-25.)
  * The print-ready sheet for a paid batch (platform admins only: the PDF holds
  * live QRs). Every download is audited, and the first one moves a paid batch
  * to 'printing' (printed_at), which ends cancel-for-credit.
@@ -32,12 +35,14 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const url = new URL(request.url)
   const paper = url.searchParams.get('paper') === 'a4' ? 'a4' : 'letter'
   const langRaw = url.searchParams.get('lang')
-  const lang = langRaw === 'en' || langRaw === 'ht' ? langRaw : 'fr'
 
   const [eventSnap, tickets] = await Promise.all([adminDb.collection('events').doc(batch.event_id).get(), loadBatchTickets(batch.id)])
   const event = eventSnap.exists ? eventSnap.data() || {} : {}
+  const haiti = isHaitiEvent(event)
+  const lang = haiti ? 'fr' : langRaw === 'en' || langRaw === 'ht' ? langRaw : 'fr'
   const start = event.start_datetime?.toDate ? event.start_datetime.toDate().toISOString() : event.start_datetime
   const when = formatEventWhen(start, lang, event)
+  const dateLine = haiti ? ticketDateLine(start, event, 'fr') : when ? when.line : ''
   const printable = tickets
     .filter((t) => t.status === 'printed_unsold')
     .map((t) => ({ serial: String(t.physical_serial || ''), qrPayload: String(t.qr_code_data || ''), tierName: String(t.tier_name || batch.tier_name) }))
@@ -51,12 +56,15 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const pdf = await renderBatchPdf({
     event: {
       title: String(event.title || batch.event_title || ''),
-      dateLine: when ? when.line : '',
+      dateLine,
       venueLine: [event.venue_name, event.city].filter(Boolean).join(', '),
     },
     tickets: printable,
     paper,
-    batchLabel: `Batch ${batch.id.slice(0, 6).toUpperCase()}${batch.reprint_count ? ` · reprint ${batch.reprint_count}` : ''}`,
+    lang,
+    batchLabel: `${lang === 'en' ? 'Batch' : lang === 'ht' ? 'Lo' : 'Lot'} ${batch.id.slice(0, 6).toUpperCase()}${
+      batch.reprint_count ? ` · ${lang === 'en' ? 'reprint' : lang === 'ht' ? 'reenprime' : 'réimpression'} ${batch.reprint_count}` : ''
+    }`,
   })
   await logAdminAction({
     action: 'physical_tickets.batch.pdf',

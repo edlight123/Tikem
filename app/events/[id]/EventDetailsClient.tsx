@@ -45,6 +45,7 @@ import { venueAddressLines } from '@/lib/events/venueLines'
 import VenueDetailsList from '@/components/events/VenueDetailsList'
 import { hasVenueDetails, venueDetailsOf } from '@/lib/events/venue-details'
 import RichText from '@/components/RichText'
+import { isHaitiEvent } from '@/lib/datetime/eventClock'
 
 interface EventDetailsClientProps {
   event: any
@@ -508,7 +509,7 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
       {/* The bill — mobile placement, above the song: who is playing is a
           bigger reason to buy than what the event sounds like. Renders nothing
           when the organizer added no lineup. */}
-      <EventLineup guestlist={(event as any).guestlist} className="px-4 pt-6 md:hidden" />
+      <EventLineup guestlist={(event as any).guestlist} twelveHour={isHaitiEvent(event as any)} className="px-4 pt-6 md:hidden" />
 
       {/* The event's song — mobile placement, under the accordions. */}
       <SpotifyEmbed url={event.spotify_url} className="px-4 pt-4 md:hidden" />
@@ -555,7 +556,7 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
             {Array.isArray((event as any).guestlist) &&
               (event as any).guestlist.length > 0 && (
                 <div className="hidden border-b border-line py-8 md:block">
-                  <EventLineup guestlist={(event as any).guestlist} />
+                  <EventLineup guestlist={(event as any).guestlist} twelveHour={isHaitiEvent(event as any)} />
                 </div>
               )}
 

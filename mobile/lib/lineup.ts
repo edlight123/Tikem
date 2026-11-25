@@ -125,10 +125,30 @@ export function lineupLinkLabel(href: string): string {
     .replace(/\/$/, '');
 }
 
-/** 'HH:mm – HH:mm', either bound optional, '' when neither is set. */
-export function lineupTimeRange(start: string | null | undefined, end: string | null | undefined): string {
-  const s = (start || '').trim();
-  const e = (end || '').trim();
+/** "20:30" → "8:30 PM" (anything unparseable unchanged). */
+function to12(hhmm: string): string {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(hhmm);
+  if (!m || Number(m[1]) > 23 || Number(m[2]) > 59) return hhmm;
+  const h = Number(m[1]);
+  return `${h % 12 || 12}:${m[2]} ${h < 12 ? 'AM' : 'PM'}`;
+}
+
+/**
+ * 'HH:mm – HH:mm', either bound optional, '' when neither is set.
+ * `twelveHour` (a Haiti event: owner, 2026-11-25, AM/PM never "military")
+ * prints "8:00 PM – 9:30 PM".
+ */
+export function lineupTimeRange(
+  start: string | null | undefined,
+  end: string | null | undefined,
+  twelveHour = false,
+): string {
+  const fmt = (x: string | null | undefined) => {
+    const v = (x || '').trim();
+    return v && twelveHour ? to12(v) : v;
+  };
+  const s = fmt(start);
+  const e = fmt(end);
   if (s && e) return `${s} – ${e}`;
   return s || e || '';
 }

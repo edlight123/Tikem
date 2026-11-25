@@ -11,6 +11,11 @@
  * by the seller), light grey crop marks, and a black-on-white QR with its
  * quiet zone.
  *
+ * Language: a Haiti event's sheet is FRENCH (owner, 2026-11-25), its date
+ * line "samedi 21 juin 2026 · 8:00 PM" (12-hour clock, see
+ * lib/datetime/eventClock). The route picks the language; every fixed label
+ * on the ticket comes from PDF_LABELS below.
+ *
  * Colours come from lib/design/tokens.ts (solid steps only: PDF has no alpha
  * on the canvas the way CSS does).
  */
@@ -34,6 +39,36 @@ export interface PrintableEvent {
   dateLine: string
   venueLine: string
   organizerName?: string | null
+}
+
+export type PdfLang = 'en' | 'fr' | 'ht'
+
+/** Every fixed word printed on the sheet, per language. Exported for tests. */
+export const PDF_LABELS: Record<
+  PdfLang,
+  { eyebrow: string; validOnceSold: string; stub: string; span: (a: string, b: string) => string; page: (n: number, of: number) => string }
+> = {
+  en: {
+    eyebrow: 'TIKÈM  ·  ADMIT ONE',
+    validOnceSold: 'Valid only once sold',
+    stub: 'STUB',
+    span: (a, b) => `${a} to ${b}`,
+    page: (n, of) => `page ${n} of ${of}`,
+  },
+  fr: {
+    eyebrow: 'TIKÈM  ·  ENTRÉE',
+    validOnceSold: 'Valide une fois vendu',
+    stub: 'TALON',
+    span: (a, b) => `${a} à ${b}`,
+    page: (n, of) => `page ${n} sur ${of}`,
+  },
+  ht: {
+    eyebrow: 'TIKÈM  ·  ANTRE',
+    validOnceSold: 'Valab sèlman lè l vann',
+    stub: 'SOUCH',
+    span: (a, b) => `${a} rive ${b}`,
+    page: (n, of) => `paj ${n} sou ${of}`,
+  },
 }
 
 const PAGE = { letter: { w: 612, h: 792 }, a4: { w: 595.28, h: 841.89 } } as const
@@ -143,7 +178,8 @@ function drawTicket(
   b: { x: number; y: number; w: number; h: number },
   ev: PrintableEvent,
   t: PrintableTicket,
-  qr: string
+  qr: string,
+  L: (typeof PDF_LABELS)[PdfLang]
 ) {
   const stubW = 46
   const pad = 14
@@ -165,7 +201,7 @@ function drawTicket(
   doc.setFont(f.sansBold, 'normal')
   doc.setFontSize(6.5)
   doc.setTextColor(INK.accent)
-  doc.text('TIKÈM  ·  ADMIT ONE', left, y, { charSpace: 0.8 })
+  doc.text(L.eyebrow, left, y, { charSpace: 0.8 })
   y += 19
   doc.setFont(f.serif, 'normal')
   doc.setFontSize(18)
@@ -183,7 +219,7 @@ function drawTicket(
   doc.setFont(f.sans, 'normal')
   doc.setFontSize(5.6)
   doc.setTextColor(INK.secondary)
-  doc.text('Valid only once sold', qx + q / 2, foot + 2, { align: 'center' })
+  doc.text(L.validOnceSold, qx + q / 2, foot + 2, { align: 'center' })
 
   const textW = qx - 3 - left - 8
   let dy = qy + 4
@@ -204,12 +240,12 @@ function drawTicket(
   doc.setTextColor(INK.text)
   doc.text(t.serial, left, foot)
 
-  // Stub: "STUB" on top, the serial reading bottom-to-top, the tier at the foot.
+  // Stub: "STUB" / "TALON" on top, the serial reading bottom-to-top, the tier at the foot.
   const sx = b.x + mainW + stubW / 2
   doc.setFont(f.sansBold, 'normal')
   doc.setFontSize(6)
   doc.setTextColor(INK.secondary)
-  doc.text('STUB', sx, b.y + pad + 4, { align: 'center', charSpace: 0.8 })
+  doc.text(L.stub, sx, b.y + pad + 4, { align: 'center', charSpace: 0.8 })
   doc.setFont(f.sans, 'normal')
   doc.setFontSize(9)
   doc.setTextColor(INK.text)
@@ -227,8 +263,11 @@ export async function renderBatchPdf(params: {
   tickets: PrintableTicket[]
   paper?: PaperSize
   batchLabel?: string
+  /** The sheet's language; Haiti events are always 'fr'. Defaults to 'fr'. */
+  lang?: PdfLang
 }): Promise<Uint8Array> {
   const paper: PaperSize = params.paper === 'a4' ? 'a4' : 'letter'
+  const L = PDF_LABELS[params.lang && PDF_LABELS[params.lang] ? params.lang : 'fr']
   const doc = new jsPDF({ unit: 'pt', format: paper, compress: true })
   const f = registerFonts(doc)
   const pages = Math.max(1, Math.ceil(params.tickets.length / TICKETS_PER_PAGE))
@@ -238,15 +277,15 @@ export async function renderBatchPdf(params: {
     for (let i = 0; i < slice.length; i++) {
       const b = ticketBox(paper, i)
       cropMarks(doc, b)
-      drawTicket(doc, f, b, params.event, slice[i], await qrPng(slice[i].qrPayload))
+      drawTicket(doc, f, b, params.event, slice[i], await qrPng(slice[i].qrPayload), L)
     }
     // Page footer for the print room: batch, page, serial span.
     const { w, h } = PAGE[paper]
     doc.setFont(f.sans, 'normal')
     doc.setFontSize(6.5)
     doc.setTextColor(INK.secondary)
-    const span = slice.length ? `${slice[0].serial} to ${slice[slice.length - 1].serial}` : ''
-    doc.text(`${params.batchLabel || ''}   ${span}   page ${p + 1} of ${pages}`.trim(), w / 2, h - 12, { align: 'center' })
+    const span = slice.length ? L.span(slice[0].serial, slice[slice.length - 1].serial) : ''
+    doc.text(`${params.batchLabel || ''}   ${span}   ${L.page(p + 1, pages)}`.trim(), w / 2, h - 12, { align: 'center' })
   }
   return new Uint8Array(doc.output('arraybuffer'))
 }

@@ -66,6 +66,7 @@ import { flushActivationQueue, pendingActivations } from '../../lib/physicalTick
 
 import { Touchable } from '../../components/ui/Touchable';
 import { doorBalance, doorMoney } from '../../lib/payAtDoor';
+import { formatEventClock, formatEventDateTime, type ClockEvent } from '../../lib/eventClock';
 type RouteParams = {
   TicketScanner: {
     eventId: string;
@@ -157,6 +158,7 @@ function computeTierValidityBlock(
   tier: any,
   locale: string,
   t: (key: string) => string,
+  place?: ClockEvent,
 ): string | undefined {
   if (!tier) return undefined;
 
@@ -165,10 +167,10 @@ function computeTierValidityBlock(
   const until = tier.valid_until ? new Date(tier.valid_until) : null;
 
   if (from && !isNaN(from.getTime()) && now < from) {
-    return `${t('organizerCreateEventFlow.canvas.ticketNotYetValid')} ${from.toLocaleString(locale)}`;
+    return `${t('organizerCreateEventFlow.canvas.ticketNotYetValid')} ${formatEventDateTime(from, place, locale)}`;
   }
   if (until && !isNaN(until.getTime()) && now > until) {
-    return `${t('organizerCreateEventFlow.canvas.ticketExpired')} ${until.toLocaleString(locale)}`;
+    return `${t('organizerCreateEventFlow.canvas.ticketExpired')} ${formatEventDateTime(until, place, locale)}`;
   }
   return undefined;
 }
@@ -251,6 +253,8 @@ export default function TicketScannerScreen() {
   } | null>(null);
   const [recentScans, setRecentScans] = useState<RecentScan[]>([]);
   const eventMetaRef = useRef<{ allowReentry: boolean }>({ allowReentry: false });
+  // Country + zone of the event: Haiti times print "8:00 PM" in every language.
+  const eventPlaceRef = useRef<ClockEvent>(null);
   const [eventTitle, setEventTitle] = useState<string>('');
 
   // Door-only access (check-in permission without view-attendees). The ref is
@@ -309,6 +313,7 @@ export default function TicketScannerScreen() {
         const data = snap.data() as any;
         setEventTitle(String(data?.title || ''));
         eventMetaRef.current = { allowReentry: Boolean(data?.allow_reentry) };
+        eventPlaceRef.current = { country: data?.country, timezone: data?.timezone };
       })
       .catch(() => {});
   }, [eventId]);
@@ -721,7 +726,7 @@ export default function TicketScannerScreen() {
           door,
           checkedInTime,
           message: checkedInTime
-            ? `${t('organizerTicketScanner.results.alreadyCheckedInAtPrefix')}${checkedInTime.toLocaleString(locale)}`
+            ? `${t('organizerTicketScanner.results.alreadyCheckedInAtPrefix')}${formatEventDateTime(checkedInTime, eventPlaceRef.current, locale)}`
             : t('organizerTicketScanner.results.alreadyCheckedIn'),
         };
       }
@@ -734,7 +739,7 @@ export default function TicketScannerScreen() {
           method,
           door,
           validityBlock:
-            computeTierValidityBlock({ valid_from: row?.validFrom, valid_until: row?.validUntil }, locale, t) ||
+            computeTierValidityBlock({ valid_from: row?.validFrom, valid_until: row?.validUntil }, locale, t, eventPlaceRef.current) ||
             t('organizerCreateEventFlow.canvas.ticketExpired'),
         };
       default:
@@ -920,7 +925,7 @@ export default function TicketScannerScreen() {
           door: doorBalance(ticketData),
           checkedInTime,
           message: checkedInTime
-            ? `${t('organizerTicketScanner.results.alreadyCheckedInAtPrefix')}${checkedInTime.toLocaleString(locale)}`
+            ? `${t('organizerTicketScanner.results.alreadyCheckedInAtPrefix')}${formatEventDateTime(checkedInTime, eventPlaceRef.current, locale)}`
             : t('organizerTicketScanner.results.alreadyCheckedIn'),
         };
       }
@@ -960,7 +965,7 @@ export default function TicketScannerScreen() {
           ticketData.tierName ||
           tierName;
         const resolvedTier = await resolveTicketTier(eventTiers, tierId, rawTierName);
-        validityBlock = computeTierValidityBlock(resolvedTier, locale, t);
+        validityBlock = computeTierValidityBlock(resolvedTier, locale, t, eventPlaceRef.current);
       } catch (e) {
         console.warn('Failed to resolve tier validity window:', e);
       }
@@ -1494,7 +1499,7 @@ export default function TicketScannerScreen() {
                   <Text style={styles.recentName} numberOfLines={1}>{r.name}</Text>
                   <StatusChip status={statusOfOutcome(r.outcome)} label={r.label} />
                   <Text style={styles.recentTime}>
-                    {r.at.toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' })}
+                    {formatEventClock(r.at, eventPlaceRef.current, locale)}
                   </Text>
                 </View>
               ))}
@@ -1553,7 +1558,7 @@ export default function TicketScannerScreen() {
                     <Text style={styles.recentName} numberOfLines={1}>{r.name}</Text>
                     <StatusChip status={statusOfOutcome(r.outcome)} label={r.label} />
                     <Text style={styles.recentTime}>
-                      {r.at.toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' })}
+                      {formatEventClock(r.at, eventPlaceRef.current, locale)}
                     </Text>
                   </View>
                 ))

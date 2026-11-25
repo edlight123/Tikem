@@ -106,6 +106,11 @@ export default async function PurchaseSuccessPage({
         ticketIdShort={ticket?.id ? String(ticket.id).slice(0, 8) : null}
         eventTitle={safeEventTitle}
         startDateIso={event?.start_datetime ? String(event.start_datetime) : null}
+        eventPlace={{
+          country: typeof (event as any)?.country === 'string' ? (event as any).country : null,
+          timezone: typeof (event as any)?.timezone === 'string' ? (event as any).timezone : null,
+          city: typeof event?.city === 'string' ? event.city : null,
+        }}
         location={safeLocation || null}
         amountPaid={amountPaid}
         amountCurrency={amountCurrency}

@@ -6,6 +6,7 @@
 // and English elsewhere.
 
 import { eventZone } from '@/lib/home/feed'
+import { clock12FromParts, isHaitiEvent, isHaitiZone } from '@/lib/datetime/eventClock'
 
 export type EmailLang = 'en' | 'fr' | 'ht'
 
@@ -72,11 +73,15 @@ function partsIn(date: Date, zone: string) {
   return { year: Number(p.year), month: Number(p.month) - 1, day: Number(p.day), weekday: weekdayIdx, hour, minute: Number(p.minute) }
 }
 
-function clock(hour: number, minute: number, lang: EmailLang): string {
+/**
+ * "8:00 PM" for a Haiti event in every language (owner, 2026-11-25: Haiti uses
+ * AM/PM, never "military" time). Elsewhere French keeps "19h", English/Kreyòl
+ * the 12-hour clock.
+ */
+function clock(hour: number, minute: number, lang: EmailLang, haiti = false): string {
   const mm = String(minute).padStart(2, '0')
-  if (lang === 'fr') return `${hour}h${mm === '00' ? '' : mm}`.replace(/h$/, 'h')
-  const h12 = hour % 12 === 0 ? 12 : hour % 12
-  return `${h12}:${mm} ${hour < 12 ? 'AM' : 'PM'}`
+  if (lang === 'fr' && !haiti) return `${hour}h${mm === '00' ? '' : mm}`.replace(/h$/, 'h')
+  return clock12FromParts(hour, minute)
 }
 
 export interface EventWhen {
@@ -84,7 +89,7 @@ export interface EventWhen {
   short: string
   /** "Saturday, November 1, 2026" */
   long: string
-  /** "7:00 PM" / "19h" */
+  /** "7:00 PM" / "19h" (French outside Haiti only) */
   time: string
   /** "Sat 1 Nov · 7:00 PM" */
   line: string
@@ -100,7 +105,7 @@ export function formatEventWhen(
   if (!date || Number.isNaN(date.getTime())) return null
   const zone = eventZone(event || null)
   const p = partsIn(date, zone)
-  const time = clock(p.hour, p.minute, lang)
+  const time = clock(p.hour, p.minute, lang, isHaitiEvent(event) || isHaitiZone(zone))
   let short: string
   let long: string
   if (lang === 'ht') {

@@ -3732,6 +3732,7 @@ export default {
     eventShort: "Event",
     ticketNumber: 'Ticket {count}',
     admit: 'Admit:',
+    orderRef: 'Order #{ref}',
     tapHint: 'Tap ticket to enlarge · show at entry',
     checkedIn: 'Checked in',
     addToCalendar: 'Add to calendar',

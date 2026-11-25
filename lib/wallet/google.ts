@@ -13,6 +13,7 @@
  * (lib/wallet/ticket-access.ts).
  */
 
+import { isHaitiEvent, ticketDateLine } from '@/lib/datetime/eventClock'
 import crypto from 'node:crypto'
 import type { GoogleWalletConfig } from './config'
 import type { WalletTicket } from './ticket-access'
@@ -44,9 +45,14 @@ function base64url(input: Buffer | string): string {
     .replace(/=+$/, '')
 }
 
-/** A Google Wallet localized string. */
-function localized(value: string) {
-  return { defaultValue: { language: 'en-US', value } }
+/** A Google Wallet localized string (French for a Haiti event's pass). */
+function localized(value: string, language = 'en-US') {
+  return { defaultValue: { language, value } }
+}
+
+/** Haiti passes are French, with the date as text on a 12-hour clock (owner, 2026-11-25). */
+function haitiPass(ticket: WalletTicket): boolean {
+  return isHaitiEvent({ country: ticket.country, timezone: ticket.timezone, city: ticket.city })
 }
 
 /**
@@ -56,13 +62,15 @@ function localized(value: string) {
 function buildEventTicketClass(ticket: WalletTicket, config: GoogleWalletConfig) {
   const classId = `${config.issuerId}.evt_${sanitizeIdSuffix(ticket.eventId || ticket.id)}`
 
+  // A Haiti event's pass is French (owner, 2026-11-25).
+  const lang = haitiPass(ticket) ? 'fr-FR' : 'en-US'
   const eventClass: Record<string, any> = {
     id: classId,
     issuerName: config.issuerName,
     // Passes created through the JWT flow start under review; Google promotes
     // them automatically for issuers in good standing.
     reviewStatus: 'UNDER_REVIEW',
-    eventName: localized(ticket.eventTitle),
+    eventName: localized(ticket.eventTitle, lang),
     hexBackgroundColor: '#0a0a0a',
   }
 
@@ -72,14 +80,14 @@ function buildEventTicketClass(ticket: WalletTicket, config: GoogleWalletConfig)
   if (hero) {
     eventClass.heroImage = {
       sourceUri: { uri: hero },
-      contentDescription: localized(ticket.eventTitle),
+      contentDescription: localized(ticket.eventTitle, lang),
     }
   }
 
   if (ticket.venueName || ticket.city) {
     eventClass.venue = {
-      name: localized(ticket.venueName || ticket.city),
-      address: localized([ticket.venueName, ticket.city].filter(Boolean).join(', ')),
+      name: localized(ticket.venueName || ticket.city, lang),
+      address: localized([ticket.venueName, ticket.city].filter(Boolean).join(', '), lang),
     }
   }
 
@@ -125,6 +133,21 @@ function buildEventTicketObject(
   }
 
   if (ticket.holderName) object.ticketHolderName = ticket.holderName
+
+  // Google prints the class dateTime in the PHONE's locale (24h on a French
+  // phone). A Haiti pass also carries the date as text, French and AM/PM.
+  if (haitiPass(ticket)) {
+    const line = ticketDateLine(ticket.startDatetime, { country: ticket.country, timezone: ticket.timezone, city: ticket.city }, 'fr')
+    object.textModulesData = [
+      ...(line ? [{ id: 'date', header: 'Date', body: line }] : []),
+      {
+        id: 'door',
+        header: 'À l’entrée',
+        body: 'Présentez ce billet à l’entrée. Chaque billet se scanne une seule fois.',
+      },
+    ]
+    object.ticketType = localized(ticket.tierName, 'fr-FR')
+  }
 
   return object
 }

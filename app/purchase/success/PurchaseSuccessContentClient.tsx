@@ -7,12 +7,15 @@ import { useTranslation } from 'react-i18next'
 import { CheckCircle2, Instagram, QrCode } from 'lucide-react'
 import { StatusChip } from '@/components/ui/kit'
 import { INSTAGRAM_HANDLE, INSTAGRAM_URL, openInstagram } from '@/lib/instagram'
+import { formatEventDateTime } from '@/lib/datetime/eventClock'
 
 type Props = {
   hasTicket: boolean
   ticketIdShort: string | null
   eventTitle: string
   startDateIso: string | null
+  /** Country/zone/city: the time is on the event's clock, "8:00 PM" for Haiti. */
+  eventPlace?: { country: string | null; timezone: string | null; city: string | null }
   location: string | null
   amountPaid: number | null
   amountCurrency: string | null
@@ -34,14 +37,15 @@ export default function PurchaseSuccessContentClient(props: Props) {
     if (!props.startDateIso) return t('tickets:purchase_success.date_tba')
     const d = new Date(props.startDateIso)
     if (Number.isNaN(d.getTime())) return t('tickets:purchase_success.date_tba')
-    return d.toLocaleDateString(locale, {
+    const opts: Intl.DateTimeFormatOptions = {
       weekday: 'short',
       year: 'numeric',
       month: 'short',
       day: 'numeric',
       hour: 'numeric',
       minute: '2-digit',
-    })
+    }
+    return props.eventPlace ? formatEventDateTime(d, props.eventPlace, i18n.language, opts) : d.toLocaleDateString(locale, opts)
   })()
 
   const amountText = (() => {
