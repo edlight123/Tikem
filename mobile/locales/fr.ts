@@ -1434,6 +1434,8 @@ export default {
       sellThrough: 'vendu',
       viewsOne: 'vue',
       viewsOther: 'vues',
+      printedOne: 'imprimé',
+      printedOther: 'imprimés',
     },
     status: {
       paused: 'En pause',
@@ -1788,6 +1790,7 @@ export default {
     linkInvite: 'Invitation par lien',
     staffInfo: 'Le staff peut scanner les billets et enregistrer les invités à l’entrée. Accordez l’accès aux participants pour qu’il voie aussi la liste.',
     memberPermissionBasic: 'Accès au scan',
+    tikemCrew: 'Équipe Tikèm',
     memberPermissionFull: 'Scan + liste des participants',
     viewAttendeesHelp: 'Le staff peut toujours enregistrer les invités. Activez ceci pour lui montrer aussi la liste des participants.',
     roleOwner: 'Propriétaire',
@@ -4632,6 +4635,25 @@ export default {
     door: {
       notSold: "Non vendu — non valide",
       voided: "Billet imprimé annulé",
+    },
+  },
+  printedBundle: {
+    title: "Billets imprimés",
+    online: "{n} en ligne",
+    printed: "{n} imprimés",
+    notSoldYet: "{n} imprimés, pas encore vendus",
+    batchLine: "{qty} imprimés · {sold} vendus · {in} entrés",
+    batchOrdered: "{qty} commandés",
+    batchUnsold: "{n} pas encore vendus",
+    manageOnWeb: "Gérer sur le web",
+    attendeeMarker: "Imprimé · {serial}",
+    orderMarker: "Imprimé",
+    batchStatus: {
+      awaitingPayment: "En attente de paiement",
+      printing: "En impression",
+      ready: "Prêt à vendre",
+      selling: "En vente",
+      cancelled: "Annulé",
     },
   },
   richText: {

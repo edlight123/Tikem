@@ -91,7 +91,8 @@
     "door_reentry_refused": "RE-ENTRY REFUSED",
     "door_overriding": "Checking…",
     "door_scan_next": "Scan next",
-    "tab_printed": "Printed tickets"
+    "tab_printed": "Printed tickets",
+    "tab_door_team": "Door team"
   },
   "your_events": "Your Events",
   "view_all_events": "View all events →",
@@ -1058,6 +1059,7 @@
     "allow_viewing_attendee_details": "Allow viewing attendee details",
     "can_check_in": "Can check in",
     "can_view_attendee_list": "Can view attendee list",
+    "tikem_crew": "Tikèm crew",
     "event_scoped_access": "Event-scoped access for check-in",
     "invite_links_one_time": "Invite links are one-time use. Create a new one if lost.",
     "invite_staff": "Invite Staff",
@@ -1069,7 +1071,18 @@
     "permissions": "Permissions",
     "staff_members": "Staff Members",
     "status": "Status",
-    "target": "Target"
+    "target": "Target",
+    "user": "User",
+    "invite_status_pending": "Pending",
+    "invite_status_claimed": "Claimed",
+    "invite_status_revoked": "Revoked",
+    "method_email": "Email",
+    "method_phone": "Phone",
+    "method_link": "Link",
+    "view_attendee_list_yes": "Can view attendee list: Yes",
+    "view_attendee_list_no": "Can view attendee list: No",
+    "role_owner": "Owner",
+    "role_staff": "Staff"
   },
   "earnings": {
     "available": "Available",

@@ -7,6 +7,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { QrCode, Calendar, CalendarDays, MapPin } from 'lucide-react'
 import { getPosterTheme } from '@/lib/posterGradient'
+import { soldForPeople } from '@/lib/physical/rules'
 
 interface EventSelectorProps {
   events: any[]
@@ -20,7 +21,7 @@ function ScanEventCard({ event, badge }: { event: any; badge?: { label: string; 
   const d = event.start_datetime ? new Date(event.start_datetime) : null
   const dateLabel = d && isValid(d) ? format(d, 'EEE, MMM d · h:mm a') : 'Date TBA'
   const location = [event.venue_name, event.city].filter(Boolean).join(', ')
-  const ticketsSold = event.tickets_sold || 0
+  const ticketsSold = soldForPeople(event)
 
   return (
     <Link href={`/organizer/scan/${event.id}`} prefetch className="group block h-full">

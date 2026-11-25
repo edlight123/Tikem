@@ -6,6 +6,7 @@ import { loadTicketDocsForEvent } from '@/lib/tickets/loadTicketsForEvent'
 import { isLiveTicketStatus } from '@/lib/tickets/status'
 import { teamRoleIn } from '@/lib/organizer/context'
 import { orgCan } from '@/lib/organizer/teamRoles'
+import { memberSeatIsLive } from '@/lib/scan/doorRules'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -66,8 +67,9 @@ export default async function DoorModeScanPage({ params }: { params: Promise<{ e
     const memberSnap = await adminDb.collection('events').doc(eventId).collection('members').doc(authUser.uid).get()
     if (memberSnap.exists) {
       const member = memberSnap.data() as any
-      isEventStaff = Boolean(member?.permissions?.checkin)
-      canViewAttendees = Boolean(member?.permissions?.viewAttendees)
+      // A time-boxed seat (Tikèm door team crew) counts only inside its window.
+      isEventStaff = Boolean(member?.permissions?.checkin) && memberSeatIsLive(member, Date.now())
+      canViewAttendees = Boolean(member?.permissions?.viewAttendees) && member?.source !== 'tikem_door_team'
     }
   }
 

@@ -5,6 +5,9 @@
  *   0/120 sold · 0 checked in
  *   0% sold · 12 views · 3 today
  *
+ * With printed tickets sold, the first line says how many of the sold are
+ * printed: "220/300 sold · 88 printed · 40 checked in".
+ *
  * Each segment is a number (drawn semibold) and a muted label. Pure, so the
  * singular/plural choice is tested in every language.
  */
@@ -34,6 +37,7 @@ export function eventStatLines(
     checkedIn,
     sellThrough,
     views,
+    printedSold = 0,
   }: {
     sold: number;
     /** 0 when the event has no real cap. */
@@ -41,12 +45,15 @@ export function eventStatLines(
     checkedIn: number;
     sellThrough: number | null;
     views: { total: number; today: number } | null;
+    /** Printed tickets sold at a point of sale, already inside `sold`. */
+    printedSold?: number;
   },
 ): StatSegment[][] {
   const k = (name: string, n: number) =>
     t(`organizerEventManagement.statLine.${name}${isSingular(language, n) ? 'One' : 'Other'}`);
   const first: StatSegment[] = [
     { value: capacity > 0 ? `${sold}/${capacity}` : String(sold), label: k('sold', sold) },
+    ...(printedSold > 0 ? [{ value: String(printedSold), label: k('printed', printedSold) }] : []),
     { value: String(checkedIn), label: k('checkedIn', checkedIn) },
   ];
   const second: StatSegment[] = [];

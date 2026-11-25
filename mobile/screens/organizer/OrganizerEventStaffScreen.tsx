@@ -71,6 +71,8 @@ type ApiInvite = {
 type ApiMember = {
   id: string
   role: string
+  /** Tikèm's own door crew (redacted by the API, managed by Tikèm only). */
+  tikemCrew?: boolean
   permissions: { checkin?: boolean; viewAttendees?: boolean }
   createdAt: string | null
   profile: { email: string | null; full_name: string | null; photo_url?: string | null }
@@ -410,6 +412,8 @@ export default function OrganizerEventStaffScreen() {
                 const seat = teamById.get(m.id)
                 const name = m.profile?.full_name || seat?.name || m.profile?.email || t('organizerStaff.unnamed')
                 const isOwner = m.role === 'owner'
+                const tikemCrew = m.tikemCrew === true || m.role === 'tikem_crew'
+                const locked = isOwner || tikemCrew
                 const full = isOwner || !!m.permissions?.viewAttendees
                 const rowBusy = busy.includes(m.id)
                 return (
@@ -428,13 +432,15 @@ export default function OrganizerEventStaffScreen() {
                           label={
                             isOwner
                               ? t('organizerStaff.roleOwner')
-                              : full
+                              : tikemCrew
+                                ? t('organizerStaff.tikemCrew')
+                                : full
                                 ? t('organizerStaff.memberPermissionFull')
                                 : t('organizerStaff.memberPermissionBasic')
                           }
                         />
                       </View>
-                      {!isOwner && (
+                      {!locked && (
                         <Touchable
                           style={[styles.ghostBtn, rowBusy && styles.disabled]}
                           onPress={() => removeMember(m.id)}
@@ -446,7 +452,7 @@ export default function OrganizerEventStaffScreen() {
                         </Touchable>
                       )}
                     </View>
-                    {!isOwner && (
+                    {!locked && (
                       <View style={styles.permRow}>
                         <Text style={styles.permLabel}>{t('organizerStaff.canViewAttendees')}</Text>
                         <Switch

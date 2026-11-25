@@ -91,7 +91,8 @@
     "door_reentry_refused": "RÉADMISSION REFUSÉE",
     "door_overriding": "Vérification…",
     "door_scan_next": "Scanner le suivant",
-    "tab_printed": "Billets imprimés"
+    "tab_printed": "Billets imprimés",
+    "tab_door_team": "Équipe d'accueil"
   },
   "your_events": "Vos événements",
   "view_all_events": "Voir tous les événements →",
@@ -1058,6 +1059,7 @@
     "allow_viewing_attendee_details": "Autoriser la consultation des détails des participants",
     "can_check_in": "Peut enregistrer les entrées",
     "can_view_attendee_list": "Peut voir la liste des participants",
+    "tikem_crew": "Équipe Tikèm",
     "event_scoped_access": "Accès limité à l'événement pour l'enregistrement",
     "invite_links_one_time": "Les liens d'invitation sont à usage unique. Créez-en un nouveau en cas de perte.",
     "invite_staff": "Inviter du personnel",
@@ -1069,7 +1071,18 @@
     "permissions": "Autorisations",
     "staff_members": "Membres du personnel",
     "status": "Statut",
-    "target": "Cible"
+    "target": "Cible",
+    "user": "Utilisateur",
+    "invite_status_pending": "En attente",
+    "invite_status_claimed": "Acceptée",
+    "invite_status_revoked": "Révoquée",
+    "method_email": "E-mail",
+    "method_phone": "Téléphone",
+    "method_link": "Lien",
+    "view_attendee_list_yes": "Peut voir la liste des participants : oui",
+    "view_attendee_list_no": "Peut voir la liste des participants : non",
+    "role_owner": "Propriétaire",
+    "role_staff": "Personnel"
   },
   "earnings": {
     "available": "Disponible",

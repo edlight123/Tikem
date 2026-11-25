@@ -44,6 +44,8 @@ import {
   PAYMENT_WINDOW_MS,
   serialPrefix,
   tallyPhysical,
+  batchHeldSeats,
+  EVENT_HELD_SEATS_FIELD,
   tokenFromBytes,
   validRange,
   type ActivationActor,
@@ -265,6 +267,7 @@ export async function createBatch(params: {
     await releaseSeats({ reservationId, logPrefix: '[physical]' })
     throw err
   }
+  await syncEventHeldSeats(params.eventId)
   return { ok: true, batch }
 }
 
@@ -304,6 +307,8 @@ export async function cancelUnpaidBatch(batchId: string, by: string, reason: str
   })
   if (cancelled !== 'ok') return { ok: false, code: cancelled }
   await releaseSeats({ reservationId: physicalReservationId(batchId), logPrefix: '[physical]' })
+  const eventId = String((await ref.get().catch(() => null))?.data()?.event_id || '')
+  if (eventId) await syncEventHeldSeats(eventId)
   return { ok: true }
 }
 
@@ -710,6 +715,7 @@ export async function releaseUnsold(params: { batch: BatchDoc; by: string; range
     released_count: (Number(batch.released_count) || 0) + touched.length,
     updated_at: nowIso,
   })
+  if (touched.length > 0) await syncEventHeldSeats(batch.event_id)
   return { ok: true, released: touched.length, skipped }
 }
 
@@ -728,6 +734,7 @@ export async function retireBatchTickets(batch: BatchDoc, by: string): Promise<n
   )
   const res = await releaseSeats({ reservationId: batch.reservation_id, logPrefix: '[physical]' })
   if (!res.released && res.error) console.warn('[physical] seats not released on cancel', { batchId: batch.id, error: res.error })
+  await syncEventHeldSeats(batch.event_id)
   return touched.length
 }
 
@@ -844,6 +851,8 @@ export async function activatePhysicalTicket(params: {
       tier: String(ticket?.tier_name || ''),
     } as ActivationResult
   })
+  // Sold: one seat fewer held without a buyer (lists read it off the event).
+  if (result.ok && !result.alreadyDone) await adjustEventHeldSeats(params.eventId, -1)
   return result
 }
 
@@ -852,6 +861,8 @@ export async function activatePhysicalTicket(params: {
 export interface BatchSummary {
   batch: BatchDoc
   counts: BatchCounts
+  /** Seats reserved by this batch that nobody has bought yet (rules.batchHeldSeats). */
+  heldSeats: number
   bySeller: Array<{ uid: string; name: string; counts: BatchCounts }>
 }
 
@@ -868,12 +879,65 @@ export async function loadEventBatches(eventId: string): Promise<BatchSummary[]>
     out.push({
       batch,
       counts: total,
+      heldSeats: batchHeldSeats(batch, total),
       bySeller: Object.entries(bySeller)
         .filter(([uid]) => uid)
         .map(([uid, counts]) => ({ uid, name: names.get(uid) || '', counts })),
     })
   }
+  // Self-heal: the event's held-seat count matches what the batches say.
+  const held = out.reduce((n, s) => n + s.heldSeats, 0)
+  try {
+    const eventRef = adminDb.collection('events').doc(eventId)
+    const ev = await eventRef.get()
+    if (ev.exists && Number(ev.data()?.[EVENT_HELD_SEATS_FIELD] || 0) !== held) {
+      await eventRef.set({ [EVENT_HELD_SEATS_FIELD]: held }, { merge: true })
+    }
+  } catch (err: any) {
+    console.warn('[physical] held seats self-heal failed', { eventId, message: err?.message })
+  }
   return out
+}
+
+/**
+ * Recompute the event's physical_held_seats from its batches (rules.batchHeldSeats)
+ * and store it on the event doc. Called after every batch change that moves
+ * seats (order, cancel, release, retire). Never throws: a miss is healed by
+ * the next change or the next look at the printed page.
+ */
+export async function syncEventHeldSeats(eventId: string): Promise<number | null> {
+  if (!eventId) return null
+  try {
+    const snap = await adminDb.collection(PHYSICAL_BATCHES).where('event_id', '==', eventId).get()
+    let held = 0
+    for (const d of snap.docs) {
+      const batch = { id: d.id, ...(d.data() || {}) } as BatchDoc
+      if (batch.status === 'cancelled') continue
+      const tickets = batch.status === 'awaiting_payment' ? [] : await loadBatchTickets(batch.id)
+      held += batchHeldSeats(batch, tallyPhysical(tickets).total)
+    }
+    await adminDb.collection('events').doc(eventId).set({ [EVENT_HELD_SEATS_FIELD]: held }, { merge: true })
+    return held
+  } catch (err: any) {
+    console.error('[physical] held seats sync failed', { eventId, message: err?.message })
+    return null
+  }
+}
+
+/** Move the event's held-seat count by delta (an activation is -1), never below 0. Never throws. */
+export async function adjustEventHeldSeats(eventId: string, delta: number): Promise<void> {
+  if (!eventId || !delta) return
+  const ref = adminDb.collection('events').doc(eventId)
+  try {
+    await adminDb.runTransaction(async (tx: any) => {
+      const snap = await tx.get(ref)
+      if (!snap.exists) return
+      const cur = Math.max(0, Math.round(Number(snap.data()?.[EVENT_HELD_SEATS_FIELD]) || 0))
+      tx.update(ref, { [EVENT_HELD_SEATS_FIELD]: Math.max(0, cur + delta) })
+    })
+  } catch (err: any) {
+    console.warn('[physical] held seats adjust failed', { eventId, delta, message: err?.message })
+  }
 }
 
 /** Batches whose ranges are assigned to this seller (for the seller's own screen). */

@@ -193,10 +193,14 @@ export default function EventAnalyticsScreen() {
               {
                 label: tripletLabels.sold,
                 value: a.ticketsSold,
+                // Printed tickets sold count here like any ticket; the caption says how many.
                 caption:
-                  capacityPct !== null
-                    ? t('organizerEventAnalytics.ofCapacity', { pct: capacityPct, cap })
-                    : undefined,
+                  [
+                    capacityPct !== null ? t('organizerEventAnalytics.ofCapacity', { pct: capacityPct, cap }) : '',
+                    a.printed && a.printed.sold > 0 ? t('printedBundle.printed', { n: a.printed.sold }) : '',
+                  ]
+                    .filter(Boolean)
+                    .join('\n') || undefined,
               },
               {
                 label: tripletLabels.checkIn,
@@ -271,6 +275,12 @@ export default function EventAnalyticsScreen() {
                         <View style={styles.track}>
                           <View style={[styles.fill, { width: `${Math.max(share * 100, 2)}%` }]} />
                         </View>
+                        {tier.printed ? (
+                          <Text style={styles.barCaption}>
+                            {t('printedBundle.online', { n: Math.max(0, tier.sold - tier.printed) })} +{' '}
+                            {t('printedBundle.printed', { n: tier.printed })}
+                          </Text>
+                        ) : null}
                         {!hideRevenue && tier.revenue.length > 0 ? (
                           <Text style={styles.barCaption}>{formatMoneyLines(tier.revenue)}</Text>
                         ) : null}

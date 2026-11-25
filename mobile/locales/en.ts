@@ -1866,6 +1866,8 @@ export default {
       sellThrough: 'sold',
       viewsOne: 'view',
       viewsOther: 'views',
+      printedOne: 'printed',
+      printedOther: 'printed',
     },
     status: {
       paused: 'Paused',
@@ -2220,6 +2222,7 @@ export default {
     linkInvite: 'Link invite',
     staffInfo: 'Staff can scan tickets and check guests in at the door. Grant attendee access to also let them view the guest list.',
     memberPermissionBasic: 'Check-in access',
+    tikemCrew: 'Tikèm crew',
     memberPermissionFull: 'Check-in + attendee list',
     viewAttendeesHelp: 'Staff can always check guests in. Turn this on to also let them see the attendee list.',
     roleOwner: 'Owner',
@@ -4613,6 +4616,25 @@ export default {
     door: {
       notSold: "Not sold — not valid",
       voided: "Voided printed ticket",
+    },
+  },
+  printedBundle: {
+    title: "Printed tickets",
+    online: "{n} online",
+    printed: "{n} printed",
+    notSoldYet: "{n} printed, not sold yet",
+    batchLine: "{qty} printed · {sold} sold · {in} checked in",
+    batchOrdered: "{qty} ordered",
+    batchUnsold: "{n} not sold yet",
+    manageOnWeb: "Manage on the web",
+    attendeeMarker: "Printed · {serial}",
+    orderMarker: "Printed",
+    batchStatus: {
+      awaitingPayment: "Awaiting payment",
+      printing: "Printing",
+      ready: "Ready to sell",
+      selling: "Selling",
+      cancelled: "Cancelled",
     },
   },
   richText: {

@@ -34,6 +34,7 @@ import StatusChip from '../../components/StatusChip';
 import { TikemWordmark } from '../../components/TikemWordmark';
 import { displayCapacity } from '../../lib/ticketPricing';
 import { formatEventClock } from '../../lib/eventClock';
+import { soldForPeople } from '../../lib/printedBundle';
 
 type EventStatus =
   | 'on_sale'
@@ -347,7 +348,8 @@ export default function OrganizerEventsScreen() {
               '';
             const metaLabel = [dateLabel, venueLabel].filter(Boolean).join(' · ');
 
-            const sold = event.tickets_sold || 0;
+            // People only: unsold printed seats sit inside tickets_sold.
+            const sold = soldForPeople(event);
             const capacity = displayCapacity(event.total_tickets);
             const soldRatio = capacity > 0 ? Math.min(1, sold / capacity) : 0;
             const salesLabel = capacity > 0

@@ -18,6 +18,7 @@ import {
   sumRevenueByCurrency,
   ticketPurchaseDate,
 } from '../organizerStats';
+import { bundleBreakdown, soldForPeople, type BundledBreakdown, type PrintedBatchSummary } from '../printedBundle';
 
 export interface OrganizerEvent {
   id: string;
@@ -32,6 +33,8 @@ export interface OrganizerEvent {
   organizer_id: string;
   is_published: boolean;
   tickets_sold: number;
+  /** Seats printed batches hold without a buyer (server-kept); see soldForPeople. */
+  physical_held_seats?: number;
   total_tickets: number;
   status: 'draft' | 'published' | 'cancelled' | 'completed';
   created_at: string;
@@ -46,16 +49,16 @@ export interface OrganizerEvent {
   currency?: string;
 }
 
-export interface EventTicketBreakdown {
-  ticketsSold: number;
-  ticketsCheckedIn: number;
-  capacity: number;
-  ticketTypes: Array<{
-    name: string;
-    sold: number;
-    capacity: number;
-  }>;
-}
+/** The event's numbers, printed tickets included (lib/printedBundle). */
+export type EventTicketBreakdown = BundledBreakdown;
+
+const emptyBreakdown = (): EventTicketBreakdown => ({
+  ticketsSold: 0,
+  ticketsCheckedIn: 0,
+  capacity: 0,
+  printed: { sold: 0, checkedIn: 0, unsold: 0 },
+  ticketTypes: [],
+});
 
 // Light in-memory cache so re-opening the Manage Event screen (or any subpage
 // that needs the event) paints instantly instead of flashing a skeleton while a
@@ -332,7 +335,8 @@ export async function getTodayEvents(
           country: typeof (event as any).country === 'string' ? (event as any).country : undefined,
           timezone: typeof (event as any).timezone === 'string' ? (event as any).timezone : undefined,
           category: event.category,
-          ticketsSold: event.tickets_sold || 0,
+          // Unsold printed seats sit inside tickets_sold: people only.
+          ticketsSold: soldForPeople(event),
           capacity: event.total_tickets || 0,
         };
         try {
@@ -405,77 +409,36 @@ export async function getEventById(eventId: string): Promise<OrganizerEvent | nu
 /**
  * Get ticket breakdown for an event
  */
-export async function getEventTicketBreakdown(eventId: string): Promise<EventTicketBreakdown> {
+export async function getEventTicketBreakdown(
+  eventId: string,
+  opts: { batches?: Promise<PrintedBatchSummary[] | null> } = {}
+): Promise<EventTicketBreakdown> {
   try {
-    const [event, ticketsSnapshot, tiersSnapshot] = await Promise.all([
+    const [event, ticketsSnapshot, tiersSnapshot, batches] = await Promise.all([
       getEventById(eventId),
       getDocs(query(collection(db, 'tickets'), where('event_id', '==', eventId))),
       getDocs(query(collection(db, 'ticket_tiers'), where('event_id', '==', eventId))),
+      opts.batches ?? Promise.resolve(null),
     ]);
 
     if (!event) {
-      return {
-        ticketsSold: 0,
-        ticketsCheckedIn: 0,
-        capacity: 0,
-        ticketTypes: [],
-      };
+      return emptyBreakdown();
     }
 
-    const tickets = ticketsSnapshot.docs.map((doc) => doc.data());
-    const tiers = tiersSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-    
-    // Use tickets_sold from event document (same as webapp)
-    const ticketsSold = event.tickets_sold || 0;
-    const ticketsCheckedIn = tickets.filter((t) => t.checked_in_at).length;
-
-    // Group tickets by tier and get capacities from ticket_tiers
-    const tierMap = new Map<string, { sold: number; capacity: number }>();
-    
-    // Initialize with tier data.
-    // NOTE: ticket tiers store capacity as `total_quantity` (see /api/ticket-tiers and
-    // every sold-out check). The old `tier.quantity` field doesn't exist, which made every
-    // tier show a capacity of 0. Fall back to `quantity` only for any legacy docs.
-    tiers.forEach((tier: any) => {
-      tierMap.set(tier.name, {
-        sold: 0,
-        capacity: Number(tier.total_quantity ?? tier.quantity ?? 0),
-      });
-    });
-    
-    // Count sold tickets per tier
-    tickets.forEach((ticket) => {
-      const tierName = ticket.tier_name || ticket.ticket_tier_name || 'General Admission';
-      if (tierMap.has(tierName)) {
-        const tier = tierMap.get(tierName)!;
-        tier.sold += 1;
-      } else {
-        // If tier not found in tiers collection, create entry
-        tierMap.set(tierName, { sold: 1, capacity: 1 });
-      }
-    });
-
-    const ticketTypes = Array.from(tierMap.entries()).map(([name, data]) => ({
-      name,
-      sold: data.sold,
-      capacity: data.capacity,
-    }));
-
-    const breakdown: EventTicketBreakdown = {
-      ticketsSold,
-      ticketsCheckedIn,
+    // Printed tickets fold in with the online ones (lib/printedBundle):
+    // activated ones count as sold, unsold ones are reserved seats taken out
+    // of tickets_sold. Ticket tiers store capacity as `total_quantity`.
+    const breakdown: EventTicketBreakdown = bundleBreakdown({
+      ticketsSold: event.tickets_sold || 0,
       capacity: event.total_tickets || 0,
-      ticketTypes,
-    };
+      tickets: ticketsSnapshot.docs.map((doc) => doc.data()),
+      tiers: tiersSnapshot.docs.map((doc) => ({ id: doc.id, ...(doc.data() as any) })),
+      batches,
+    });
     breakdownCache.set(eventId, breakdown);
     return breakdown;
   } catch (error) {
     console.error('Error fetching event ticket breakdown:', error);
-    return {
-      ticketsSold: 0,
-      ticketsCheckedIn: 0,
-      capacity: 0,
-      ticketTypes: [],
-    };
+    return emptyBreakdown();
   }
 }

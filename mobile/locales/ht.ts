@@ -1402,6 +1402,8 @@ export default {
       sellThrough: 'vann',
       viewsOne: 'vizit',
       viewsOther: 'vizit',
+      printedOne: 'enprime',
+      printedOther: 'enprime',
     },
     status: {
       paused: 'An poz',
@@ -1756,6 +1758,7 @@ export default {
     linkInvite: 'Envitasyon lyen',
     staffInfo: 'Staff kapab eskane tikè epi anrejistre envite yo nan pòt la. Bay aksè patisipan pou yo ka wè lis la tou.',
     memberPermissionBasic: 'Aksè eskane',
+    tikemCrew: 'Ekip Tikèm',
     memberPermissionFull: 'Eskane + lis patisipan',
     viewAttendeesHelp: 'Staff toujou kapab anrejistre envite yo. Ouvri sa a pou yo ka wè lis patisipan yo tou.',
     roleOwner: 'Pwopriyetè',
@@ -4599,6 +4602,25 @@ export default {
     door: {
       notSold: "Pa vann — pa valab",
       voided: "Tikè enprime anile",
+    },
+  },
+  printedBundle: {
+    title: "Biyè enprime",
+    online: "{n} sou entènèt",
+    printed: "{n} enprime",
+    notSoldYet: "{n} enprime, poko vann",
+    batchLine: "{qty} enprime · {sold} vann · {in} antre",
+    batchOrdered: "{qty} kòmande",
+    batchUnsold: "{n} poko vann",
+    manageOnWeb: "Jere sou sit la",
+    attendeeMarker: "Enprime · {serial}",
+    orderMarker: "Enprime",
+    batchStatus: {
+      awaitingPayment: "Ap tann peman",
+      printing: "Y ap enprime l",
+      ready: "Pare pou vann",
+      selling: "An vant",
+      cancelled: "Anile",
     },
   },
   richText: {

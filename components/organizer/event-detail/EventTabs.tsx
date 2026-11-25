@@ -63,6 +63,7 @@ export function EventTabs({ eventId, ticketCount, requiresApproval = false, pend
     { id: 'guest-list', label: t('organizer.tab_guest_list', { defaultValue: 'Guest list' }), href: `${base}/guest-list` },
     { id: 'comps', label: t('organizer.tab_comps', { defaultValue: 'Comps' }), href: `${base}/comps` },
     { id: 'printed', label: t('organizer.tab_printed', { defaultValue: 'Printed tickets' }), href: `${base}/printed` },
+    { id: 'door-team', label: t('organizer.tab_door_team', { defaultValue: 'Door team' }), href: `${base}/door-team` },
     { id: 'tracking', label: t('organizer.tab_tracking', { defaultValue: 'Tracking' }), href: `${base}/tracking` },
     { id: 'staff', label: t('organizer.tab_staff', { defaultValue: 'Staff' }), href: `${base}/staff` },
   ]
