@@ -729,16 +729,20 @@ export default function OrganizerEventManagementScreen() {
                   const tone =
                     state.tone === 'live' ? T.accent : state.tone === 'pending' ? T.amber : colors.textTertiary;
                   const unsold = Math.max(0, Number(b.counts?.unsold) || 0);
-                  const line = [
-                    t('printedBundle.batchLine', {
-                      qty: Number(b.batch.quantity) || 0,
-                      sold: Number(b.counts?.activated) || 0,
-                      in: Number(b.counts?.checkedIn) || 0,
-                    }),
-                    unsold > 0 ? t('printedBundle.batchUnsold', { n: unsold }) : '',
-                  ]
-                    .filter(Boolean)
-                    .join(' · ');
+                  // Not printed yet (awaiting payment / paid): only the quantity ordered.
+                  const issued = (Number(b.counts?.printed) || 0) > 0;
+                  const line = !issued
+                    ? t('printedBundle.batchOrdered', { qty: Number(b.batch.quantity) || 0 })
+                    : [
+                        t('printedBundle.batchLine', {
+                          qty: Number(b.batch.quantity) || 0,
+                          sold: Number(b.counts?.activated) || 0,
+                          in: Number(b.counts?.checkedIn) || 0,
+                        }),
+                        unsold > 0 ? t('printedBundle.batchUnsold', { n: unsold }) : '',
+                      ]
+                        .filter(Boolean)
+                        .join(' · ');
                   return (
                     <View key={b.batch.id} style={[styles.tierRow, index > 0 && styles.tierRowSpaced]}>
                       <View style={styles.tierInfo}>

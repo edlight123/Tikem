@@ -4604,6 +4604,7 @@ export default {
     printed: "{n} enprime",
     notSoldYet: "{n} enprime, poko vann",
     batchLine: "{qty} enprime · {sold} vann · {in} antre",
+    batchOrdered: "{qty} kòmande",
     batchUnsold: "{n} poko vann",
     manageOnWeb: "Jere sou sit la",
     attendeeMarker: "Enprime · {serial}",

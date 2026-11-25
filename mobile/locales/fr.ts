@@ -4637,6 +4637,7 @@ export default {
     printed: "{n} imprimés",
     notSoldYet: "{n} imprimés, pas encore vendus",
     batchLine: "{qty} imprimés · {sold} vendus · {in} entrés",
+    batchOrdered: "{qty} commandés",
     batchUnsold: "{n} pas encore vendus",
     manageOnWeb: "Gérer sur le web",
     attendeeMarker: "Imprimé · {serial}",
