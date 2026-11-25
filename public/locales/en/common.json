@@ -2513,7 +2513,7 @@
       "title": "sell a printed ticket",
       "intro": "Type the serial printed on the ticket (or paste its scanned code), then the buyer's name.",
       "code": "Serial or code",
-      "code_ph": "FETE-VIP-0001",
+      "code_ph": "FETE-VIP-B1-0001",
       "name": "Buyer's name",
       "phone": "Phone (optional)",
       "method": "Paid with",

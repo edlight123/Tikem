@@ -287,9 +287,9 @@ export function PrintedTicketsAdmin() {
             const next = NEXT[b.status]
             const printable = !['awaiting_payment', 'cancelled'].includes(b.status)
             return (
-              <ConsolePanel key={b.id} className="flex flex-wrap items-center gap-x-6 gap-y-3 px-4 py-3">
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-meta font-semibold text-console-text">
+              <ConsolePanel key={b.id} className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-6">
+                <div className="min-w-0 sm:flex-1">
+                  <p className="text-meta font-semibold text-console-text sm:truncate">
                     {b.eventTitle || b.eventId} · {nf(b.quantity)} × {b.tierName}
                   </p>
                   <p className="label-mono text-xs tabular-nums text-console-faint">
@@ -309,11 +309,12 @@ export function PrintedTicketsAdmin() {
                   )}
                 </div>
                 <ConsoleState tone={tone(b.status)}>{LABEL[b.status] || b.status}</ConsoleState>
-                <div className="flex flex-wrap gap-2">
+                {/* Phones: equal-width buttons on one row under the status. */}
+                <div className="flex gap-2 sm:flex-wrap [&>*]:flex-1 [&>*]:whitespace-nowrap [&>*]:px-3 sm:[&>*]:flex-none sm:[&>*]:px-4">
                   {printable && (
                     <a
                       href={`/api/admin/physical-tickets/batches/${b.id}/pdf?paper=${paper}`}
-                      className="inline-flex items-center gap-2 rounded bg-console-raise px-4 py-2 text-meta font-semibold text-console-mut transition-colors hover:text-console-text focus:outline-none focus-visible:ring-2 focus-visible:ring-console-mut"
+                      className="inline-flex items-center justify-center gap-2 rounded bg-console-raise px-4 py-2 text-meta font-semibold text-console-mut transition-colors hover:text-console-text focus:outline-none focus-visible:ring-2 focus-visible:ring-console-mut"
                     >
                       <Download className="h-4 w-4" strokeWidth={1.75} /> PDF
                     </a>

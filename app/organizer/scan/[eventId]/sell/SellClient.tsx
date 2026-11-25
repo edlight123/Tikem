@@ -79,7 +79,7 @@ export default function SellClient({ eventId, eventTitle }: { eventId: string; e
         </FormField>
         <fieldset>
           <legend className="mb-2 text-sm font-medium text-fg-soft">{t('physical.activate.method')}</legend>
-          <div className="flex flex-wrap gap-2">
+          <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap">
             {SALE_METHODS.map((m) => (
               <button
                 key={m}
