@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth'
 import { adminAuth, adminDb } from '@/lib/firebase/admin'
 import { assertEventOwner } from '@/app/api/staff/_utils'
+import { isTikemCrewSeat } from '@/lib/doorTeam/rules'
 
 type ResolvedProfile = {
   uid: string
@@ -42,7 +43,12 @@ export async function POST(request: NextRequest) {
     // an arbitrary uid and read that user's Auth email.
     const eventRef = adminDb.collection('events').doc(eventId)
     const memberSnaps = await adminDb.getAll(...uids.map((uid) => eventRef.collection('members').doc(uid)))
-    const allowed = new Set(memberSnaps.filter((s: any) => s.exists).map((s: any) => String(s.id)))
+    // Tikèm crew seats resolve to a first name only (no Auth email).
+    const crewNames = new Map<string, string>()
+    memberSnaps.forEach((s: any) => {
+      if (s.exists && isTikemCrewSeat(s.data())) crewNames.set(String(s.id), String(s.data()?.first_name || ''))
+    })
+    const allowed = new Set(memberSnaps.filter((s: any) => s.exists && !crewNames.has(String(s.id))).map((s: any) => String(s.id)))
     const remaining = uids.filter((uid) => !allowed.has(uid))
     for (let i = 0; i < remaining.length; i += 30) {
       const chunk = remaining.slice(i, i + 30)
@@ -52,7 +58,7 @@ export async function POST(request: NextRequest) {
         if (usedBy) allowed.add(usedBy)
       })
     }
-    const permitted = uids.filter((uid) => allowed.has(uid))
+    const permitted = uids.filter((uid) => allowed.has(uid) && !crewNames.has(uid))
 
     const profilesArr: ResolvedProfile[] = await Promise.all(
       permitted.map(async (uid: string) => {
@@ -78,6 +84,9 @@ export async function POST(request: NextRequest) {
       acc[p.uid] = { email: p.email, full_name: p.full_name }
       return acc
     }, {})
+    crewNames.forEach((firstName, uid) => {
+      profiles[uid] = { email: null, full_name: firstName || null }
+    })
 
     return NextResponse.json({ profiles })
   } catch (err: any) {

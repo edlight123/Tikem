@@ -1758,6 +1758,7 @@ export default {
     linkInvite: 'Envitasyon lyen',
     staffInfo: 'Staff kapab eskane tikè epi anrejistre envite yo nan pòt la. Bay aksè patisipan pou yo ka wè lis la tou.',
     memberPermissionBasic: 'Aksè eskane',
+    tikemCrew: 'Ekip Tikèm',
     memberPermissionFull: 'Eskane + lis patisipan',
     viewAttendeesHelp: 'Staff toujou kapab anrejistre envite yo. Ouvri sa a pou yo ka wè lis patisipan yo tou.',
     roleOwner: 'Pwopriyetè',

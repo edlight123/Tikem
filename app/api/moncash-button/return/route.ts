@@ -19,6 +19,7 @@ import { fulfillPaidOrder, fulfillmentBlockedReason } from '@/lib/tickets/fulfil
 import { getCurrentUser } from '@/lib/auth'
 import { callerHoldsOrder, orderIdsFromCookies } from '@/lib/tickets/orderAccess'
 import { findBatchOrder, verifyMonCashBatchPayment } from '@/lib/physical/payments'
+import { findDoorTeamOrder, verifyMonCashDoorTeamPayment } from '@/lib/doorTeam/payments'
 
 export const runtime = 'nodejs'
 
@@ -284,6 +285,17 @@ async function handleMonCashButtonReturn(request: Request): Promise<NextResponse
       const r = await verifyMonCashBatchPayment(orderId)
       const back = new URL(
         `/organizer/events/${encodeURIComponent(String(r.eventId || ''))}/printed?batch=${encodeURIComponent(String(r.batchId || ''))}&moncash=${r.paid ? 'paid' : 'unpaid'}`,
+        request.url
+      )
+      return NextResponse.redirect(back)
+    }
+
+    // A door team paid upfront by an organizer (lib/doorTeam): same
+    // RetrieveOrderPayment + amount check, never a ticket order.
+    if (await findDoorTeamOrder(orderId)) {
+      const r = await verifyMonCashDoorTeamPayment(orderId)
+      const back = new URL(
+        `/organizer/events/${encodeURIComponent(String(r.eventId || ''))}/door-team?request=${encodeURIComponent(String(r.requestId || ''))}&moncash=${r.paid ? 'paid' : 'unpaid'}`,
         request.url
       )
       return NextResponse.redirect(back)

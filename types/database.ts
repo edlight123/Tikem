@@ -66,6 +66,12 @@ export type NotificationType =
   | 'community_event_published'
   | 'community_claim_decided'
   | 'community_review'
+  // Door team service (lib/doorTeam). Transactional: the organizer's own
+  // request changed (quoted / declined / confirmed), or a crew member was put
+  // on a door. door_team_request is admin-only (a new request or payment).
+  | 'door_team_update'
+  | 'door_team_crew'
+  | 'door_team_request'
 
 export interface Database {
   public: {

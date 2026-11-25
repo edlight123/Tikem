@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { sweepInventory } from '@/lib/tickets/inventoryShards'
 import { sweepWaitlists } from '@/lib/waitlist'
 import { expireUnpaidBatches } from '@/lib/physical/payments'
+import { sweepDoorTeam } from '@/lib/doorTeam/payments'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -26,6 +27,10 @@ export const maxDuration = 120
  *    window are cancelled and their seats given back, after one last check
  *    with MonCash / Stripe that the payment did not land.
  *
+ *  - Door team requests (lib/doorTeam): quotes past their close are expired
+ *    (after one last gateway check), and confirmed crews past their access
+ *    window are marked done with their door access removed.
+ *
  * Correctness never depends on this job: if it stops, nothing oversells; the
  * display counters just lag until the next sale on that event.
  *
@@ -45,8 +50,12 @@ export async function GET(request: Request) {
       console.error('[inventory_sweep] printed batch expiry failed', { message: err?.message })
       return null
     })
-    console.info('[inventory_sweep] run complete', { ...result, waitlist, physical })
-    return NextResponse.json({ ok: true, ...result, waitlist, physical })
+    const doorTeam = await sweepDoorTeam().catch((err: any) => {
+      console.error('[inventory_sweep] door team sweep failed', { message: err?.message })
+      return null
+    })
+    console.info('[inventory_sweep] run complete', { ...result, waitlist, physical, doorTeam })
+    return NextResponse.json({ ok: true, ...result, waitlist, physical, doorTeam })
   } catch (error: any) {
     console.error('[inventory_sweep] failed', { message: error?.message })
     return NextResponse.json({ error: 'Sweep failed' }, { status: 500 })
