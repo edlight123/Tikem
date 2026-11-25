@@ -59,6 +59,14 @@ export async function POST(request: Request) {
     const user = await getCurrentUser()
 
     const body = await request.json().catch(() => ({}))
+    // Add-ons (lib/addons/addOns.ts) are sold on the card and MonCash rails only.
+    // Sogepay never went live; refuse rather than drop what the buyer picked.
+    if (Array.isArray((body as any)?.addOns) && (body as any).addOns.length > 0) {
+      return NextResponse.json(
+        { error: 'Add-ons can be paid by card or MonCash.', code: 'addon_rail_unsupported' },
+        { status: 400 }
+      )
+    }
     // `accessCode` is how a GUEST clears a password-protected event: no uid means no
     // grant to hold, so the code rides along and is verified server-side before the
     // order exists.

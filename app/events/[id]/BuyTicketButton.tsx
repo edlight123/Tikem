@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { isDemoMode } from '@/lib/demo'
 import { normalizeCountryCode } from '@/lib/payment-provider'
 import EventbriteStyleTicketSelector from '@/components/EventbriteStyleTicketSelector'
+import { addOnErrorMessage, addOnsRequestBody, type SelectedAddOn } from '@/components/AddOnsPicker'
 import { allSelectionsFree, computeSelectionTotal, MAX_FREE_TICKETS_PER_PERSON } from '@/lib/ticketPricing'
 import { priceCart } from '@/lib/checkout/buyer-pricing'
 import BottomSheet from '@/components/ui/BottomSheet'
@@ -105,9 +106,12 @@ interface BuyTicketButtonProps {
   /** Most free tickets one person may claim here (freeClaimCap): the
    *  organizer's per-person limit, at most MAX_FREE_TICKETS_PER_PERSON. */
   maxFreePerPerson?: number
+  /** The event's add-ons (events.add_ons) and sold rollup, offered after the tickets. */
+  addOns?: unknown
+  addOnsSold?: Record<string, unknown> | null
 }
 
-export default function BuyTicketButton({ eventId, userId, isFree, payAtDoor = false, ticketPrice, eventTitle = 'Event', currency = 'HTG', country, feeIncidence = null, eventStartsAt, isPasswordProtected = false, plusOnesAllowed = 0, familyMax = 0, freeTypes = false, heldFreeTickets = 0, maxFreePerPerson = MAX_FREE_TICKETS_PER_PERSON }: BuyTicketButtonProps) {
+export default function BuyTicketButton({ eventId, userId, isFree, payAtDoor = false, ticketPrice, eventTitle = 'Event', currency = 'HTG', country, feeIncidence = null, eventStartsAt, isPasswordProtected = false, plusOnesAllowed = 0, familyMax = 0, freeTypes = false, heldFreeTickets = 0, maxFreePerPerson = MAX_FREE_TICKETS_PER_PERSON, addOns: eventAddOnsRaw, addOnsSold = null }: BuyTicketButtonProps) {
   const { t } = useTranslation('common')
   const router = useRouter()
   const { showToast } = useToast()
@@ -137,6 +141,8 @@ export default function BuyTicketButton({ eventId, userId, isFree, payAtDoor = f
   const [selectedTierId, setSelectedTierId] = useState<string | null>(null)
   const [selectedTierPrice, setSelectedTierPrice] = useState<number>(0)
   const [selectedTiers, setSelectedTiers] = useState<{ tierId: string; quantity: number; price: number; tierName?: string }[]>([])
+  /** Add-ons picked in the selector (lib/addons/addOns.ts); every rail sends them. */
+  const [selectedAddOns, setSelectedAddOns] = useState<SelectedAddOn[]>([])
   // Stores the promo code ID (promo_codes.id) once validated.
   const [promoCode, setPromoCode] = useState<string | undefined>()
   // The validated code's terms, so the summary applies the same per-ticket
@@ -500,8 +506,12 @@ export default function BuyTicketButton({ eventId, userId, isFree, payAtDoor = f
    */
   const orderPricing = useMemo(
     () =>
-      priceCart(cartLines, { country, currency, fee_incidence: feeIncidence }, { promo: promoTerms, currency }),
-    [cartLines, country, currency, feeIncidence, promoTerms]
+      priceCart(cartLines, { country, currency, fee_incidence: feeIncidence }, {
+        promo: promoTerms,
+        currency,
+        addOns: selectedAddOns.map((a) => ({ unitPrice: a.unitPrice, quantity: a.quantity })),
+      }),
+    [cartLines, country, currency, feeIncidence, promoTerms, selectedAddOns]
   )
   const showFeeLine = orderPricing.feeOnTop && orderPricing.buyerFee > 0
   const formatAmount = (amount: number) => `${amount.toLocaleString()} ${currency}`
@@ -513,13 +523,14 @@ export default function BuyTicketButton({ eventId, userId, isFree, payAtDoor = f
   const hasConcreteSelection = selectedTiers.length > 0 || selectedTierPrice > 0
 
   /** Stable key for the quote effect (an array would re-fire it every render). */
-  const quoteCartKey = JSON.stringify(
-    selectedTiers.length > 0
+  const quoteCartKey = JSON.stringify({
+    ...(selectedTiers.length > 0
       ? { tiers: selectedTiers.map((t) => ({ tierId: t.tierId, quantity: t.quantity })) }
       : selectedTierId
         ? { tiers: [{ tierId: selectedTierId, quantity }] }
-        : { quantity }
-  )
+        : { quantity }),
+    ...(selectedAddOns.length > 0 ? { addOns: addOnsRequestBody(selectedAddOns) } : {}),
+  })
 
   useEffect(() => {
     const clear = () => {
@@ -977,6 +988,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, payAtDoor = f
             ...(refCode ? { refCode } : {}),
             ...(attribution ? { attribution } : {}),
             tiers,
+            ...(selectedAddOns.length > 0 ? { addOns: addOnsRequestBody(selectedAddOns) } : {}),
             mobileMoneyProvider: method,
             ...guestBody,
             ...accessBody,
@@ -986,6 +998,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, payAtDoor = f
         const data = await response.json()
         if (!response.ok) {
           throw new Error(
+            addOnErrorMessage(data?.code, t) ||
             data.error ||
               t('checkout.moncash_initiate_failed', {
                 defaultValue: 'Failed to initiate MonCash Button payment',
@@ -1071,9 +1084,12 @@ export default function BuyTicketButton({ eventId, userId, isFree, payAtDoor = f
     selections: { tierId: string; quantity: number; price: number; tierName?: string }[],
     promoCodeId?: string,
     discountedTotal?: number,
-    promo?: { discount_type: string; discount_value: number }
+    promo?: { discount_type: string; discount_value: number },
+    addOns?: SelectedAddOn[]
   ) => {
     if (!selections || selections.length === 0) return
+    const chosenAddOns = addOns || []
+    setSelectedAddOns(chosenAddOns)
 
     const totalQuantity = selections.reduce((sum, s) => sum + s.quantity, 0)
     const totalPrice = computeSelectionTotal(selections)
@@ -1082,7 +1098,8 @@ export default function BuyTicketButton({ eventId, userId, isFree, payAtDoor = f
     // Sending this to a payment initiator would produce a 0-amount gateway call:
     // Stripe rejects a 0 PaymentIntent, and MonCash would write a pending
     // transaction of 0 and redirect the buyer to pay nothing.
-    if (allSelectionsFree(selections)) {
+    // (Paid add-ons make the order cost money: it goes to checkout.)
+    if (allSelectionsFree(selections) && chosenAddOns.length === 0) {
       setShowTieredModal(false)
       setSelectedTiers(selections)
       setSelectedTierId(selections[0].tierId)
@@ -1119,7 +1136,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, payAtDoor = f
     // whole point: `create-payment-intent` would compute amountCents = 0 (Stripe
     // rejects it) and `moncash-button/initiate` would write a 0-amount pending
     // transaction and redirect.
-    if (promoCodeId && typeof discountedTotal === 'number' && discountedTotal <= 0 && totalPrice > 0) {
+    if (chosenAddOns.length === 0 && promoCodeId && typeof discountedTotal === 'number' && discountedTotal <= 0 && totalPrice > 0) {
       handleClaimFreeTicket(selections, promoCodeId)
       return
     }
@@ -1442,6 +1459,8 @@ export default function BuyTicketButton({ eventId, userId, isFree, payAtDoor = f
                 allowGuest={isGuestCheckout}
                 freeClaimHeld={heldFree > 0}
                 freeCap={freeCap}
+                addOns={eventAddOnsRaw}
+                addOnsSold={addOnsSold}
                 onPurchase={handleTieredPurchase}
               />
             </BottomSheet>
@@ -1507,6 +1526,17 @@ export default function BuyTicketButton({ eventId, userId, isFree, payAtDoor = f
                       </span>
                       <span className="font-medium text-fg">
                         {(tier.price * tier.quantity).toLocaleString()} {currency}
+                      </span>
+                    </div>
+                  ))}
+                  {selectedAddOns.map((a) => (
+                    <div key={`${a.id}-${a.option ?? ''}`} className="flex justify-between items-center text-sm">
+                      <span className="text-fg-muted">
+                        {a.quantity}x {a.name}
+                        {a.option ? ` (${a.option})` : ''}
+                      </span>
+                      <span className="font-medium text-fg">
+                        {(a.unitPrice * a.quantity).toLocaleString()} {currency}
                       </span>
                     </div>
                   ))}
@@ -1756,6 +1786,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, payAtDoor = f
               ? selectedTiers.map((t) => ({ tierId: t.tierId, quantity: t.quantity }))
               : undefined
           }
+          addOns={addOnsRequestBody(selectedAddOns)}
           promoCodeId={promoCode}
           refCode={refCode}
           attribution={attribution}
@@ -1767,6 +1798,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, payAtDoor = f
             setSelectedTierId(null)
             setSelectedTierPrice(0)
             setSelectedTiers([])
+            setSelectedAddOns([])
             setPromoCode(undefined)
             setPromoTerms(null)
           }}

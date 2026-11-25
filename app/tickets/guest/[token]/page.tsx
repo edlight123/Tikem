@@ -16,6 +16,7 @@ import Navbar from '@/components/Navbar'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
 import GuestAccountOffer from './GuestAccountOffer'
 import RefundRequestAction from '@/components/tickets/RefundRequestAction'
+import TicketAddOns from '@/components/tickets/TicketAddOns'
 import { StatusChip } from '@/components/ui/kit'
 import { Ticket } from 'lucide-react'
 import { resolveServerLanguage, tServer } from '@/lib/serverT'
@@ -221,6 +222,11 @@ export default async function GuestTicketsPage({
                     {String(ticket.id).slice(0, 12).toUpperCase()}
                   </p>
                   <p className="text-xs text-fg-subtle mt-1">{t('guest_tickets.show_code_fallback', "Show this code if the QR won't scan")}</p>
+                  {/* Add-ons bought with the order (on its first ticket); plain fields only. */}
+                  <TicketAddOns
+                    ticket={{ add_ons: (ticket as any).add_ons ?? null, add_ons_ticket_id: (ticket as any).add_ons_ticket_id ?? null }}
+                    className="mt-4 w-full text-left"
+                  />
                   {/* Authorised by this link's token on the server, never by the id alone. */}
                   <div className="mt-5 w-full">
                     <RefundRequestAction

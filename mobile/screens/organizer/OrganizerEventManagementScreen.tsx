@@ -67,6 +67,7 @@ import StatusChip from '../../components/StatusChip';
 import { eventStatLines } from '../../lib/eventStatLines';
 import { getEventViews, type EventViews } from '../../lib/eventViews';
 import SectionHeader from '../../components/SectionHeader';
+import AddOnSalesCard from '../../components/organizer/AddOnSalesCard';
 import { resolvePosterTheme } from '../../lib/posterGradient';
 import { colors as T, radius, font } from '../../theme/tokens';
 import { eventRequiresApproval, getEventRequests } from '../../lib/attendRequests';
@@ -776,6 +777,8 @@ export default function OrganizerEventManagementScreen() {
             </ListGroup>
           </View>
         )}
+        {/* Add-on sales (lib/addOns): nothing when the event sold none. */}
+        <AddOnSalesCard eventId={eventId} />
 
         {/* Actions: grouped list rows (icon, label, chevron) under the serif
             section rail, one filled group each, instead of the old tile walls

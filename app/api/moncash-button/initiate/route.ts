@@ -48,6 +48,7 @@ import {
   priceMonCashCharge,
   type TierSelection,
 } from '@/lib/moncash/price-order'
+import { addOnIncrements, resolveAddOnLines, type AddOnLine } from '@/lib/addons/addOns'
 
 import crypto from 'crypto'
 
@@ -110,6 +111,7 @@ export async function POST(request: Request) {
       guest,
       accessCode,
       fingerprint,
+      addOns: rawAddOns,
     }: {
       eventId: string
       quantity?: unknown
@@ -126,6 +128,8 @@ export async function POST(request: Request) {
       /** A GUEST's access code for a password-protected event. */
       accessCode?: string | null
       fingerprint?: string | null
+      /** Add-ons (lib/addons/addOns.ts) `[{ id, option?, quantity }]`; priced from the STORED event. */
+      addOns?: unknown
     } = await request.json()
 
     // Provider allow-list, enforced HERE (the web/mobile NATCASH_ENABLED flags
@@ -292,11 +296,27 @@ export async function POST(request: Request) {
     }
     const { normalizedSelections, totalQuantity, originalCurrency, originalAmount, promoDiscountTotal } = face
 
+    // ADD-ONS: validated and priced from the event's STORED add-ons, exactly as
+    // the card rail does (option, sale window, tier restriction, per-order
+    // limit, lock-free stock pre-check). Their stock is held below with the seats.
+    const addOnResult = resolveAddOnLines(
+      event,
+      rawAddOns,
+      normalizedSelections.map((s) => ({ tierId: s.tierId, quantity: s.quantity }))
+    )
+    if (!addOnResult.ok) {
+      return NextResponse.json(
+        { error: addOnResult.error, code: addOnResult.code, ...(addOnResult.addOnId ? { addOnId: addOnResult.addOnId } : {}) },
+        { status: 400 }
+      )
+    }
+    const addOnLinesIn: AddOnLine[] = addOnResult.lines
+
     // Nothing to charge: every ticket is free, or the promo takes the whole cart
     // to zero. Same rule as the card rail: free tickets go through
     // /api/tickets/claim-free and its one-claim-per-buyer limits, never a
-    // zero-amount mobile-money payment.
-    if (!(originalAmount > 0)) {
+    // zero-amount mobile-money payment. Paid add-ons make the order chargeable.
+    if (!(originalAmount > 0) && addOnLinesIn.length === 0) {
       return NextResponse.json(
         { error: 'These tickets are free. Claim them instead of paying.', code: 'order_is_free' },
         { status: 400 }
@@ -347,6 +367,7 @@ export async function POST(request: Request) {
       face,
       feeConfig: platformSettings.haiti,
       lang: requestLanguage(request),
+      addOnLines: addOnLinesIn,
     })
     if (!charge.ok) {
       if (charge.code === 'fx_rate_unavailable') {
@@ -372,6 +393,11 @@ export async function POST(request: Request) {
       buyerFeeOriginal,
       buyerFeeCharged,
       exchange,
+      addOnLines,
+      addOnFaceOriginal,
+      addOnFaceCharged,
+      addOnFeeOriginal,
+      addOnFeeCharged,
     } = charge
 
     // Create a gateway order ID.
@@ -393,6 +419,8 @@ export async function POST(request: Request) {
       eventId: String(eventId),
       quantity: totalQuantity,
       tierIncrements: buildTierSoldIncrements(chargeSelections),
+      // Add-on stock, held in the same transaction as the seats.
+      addOnIncrements: addOnIncrements(addOnLines),
       ownerKey: seatHoldOwnerKey(identity),
       ipAddress,
       source: normalizedProvider,
@@ -436,6 +464,26 @@ export async function POST(request: Request) {
       // 'live' | 'snapshot_fallback' — which rule produced the rate.
       exchange_rate_source: exchange?.source ?? null,
       tier_selections: chargeSelections,
+      // Add-ons (lib/addons/addOns.ts): the lines as priced, their face in the
+      // event and charge currencies, and their share of a passed-on fee.
+      // `original_amount` stays the TICKETS' face; fulfillment books these on
+      // the order's first ticket and adds them to the organizer's gross.
+      ...(addOnLines.length > 0
+        ? {
+            add_on_lines: addOnLines.map((l) => ({
+              addOnId: l.addOnId,
+              name: l.name,
+              option: l.option,
+              quantity: l.quantity,
+              unitPrice: l.unitPrice,
+              chargeUnitPrice: l.chargeUnitPrice,
+            })),
+            add_ons_face_amount: addOnFaceOriginal,
+            add_ons_charge_amount: addOnFaceCharged,
+            add_ons_buyer_fee: addOnFeeCharged,
+            add_ons_buyer_fee_original: addOnFeeOriginal,
+          }
+        : {}),
       // The seat hold fulfillment converts into a sale (lib/tickets/seatHolds.ts).
       seat_hold_id: clientHold ? clientHold.id : null,
       seat_hold_expires_at: clientHold ? clientHold.expiresAt : null,

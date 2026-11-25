@@ -65,6 +65,14 @@ import { refundFaceAmount } from '@/lib/tickets/refundPlan'
 import { NO_END_TIME_SALES_GRACE_MS, parseTicketQuantity } from '@/lib/tickets/purchasable'
 import { decodeCardOrderLines, type CardOrderLine } from '@/lib/checkout/card-order-lines'
 import { recordFreeClaimTickets, releaseUnusedFreeClaimForOrder, takeFreeClaimForOrder } from '@/lib/tickets/free-claim-policy'
+import {
+  addOnFaceCents,
+  addOnIncrements,
+  addOnLabel,
+  decodeAddOnLines,
+  purchasedAddOnsFor,
+  type PurchasedAddOn,
+} from '@/lib/addons/addOns'
 
 export const STRIPE_ORDERS_COLLECTION = 'stripe_orders'
 
@@ -498,6 +506,25 @@ export async function fulfillStripeOrder(input: StripeOrderInput): Promise<Strip
   }
   let orderLines: CardOrderLine[] | null = decodedLines.present && decodedLines.ok ? decodedLines.lines : null
 
+  // Add-ons (lib/addons/addOns.ts) ride as `ao` with their face and fee share.
+  // Unreadable lines are never guessed at either: the order is refunded.
+  const decodedAddOns = decodeAddOnLines(m)
+  if (decodedAddOns.present && !decodedAddOns.ok) {
+    console.error(`${logPrefix} refusing to issue an order with unreadable add-on lines — refunding`, {
+      paymentId: input.paymentId,
+    })
+    return refundSoldOutOrder(input, orderRef, 'invalid_add_on_lines', 'invalid_add_on_lines')
+  }
+  const addOnLines = decodedAddOns.present && decodedAddOns.ok ? decodedAddOns.lines : []
+  const nonNegCents = (v: unknown) => {
+    const n = Math.round(Number(v))
+    return Number.isFinite(n) && n > 0 ? n : 0
+  }
+  // In the CHARGED currency's minor units, as the intent was priced.
+  const addOnFaceChargedCents = addOnLines.length > 0 ? nonNegCents(m.aoFaceCents) : 0
+  const addOnFeeChargedCents = addOnLines.length > 0 && m.feeIncidence === 'buyer' ? nonNegCents(m.aoFeeCents) : 0
+  const addOnChargedCents = addOnFaceChargedCents + addOnFeeChargedCents
+
   // FREE lines (list price 0) are the buyer's one free claim for this event,
   // under the same lock the free-claim route uses (lib/tickets/free-claim-policy).
   // Checkout refused a buyer who had already claimed, but two orders paid side by
@@ -511,8 +538,35 @@ export async function fulfillStripeOrder(input: StripeOrderInput): Promise<Strip
     id: input.buyerId,
     email: input.guestRecipient?.email || m.guestEmail || null,
   }
-  const hasFreeLines = Boolean(orderLines?.some((l) => l.unitOriginal <= 0))
+  // A SINGLE-line order (no per-tier breakdown: a legacy single-price event)
+  // whose ticket is free can only be paid because of its add-ons. It is a free
+  // claim like any other: without the lock, buying a cheap add-on again and
+  // again would hand out unlimited free tickets.
+  const singleLineFree =
+    !orderLines &&
+    addOnLines.length > 0 &&
+    (m.originalPrice ?? m.priceInOriginalCurrency) != null &&
+    Number(m.originalPrice ?? m.priceInOriginalCurrency) <= 0
+  const hasFreeLines = singleLineFree || Boolean(orderLines?.some((l) => l.unitOriginal <= 0))
   let freeClaimDecision: string | null = hasFreeLines ? initial.free_claim_decision || null : null
+  if (singleLineFree && !freeClaimDecision) {
+    const held = await takeFreeClaimForOrder(eventId, freeClaimant, input.paymentId)
+    freeClaimDecision = held ? 'kept' : 'dropped'
+    await orderRef.set(
+      {
+        free_claim_decision: freeClaimDecision,
+        ...(held ? {} : { free_lines_dropped_reason: 'already_claimed' }),
+        updated_at: new Date().toISOString(),
+      },
+      { merge: true }
+    )
+  }
+  if (singleLineFree && freeClaimDecision === 'dropped') {
+    console.warn(`${logPrefix} free ticket not issued (free claim already used) — refunding the order`, {
+      paymentId: input.paymentId,
+    })
+    return refundSoldOutOrder(input, orderRef, 'already_claimed', 'already_claimed')
+  }
   if (orderLines && hasFreeLines && !freeClaimDecision) {
     const held = await takeFreeClaimForOrder(eventId, freeClaimant, input.paymentId)
     freeClaimDecision = held ? 'kept' : 'dropped'
@@ -534,6 +588,14 @@ export async function fulfillStripeOrder(input: StripeOrderInput): Promise<Strip
   if (orderLines && freeClaimDecision === 'dropped') {
     orderLines = orderLines.filter((l) => l.unitOriginal > 0)
   }
+  // A free ticket + add-ons order whose free claim went to another order has
+  // no ticket left to carry the add-ons: refund it rather than sell add-ons alone.
+  if (orderLines && orderLines.length === 0) {
+    console.warn(`${logPrefix} no ticket left to issue (free claim already used) — refunding the add-ons`, {
+      paymentId: input.paymentId,
+    })
+    return refundSoldOutOrder(input, orderRef, 'already_claimed', 'already_claimed')
+  }
 
   // A paid intent whose quantity is not a valid whole number: never issue.
   // Refunded through the same path as a sell-out, flagged needs_refund.
@@ -553,10 +615,14 @@ export async function fulfillStripeOrder(input: StripeOrderInput): Promise<Strip
   // ── Derived order facts ──
   const eventCurrency = normalizeEventCurrency(m.originalCurrency)
   const chargedCurrency = String(input.chargedCurrency || 'usd').toUpperCase()
-  const pricePerTicketCharged = (Number(input.amountTotalCents) || 0) / 100 / quantity
+  // The add-ons' charge is booked on the first ticket (below); the tickets split
+  // the rest exactly as before.
+  const ticketsChargedCents = Math.max(0, (Number(input.amountTotalCents) || 0) - addOnChargedCents)
+  const pricePerTicketCharged = ticketsChargedCents / 100 / quantity
   const priceInOriginal = Number(m.priceInOriginalCurrency || m.finalPrice || 0)
   const unitFace = Number.isFinite(priceInOriginal) && priceInOriginal > 0 ? priceInOriginal : pricePerTicketCharged
-  const buyerFeeCentsTotal = m.feeIncidence === 'buyer' ? Number(m.buyerFeeCents || 0) : 0
+  const buyerFeeCentsTotal =
+    m.feeIncidence === 'buyer' ? Math.max(0, Number(m.buyerFeeCents || 0) - addOnFeeChargedCents) : 0
   const perTicketBuyerFeeCharged =
     Number.isFinite(buyerFeeCentsTotal) && buyerFeeCentsTotal > 0
       ? Math.round(buyerFeeCentsTotal / quantity) / 100
@@ -570,6 +636,9 @@ export async function fulfillStripeOrder(input: StripeOrderInput): Promise<Strip
   const orderGrossCents = orderLines
     ? orderLines.reduce((sum, l) => sum + Math.round(l.unitPrice * 100) * l.quantity, 0)
     : Math.round(unitFace * quantity * 100)
+  // Add-on face in the EVENT currency: part of what the organizer sold, so the
+  // earnings ledger and attribution count it; promoter commission stays on tickets.
+  const addOnGrossCents = addOnFaceCents(addOnLines)
   // Tickets that cost something: the market's fixed fee (US/CA/FR) is per PAID
   // ticket, so the earnings ledger must not count a free line of a mixed cart.
   const paidQuantity = orderLines
@@ -645,6 +714,7 @@ export async function fulfillStripeOrder(input: StripeOrderInput): Promise<Strip
               ? [{ tierId, quantity }]
               : []
         ),
+        addOnIncrements: addOnIncrements(addOnLines),
         reservationId: stripeReservationId(m, input.paymentId),
         logPrefix,
       })
@@ -701,6 +771,33 @@ export async function fulfillStripeOrder(input: StripeOrderInput): Promise<Strip
   const ticketsRef = adminDb.collection('tickets')
   const nowIso = new Date().toISOString()
 
+  // The order's add-ons, booked on its FIRST ticket: names from the event's
+  // add-ons (the metadata carries ids only), each line's charge = its face plus
+  // its share of the add-on fee, adding up to exactly what the card paid for them.
+  const addOnNames: Record<string, string> = {}
+  for (const a of Array.isArray(eventDetails?.add_ons) ? eventDetails!.add_ons : []) {
+    if (a?.id) addOnNames[String(a.id)] = String(a.name || 'Add-on')
+  }
+  const purchasedAddOns: PurchasedAddOn[] =
+    addOnLines.length > 0
+      ? purchasedAddOnsFor(addOnLines, { chargeRate, addOnFeeCents: addOnFeeChargedCents, names: addOnNames })
+      : []
+  const round2 = (n: number) => Math.round(n * 100) / 100
+  const addOnTicketFields = (index: number, plan: TicketPlan) =>
+    purchasedAddOns.length === 0
+      ? {}
+      : index === 0
+        ? {
+            add_ons: purchasedAddOns,
+            add_ons_charged_amount: addOnChargedCents / 100,
+            add_ons_face_total: addOnGrossCents / 100,
+            // The first ticket's charge includes its add-ons, so the per-ticket
+            // refund flow returns them with it (face only unless the fee goes back).
+            charged_amount: round2(plan.charged + addOnChargedCents / 100),
+            buyer_fee_charged_amount: round2(plan.buyerFee + addOnFeeChargedCents / 100),
+          }
+        : { add_ons_ticket_id: ticketIds[0] }
+
   const buildTicket = (id: string, plan: TicketPlan) => ({
     id,
     event_id: eventId,
@@ -756,7 +853,7 @@ export async function fulfillStripeOrder(input: StripeOrderInput): Promise<Strip
     const refs = ticketIds.map((id) => ticketsRef.doc(id))
     const snaps = await Promise.all(refs.map((r) => tx.get(r)))
     refs.forEach((ref, i) => {
-      if (!snaps[i].exists) tx.set(ref, buildTicket(ticketIds[i], ticketPlan[i]))
+      if (!snaps[i].exists) tx.set(ref, { ...buildTicket(ticketIds[i], ticketPlan[i]), ...addOnTicketFields(i, ticketPlan[i]) })
     })
     tx.set(
       orderRef,
@@ -769,6 +866,13 @@ export async function fulfillStripeOrder(input: StripeOrderInput): Promise<Strip
         buyer_id: input.buyerId,
         quantity,
         ...(orderLines ? { tier_lines: orderLines } : {}),
+        ...(purchasedAddOns.length > 0
+          ? {
+              add_on_lines: purchasedAddOns.map(({ picked_up_at, picked_up_by, ...line }) => line),
+              add_ons_ticket_id: ticketIds[0],
+              add_ons_face_cents: addOnGrossCents,
+            }
+          : {}),
         payment_method: paymentMethod,
         funds_rail: fundsRail,
         // The money, both sides of a converted order: what the card was charged
@@ -794,6 +898,11 @@ export async function fulfillStripeOrder(input: StripeOrderInput): Promise<Strip
   // later tell whether they were all voided (and only then reopen the claim).
   // Idempotent; a failure leaves a lock with no ids, which reads as "held" — the
   // safe side.
+  if (freeClaimDecision === 'kept' && singleLineFree && ticketIds.length > 0) {
+    await recordFreeClaimTickets(eventId, freeClaimant, ticketIds).catch((err: any) =>
+      console.error(`${logPrefix} could not record free-claim tickets`, err?.message || err)
+    )
+  }
   if (freeClaimDecision === 'kept' && orderLines) {
     // Free by LIST price (a promo-zeroed paid ticket is not a free claim). The
     // plan is the lines in order, one entry per ticket.
@@ -927,7 +1036,7 @@ export async function fulfillStripeOrder(input: StripeOrderInput): Promise<Strip
       eventId,
       orderKey: input.paymentId,
       quantity,
-      revenueCents: orderGrossCents,
+      revenueCents: orderGrossCents + addOnGrossCents,
       currency: eventCurrency,
       paymentMethod,
     })
@@ -969,7 +1078,8 @@ export async function fulfillStripeOrder(input: StripeOrderInput): Promise<Strip
     await runStep('earnings', { idempotent: false }, async () => {
       // PAID tickets: the ledger charges the market's fixed fee per ticket it is
       // told about, and a free line of a mixed cart carries none.
-      await addTicketToEarnings(eventId, orderGrossCents, paidQuantity, {
+      // Add-ons are part of what the organizer sold (event currency).
+      await addTicketToEarnings(eventId, orderGrossCents + addOnGrossCents, paidQuantity, {
         currency: eventCurrency,
         paymentMethod,
         chargedAmountCents: Number(input.amountTotalCents) || 0,
@@ -978,7 +1088,11 @@ export async function fulfillStripeOrder(input: StripeOrderInput): Promise<Strip
         feeIncidence,
         promoterCommissionCents,
       })
-      return { gross_cents: orderGrossCents, promoter_commission_cents: promoterCommissionCents }
+      return {
+        gross_cents: orderGrossCents + addOnGrossCents,
+        ...(addOnGrossCents > 0 ? { add_ons_gross_cents: addOnGrossCents } : {}),
+        promoter_commission_cents: promoterCommissionCents,
+      }
     })
   } else {
     pendingElsewhere = true
@@ -1008,6 +1122,7 @@ export async function fulfillStripeOrder(input: StripeOrderInput): Promise<Strip
           },
           quantity,
           guestToken: guest?.guestToken || null,
+          ...(purchasedAddOns.length > 0 ? { addOns: purchasedAddOns.map(addOnLabel) } : {}),
           logPrefix,
         })
         out.confirmation = true
@@ -1028,7 +1143,7 @@ export async function fulfillStripeOrder(input: StripeOrderInput): Promise<Strip
           quantity,
           // The organizer is paid in the EVENT currency: a Haiti card sale
           // (charged in USD) is announced at its HTG face value.
-          chargeRate !== 1 ? orderGrossCents / 100 : (Number(input.amountTotalCents) || 0) / 100,
+          chargeRate !== 1 ? (orderGrossCents + addOnGrossCents) / 100 : (Number(input.amountTotalCents) || 0) / 100,
           attendee?.full_name,
           chargeRate !== 1 ? eventCurrency : chargedCurrency,
           input.buyerId ? String(input.buyerId) : null

@@ -85,6 +85,12 @@ export interface TierSoldIncrement {
   quantity: number
 }
 
+/** Add-on stock (lib/addons/addOns.ts): one bucket per add-on, options share it. */
+export interface AddOnIncrement {
+  addOnId: string
+  quantity: number
+}
+
 /** Default shard count (an event below 500 seats, or unlimited). */
 export const INVENTORY_SHARD_COUNT = 20
 export const MAX_INVENTORY_SHARDS = 100
@@ -97,6 +103,10 @@ export const HOLD_LIMITS_COLLECTION = 'inventory_hold_limits'
 /** The bucket every ticket of the event counts in. */
 export const EVENT_BUCKET = '_event'
 export const tierBucket = (tierId: string) => `t_${tierId}`
+/** An add-on's stock bucket. Never counted in `_event` (add-ons are not seats). */
+export const addOnBucket = (addOnId: string) => `a_${addOnId}`
+const isTierKey = (key: string) => key.startsWith('t_')
+const isAddOnKey = (key: string) => key.startsWith('a_')
 
 /** Hot-path shards tried before stealing. */
 const FAST_SHARD_TRIES = 2
@@ -143,6 +153,8 @@ export type ReserveRefusalReason =
   | 'busy'
   /** Abuse cap (seatHolds.ts): this buyer / network already holds too much for this event. */
   | 'too_many_holds'
+  /** An add-on's stock is used up (or fewer left than requested). */
+  | 'addon_capacity'
 
 export interface ReserveOutcome {
   ok: boolean
@@ -155,6 +167,8 @@ export interface ReserveOutcome {
   reason?: ReserveRefusalReason
   /** The tier that was sold out (only for reason === 'tier_capacity'). */
   tierId?: string | null
+  /** The add-on that ran out (only for reason === 'addon_capacity'). */
+  addOnId?: string | null
   /** How many were still available for the blocking bucket (capacity refusals). */
   remaining?: number
   requested?: number
@@ -210,6 +224,20 @@ export function tierCapacityOf(tier: Record<string, any> | null | undefined): nu
   if (!tier) return null
   const cap = Number(tier.total_quantity ?? tier.quantity ?? 0)
   return Number.isFinite(cap) && cap > 0 ? Math.floor(cap) : null
+}
+
+/** Add-on stock from the event's stored add_ons; missing / 0 => unlimited (null). */
+export function addOnCapacityOf(event: Record<string, any> | null | undefined, addOnId: string): number | null {
+  const list = Array.isArray(event?.add_ons) ? event!.add_ons : []
+  const addOn = list.find((a: any) => a && String(a.id) === String(addOnId))
+  const cap = Number(addOn?.quantity ?? 0)
+  return Number.isFinite(cap) && cap > 0 ? Math.floor(cap) : null
+}
+
+/** Sold count of an add-on from the display rollup (seeds a brand-new bucket). */
+function addOnSoldOf(event: Record<string, any> | null | undefined, addOnId: string): number {
+  const map = event?.add_ons_sold
+  return map && typeof map === 'object' ? nonNegInt((map as any)[addOnId]) : 0
 }
 
 function readShard(snap: any): Shard {
@@ -331,6 +359,16 @@ type Resolution =
   | { kind: 'nothing' }
   | { kind: 'refused'; outcome: ReserveOutcome }
 
+/** Merge raw add-on increments (duplicates summed, junk dropped). */
+function mergeAddOnIncrements(increments: AddOnIncrement[] | null | undefined): AddOnIncrement[] {
+  const merged = new Map<string, number>()
+  for (const a of increments || []) {
+    if (!a?.addOnId || !(Number(a.quantity) > 0)) continue
+    merged.set(String(a.addOnId), (merged.get(String(a.addOnId)) || 0) + Number(a.quantity))
+  }
+  return Array.from(merged.entries()).map(([addOnId, quantity]) => ({ addOnId, quantity }))
+}
+
 /** Merge raw selections into one increment per tier (duplicates summed, junk dropped). */
 function mergeTierIncrements(tierIncrements: TierSoldIncrement[] | null | undefined): TierSoldIncrement[] {
   const merged = new Map<string, number>()
@@ -351,13 +389,19 @@ async function resolveRequest(
   eventId: string,
   quantity: number,
   tierIncrements: TierSoldIncrement[],
-  logPrefix: string
+  logPrefix: string,
+  addOnIncrements: AddOnIncrement[] = []
 ): Promise<Resolution> {
   const qty = Number(quantity)
   if (!eventId || !Number.isFinite(qty) || qty <= 0) return { kind: 'nothing' }
   const tiers = mergeTierIncrements(tierIncrements)
+  const addOns = mergeAddOnIncrements(addOnIncrements)
   // Seats are whole. A fractional count is how a 0.01-ticket order got a full ticket.
-  if (!Number.isInteger(qty) || tiers.some((t) => !Number.isInteger(Number(t.quantity)))) {
+  if (
+    !Number.isInteger(qty) ||
+    tiers.some((t) => !Number.isInteger(Number(t.quantity))) ||
+    addOns.some((a) => !Number.isInteger(Number(a.quantity)))
+  ) {
     console.error(`${logPrefix} refusing to reserve a non-integer quantity`, { eventId, quantity: qty })
     return { kind: 'refused', outcome: { ok: false, reason: 'invalid_quantity', requested: qty } }
   }
@@ -385,12 +429,23 @@ async function resolveRequest(
     q[key] = tiers[i].quantity
     caps[key] = tierCapacityOf(tier)
   }
+  // Add-on stock: capacity from the event's own add_ons. An add-on the
+  // organizer removed since checkout reads as unlimited, so a paid order still
+  // converts (the route refused unknown add-ons before any hold).
+  for (const a of addOns) {
+    const key = addOnBucket(a.addOnId)
+    q[key] = a.quantity
+    caps[key] = addOnCapacityOf(event, a.addOnId)
+  }
   const sizing = caps[EVENT_BUCKET] ?? Math.max(0, ...Object.values(caps).map((c) => Number(c) || 0))
   const n = storedShardCount(event) ?? shardCountForCapacity(sizing)
   return { kind: 'request', req: { eventId: String(eventId), q, caps, n } }
 }
 
 function refusalFor(key: string, remaining: number, requested: number): ReserveOutcome {
+  if (isAddOnKey(key)) {
+    return { ok: false, reason: 'addon_capacity', addOnId: key.slice(2), remaining: Math.max(0, remaining), requested }
+  }
   return key === EVENT_BUCKET
     ? { ok: false, reason: 'event_capacity', remaining: Math.max(0, remaining), requested }
     : {
@@ -555,7 +610,8 @@ async function globalPathTx(p: Placement): Promise<GlobalResult> {
   const { req, reservationId } = p
   const rRef = reservationRef(reservationId)
   const eventRef = adminDb.collection('events').doc(req.eventId)
-  const tierKeys = Object.keys(req.q).filter((k) => k !== EVENT_BUCKET)
+  const tierKeys = Object.keys(req.q).filter(isTierKey)
+  const addOnKeys = Object.keys(req.q).filter(isAddOnKey)
   const span = Math.max(req.n, await existingShardSpan(req.eventId))
   return adminDb.runTransaction(async (tx: any) => {
     const rSnap = await tx.get(rRef)
@@ -577,6 +633,7 @@ async function globalPathTx(p: Placement): Promise<GlobalResult> {
     tierKeys.forEach((key, i) => {
       caps[key] = tierSnaps[i]?.exists ? tierCapacityOf(tierSnaps[i].data()) : null
     })
+    for (const key of addOnKeys) caps[key] = addOnCapacityOf(event, key.slice(2))
 
     const shards = sSnaps.map(readShard)
     const keys = Object.keys(req.q)
@@ -586,9 +643,14 @@ async function globalPathTx(p: Placement): Promise<GlobalResult> {
     // this transaction above, so an increment landing concurrently is never lost.
     for (const key of keys) {
       if (shards.some((sh) => sh.b[key])) continue
-      const snap = key === EVENT_BUCKET ? eventSnap : tierSnaps[tierKeys.indexOf(key)]
-      const data = snap?.exists ? snap.data() || {} : {}
-      const sold = nonNegInt(key === EVENT_BUCKET ? data.tickets_sold : data.sold_quantity)
+      let sold: number
+      if (isAddOnKey(key)) {
+        sold = addOnSoldOf(event, key.slice(2))
+      } else {
+        const snap = key === EVENT_BUCKET ? eventSnap : tierSnaps[tierKeys.indexOf(key)]
+        const data = snap?.exists ? snap.data() || {} : {}
+        sold = nonNegInt(key === EVENT_BUCKET ? data.tickets_sold : data.sold_quantity)
+      }
       shards.forEach((sh, k) => {
         sh.b[key] = { cap: null, alloc: null, sold: k === 0 ? sold : 0 }
       })
@@ -842,6 +904,8 @@ export async function reserveSeats(params: {
   eventId: string
   quantity: number
   tierIncrements: TierSoldIncrement[]
+  /** Add-on stock reserved with the seats (same hold, same conversion). */
+  addOnIncrements?: AddOnIncrement[]
   mode: 'hold' | 'sold'
   reservationId: string
   /** Required for mode 'hold': hold expiry, ms since epoch. */
@@ -854,7 +918,7 @@ export async function reserveSeats(params: {
   logPrefix?: string
 }): Promise<ReserveOutcome> {
   const logPrefix = params.logPrefix || '[inventory]'
-  const resolved = await resolveRequest(params.eventId, params.quantity, params.tierIncrements, logPrefix)
+  const resolved = await resolveRequest(params.eventId, params.quantity, params.tierIncrements, logPrefix, params.addOnIncrements)
   if (resolved.kind === 'nothing') return { ok: true }
   if (resolved.kind === 'refused') return resolved.outcome
   const outcome = await place(
@@ -897,13 +961,14 @@ export async function convertHeldSeats(params: {
   eventId: string
   quantity: number
   tierIncrements: TierSoldIncrement[]
+  addOnIncrements?: AddOnIncrement[]
   reservationId: string
   source?: string | null
   logPrefix?: string
 }): Promise<ReserveOutcome> {
   const logPrefix = params.logPrefix || '[inventory]'
   const { reservationId } = params
-  const resolved = await resolveRequest(params.eventId, params.quantity, params.tierIncrements, logPrefix)
+  const resolved = await resolveRequest(params.eventId, params.quantity, params.tierIncrements, logPrefix, params.addOnIncrements)
   if (resolved.kind === 'nothing') return { ok: true }
   if (resolved.kind === 'refused') return resolved.outcome
   const req = resolved.req
@@ -985,6 +1050,8 @@ export async function releaseSeats(params: {
   quantity?: number
   /** … and per tier. Omit both to release everything. */
   tierIncrements?: TierSoldIncrement[]
+  /** … and per add-on (a refunded order's add-ons). */
+  addOnIncrements?: AddOnIncrement[]
   /** Only release a HOLD (never a sale): checkout cancel / abandon paths. */
   onlyHeld?: boolean
   /** Sweep: mark a hold expired, and only if it really has expired. */
@@ -994,11 +1061,15 @@ export async function releaseSeats(params: {
   const logPrefix = params.logPrefix || '[inventory]'
   const { reservationId } = params
   if (!reservationId) return { released: false }
-  const partial = params.quantity != null || (params.tierIncrements && params.tierIncrements.length > 0)
+  const partial =
+    params.quantity != null ||
+    (params.tierIncrements && params.tierIncrements.length > 0) ||
+    (params.addOnIncrements && params.addOnIncrements.length > 0)
   const dec: Qty | null = partial
     ? {
         [EVENT_BUCKET]: nonNegInt(params.quantity),
         ...Object.fromEntries(mergeTierIncrements(params.tierIncrements).map((t) => [tierBucket(t.tierId), t.quantity])),
+        ...Object.fromEntries(mergeAddOnIncrements(params.addOnIncrements).map((a) => [addOnBucket(a.addOnId), a.quantity])),
       }
     : null
 
@@ -1087,10 +1158,13 @@ export async function rollupInventoryCounters(
     for (const [key, b] of Object.entries(s.b)) totals[key] = (totals[key] || 0) + nonNegInt(b?.sold)
   }
 
+  const addOnSold: Record<string, number> = {}
+  for (const [key, sold] of Object.entries(totals)) if (isAddOnKey(key)) addOnSold[key.slice(2)] = sold
   const writes: Promise<unknown>[] = []
   writes.push(
     eventRef.update({
       ...(EVENT_BUCKET in totals ? { tickets_sold: totals[EVENT_BUCKET] } : {}),
+      ...(Object.keys(addOnSold).length > 0 ? { add_ons_sold: addOnSold } : {}),
       inventory_rollup_at_ms: Date.now(),
     })
   )

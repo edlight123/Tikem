@@ -74,6 +74,15 @@ import {
   // Pay-at-the-door tiers never ride in a card cart.
   doorTierInPaidOrderRefusal,
 } from '@/lib/tickets/purchasable'
+import {
+  ADD_ON_LINES_METADATA_KEY,
+  addOnFaceCents as addOnLinesFaceCents,
+  addOnFeeShareCents,
+  addOnIncrements,
+  encodeAddOnLines,
+  resolveAddOnLines,
+  type AddOnLine,
+} from '@/lib/addons/addOns'
 
 /** Stripe's minimum charge in USD, in cents. */
 const STRIPE_MIN_USD_CENTS = 50
@@ -136,6 +145,9 @@ export async function POST(request: Request) {
       // A signed-in buyer still unlocks through /api/events/verify-access and is
       // admitted by their stored grant, exactly as before.
       accessCode,
+      // Add-ons (lib/addons/addOns.ts): `[{ id, option?, quantity }]`, picked after
+      // the tickets. Priced from the event's STORED add-ons; never a client price.
+      addOns: rawAddOns,
     } = await request.json()
 
     // A whole number of tickets, 1..MAX_TICKETS_PER_ORDER. A fractional quantity used
@@ -444,6 +456,22 @@ export async function POST(request: Request) {
       }
     }
 
+    // ADD-ONS: validated against the event's STORED add-ons (price, option,
+    // sale window, ticket-tier restriction, per-order limit, and a lock-free
+    // stock pre-check). Stock itself is reserved below, in the same inventory
+    // transaction as the seats. Add-ons are sold only with a ticket: every
+    // path here has at least one ticket line.
+    const addOnResult = resolveAddOnLines(
+      event,
+      rawAddOns,
+      orderLines.map((l) => ({ tierId: l.tierId, quantity: l.quantity })),
+      now
+    )
+    if (!addOnResult.ok) {
+      return refuse({ error: addOnResult.error, code: addOnResult.code, addOnId: addOnResult.addOnId }, 400)
+    }
+    const addOnLines: AddOnLine[] = addOnResult.lines
+
     // FREE lines in a mixed cart are held to the free-claim route's limits
     // (lib/tickets/free-claim-policy): at most 10 free tickets, and one free claim
     // per buyer per event. Without this a buyer could attach free tickets to a
@@ -556,13 +584,25 @@ export async function POST(request: Request) {
     // a free tier in a mixed cart carries no fee.
     const platformSettings = await getPlatformSettings()
     const locationFees = locationFeesForCountry(platformSettings, event.country)
+    // Add-ons join the face total here, so the same fee formula prices the full
+    // subtotal (lib/checkout/buyer-pricing). Promos never touch them.
     const pricedOrder = priceTierLinesCents(pricedLines, event, {
       currency: stripeCurrency.toUpperCase(),
       config: locationFees,
       exchangeRate: exchangeRateUsed,
+      addOns: addOnLines,
     })
     const faceValueCents = pricedOrder.faceValueCents
     const buyerPricing = pricedOrder.pricing
+    // The add-ons' face and their share of the buyer fee, stamped on the intent
+    // so fulfillment books them on the order's first ticket and splits the
+    // rest over the tickets exactly as before.
+    const addOnFaceCentsTotal = pricedOrder.addOnFaceCents
+    const addOnFeeCents = addOnFeeShareCents({
+      buyerFeeCents: buyerPricing.buyerFee,
+      faceValueCents,
+      addOnFaceCents: addOnFaceCentsTotal,
+    })
 
     // Nothing to charge: every ticket is free, or the promo takes the whole cart
     // to zero. Stripe refuses a 0 PaymentIntent, and free tickets are issued by
@@ -576,8 +616,24 @@ export async function POST(request: Request) {
 
     // The per-tier breakdown fulfillment issues from. A single line keeps the
     // original single-tier fields only, so it fulfils exactly as before.
-    const isMultiLine = pricedLines.length > 1
+    // An order with add-ons always carries the per-tier breakdown, even for one
+    // tier: fulfillment then takes the free-claim lock for a free line and
+    // prices each ticket from its own line, never from the order total.
+    // (A legacy single-price event has no tier id to encode; it stays single-line
+    // and fulfillment subtracts the add-ons from the order total instead.)
+    const hasAddOnLines = addOnLines.length > 0
     const singleLine = pricedLines[0]
+    const isMultiLine = pricedLines.length > 1 || (hasAddOnLines && Boolean(singleLine?.tierId))
+    let encodedAddOns: string | null = null
+    if (hasAddOnLines) {
+      encodedAddOns = encodeAddOnLines(addOnLines)
+      if (!encodedAddOns) {
+        return refuse(
+          { error: 'Too many add-ons in one order. Please split it into two orders.', code: 'addon_too_many_lines' },
+          400
+        )
+      }
+    }
     let encodedLines: string | null = null
     if (isMultiLine) {
       encodedLines = encodeCardOrderLines(
@@ -635,10 +691,10 @@ export async function POST(request: Request) {
 
     // What the buyer sees on a converted (HTG → USD) order: the event-currency
     // face and total, beside the USD figure the card is charged. Display only.
-    const localFaceMajor = pricedLines.reduce(
-      (sum, l) => sum + Math.max(0, Number(l.unitPrice) || 0) * l.quantity,
-      0
-    )
+    // Add-ons are part of the quoted face (event currency, no conversion).
+    const localFaceMajor =
+      pricedLines.reduce((sum, l) => sum + Math.max(0, Number(l.unitPrice) || 0) * l.quantity, 0) +
+      addOnLinesFaceCents(addOnLines) / 100
     const localDisplay =
       exchangeRateUsed && exchangeRateUsed > 0
         ? {
@@ -711,6 +767,8 @@ export async function POST(request: Request) {
       eventId: String(eventId),
       quantity,
       tierIncrements: buildTierSoldIncrements(pricedLines.map((l) => ({ tierId: l.tierId, quantity: l.quantity }))),
+      // Add-on stock, held in the same transaction as the seats.
+      addOnIncrements: addOnIncrements(addOnLines),
       ownerKey: seatHoldOwnerKey(identity),
       ipAddress,
       source: 'card',
@@ -758,6 +816,15 @@ export async function POST(request: Request) {
           tierId: isMultiLine ? '' : singleLine.tierId,
           tierName,
           ...(isMultiLine && encodedLines ? { [CARD_ORDER_LINES_KEY]: encodedLines } : {}),
+          // Add-on lines `[[id, option, qty, unitPrice]]`, their face (charge
+          // currency minor units, inside faceValueCents) and their buyer-fee share.
+          ...(hasAddOnLines && encodedAddOns
+            ? {
+                [ADD_ON_LINES_METADATA_KEY]: encodedAddOns,
+                aoFaceCents: String(addOnFaceCentsTotal),
+                aoFeeCents: String(addOnFeeCents),
+              }
+            : {}),
           promoCodeId: resolvedPromoId,
           promoterId: promoter?.id || '',
           promoterCode: promoter?.code || '',
@@ -848,6 +915,8 @@ export async function POST(request: Request) {
         // Set when the event is priced in another currency (HTG) than the card is
         // charged in (USD): what the buyer was quoted, and the rate used.
         ...(localDisplay ? { local: localDisplay } : {}),
+        // Add-ons' face total, in the charged currency (inside faceValue).
+        ...(hasAddOnLines ? { addOnSubtotal: fromCents(addOnFaceCentsTotal) } : {}),
       },
       // How long the seats are held, and the id that releases them when the sheet closes.
       ...(clientHold ? { seatHold: clientHold } : {}),

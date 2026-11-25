@@ -100,7 +100,9 @@ import {
   type ComposerSeed,
   type PublishEligibility,
 } from '@/lib/events/composer-country'
-import { normalizeSupportedCountry } from '@/lib/country-support'
+import { isPaidAllowed, normalizeSupportedCountry } from '@/lib/country-support'
+import AddOnsEditor from '@/components/organizer/AddOnsEditor'
+import { addOnsFromDrafts, draftProblem, draftsFromAddOns, type AddOnDraft } from '@/lib/addons/editor'
 import { withStoredMoneyFields } from '@/lib/events/stored-money-fields'
 import { incidenceForEvent, priceOrder } from '@/lib/checkout/buyer-pricing'
 import { fromCents, MAX_FREE_TICKETS_PER_PERSON } from '@/lib/ticketPricing'
@@ -158,6 +160,7 @@ import {
   Users,
   X,
   Youtube,
+  ShoppingBag,
 } from 'lucide-react'
 
 const CATEGORIES = [
@@ -610,6 +613,7 @@ export default function EventComposer({
   const router = useRouter()
   const { showToast } = useToast()
   const { t, i18n } = useTranslation('common')
+  const { t: te } = useTranslation('events')
 
   const isEdit = !!event
   const start0 = splitISO(event?.start_datetime)
@@ -770,6 +774,9 @@ export default function EventComposer({
         })
       : [{ id: makeId(), name: 'General Admission', price: '10', qty: '100', free: false }]
   )
+
+  // Add-ons (lib/addons/addOns.ts): paid extras sold with tickets, saved on the event.
+  const [addOnDrafts, setAddOnDrafts] = useState<AddOnDraft[]>(() => draftsFromAddOns((event as any)?.add_ons))
 
   /** Which tier's detail panel is expanded (null = all collapsed, the default). */
   const [openTierId, setOpenTierId] = useState<string | null>(null)
@@ -1444,7 +1451,15 @@ export default function EventComposer({
       })()
     : ''
 
-  const isPaid = sellMode === 'tickets' && tiers.some((t) => Number(t.price) > 0)
+  const ticketsPaid = sellMode === 'tickets' && tiers.some((t) => Number(t.price) > 0)
+  // Add-ons are paid items: an event selling them follows every paid gate
+  // (payout setup, the publish gate), even when its tickets are free.
+  const addOnsAllowed = sellMode === 'tickets' && isPaidAllowed(country)
+  const savedAddOns = addOnsAllowed
+    ? addOnsFromDrafts(addOnDrafts, tiers.map((tr) => tr.docId).filter(Boolean) as string[])
+    : []
+  const addOnDraftProblem = addOnsAllowed && addOnDrafts.some((d) => draftProblem(d) !== null)
+  const isPaid = ticketsPaid || savedAddOns.length > 0
   // Approval is for free events only: a paid tier switches it off.
   useEffect(() => {
     if (isPaid && requiresApproval) setRequiresApproval(false)
@@ -1642,6 +1657,9 @@ export default function EventComposer({
       // Stamped on the event so checkout, the ticket record and the earnings
       // ledger all read the same answer. Free events carry it harmlessly.
       fee_incidence: passFeesToBuyer ? 'buyer' : 'organizer',
+      // Add-ons ride on the event doc; firestore.rules require the flag with them.
+      add_ons: savedAddOns,
+      add_ons_enabled: savedAddOns.length > 0,
       video_url: videoUrl.trim(),
       theme_key: themeKey || '',
       spotify_url: spotifyUrl.trim() || null,
@@ -1868,6 +1886,17 @@ export default function EventComposer({
           defaultValue: 'Add an event name and a start date to continue.',
         }),
         duration: 4000,
+      })
+      return
+    }
+    if (addOnDraftProblem) {
+      showToast({
+        type: 'error',
+        title: te('addOns.editor.fixTitle', { defaultValue: 'Check your add-ons' }),
+        message: te('addOns.editor.fixMsg', {
+          defaultValue: 'Each add-on needs a name and a price above 0, and its sales must end after they start.',
+        }),
+        duration: 5000,
       })
       return
     }
@@ -3555,6 +3584,26 @@ export default function EventComposer({
                   </p>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Add-ons: paid extras sold with tickets (lib/addons/addOns.ts). */}
+          {sellMode === 'tickets' && addOnsAllowed && (
+            <div className="mt-8 border-t border-line pt-6">
+              <SectionTitle
+                icon={ShoppingBag}
+                info={te('addOns.editor.info', {
+                  defaultValue: 'Bottle packages, VIP upgrades, parking, drinks or merch, bought with the tickets.',
+                })}
+              >
+                {te('addOns.editor.title', { defaultValue: 'Add-ons' })}
+              </SectionTitle>
+              <AddOnsEditor
+                drafts={addOnDrafts}
+                onChange={setAddOnDrafts}
+                tiers={tiers.map((tr) => ({ docId: tr.docId, name: tr.name }))}
+                currency={currency}
+              />
             </div>
           )}
 

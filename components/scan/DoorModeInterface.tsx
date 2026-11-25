@@ -11,6 +11,7 @@ import { useScanController } from '@/lib/scan/useScanController'
 import { performCheckIn, performOverrideCheckIn } from '@/app/organizer/scan/actions'
 import type { CheckInParams, CheckInResult } from '@/lib/scan/checkInTicket'
 import { DoorCollectBar } from '@/components/scan/DoorCollectBar'
+import AddOnsHandover from '@/components/check-in/AddOnsHandover'
 import { doorBalance } from '@/lib/tickets/pay-at-door'
 import type { ClockEvent } from '@/lib/datetime/eventClock'
 
@@ -52,6 +53,15 @@ export function DoorModeInterface({
       next.add(ticketId)
       return next
     })
+
+  // Add-ons (lib/addons/addOns.ts): the last admitted order that bought some.
+  // Stays open after the scan result clears, until staff close it or scan on.
+  const [handoverTicketId, setHandoverTicketId] = useState<string | null>(null)
+  const openHandoverFor = (ticketId: string, res: CheckInResult) => {
+    const ticket = tickets.find((t) => String(t.id) === ticketId)
+    const admitted = res.success || res.type === 'ALREADY_CHECKED_IN'
+    setHandoverTicketId(ticket?.has_add_ons && admitted ? ticketId : null)
+  }
 
   // Pay at the door: payments recorded on this phone since the page loaded.
   const [doorPaidLocal, setDoorPaidLocal] = useState<Record<string, boolean>>({})
@@ -103,6 +113,7 @@ export function DoorModeInterface({
       }
       const res = await performCheckIn(params)
       if (res.success) markIn(ticketId)
+      openHandoverFor(ticketId, res)
       return res
     },
     cooldownMs: 1200,
@@ -138,6 +149,7 @@ export function DoorModeInterface({
     }
     setOverriding(false)
     if (res.success) markIn(currentTicketId)
+    openHandoverFor(currentTicketId, res)
     // Show what actually happened: re-entry allowed, or refused (refunded,
     // cancelled, wrong code...) with the reason. A refusal stays until closed.
     setOverrideResult(res)
@@ -201,6 +213,18 @@ export function DoorModeInterface({
             />
           )
         })()}
+
+      {/* The order's add-ons to hand over (bottle package, parking, merch…).
+          Pay-at-the-door spots never carry add-ons, so it never stacks on the
+          collect bar. */}
+      {handoverTicketId && (
+        <AddOnsHandover
+          key={handoverTicketId}
+          eventId={eventId}
+          ticketId={handoverTicketId}
+          onClose={() => setHandoverTicketId(null)}
+        />
+      )}
 
       {/* Manual Lookup Sheet */}
       <ManualLookupSheet

@@ -5,6 +5,7 @@ import { usePosterAlt } from '@/lib/usePosterAlt'
 import { DiscoverEventCard } from '@/components/discover/DiscoverEventCard'
 import { useTranslation } from 'react-i18next'
 import BuyTicketButton from './BuyTicketButton'
+import { hasAddOns } from '@/lib/addons/addOns'
 import RequestToJoin from './RequestToJoin'
 import ExternalTicketsLink, { externalTicketsUrl } from './ExternalTicketsLink'
 import { CommunityCredit, CommunityPrice, CommunityTickets, communityPriceLabel } from './CommunityEvent'
@@ -406,7 +407,8 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                 <BuyTicketButton
                   eventId={event.id}
                   userId={user?.id ?? null}
-                  isFree={isFree && !freeTypes}
+                  // Free tickets + paid add-ons go through the tier selector, not the bare free claim.
+                  isFree={isFree && !freeTypes && !hasAddOns(event)}
                   payAtDoor={payAtDoor}
                   freeTypes={freeTypes}
                   familyMax={familySize}
@@ -420,6 +422,8 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                   plusOnesAllowed={eventAllowedPlusOnes(event as any)}
                   heldFreeTickets={heldFreeTickets}
                   maxFreePerPerson={freeClaimCap((event as any).ticket_tiers, null, freeClaimCapFor(event as any))}
+                  addOns={(event as any).add_ons}
+                  addOnsSold={(event as any).add_ons_sold ?? null}
                 />
               )
             )}
@@ -808,7 +812,8 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                     <BuyTicketButton
                       eventId={event.id}
                       userId={user?.id ?? null}
-                      isFree={isFree && !freeTypes}
+                      // Free tickets + paid add-ons go through the tier selector, not the bare free claim.
+                  isFree={isFree && !freeTypes && !hasAddOns(event)}
                       payAtDoor={payAtDoor}
                       freeTypes={freeTypes}
                       familyMax={familySize}
@@ -822,6 +827,8 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                       plusOnesAllowed={eventAllowedPlusOnes(event as any)}
                       heldFreeTickets={heldFreeTickets}
                       maxFreePerPerson={freeClaimCap((event as any).ticket_tiers, null, freeClaimCapFor(event as any))}
+                  addOns={(event as any).add_ons}
+                  addOnsSold={(event as any).add_ons_sold ?? null}
                     />
                   )}
                   {!user && (event as any).requires_approval !== true && (

@@ -1,3 +1,4 @@
+import { resolveAddOnLines } from '@/lib/addons/addOns'
 import { NextResponse, after } from 'next/server'
 import { prewarmMonCashAccessToken } from '@/lib/moncash'
 import { createClient } from '@/lib/firebase-db/server'
@@ -62,6 +63,8 @@ export async function POST(request: Request) {
       tierId?: string | null
       promoCodeId?: string | null
       promoCode?: string | null
+      /** Add-ons `[{ id, option?, quantity }]` (lib/addons/addOns.ts). */
+      addOns?: unknown
     } | null
     const eventId = String(body?.eventId || '').trim()
     if (!eventId) {
@@ -159,12 +162,26 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: overFreeLimit.error, code: overFreeLimit.code }, { status: overFreeLimit.status })
     }
 
+    // Add-ons, priced from the stored event exactly as initiate prices them.
+    const addOnResult = resolveAddOnLines(
+      event,
+      body?.addOns,
+      face.normalizedSelections.map((s) => ({ tierId: s.tierId, quantity: s.quantity }))
+    )
+    if (!addOnResult.ok) {
+      return NextResponse.json(
+        { error: addOnResult.error, code: addOnResult.code, ...(addOnResult.addOnId ? { addOnId: addOnResult.addOnId } : {}) },
+        { status: 400 }
+      )
+    }
+
     const platformSettings = await getPlatformSettings()
     const charge = await priceMonCashCharge({
       event,
       face,
       feeConfig: platformSettings.haiti,
       lang: requestLanguage(request),
+      addOnLines: addOnResult.lines,
     })
     if (!charge.ok) {
       if (charge.code === 'fx_rate_unavailable') {
@@ -185,7 +202,9 @@ export async function POST(request: Request) {
     return NextResponse.json({
       amountHtg: charge.chargeAmount,
       // What the buyer reads as the total in the event currency: face + any passed-on fee.
-      amountOriginal: sumMoney([face.originalAmount, charge.buyerFeeOriginal]),
+      amountOriginal: sumMoney([face.originalAmount, charge.addOnFaceOriginal, charge.buyerFeeOriginal]),
+      // The add-ons' face inside amountOriginal (event currency); 0 when none.
+      addOnSubtotal: charge.addOnFaceOriginal,
       originalCurrency: face.originalCurrency,
       baseRate: charge.exchange?.base ?? null,
       effectiveRate: charge.exchange?.used ?? null,

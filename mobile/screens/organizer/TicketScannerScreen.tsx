@@ -55,6 +55,9 @@ import {
   pendingCount,
   postCheckIn,
   postDoorPayment,
+  fetchOrderAddOns,
+  postAddOnPickup,
+  type DoorOrderAddOns,
   queueCheckIn,
   readCheckInQueue,
   saveDoorList,
@@ -225,6 +228,34 @@ export default function TicketScannerScreen() {
   const processingRef = useRef(false);
   const lastScanRef = useRef<{ id: string | null; at: number }>({ id: null, at: 0 });
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
+  // The scanned order's add-ons to hand over (lib/addOns), loaded per ticket.
+  const [orderAddOns, setOrderAddOns] = useState<DoorOrderAddOns>(null);
+  const [addOnBusy, setAddOnBusy] = useState<number | null>(null);
+  const [addOnError, setAddOnError] = useState(false);
+  const scannedTicketId = scanResult?.ticketId || null;
+  const scannedAdmits =
+    scanResult?.status === 'VALID' || scanResult?.status === 'CHECKED_IN' || scanResult?.status === 'ALREADY_CHECKED_IN';
+  useEffect(() => {
+    setOrderAddOns(null);
+    setAddOnError(false);
+    if (!scannedTicketId || !scannedAdmits) return;
+    let cancelled = false;
+    fetchOrderAddOns(eventId, scannedTicketId)
+      .then((order) => {
+        if (cancelled) return;
+        setOrderAddOns(order);
+        // Something to hand over: keep the sheet open until staff close it.
+        if (order && order.items.some((i) => !i.pickedUp) && closeTimerRef.current) {
+          clearTimeout(closeTimerRef.current);
+          closeTimerRef.current = null;
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scannedTicketId, scannedAdmits, eventId]);
   const [doorBusy, setDoorBusy] = useState(false);
   const [doorError, setDoorError] = useState('');
   // Offline support. `offlineReady` is how many guests we pre-loaded into the
@@ -1254,6 +1285,8 @@ export default function TicketScannerScreen() {
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scheduleSheetClose = () => {
     if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+    // Add-ons still to hand over keep the sheet open.
+    if (orderAddOns && orderAddOns.items.some((i) => !i.pickedUp)) return;
     closeTimerRef.current = setTimeout(() => handleCloseSheet(), 1500);
   };
 
@@ -1725,6 +1758,57 @@ export default function TicketScannerScreen() {
                 </View>
               )}
 
+              {/* Add-ons to hand over (meals, merch…) with a picked-up toggle. */}
+              {orderAddOns && orderAddOns.items.length > 0 && (
+                <View style={styles.addOnBox}>
+                  <Text style={styles.addOnKicker}>{t('addOns.door.title')}</Text>
+                  {orderAddOns.items.map((item) => (
+                    <View key={`${item.index}`} style={styles.addOnLine}>
+                      <View style={styles.addOnText}>
+                        <Text style={styles.addOnName} numberOfLines={2}>
+                          {`${item.quantity}× ${item.name}${item.option ? ` (${item.option})` : ''}`}
+                        </Text>
+                        {/* Dot + label status, never a pill. */}
+                        <View style={styles.addOnStatus}>
+                          <View style={[styles.addOnDot, { backgroundColor: item.pickedUp ? T.emerald : T.amber }]} />
+                          <Text style={styles.addOnStatusText}>
+                            {item.pickedUp ? t('addOns.pickedUp') : t('addOns.door.toHandOver')}
+                          </Text>
+                        </View>
+                      </View>
+                      <TouchableOpacity
+                        style={[styles.addOnToggle, item.pickedUp && styles.addOnToggleDone]}
+                        disabled={addOnBusy !== null}
+                        accessibilityRole="checkbox"
+                        accessibilityState={{ checked: item.pickedUp }}
+                        accessibilityLabel={`${item.name}${item.option ? ` ${item.option}` : ''}`}
+                        onPress={async () => {
+                          setAddOnBusy(item.index);
+                          setAddOnError(false);
+                          try {
+                            const next = await postAddOnPickup(eventId, orderAddOns.ticketId, item.index, !item.pickedUp);
+                            if (next) setOrderAddOns(next);
+                          } catch {
+                            setAddOnError(true);
+                          } finally {
+                            setAddOnBusy(null);
+                          }
+                        }}
+                      >
+                        {addOnBusy === item.index ? (
+                          <ActivityIndicator size="small" color={item.pickedUp ? T.textPrimary : T.onWhite} />
+                        ) : (
+                          <Text style={[styles.addOnToggleText, item.pickedUp && styles.addOnToggleTextDone]}>
+                            {item.pickedUp ? t('addOns.door.undo') : t('addOns.door.markPickedUp')}
+                          </Text>
+                        )}
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                  {addOnError && <Text style={styles.addOnErrorText}>{t('addOns.door.failed')}</Text>}
+                </View>
+              )}
+
               {isProcessing && scanResult?.status === 'VALID' && (
                 <ActivityIndicator size="large" color={colors.primary} style={styles.loader} />
               )}
@@ -1810,6 +1894,20 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     backgroundColor: T.surface,
     alignSelf: 'stretch',
   },
+  // Add-ons to hand over: compact rows, dot + label, the 40pt white button.
+  addOnBox: { marginTop: 12, paddingHorizontal: 14, paddingVertical: 10, borderRadius: radius.sm, backgroundColor: T.surface, alignSelf: 'stretch' },
+  addOnKicker: { fontSize: 11, fontWeight: '700', letterSpacing: 1.2, textTransform: 'uppercase', color: T.textSecondary, marginBottom: 2 },
+  addOnLine: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 52 },
+  addOnText: { flex: 1, minWidth: 0 },
+  addOnName: { fontSize: 15, color: T.textPrimary, fontWeight: '600' },
+  addOnStatus: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 },
+  addOnDot: { width: 6, height: 6, borderRadius: 3 },
+  addOnStatusText: { fontSize: 12, color: T.textSecondary },
+  addOnToggle: { backgroundColor: T.white, paddingHorizontal: 14, height: 40, justifyContent: 'center', alignItems: 'center', borderRadius: radius.sm, minWidth: 92 },
+  addOnToggleDone: { backgroundColor: T.surfaceRaised },
+  addOnToggleText: { color: T.onWhite, fontWeight: '700', fontSize: 14 },
+  addOnToggleTextDone: { color: T.textPrimary },
+  addOnErrorText: { marginTop: 4, fontSize: 12, color: T.red },
   // Dot + label status (no pill); the white primary button, 40pt like the web.
   doorStatus: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   doorDot: { width: 6, height: 6, borderRadius: 3 },

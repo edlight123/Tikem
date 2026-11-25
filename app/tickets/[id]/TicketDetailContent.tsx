@@ -12,6 +12,7 @@ import TicketActions, { type PendingTransferInfo } from './TicketActions'
 import AddToWalletButton from '@/components/AddToWalletButton'
 import RefundRequestAction from '@/components/tickets/RefundRequestAction'
 import { isLiveTicketStatus } from '@/lib/tickets/status'
+import TicketAddOns from '@/components/tickets/TicketAddOns'
 
 interface TicketDetailContentProps {
   ticket: any
@@ -250,6 +251,9 @@ export default function TicketDetailContent({ ticket, event, user, pendingTransf
               </div>
             </div>
           </div>
+
+          {/* Add-ons bought with the order (on its first ticket). */}
+          <TicketAddOns ticket={ticket} />
 
           {/* Instructions Card */}
           <div className="bg-surface rounded-2xl p-4 sm:p-6">

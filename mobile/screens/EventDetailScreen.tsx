@@ -53,6 +53,7 @@ import PaymentModal from '../components/PaymentModal';
 import { externalTicketsUrl } from '../lib/integrationWeb';
 import { communityTicketsUrl, isCommunityEvent, isSafeHttpUrl } from '../lib/community';
 import TieredTicketSelector, { PurchaseSelectionMeta } from '../components/TieredTicketSelector';
+import { eventAddOns } from '../lib/addOns';
 import { resolveEventPricing } from '../lib/ticketPricing';
 import { doorPriceLabel, isDoorEvent, isDoorTier, lowestDoorPrice } from '../lib/payAtDoor';
 import { familyMax, freeClaimCapFor } from '../lib/family';
@@ -222,6 +223,8 @@ export default function EventDetailScreen({ route, navigation }: any) {
   // The whole cart when it mixes ticket types; sent to checkout as `tiers[]`.
   const [selectedLines, setSelectedLines] = useState<{ tierId: string; quantity: number }[]>([]);
   const [selectedPaidQuantity, setSelectedPaidQuantity] = useState<number | undefined>(undefined);
+  // Add-ons picked with the tickets (lib/addOns), sent with the card order.
+  const [selectedAddOns, setSelectedAddOns] = useState<NonNullable<PurchaseSelectionMeta['addOns']>>([]);
   const [ticketQuantity, setTicketQuantity] = useState(1);
   const [promoCode, setPromoCode] = useState<string | undefined>();
   // Password-gate state. accessGranted: null = unknown/not-yet-checked, true =
@@ -773,6 +776,7 @@ export default function EventDetailScreen({ route, navigation }: any) {
     setSelectedTierName(meta?.tierName || '');
     setSelectedLines(meta?.lines || []);
     setSelectedPaidQuantity(meta?.paidQuantity);
+    setSelectedAddOns(meta?.addOns || []);
 
     setShowTierSelector(false);
 
@@ -901,7 +905,9 @@ export default function EventDetailScreen({ route, navigation }: any) {
     freeOnly && eventTiers.filter((tier) => Number(tier?.price ?? 0) === 0 && !isDoorTier(tier) && tier?.is_active !== false).length > 1;
   // `isFree` now means "there is no paid way in", i.e. tier selection can be
   // skipped. A mixed event is NOT free: the buyer must choose a tier.
-  const isFree = freeOnly && !freeTypes;
+  // Paid add-ons (lib/addOns) on a free event are picked in the tier picker too.
+  const sellsAddOns = eventAddOns(event as any).some((a) => a.is_active !== false);
+  const isFree = freeOnly && !freeTypes && !sellsAddOns;
   // Family registration (lib/family): one person registers up to N people.
   const familySize = familyMax(event as any);
   // v1 approval lists are free-only; a paid event with a stray flag sells as usual.
@@ -1531,6 +1537,8 @@ export default function EventDetailScreen({ route, navigation }: any) {
         feeIncidence={(event as any)?.fee_incidence ?? (event as any)?.feeIncidence}
         freeClaimHeld={heldFreeTickets > 0}
         freeCap={freeClaimCapFor(event as any)}
+        addOns={(event as any)?.add_ons}
+        addOnsSold={(event as any)?.add_ons_sold}
       />
 
       <PurchaseSuccessSheet
@@ -1705,6 +1713,7 @@ export default function EventDetailScreen({ route, navigation }: any) {
         tierId={selectedTierId || undefined}
         tiers={selectedLines.length > 1 ? selectedLines : undefined}
         feeQuantity={selectedPaidQuantity}
+        addOns={selectedAddOns}
         promoCodeId={promoCode}
         refCode={refCode}
         attribution={attribution}

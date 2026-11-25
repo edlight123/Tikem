@@ -152,6 +152,8 @@ export default async function DoorModeScanPage({ params }: { params: Promise<{ e
       door_price: Number(ticketData.door_price) || 0,
       door_currency: String(ticketData.door_currency || ''),
       door_paid: ticketData.door_paid === true,
+      // Add-ons (lib/addons/addOns.ts): on the order's first ticket, pointed to from the others.
+      has_add_ons: (Array.isArray(ticketData.add_ons) && ticketData.add_ons.length > 0) || Boolean(ticketData.add_ons_ticket_id),
       checked_in: ticketData.checked_in || false,
       qr_code: ticketData.qr_code || ticketData.qr_code_data || '',
       attendee,

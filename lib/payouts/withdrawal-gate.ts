@@ -220,6 +220,8 @@ async function loadTicketFacts(eventId: string): Promise<TicketFacts> {
       'checked_in',
       'check_in_method',
       'price_paid',
+      // Add-ons booked on an order's first ticket (lib/addons/addOns.ts).
+      'add_ons_face_total',
       'pricePaid',
       'refund_status',
       'refund_amount',

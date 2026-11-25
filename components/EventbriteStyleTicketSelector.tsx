@@ -7,6 +7,8 @@ import { allSelectionsFree, computeSelectionTotal, isFreeTier, MAX_FREE_TICKETS_
 import { priceCart } from '@/lib/checkout/buyer-pricing'
 import { MAX_DOOR_TICKETS_PER_PERSON, doorMoney, doorPriceLabel, doorPriceOf, isDoorTier } from '@/lib/tickets/pay-at-door'
 import { ticketScarcity, scarcityCopy, isUrgent } from '@/lib/ticketScarcity'
+import AddOnsPicker, { selectedAddOnsFrom, type SelectedAddOn } from '@/components/AddOnsPicker'
+import { addOnAvailability, eventAddOns } from '@/lib/addons/addOns'
 
 interface TicketTier {
   id: string
@@ -79,11 +81,15 @@ interface EventbriteStyleTicketSelectorProps {
    * server re-prices the order from Firestore and has the final say. `promo` is
    * the applied code's terms, so the checkout summary can show the same discount.
    */
+  /** The event's add-ons (events.add_ons) and their sold rollup, offered after the tiers. */
+  addOns?: unknown
+  addOnsSold?: Record<string, unknown> | null
   onPurchase: (
     selections: { tierId: string; quantity: number; price: number; tierName?: string }[],
     promoCodeId?: string,
     discountedTotal?: number,
-    promo?: { discount_type: string; discount_value: number }
+    promo?: { discount_type: string; discount_value: number },
+    addOns?: SelectedAddOn[]
   ) => void
 }
 
@@ -97,8 +103,12 @@ export default function EventbriteStyleTicketSelector({
   allowGuest = false,
   freeClaimHeld = false,
   freeCap = MAX_FREE_TICKETS_PER_PERSON,
+  addOns: rawAddOns,
+  addOnsSold = null,
   onPurchase
 }: EventbriteStyleTicketSelectorProps) {
+  const addOnList = eventAddOns({ add_ons: rawAddOns })
+  const [addOnQty, setAddOnQty] = useState<Record<string, number>>({})
   /** Who may press "checkout": a signed-in user, or a guest when guests are allowed. */
   const canPurchase = Boolean(userId) || allowGuest
   const { t, i18n } = useTranslation('common')
@@ -225,8 +235,25 @@ export default function EventbriteStyleTicketSelector({
 
   // The whole cart, priced once: promo per ticket, then the fee on the post-promo
   // face total, honouring the organizer's absorb/pass-on choice for this event.
+  // Add-ons (no promo) join the face total, so the one fee covers the full
+  // subtotal. Not offered with pay-at-the-door spots (never a card order).
+  const doorSelected = tiers.some((tier) => isDoorTier(tier) && (quantities[tier.id] || 0) > 0)
+  const getSelectedAddOns = (): SelectedAddOn[] =>
+    doorSelected
+      ? []
+      : selectedAddOnsFrom(
+          // Only add-ons the CURRENT tiers allow (a tier removed after picking drops its add-ons).
+          addOnList.filter(
+            (a) => addOnAvailability(a, { cartTierIds: getSelections().map((s) => s.tierId), soldMap: addOnsSold }) === 'available'
+          ),
+          addOnQty
+        )
   const getCartPricing = () =>
-    priceCart(getSelections(), { country, currency, fee_incidence: feeIncidence }, { promo: appliedPromo, currency })
+    priceCart(getSelections(), { country, currency, fee_incidence: feeIncidence }, {
+      promo: appliedPromo,
+      currency,
+      addOns: getSelectedAddOns().map((a) => ({ unitPrice: a.unitPrice, quantity: a.quantity })),
+    })
 
   /** Post-promo face total. */
   const getTotalPrice = (): number => getCartPricing().faceValue
@@ -271,7 +298,7 @@ export default function EventbriteStyleTicketSelector({
 
     if (selections.length === 0) return
 
-    onPurchase(selections, promoValidation?.promoCode?.id, getTotalPrice(), appliedPromo || undefined)
+    onPurchase(selections, promoValidation?.promoCode?.id, getTotalPrice(), appliedPromo || undefined, getSelectedAddOns())
   }
 
   if (loading) {
@@ -299,7 +326,8 @@ export default function EventbriteStyleTicketSelector({
   // Free ISSUANCE is decided by each selected tier's OWN price, not by the total.
   // A cart zeroed by a 100%-off promo still has to go through checkout — the
   // free-claim endpoint requires the tier itself to cost 0 and would refuse it.
-  const isFreeOrder = allSelectionsFree(getSelections())
+  const chosenAddOns = getSelectedAddOns()
+  const isFreeOrder = allSelectionsFree(getSelections()) && chosenAddOns.length === 0
   /** Pay at the door: what the chosen spots will cost on arrival (nothing online). */
   const doorDue = tiers.reduce((sum, tier) => sum + doorPriceOf(tier) * (quantities[tier.id] || 0), 0)
 
@@ -429,6 +457,18 @@ export default function EventbriteStyleTicketSelector({
         })}
       </div>
 
+      {/* Add-ons, after the tickets (lib/addons/addOns.ts). */}
+      {addOnList.length > 0 && totalTickets > 0 && !doorSelected && (
+        <AddOnsPicker
+          addOns={addOnList}
+          soldMap={addOnsSold}
+          cartTierIds={getSelections().map((s) => s.tierId)}
+          quantities={addOnQty}
+          onChange={setAddOnQty}
+          currency={currency}
+        />
+      )}
+
       {/* Promo code — one line until somebody wants it.
           It was a bordered card with its own heading and 16px of padding above
           an input row: roughly 110px of a phone sheet spent on a field most
@@ -505,6 +545,15 @@ export default function EventbriteStyleTicketSelector({
                   </span>
                 </div>
               ))}
+            {chosenAddOns.map((a) => (
+              <div key={`${a.id}-${a.option ?? ''}`} className="flex justify-between text-sm">
+                <span className="text-fg-muted">
+                  {a.quantity}× {a.name}
+                  {a.option ? ` (${a.option})` : ''}
+                </span>
+                <span className="text-fg">{formatMoney(a.unitPrice * a.quantity)}</span>
+              </div>
+            ))}
             {promoValidation?.valid && promoValidation.promoCode && (
               <div className="flex justify-between text-sm text-success">
                 <span>

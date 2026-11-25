@@ -8,6 +8,7 @@ import { X, CreditCard, Lock } from 'lucide-react'
 import { useToast } from '@/components/ui/Toast'
 import { useTranslation } from 'react-i18next'
 import { priceOrder } from '@/lib/checkout/buyer-pricing'
+import { addOnErrorMessage } from '@/components/AddOnsPicker'
 import type { Attribution } from '@/lib/attribution'
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
@@ -319,6 +320,8 @@ interface EmbeddedStripePaymentProps {
    * single-tier purchase.
    */
   tiers?: { tierId: string; quantity: number }[]
+  /** Add-ons picked after the tickets (lib/addons/addOns.ts); the server prices them. */
+  addOns?: { id: string; option: string | null; quantity: number }[]
   promoCodeId?: string
   /** Promoter ref code captured from `?ref=` — resolved and attributed server-side. */
   refCode?: string
@@ -352,6 +355,7 @@ export default function EmbeddedStripePayment({
   feeIncidence,
   tierId,
   tiers,
+  addOns,
   promoCodeId,
   refCode,
   attribution,
@@ -361,6 +365,8 @@ export default function EmbeddedStripePayment({
 }: EmbeddedStripePaymentProps) {
   // Stable dependency for the PaymentIntent effect (an object would re-fire it).
   const attributionKey = attribution ? JSON.stringify(attribution) : ''
+  const addOnsKey =
+    addOns && addOns.length > 0 ? JSON.stringify(addOns.map((a) => ({ id: a.id, option: a.option, quantity: a.quantity }))) : ''
   const tiersKey = tiers && tiers.length > 0 ? JSON.stringify(tiers.map((l) => ({ tierId: l.tierId, quantity: l.quantity }))) : ''
   const { t, i18n } = useTranslation('common')
   const [clientSecret, setClientSecret] = useState<string | null>(null)
@@ -426,6 +432,7 @@ export default function EmbeddedStripePayment({
             quantity,
             // The cart, per tier, when there is one; the server prices every line.
             ...(tiersKey ? { tiers: JSON.parse(tiersKey) } : { tierId }),
+            ...(addOnsKey ? { addOns: JSON.parse(addOnsKey) } : {}),
             promoCodeId,
             ...(refCode ? { refCode } : {}),
             ...(attributionKey ? { attribution: JSON.parse(attributionKey) } : {}),
@@ -437,6 +444,8 @@ export default function EmbeddedStripePayment({
         const data = await response.json()
 
         if (!response.ok) {
+          const addOnMessage = addOnErrorMessage(data?.code, t)
+          if (addOnMessage) throw new Error(addOnMessage)
           // Haiti card refusals: below the card minimum, or no trustworthy rate.
           if (data?.code === 'card_amount_below_minimum' && Number(data?.minimumHtg) > 0) {
             throw new Error(
@@ -481,7 +490,7 @@ export default function EmbeddedStripePayment({
     // checkout doesn't re-mint a PaymentIntent (and a second guest order) on every
     // parent re-render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [eventId, quantity, tierId, tiersKey, promoCodeId, refCode, attributionKey, accessCode, guest?.name, guest?.email, guest?.phone])
+  }, [eventId, quantity, tierId, tiersKey, addOnsKey, promoCodeId, refCode, attributionKey, accessCode, guest?.name, guest?.email, guest?.phone])
 
   const appearance = {
     theme: 'night' as const,

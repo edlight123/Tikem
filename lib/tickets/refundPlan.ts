@@ -1,5 +1,6 @@
 import { isLiveTicketStatus } from '@/lib/tickets/status'
 import { buyerFeeChargedMinor, ticketFeeIncidence } from '@/lib/payouts/fee-incidence'
+import { ticketAddOnFace } from '@/lib/addons/addOns'
 
 /**
  * What an organizer-initiated refund of ONE ticket would do — decided from the
@@ -228,5 +229,7 @@ function positiveMoney(value: unknown): number {
  * (lib/payouts/availability.ts ticketRefundedFaceMinor) subtracts this instead.
  */
 export function refundFaceAmount(ticket: Record<string, any> | null | undefined): number {
-  return Math.round(positiveMoney(ticket?.price_paid ?? ticket?.pricePaid ?? ticket?.price) * 100) / 100
+  // The order's first ticket carries its add-ons (lib/addons/addOns.ts): their
+  // face goes back with it.
+  return Math.round((positiveMoney(ticket?.price_paid ?? ticket?.pricePaid ?? ticket?.price) + ticketAddOnFace(ticket)) * 100) / 100
 }

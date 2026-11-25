@@ -13,6 +13,7 @@
  */
 import { adminDb } from '@/lib/firebase/admin'
 import { releaseSeats } from '@/lib/tickets/inventoryShards'
+import { addOnIncrements, ticketAddOns } from '@/lib/addons/addOns'
 
 // Same derivations as lib/tickets/fulfillment (orderReservationId) and
 // lib/tickets/stripe-fulfillment (stripeOrderDocId / stripeReservationId),
@@ -76,10 +77,14 @@ export async function returnSeatForRefundedTicket(
     if (!claimed) return 'already'
 
     const tierId = String(ticket.tier_id || '').trim()
+    // The order's first ticket carries its add-ons (lib/addons/addOns.ts): a
+    // refund of it returns them, so their stock goes back too.
+    const addOns = addOnIncrements(ticketAddOns(ticket).map((a) => ({ addOnId: a.id, quantity: a.quantity })))
     const res = await releaseSeats({
       reservationId,
       quantity: 1,
       tierIncrements: tierId ? [{ tierId, quantity: 1 }] : [],
+      ...(addOns.length > 0 ? { addOnIncrements: addOns } : {}),
       logPrefix,
     })
     if (!res.released) {

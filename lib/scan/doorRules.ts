@@ -13,6 +13,7 @@
  * for offline use; __tests__/staff-door-check-in.test.ts holds them to parity.
  */
 
+import { ticketAddOns } from '@/lib/addons/addOns'
 import { createHash } from 'crypto'
 import { doorBalance } from '@/lib/tickets/pay-at-door'
 
@@ -215,6 +216,12 @@ export type DoorRow = {
   doorOwes: number | null
   doorCurrency: string | null
   doorPaid: boolean
+  /**
+   * Add-ons to hand over (lib/addons/addOns.ts), on the order's first ticket
+   * only; `addOnsTicketId` points the order's other tickets at it.
+   */
+  addOns?: Array<{ index: number; name: string; option: string | null; quantity: number; pickedUp: boolean }>
+  addOnsTicketId?: string | null
 }
 
 export function toDoorRow(
@@ -244,6 +251,22 @@ export function toDoorRow(
     ...(() => {
       const b = doorBalance(ticket)
       return b ? { doorOwes: b.owes, doorCurrency: b.currency, doorPaid: b.paid } : { doorOwes: null, doorCurrency: null, doorPaid: false }
+    })(),
+    ...(() => {
+      const addOns = ticketAddOns(ticket)
+      if (addOns.length > 0) {
+        return {
+          addOns: addOns.map((a, index) => ({
+            index,
+            name: a.name,
+            option: a.option,
+            quantity: a.quantity,
+            pickedUp: Boolean(a.picked_up_at),
+          })),
+          addOnsTicketId: id,
+        }
+      }
+      return ticket?.add_ons_ticket_id ? { addOnsTicketId: String(ticket.add_ons_ticket_id) } : {}
     })(),
   }
 }

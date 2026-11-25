@@ -57,6 +57,7 @@ import {
   releaseHoldLimit,
   releaseSeats,
   reserveSeats,
+  type AddOnIncrement,
   type ReserveOutcome,
   type TierSoldIncrement,
 } from '@/lib/tickets/inventoryShards'
@@ -195,6 +196,8 @@ export async function createSeatHold(params: {
   eventId: string
   quantity: number
   tierIncrements: TierSoldIncrement[]
+  /** Add-on stock held with the seats (lib/addons/addOns.ts). */
+  addOnIncrements?: AddOnIncrement[]
   holdId?: string
   /** seatHoldOwnerKey(identity): `user:{uid}` or `guest:{email}`. */
   ownerKey?: string | null
@@ -252,6 +255,7 @@ export async function createSeatHold(params: {
     eventId: params.eventId,
     quantity: params.quantity,
     tierIncrements: params.tierIncrements,
+    addOnIncrements: params.addOnIncrements,
     mode: 'hold',
     reservationId: holdId,
     expiresAt,
@@ -306,11 +310,21 @@ export const SEAT_HOLD_MESSAGES = {
     fr: 'Trop de paiements sont déjà en cours pour cet événement. Terminez-en ou fermez-en un, ou réessayez dans quelques minutes.',
     ht: 'Gen twòp peman ki deja ap fèt pou evènman sa a. Fini oswa fèmen youn, oswa eseye ankò nan kèk minit.',
   },
+  addon_sold_out: {
+    en: 'Sorry, one of your add-ons is sold out. Remove it and try again.',
+    fr: "Désolé, l'un de vos extras est épuisé. Retirez-le et réessayez.",
+    ht: 'Padon, youn nan ekstra ou yo fini. Retire l epi eseye ankò.',
+  },
+  addon_only_n_left: {
+    en: (n: number) => `Only ${n} left of one of your add-ons. Lower the quantity and try again.`,
+    fr: (n: number) => `Il n'en reste que ${n} pour l'un de vos extras. Réduisez la quantité et réessayez.`,
+    ht: (n: number) => `Se ${n} sèlman ki rete pou youn nan ekstra ou yo. Diminye kantite a epi eseye ankò.`,
+  },
 } as const
 
 export interface SeatHoldRefusal {
   status: number
-  body: { error: string; code: string; remaining?: number }
+  body: { error: string; code: string; remaining?: number; addOnId?: string }
 }
 
 /**
@@ -333,6 +347,13 @@ export function seatHoldRefusal(outcome: ReserveOutcome, lang: Lang = 'en'): Sea
       return remaining > 0
         ? { status: 409, body: { error: SEAT_HOLD_MESSAGES.only_n_left[lang](remaining), code: 'only_n_left', remaining } }
         : { status: 409, body: { error: SEAT_HOLD_MESSAGES.sold_out[lang], code: 'sold_out', remaining: 0 } }
+    }
+    case 'addon_capacity': {
+      const remaining = Math.max(0, Number(outcome.remaining || 0))
+      const addOnId = outcome.addOnId || undefined
+      return remaining > 0
+        ? { status: 409, body: { error: SEAT_HOLD_MESSAGES.addon_only_n_left[lang](remaining), code: 'addon_only_n_left', remaining, addOnId } }
+        : { status: 409, body: { error: SEAT_HOLD_MESSAGES.addon_sold_out[lang], code: 'addon_sold_out', remaining: 0, addOnId } }
     }
     case 'tier_mismatch':
       return { status: 400, body: { error: 'This ticket tier is not available for this event.', code: 'tier_not_for_event' } }

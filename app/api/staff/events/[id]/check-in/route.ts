@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { authorizeDoorAccess, performDoorCheckIn } from '@/lib/scan/doorService'
 import { normalizeEntryPoint } from '@/lib/scan/doorRules'
+import { orderAddOnsForTicket } from '@/lib/addons/server'
 
 export const dynamic = 'force-dynamic'
 
@@ -40,7 +41,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       reentry: body?.reentry === true,
       override: body?.override === true,
     })
-    return NextResponse.json({ ok: result.verdict === 'CHECKED_IN', ...result })
+    // The order's add-ons to hand over (meals, merch…), whichever of its tickets
+    // was scanned. Best-effort: never changes the verdict.
+    const orderAddOns =
+      result.row && ['CHECKED_IN', 'ALREADY_CHECKED_IN'].includes(result.verdict)
+        ? await orderAddOnsForTicket(eventId, result.row.id).catch(() => null)
+        : null
+    return NextResponse.json({ ok: result.verdict === 'CHECKED_IN', ...result, ...(orderAddOns ? { addOns: orderAddOns } : {}) })
   } catch (error) {
     console.error('[staff/check-in] failed', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

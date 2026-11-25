@@ -63,6 +63,7 @@
  */
 
 import { platformFeeForSale } from '@/lib/fees'
+import { ticketAddOnFace } from '@/lib/addons/addOns'
 import { isLiveTicketStatus } from '@/lib/tickets/status'
 import { ticketFeeIncidence } from '@/lib/payouts/fee-incidence'
 import {
@@ -196,7 +197,9 @@ export function ticketPriceMinor(ticket: any): number {
   // taken in person. Tikem never held it, takes no fee on it and owes none of
   // it, so it is never gross here, whatever door_amount says.
   if (String(ticket?.payment_method ?? '').toLowerCase().trim() === 'pay_at_door') return 0
-  return majorToMinor(ticket?.price_paid ?? ticket?.pricePaid)
+  // An order's add-ons ride on its first ticket (lib/addons/addOns.ts): their
+  // face is part of that ticket's gross, fee basis and refund.
+  return majorToMinor(ticket?.price_paid ?? ticket?.pricePaid) + majorToMinor(ticketAddOnFace(ticket))
 }
 
 /**
