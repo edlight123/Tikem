@@ -211,7 +211,7 @@ export type RootStackParamList = {
   GovernmentIDUpload: { onComplete?: () => void };
   SelfieUpload: { onComplete?: () => void };
   CreateEvent: undefined;
-  TicketScanner: { eventId: string; openLookup?: boolean; doorMode?: boolean };
+  TicketScanner: { eventId: string; openLookup?: boolean; doorMode?: boolean; sellMode?: boolean; sellOnly?: boolean };
   EventAttendees: { eventId: string };
   // Per-event orders (web: organizer/events/[id]/orders) and one order's detail.
   EventOrders: { eventId: string; eventTitle?: string };

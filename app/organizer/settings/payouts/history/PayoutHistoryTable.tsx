@@ -159,7 +159,7 @@ export default function PayoutHistoryClient({ payouts }: { payouts: PayoutHistor
                         {payout.eventCount} {payout.eventCount === 1 ? 'event' : 'events'}
                       </td>
                       <td className="px-6 py-4 text-sm text-fg-muted capitalize">
-                        {payout.method}
+                        {payout.method === 'balance_offset' ? t('finance_view.method_balance_offset') : payout.method}
                       </td>
                     </tr>
                   ))
@@ -198,7 +198,7 @@ export default function PayoutHistoryClient({ payouts }: { payouts: PayoutHistor
                   <div className="flex items-center gap-3 text-sm text-fg-muted">
                     <span>{payout.eventCount} {payout.eventCount === 1 ? 'event' : 'events'}</span>
                     <span>·</span>
-                    <span className="capitalize">{payout.method}</span>
+                    <span className="capitalize">{payout.method === 'balance_offset' ? t('finance_view.method_balance_offset') : payout.method}</span>
                   </div>
                 </div>
               ))

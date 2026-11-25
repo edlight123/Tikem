@@ -16,6 +16,7 @@
 export function systemTabs(canUseDevTools: boolean) {
   return [
     { href: '/admin/system', label: 'Settings' },
+    { href: '/admin/system/printed-tickets', label: 'Printed tickets' },
     ...(canUseDevTools ? [{ href: '/admin/system/dev', label: 'Dev tools' }] : []),
   ]
 }

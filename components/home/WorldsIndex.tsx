@@ -65,8 +65,8 @@ export default function WorldsIndex({ worlds, scopeQs }: { worlds: HomeWorld[]; 
                   src={`/art/world-photos/${w.key}.jpg`}
                   alt=""
                   fill
-                  sizes="(min-width: 1024px) 210px, (min-width: 640px) 25vw, 50vw"
-                  quality={65}
+                  sizes="(min-width: 1024px) 320px, (min-width: 640px) 33vw, 60vw"
+                  quality={85}
                   className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.04]"
                 />
                 <span aria-hidden className="absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-scrim-strong via-scrim-light to-transparent" />

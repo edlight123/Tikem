@@ -90,7 +90,8 @@
     "door_readmitted": "Let back in now",
     "door_reentry_refused": "RE-ENTRY REFUSED",
     "door_overriding": "Checking…",
-    "door_scan_next": "Scan next"
+    "door_scan_next": "Scan next",
+    "tab_printed": "Printed tickets"
   },
   "your_events": "Your Events",
   "view_all_events": "View all events →",
@@ -644,7 +645,9 @@
     "mark_paid": "Mark paid",
     "undo_payment": "Undo",
     "payment_needs_connection": "Needs a connection to record the payment.",
-    "child": "Child"
+    "child": "Child",
+    "reason_not_sold": "Not sold. Not valid.",
+    "reason_voided": "This printed ticket was voided."
   },
   "markets": {
     "title": "Where you run events",
@@ -1374,7 +1377,9 @@
     "remove_failed": "Could not remove this member.",
     "role_failed": "Could not change the role.",
     "load_failed": "The team list did not load. Refresh to try again.",
-    "invite_note": "We email them a link that works for 7 days. They join once they open it and sign in."
+    "invite_note": "We email them a link that works for 7 days. They join once they open it and sign in.",
+    "tile_seller": "Activates printed tickets from the serial ranges assigned to them.",
+    "access_seller": "Only printed tickets: activates the serial ranges assigned to them, with the buyer's name. No orders, guests or money."
   },
   "defaults_form": {
     "select_a_city": "Select a city",
@@ -1771,7 +1776,8 @@
     "toggle_label": "Can see finances (read only)",
     "toggle_desc": "Earnings, payout history and revenue reports. Never withdrawals or bank and MonCash details.",
     "row_marker": "Finances",
-    "access_note": "The owner can also let an admin see finances, read only."
+    "access_note": "The owner can also let an admin see finances, read only.",
+    "method_balance_offset": "Printed tickets (from balance)"
   },
   "payout_phone_check": {
     "no_sms_body": "We can't text verification codes yet, so there is nothing to do here. If this is the number you sign in with, it is already confirmed. Otherwise our team checks it with your first withdrawal."
@@ -1780,7 +1786,8 @@
     "owner": "Owner",
     "admin": "Admin",
     "manager": "Manager",
-    "staff": "Staff"
+    "staff": "Staff",
+    "seller": "Seller"
   },
   "org_switcher": {
     "acting_for": "Acting for",

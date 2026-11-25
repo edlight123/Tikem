@@ -30,6 +30,8 @@ export type CheckInResponse = {
   row: DoorRow | null;
   /** ALREADY_CHECKED_IN by this same user (e.g. an earlier timed-out request that landed). */
   mine?: boolean;
+  /** Why a CANCELLED verdict refused: e.g. NOT_SOLD / VOIDED for printed tickets. */
+  reason?: string | null;
 };
 
 export class DoorOfflineError extends Error {
@@ -145,7 +147,12 @@ export async function postCheckIn(
     throw new DoorAccessError(res.status, String(json?.error || 'Forbidden'));
   }
   if (!res.ok || !json?.verdict) throw new DoorOfflineError();
-  return { verdict: json.verdict as DoorVerdict, row: (json.row as DoorRow) || null, mine: Boolean(json.mine) };
+  return {
+    verdict: json.verdict as DoorVerdict,
+    row: (json.row as DoorRow) || null,
+    mine: Boolean(json.mine),
+    reason: typeof json.reason === 'string' ? json.reason : null,
+  };
 }
 
 /**

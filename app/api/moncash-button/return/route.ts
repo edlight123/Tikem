@@ -18,6 +18,7 @@ import { orderStatusToken } from '@/lib/tickets/seatHolds'
 import { fulfillPaidOrder, fulfillmentBlockedReason } from '@/lib/tickets/fulfillment'
 import { getCurrentUser } from '@/lib/auth'
 import { callerHoldsOrder, orderIdsFromCookies } from '@/lib/tickets/orderAccess'
+import { findBatchOrder, verifyMonCashBatchPayment } from '@/lib/physical/payments'
 
 export const runtime = 'nodejs'
 
@@ -275,6 +276,17 @@ async function handleMonCashButtonReturn(request: Request): Promise<NextResponse
         ),
       })
       return NextResponse.redirect(new URL('/purchase/failed?reason=missing_order', request.url))
+    }
+
+    // A printed-ticket batch paid upfront by an organizer (lib/physical): not a
+    // ticket order. Verified with the same RetrieveOrderPayment + amount check.
+    if (await findBatchOrder(orderId)) {
+      const r = await verifyMonCashBatchPayment(orderId)
+      const back = new URL(
+        `/organizer/events/${encodeURIComponent(String(r.eventId || ''))}/printed?batch=${encodeURIComponent(String(r.batchId || ''))}&moncash=${r.paid ? 'paid' : 'unpaid'}`,
+        request.url
+      )
+      return NextResponse.redirect(back)
     }
 
     const { data: pendingTx, error: txError } = await supabase

@@ -50,6 +50,10 @@ export type AuditAction =
   | 'withdrawal.reject'
   | 'withdrawal.complete'
   | 'withdrawal.fail'
+  | 'physical_tickets.config.update'
+  | 'physical_tickets.batch.move'
+  | 'physical_tickets.batch.reprint'
+  | 'physical_tickets.batch.pdf'
 
 function toIsoTimestamp(value: unknown): string {
   if (!value) return ''

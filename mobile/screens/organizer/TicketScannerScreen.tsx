@@ -59,7 +59,10 @@ import {
   readCheckInQueue,
   saveDoorList,
 } from '../../lib/doorCheckIn';
-import { Camera, DoorOpen, Search, Vibrate, VibrateOff, X } from 'lucide-react-native';
+import { Camera, DoorOpen, Keyboard, Search, Ticket, Vibrate, VibrateOff, X } from 'lucide-react-native';
+import SellPrintedSheet, { SellOutcome } from '../../components/scanner/SellPrintedSheet';
+import { activationMessageKey, isUnsoldPrinted, isVoidedPrinted } from '../../lib/physicalTickets';
+import { flushActivationQueue, pendingActivations } from '../../lib/physicalTicketsApi';
 
 import { Touchable } from '../../components/ui/Touchable';
 import { doorBalance, doorMoney } from '../../lib/payAtDoor';
@@ -70,6 +73,13 @@ type RouteParams = {
     openLookup?: boolean;
     /** Start in door mode (Scan screen's "Door mode"). */
     doorMode?: boolean;
+    /** Start in "Sell printed ticket" mode (activate printed tickets). */
+    sellMode?: boolean;
+    /**
+     * A seller (org role 'seller'): sell mode only. No guest list, no door
+     * check-in (the server would refuse both); only activation.
+     */
+    sellOnly?: boolean;
   };
 };
 
@@ -198,7 +208,7 @@ export default function TicketScannerScreen() {
   const route = useRoute<RouteProp<RouteParams, 'TicketScanner'>>();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
-  const { eventId, openLookup, doorMode: startInDoorMode } = route.params;
+  const { eventId, openLookup, doorMode: startInDoorMode, sellMode: startInSellMode, sellOnly } = route.params;
 
   const { t, language } = useI18n();
   const locale = language === 'fr' ? 'fr-FR' : language === 'ht' ? 'fr-HT' : 'en-US';
@@ -252,6 +262,13 @@ export default function TicketScannerScreen() {
   const [pendingSync, setPendingSync] = useState(0);
   const uid = auth.currentUser?.uid || '';
 
+  // Printed tickets: "Sell" mode turns a scan into an activation (buyer's name
+  // required) instead of a check-in. Sales made offline queue on the phone.
+  const [sellMode, setSellMode] = useState(Boolean(startInSellMode || sellOnly));
+  const [sellSheet, setSellSheet] = useState<{ code: string | null } | null>(null);
+  const [pendingSales, setPendingSales] = useState(0);
+  const salesSyncingRef = useRef(false);
+
   useEffect(() => {
     if (permission && !permission.granted) {
       requestPermission();
@@ -302,6 +319,9 @@ export default function TicketScannerScreen() {
   // AsyncStorage so attendee name/tier still render even on a cache miss.
   useEffect(() => {
     let cancelled = false;
+    // A seller sells printed tickets only: no guest list to warm (the rules and
+    // the door API would refuse them anyway).
+    if (sellOnly) return;
     (async () => {
       // Door-only staff never attempt the tickets read: rules would refuse it.
       const mode = await resolveAccessMode();
@@ -442,6 +462,52 @@ export default function TicketScannerScreen() {
         ...prev,
       ].slice(0, 20),
     );
+  };
+
+  const syncSales = async () => {
+    if (!uid || salesSyncingRef.current) return;
+    salesSyncingRef.current = true;
+    try {
+      if ((await pendingActivations(uid, eventId)) === 0) {
+        setPendingSales(0);
+        return;
+      }
+      const report = await flushActivationQueue(uid, eventId);
+      setPendingSales(report.remaining);
+      // First activation wins: a sale made offline that another seller beat
+      // shows in the recent list with who holds the ticket.
+      for (const o of report.outcomes) {
+        if (o.kind === 'refused' && !o.response.ok) {
+          const label =
+            o.response.code === 'ALREADY_ACTIVATED' && o.response.holderName
+              ? t('physicalSell.result.alreadySoldTo', { name: o.response.holderName })
+              : t(activationMessageKey(o.response.code));
+          recordScan(o.item.name, 'invalid', label);
+        } else if (o.kind === 'denied') {
+          recordScan(o.item.name, 'invalid', t('physicalSell.result.noAccess'));
+        } else if (o.kind === 'activated') {
+          recordScan(o.item.name, 'valid', t('physicalSell.recent.synced'));
+        }
+      }
+    } catch {
+      // next tick
+    } finally {
+      salesSyncingRef.current = false;
+    }
+  };
+  useEffect(() => {
+    if (!uid) return;
+    syncSales();
+    const timer = setInterval(syncSales, 15000);
+    return () => clearInterval(timer);
+  }, [uid, eventId]);
+
+  const onSellOutcome = (outcome: SellOutcome, name: string, label: string, pending?: number) => {
+    const o: ScanOutcome = outcome === 'sold' ? 'valid' : outcome === 'queued' ? 'warning' : 'invalid';
+    feedback(o);
+    recordScan(name, o, label);
+    if (outcome === 'queued' && typeof pending === 'number') setPendingSales(pending);
+    if (outcome === 'sold') syncSales();
   };
 
   // Tickets this device admitted (or queued) this session. The full-access
@@ -602,7 +668,12 @@ export default function TicketScannerScreen() {
     }
   };
 
-  const doorVerdictToResult = (row: DoorRow | null, verdict: DoorVerdict, method: CheckInMethod): ScanResult => {
+  const doorVerdictToResult = (
+    row: DoorRow | null,
+    verdict: DoorVerdict,
+    method: CheckInMethod,
+    reason?: string | null,
+  ): ScanResult => {
     const attendeeName = row?.name || t('common.attendee');
     const tierName = row?.tier || t('common.generalAdmission');
     const door =
@@ -617,6 +688,13 @@ export default function TicketScannerScreen() {
       case 'EXPIRED':
         return { status: 'EXPIRED', attendeeName, tierName, message: t('organizerTicketScanner.results.expired') };
       case 'CANCELLED':
+        // Printed tickets: never sold (not valid), or voided / released.
+        if (reason === 'NOT_SOLD' || isUnsoldPrinted(row?.status)) {
+          return { status: 'CANCELLED', tierName, message: t('physicalSell.door.notSold') };
+        }
+        if (reason === 'VOIDED' || isVoidedPrinted(row?.status)) {
+          return { status: 'CANCELLED', tierName, message: t('physicalSell.door.voided') };
+        }
         return {
           status: 'CANCELLED',
           attendeeName,
@@ -717,7 +795,7 @@ export default function TicketScannerScreen() {
         }
         if (fresh.checkedIn) markGuestCheckedIn(fresh.id);
       }
-      return { synced: true, refused: doorVerdictToResult(res.row, res.verdict, method) };
+      return { synced: true, refused: doorVerdictToResult(res.row, res.verdict, method, res.reason) };
     } catch (e) {
       if (e instanceof DoorAccessError) throw new Error(t('doorScanner.door.noAccess'));
       const name = doorRowsRef.current?.find((r) => r.id === ticketId)?.name || '';
@@ -851,6 +929,12 @@ export default function TicketScannerScreen() {
       // check-in. Legacy tickets predate the status field, so a missing/empty
       // status is allowed; anything else (refunded, revoked, void, cancelled, …)
       // is blocked so the scanner can't admit a refunded or voided ticket.
+      if (isUnsoldPrinted(ticketData.status)) {
+        return { status: 'CANCELLED', tierName, message: t('physicalSell.door.notSold') };
+      }
+      if (ticketData.kind === 'physical' && isVoidedPrinted(ticketData.status)) {
+        return { status: 'CANCELLED', tierName, message: t('physicalSell.door.voided') };
+      }
       if (!isLiveStatus(ticketData.status)) {
         return {
           status: 'CANCELLED',
@@ -1038,6 +1122,14 @@ export default function TicketScannerScreen() {
   const handleBarCodeScanned = async ({ data }: { data: string }) => {
     // Prevent multiple scans
     if (processingRef.current || isProcessing) return;
+
+    // Sell mode: the scan opens the sale sheet (buyer's name) instead of a check-in.
+    if (sellMode) {
+      if (sellSheet) return;
+      if (hapticsOn) scanReadFeedback();
+      setSellSheet({ code: String(data ?? '') });
+      return;
+    }
 
     const ticketId = parseTicketId(data) ?? data;
     const last = lastScanRef.current;
@@ -1241,7 +1333,7 @@ export default function TicketScannerScreen() {
   }
 
   const statusOfOutcome = (o: ScanOutcome) => (o === 'valid' ? 'success' : o === 'warning' ? 'pending' : 'error');
-  const blocked = isProcessing || showLookup || doorResult !== null || scanResult !== null;
+  const blocked = isProcessing || showLookup || doorResult !== null || scanResult !== null || sellSheet !== null;
 
   return (
     <View style={styles.container}>
@@ -1266,7 +1358,15 @@ export default function TicketScannerScreen() {
 
             {/* Door mode wears its state on the viewfinder: a live dot + the
                 entry point, so the phone on the stand says where it is. */}
-            {doorMode && (
+            {sellMode && (
+              <View style={[styles.doorBadge, { top: insets.top + 12 }]}>
+                <View style={[styles.doorBadgeDot, { backgroundColor: T.amber }]} />
+                <Text style={styles.doorBadgeText} numberOfLines={1}>
+                  {t('physicalSell.modeBadge')}
+                </Text>
+              </View>
+            )}
+            {doorMode && !sellMode && (
               <View style={[styles.doorBadge, { top: insets.top + 12 }]}>
                 <View style={styles.doorBadgeDot} />
                 <Text style={styles.doorBadgeText} numberOfLines={1}>
@@ -1280,7 +1380,9 @@ export default function TicketScannerScreen() {
               <Text style={styles.instruction}>
                 {isProcessing
                   ? t('organizerTicketScanner.instructions.processing')
-                  : t('organizerTicketScanner.instructions.positionQr')}
+                  : sellMode
+                    ? t('physicalSell.instruction')
+                    : t('organizerTicketScanner.instructions.positionQr')}
               </Text>
             </View>
           </View>
@@ -1326,7 +1428,37 @@ export default function TicketScannerScreen() {
           </Touchable>
         </View>
 
+        {/* Printed tickets: sell (activate) mode, and typing a serial. */}
+        <View style={styles.toolsRow}>
+          <View style={[styles.tool, styles.toolGrow]}>
+            <Ticket size={18} color={sellMode ? T.accent : colors.textSecondary} />
+            <Text style={styles.toolText} numberOfLines={1}>{t('physicalSell.mode')}</Text>
+            {!sellOnly && (
+              <Switch
+                value={sellMode}
+                onValueChange={setSellMode}
+                trackColor={{ false: T.border, true: T.accent }}
+                thumbColor={T.white}
+                ios_backgroundColor={T.border}
+                accessibilityLabel={t('physicalSell.mode')}
+                style={styles.toolSwitch}
+              />
+            )}
+          </View>
+          {sellMode && (
+            <TouchableOpacity
+              style={styles.tool}
+              onPress={() => setSellSheet({ code: null })}
+              accessibilityRole="button"
+            >
+              <Keyboard size={18} color={colors.text} />
+              <Text style={styles.toolText} numberOfLines={1}>{t('physicalSell.typeSerial')}</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
         {/* Tools: manual lookup + door mode. */}
+        {!sellOnly && !sellMode && (
         <View style={styles.toolsRow}>
           <TouchableOpacity
             style={[styles.tool, styles.toolGrow]}
@@ -1351,8 +1483,26 @@ export default function TicketScannerScreen() {
             />
           </View>
         </View>
+        )}
 
-        {doorMode && (
+        {sellMode && recentScans.length > 0 && (
+          <View style={styles.doorPanel}>
+            <View style={styles.recentCard}>
+              <Text style={styles.recentTitle}>{t('doorScanner.recent.title')}</Text>
+              {recentScans.slice(0, 3).map((r) => (
+                <View key={r.key} style={styles.recentRow}>
+                  <Text style={styles.recentName} numberOfLines={1}>{r.name}</Text>
+                  <StatusChip status={statusOfOutcome(r.outcome)} label={r.label} />
+                  <Text style={styles.recentTime}>
+                    {r.at.toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' })}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {doorMode && !sellMode && (
           <View style={styles.doorPanel}>
             <StatTriplet
               items={[
@@ -1431,6 +1581,19 @@ export default function TicketScannerScreen() {
 
         {/* Check-ins this phone admitted while offline and has not delivered
             yet. Cleared as the queue syncs. */}
+        {pendingSales > 0 && (
+          <Touchable
+            style={[styles.statusStrip, { backgroundColor: T.amberMuted }]}
+            onPress={syncSales}
+            accessibilityRole="button"
+          >
+            <Ionicons name="sync-outline" size={15} color={T.amber} />
+            <Text style={[styles.statusStripText, { color: T.amber }]} numberOfLines={1}>
+              {t('physicalSell.pending', { count: pendingSales })}
+            </Text>
+          </Touchable>
+        )}
+
         {pendingSync > 0 && (
           <View style={[styles.statusStrip, { backgroundColor: T.amberMuted }]}>
             <Ionicons name="sync-outline" size={15} color={T.amber} />
@@ -1451,6 +1614,15 @@ export default function TicketScannerScreen() {
         listUnavailable={listUnavailable}
         doorOnly={accessMode === 'door'}
         onSelect={handleManualSelect}
+      />
+
+      <SellPrintedSheet
+        visible={sellSheet !== null}
+        eventId={eventId}
+        uid={uid}
+        code={sellSheet?.code ?? null}
+        onClose={() => setSellSheet(null)}
+        onOutcome={onSellOutcome}
       />
 
       <DoorResultOverlay

@@ -67,21 +67,24 @@ export function OrganizerTopNav({
 
   return (
     <div className="sticky top-0 z-40 border-b border-line bg-canvas/90 backdrop-blur-xl">
-      <div className="mx-auto flex h-14 max-w-7xl items-center gap-3 px-4 sm:px-6 lg:px-8">
+      {/* Phones: brand + icons on the first row, the tabs on their own full-width
+          row underneath, so Marketing / Orders / Team are never pushed off
+          screen behind the icons. sm and up: one row, as before. */}
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-3 px-4 sm:h-14 sm:flex-nowrap sm:px-6 lg:px-8">
         {/* Brand */}
-        <Link href="/" className="shrink-0 pr-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded">
+        <Link href="/" className="flex h-14 shrink-0 items-center pr-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded">
           <TikemWordmark italic className="text-2xl text-fg" />
         </Link>
 
         {/* Tabs */}
-        <nav className="scrollbar-hide flex flex-1 items-center gap-1 overflow-x-auto" aria-label={t('actions.organizer')}>
+        <nav className="scrollbar-hide order-last -mx-4 flex w-[calc(100%+2rem)] items-center gap-0.5 overflow-x-auto px-2 [mask-image:linear-gradient(to_right,black_85%,transparent)] sm:order-none sm:[mask-image:none] sm:mx-0 sm:w-auto sm:flex-1 sm:gap-1 sm:px-0" aria-label={t('actions.organizer')}>
           {tabs.map((tab) => {
             const active = isActive(tab.href)
             return (
               <Link
                 key={tab.href}
                 href={tab.href}
-                className={`relative flex h-14 shrink-0 items-center gap-2 whitespace-nowrap px-3 text-sm font-semibold transition-colors ${
+                className={`relative flex h-11 shrink-0 items-center gap-2 whitespace-nowrap px-2.5 text-sm sm:h-14 sm:px-3 font-semibold transition-colors ${
                   active ? 'text-fg' : 'text-fg-muted hover:text-fg-soft'
                 }`}
               >
@@ -98,7 +101,7 @@ export function OrganizerTopNav({
         </nav>
 
         {/* Right: finance, settings, account */}
-        <div className="flex shrink-0 items-center gap-1">
+        <div className="ml-auto flex shrink-0 items-center gap-1">
           <OrgSwitcher orgs={orgs} staleOrgCookie={staleOrgCookie} />
           {showFinance && (
           <Link

@@ -4,7 +4,7 @@ import { EMPTY_VALUE } from '@/lib/format'
 import { useTranslation } from 'react-i18next'
 
 import { useState, useTransition } from 'react'
-import { UserPlus, Users, Trash2, ShieldCheck, User, Briefcase, Crown, ChevronDown } from 'lucide-react'
+import { UserPlus, Users, Trash2, ShieldCheck, User, Briefcase, Crown, ChevronDown, Ticket } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import {
   OrgDataTable,
@@ -46,11 +46,12 @@ interface OrgTeamClientProps {
   loadError?: boolean
 }
 
-// The three roles a team member can hold (lib/organizer/teamRoles.ts).
+// The roles a team member can hold (lib/organizer/teamRoles.ts).
 const ROLES: { value: TeamRole; icon: LucideIcon }[] = [
   { value: 'admin', icon: ShieldCheck },
   { value: 'manager', icon: Briefcase },
   { value: 'staff', icon: User },
+  { value: 'seller', icon: Ticket },
 ]
 
 // The access explainer: what each role can really do (docs/specs/org-teams.md).
@@ -59,6 +60,7 @@ const ACCESS: { role: 'owner' | TeamRole; icon: LucideIcon }[] = [
   { role: 'admin', icon: ShieldCheck },
   { role: 'manager', icon: Briefcase },
   { role: 'staff', icon: User },
+  { role: 'seller', icon: Ticket },
 ]
 
 const OWNER_ROW_ID = '__owner__'
@@ -248,7 +250,7 @@ export default function OrgTeamClient({
 
   const openRoleEditor = (m: TeamRow) => {
     setEditing(m)
-    setEditRole((['admin', 'manager', 'staff'].includes(m.role) ? m.role : 'staff') as TeamRole)
+    setEditRole((['admin', 'manager', 'staff', 'seller'].includes(m.role) ? m.role : 'staff') as TeamRole)
     setEditFinance(m.role === 'admin' && m.finance_view === true)
     setError(null)
   }

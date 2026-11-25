@@ -227,8 +227,14 @@ export function toDoorRow(
   }
 }
 
-/** On the door list: live tickets, plus checked-in ones so "already in" can show. */
+/**
+ * On the door list: live tickets, plus checked-in ones so "already in" can show,
+ * plus printed tickets nobody has sold yet (lib/physical), so an offline door
+ * can say "not sold, not valid" instead of "not found" (status 'printed_unsold',
+ * live false: every build refuses them).
+ */
 export function belongsOnDoorList(ticket: Record<string, any>): boolean {
+  if (String(ticket?.kind || '') === 'physical' && String(ticket?.status || '') === 'printed_unsold') return true
   return isLiveStatus(ticket?.status) || isCheckedIn(ticket)
 }
 
