@@ -56,7 +56,7 @@ const LEASE_MS = 2 * 60 * 1000
 
 /** The slice of firebase-admin Auth the merge needs. */
 export interface MergeAuthAdmin {
-  getUser(uid: string): Promise<{ uid: string; email?: string; phoneNumber?: string; disabled?: boolean }>
+  getUser(uid: string): Promise<{ uid: string; email?: string; emailVerified?: boolean; phoneNumber?: string; disabled?: boolean }>
   updateUser(uid: string, props: Record<string, unknown>): Promise<unknown>
   revokeRefreshTokens(uid: string): Promise<unknown>
 }
@@ -153,7 +153,8 @@ export async function assessMerge(
   db: any,
   auth: MergeAuthAdmin,
   sourceUid: string,
-  targetUid: string
+  targetUid: string,
+  opts: { requireVerifiedTargetEmail?: boolean } = {}
 ): Promise<
   | { ok: true; movePhone: string | null }
   | { ok: false; kind: 'review'; reasons: string[]; source: OrgFootprint; target: OrgFootprint }
@@ -170,6 +171,11 @@ export async function assessMerge(
   }
   const [source, target] = await Promise.all([orgFootprint(db, sourceUid), orgFootprint(db, targetUid)])
   const reasons = orgBlockers(source)
+  // Pre-hijack guard: when the target was found by its EMAIL, that email must
+  // have been verified by whoever owns the target. Otherwise anyone could
+  // register someone else's address unverified and wait for the real owner to
+  // merge their account into it. Unverified => a human looks at it.
+  if (opts.requireVerifiedTargetEmail && !tgt.emailVerified) reasons.push('target_email_unverified')
   if (reasons.length) {
     if (target.hasOrgDoc || target.events > 0) reasons.push('both_accounts_are_organizers')
     return { ok: false, kind: 'review', reasons, source, target }
@@ -472,7 +478,9 @@ export async function runAccountMerge(db: any, auth: MergeAuthAdmin, req: MergeR
     return { status: 'completed', mergeId: id, counts: d.counts || {}, movedPhone: null, alreadyDone: true }
   }
 
-  const assessed = await assessMerge(db, auth, req.sourceUid, req.targetUid)
+  const assessed = await assessMerge(db, auth, req.sourceUid, req.targetUid, {
+    requireVerifiedTargetEmail: req.reason === 'phone_account_added_email',
+  })
   if (!assessed.ok && assessed.kind === 'blocked') return { status: 'blocked', mergeId: id, code: assessed.code }
   if (!assessed.ok) {
     const reviewId = await openMergeReview(db, {

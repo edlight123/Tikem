@@ -532,6 +532,23 @@ describe('account routes', () => {
     expect(auth.users.get('phone')!.disabled).toBeUndefined()
   })
 
+  it('never merges into an account whose email was never verified (pre-hijack guard)', async () => {
+    const { d, db, auth } = accountDeps()
+    seedPersonData(db)
+    // Someone registered ana@example.com without ever proving the inbox.
+    auth.users.get('email')!.emailVerified = false
+    const { body } = await sendAndVerify(d, 'phone', 'ana@example.com')
+    expect(body.status).toBe('needs_review')
+    expect(body.mergeId).toBeUndefined()
+    expect(db.store.get(`${MERGE_REVIEWS}/phone__email`)).toMatchObject({
+      status: 'pending',
+      blockers: expect.arrayContaining(['target_email_unverified']),
+    })
+    // Nothing moved, nobody disabled.
+    expect(db.store.get('tickets/t1')!.user_id).toBe('phone')
+    expect(auth.users.get('phone')!.disabled).toBeUndefined()
+  })
+
   it('"Verify later" parks the address unverified, but never an address another account owns', async () => {
     const { d, db, auth } = accountDeps()
     const taken = await handleEmailLater(req('phone', { email: 'ana@example.com' }), d)

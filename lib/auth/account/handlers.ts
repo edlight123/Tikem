@@ -186,7 +186,9 @@ export async function openMergeSession(
 ): Promise<{ mergeId: string; mergeStatus: 'merge_available' | 'needs_review' | 'blocked'; blockedCode?: string }> {
   const db = deps.db()
   const now = deps.now ? deps.now() : Date.now()
-  const assessed = await assessMerge(db, deps.auth(), s.sourceUid, s.targetUid)
+  const assessed = await assessMerge(db, deps.auth(), s.sourceUid, s.targetUid, {
+    requireVerifiedTargetEmail: s.reason === 'phone_account_added_email',
+  })
   const mergeId = crypto.randomBytes(18).toString('hex')
   if (!assessed.ok && assessed.kind === 'blocked') {
     return { mergeId: '', mergeStatus: 'blocked', blockedCode: assessed.code }
