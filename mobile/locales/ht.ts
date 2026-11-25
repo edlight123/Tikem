@@ -1402,6 +1402,8 @@ export default {
       sellThrough: 'vann',
       viewsOne: 'vizit',
       viewsOther: 'vizit',
+      printedOne: 'enprime',
+      printedOther: 'enprime',
     },
     status: {
       paused: 'An poz',
@@ -4598,6 +4600,25 @@ export default {
     door: {
       notSold: "Pa vann — pa valab",
       voided: "Tikè enprime anile",
+    },
+  },
+  printedBundle: {
+    title: "Biyè enprime",
+    online: "{n} sou entènèt",
+    printed: "{n} enprime",
+    notSoldYet: "{n} enprime, poko vann",
+    batchLine: "{qty} enprime · {sold} vann · {in} antre",
+    batchOrdered: "{qty} kòmande",
+    batchUnsold: "{n} poko vann",
+    manageOnWeb: "Jere sou sit la",
+    attendeeMarker: "Enprime · {serial}",
+    orderMarker: "Enprime",
+    batchStatus: {
+      awaitingPayment: "Ap tann peman",
+      printing: "Y ap enprime l",
+      ready: "Pare pou vann",
+      selling: "An vant",
+      cancelled: "Anile",
     },
   },
   richText: {

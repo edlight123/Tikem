@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { backendFetch } from './api/backend';
+import { backendFetch, backendJson } from './api/backend';
+import type { PrintedBatchSummary } from './printedBundle';
 import {
   enqueueActivation,
   syncActivationQueue,
@@ -128,5 +129,22 @@ export async function fetchSellerAssignments(): Promise<SellerAssignment[]> {
     return Array.isArray(json?.assignments) ? (json.assignments as SellerAssignment[]) : [];
   } catch {
     return [];
+  }
+}
+
+/**
+ * The event's printed batches with their counts (GET
+ * /api/organizer/events/{id}/physical-batches: owner, admin, manager). null
+ * when it cannot be read (no access, offline): callers then fall back to the
+ * ticket docs and hide the batch list.
+ */
+export async function fetchPrintedBatches(eventId: string): Promise<PrintedBatchSummary[] | null> {
+  try {
+    const json = await backendJson<{ batches?: PrintedBatchSummary[] }>(
+      `/api/organizer/events/${encodeURIComponent(eventId)}/physical-batches`
+    );
+    return Array.isArray(json?.batches) ? json.batches : null;
+  } catch {
+    return null;
   }
 }

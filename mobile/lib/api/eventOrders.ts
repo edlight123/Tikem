@@ -48,6 +48,8 @@ export interface EventOrder {
   }[];
   refund: { eligibleTicketIds: string[]; totals: MoneyLine[]; rails: string[] };
   canResend: boolean;
+  /** Printed tickets sold at a point of sale (no online payment, never revenue). Older servers omit it. */
+  printed?: boolean;
 }
 
 export interface EventOrdersResponse {
@@ -62,7 +64,10 @@ export interface EventAnalytics {
   checkInRate: number;
   revenue: MoneyLine[];
   salesByDay: { date: string; count: number }[];
-  tiers: { name: string; sold: number; revenue: MoneyLine[] }[];
+  /** `printed`: of `sold`, printed tickets sold at a point of sale (older servers omit it). */
+  tiers: { name: string; sold: number; printed?: number; revenue: MoneyLine[] }[];
+  /** Printed tickets: sold (inside ticketsSold), checked in, unsold seats. Older servers omit it. */
+  printed?: { sold: number; checkedIn: number; unsold: number };
   cities: { city: string; buyers: number }[];
   buyersWithoutCity: number;
   totalBuyers: number;

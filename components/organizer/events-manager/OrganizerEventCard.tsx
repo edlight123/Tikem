@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next'
 import { formatMoneyFromCents, formatPrimaryMoneyFromCentsByCurrency, normalizeCurrency } from '@/lib/money'
 import { StatusChip } from '@/components/ui/kit'
 import { getPosterTheme } from '@/lib/posterGradient'
+import { soldForPeople } from '@/lib/physical/rules'
 
 interface EventData {
   id: string
@@ -19,6 +20,8 @@ interface EventData {
   is_published: boolean
   banner_image_url?: string
   tickets_sold?: number
+  /** Seats printed batches hold without a buyer (lib/physical); not sales. */
+  physical_held_seats?: number
   total_tickets?: number
   revenue?: number
   revenueByCurrencyCents?: Record<string, number>
@@ -51,7 +54,8 @@ const NO_VALUE = '\u2013'
 export default function OrganizerEventCard({ event, showNeedsAttention = true }: OrganizerEventCardProps) {
   const { t } = useTranslation('organizer')
 
-  const ticketsSold = event.tickets_sold || 0
+  // Unsold printed seats sit inside tickets_sold: count people only.
+  const ticketsSold = soldForPeople(event)
   const totalTickets = event.total_tickets || 0
   const isSoldOut = ticketsSold >= totalTickets && totalTickets > 0
 

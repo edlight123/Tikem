@@ -60,6 +60,7 @@ import GalleryStrip from '../components/GalleryStrip';
 import OrgCoverSheet from '../components/organizer/OrgCoverSheet';
 import OrgHeroBackdrop from '../components/organizer/OrgHeroBackdrop';
 import { useActiveOrg } from '../lib/activeOrg';
+import { soldForPeople } from '../lib/printedBundle';
 import { COVER_TEMPLATE_SOURCES, readGallery, readOrgCover, type OrgCoverState } from '../lib/orgPage';
 
 const { width } = Dimensions.get('window');
@@ -293,7 +294,7 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
           end_datetime: data.end_datetime?.toDate ? data.end_datetime.toDate() : (data.end_datetime ? new Date(data.end_datetime) : null),
         };
 
-        totalSold += data.tickets_sold || 0;
+        totalSold += soldForPeople(data);
 
         // An event is over once it *ends*; multi-day events stay "upcoming"
         // while they are running. `end_datetime` is optional on event docs, so

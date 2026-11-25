@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { getOrganizerEvents, type OrganizerEvent } from './api/organizer';
 import { backendJson } from './api/backend';
+import { soldForPeople } from './printedBundle';
 import { earningsCurrency, withdrawableMinor, type EventEarningsRow } from './eventEarnings';
 
 /**
@@ -42,7 +43,7 @@ export type PayoutHistoryItem = {
 /** The slice of an event the hub renders; kept small so the snapshot serialises cleanly. */
 export type HubEvent = Pick<
   OrganizerEvent,
-  'id' | 'title' | 'start_datetime' | 'status' | 'tickets_sold' | 'banner_image_url' | 'cover_image_url'
+  'id' | 'title' | 'start_datetime' | 'status' | 'tickets_sold' | 'physical_held_seats' | 'banner_image_url' | 'cover_image_url'
 >;
 
 export type EarningsHubSnapshot = {
@@ -83,7 +84,8 @@ async function mapLimited<T, R>(items: T[], limit: number, fn: (item: T) => Prom
  * costs a request. An event whose counter is missing is still fetched.
  */
 function hasSales(e: HubEvent): boolean {
-  const sold = typeof e.tickets_sold === 'number' ? e.tickets_sold : null;
+  // People only: seats an unsold printed batch holds are not sales.
+  const sold = typeof e.tickets_sold === 'number' ? soldForPeople(e) : null;
   if (e.status === 'draft') return (sold || 0) > 0;
   return sold == null || sold > 0;
 }
@@ -140,6 +142,7 @@ export async function loadEarningsHub(userId: string): Promise<EarningsHubSnapsh
       start_datetime: e.start_datetime,
       status: e.status,
       tickets_sold: e.tickets_sold,
+      physical_held_seats: e.physical_held_seats,
       banner_image_url: e.banner_image_url,
       cover_image_url: e.cover_image_url,
     }))

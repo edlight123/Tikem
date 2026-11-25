@@ -8,6 +8,7 @@ import EventCardSkeleton from '@/components/organizer/events-manager/EventCardSk
 import QuickLinksBar from '@/components/organizer/events-manager/QuickLinksBar'
 import { PageHeader, FilterBar, FilterChip, OrgEmptyState, SearchInput } from '@/components/organizer/ui'
 import { Plus, List, Calendar, SlidersHorizontal, CalendarRange } from 'lucide-react'
+import { soldForPeople } from '@/lib/physical/rules'
 import { useTranslation } from 'react-i18next'
 import { isDemoMode, DEMO_EVENTS } from '@/lib/demo'
 import { getOrganizerEventsClient } from '@/lib/data/events.client'
@@ -157,9 +158,9 @@ export default function OrganizerEventsPage() {
     }
 
     if (filters.hasSales === true) {
-      filtered = filtered.filter((event) => (event.tickets_sold || 0) > 0)
+      filtered = filtered.filter((event) => soldForPeople(event) > 0)
     } else if (filters.hasSales === false) {
-      filtered = filtered.filter((event) => (event.tickets_sold || 0) === 0)
+      filtered = filtered.filter((event) => soldForPeople(event) === 0)
     }
 
     // Apply sorting
@@ -171,7 +172,7 @@ export default function OrganizerEventsPage() {
           comparison = new Date(a.start_datetime).getTime() - new Date(b.start_datetime).getTime()
           break
         case 'sales':
-          comparison = (a.tickets_sold || 0) - (b.tickets_sold || 0)
+          comparison = soldForPeople(a) - soldForPeople(b)
           break
         case 'created':
           comparison = new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime()

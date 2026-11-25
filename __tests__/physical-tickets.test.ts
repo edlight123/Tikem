@@ -52,12 +52,16 @@ import {
   physicalQrPayload,
   serialPrefix,
   tallyPhysical,
+  batchHeldSeats,
+  soldForPeople,
   tokenFromBytes,
 } from '@/lib/physical/rules'
 import {
   activatePhysicalTicket,
   assignRange,
+  cancelUnpaidBatch,
   createBatch,
+  loadEventBatches,
   getBatch,
   issueBatchTickets,
   markBatchPaid,
@@ -460,7 +464,7 @@ describe('release unsold seats', () => {
     expect(releaseSeats).not.toHaveBeenCalled()
 
     const tally = tallyPhysical(after)
-    expect(tally.total).toMatchObject({ printed: 100, activated: 30, released: 60, voided: 10, unsold: 0 })
+    expect(tally.total).toMatchObject({ printed: 100, activated: 30, released: 60, voided: 10, unsold: 0, held: 0 })
   })
 })
 
@@ -633,5 +637,74 @@ describe('seller assignments only for current team members', () => {
     db.store.delete('organizers/org1/team/s1')
     json = await (await assignmentsGET()).json()
     expect(json.assignments).toHaveLength(0)
+  })
+})
+
+describe('seats a printed batch still holds (bundled sold counts)', () => {
+  it('counts unsold and voided tickets whose seat has not come back', () => {
+    const tally = tallyPhysical([
+      { status: 'printed_unsold' },
+      { status: 'printed_unsold', seat_returned_at: '2026-11-24T00:00:00Z' },
+      { status: 'voided' },
+      { status: 'voided', seat_returned_at: '2026-11-24T00:00:00Z' },
+      { status: 'released', seat_returned_at: '2026-11-24T00:00:00Z' },
+      { status: 'valid', checked_in: true },
+    ])
+    expect(tally.total).toMatchObject({ printed: 6, unsold: 2, voided: 2, released: 1, activated: 1, checkedIn: 1, held: 2 })
+  })
+
+  it('holds the whole quantity before the tickets exist, nothing once cancelled', () => {
+    expect(batchHeldSeats({ status: 'awaiting_payment', quantity: 300 }, { printed: 0, held: 0 })).toBe(300)
+    expect(batchHeldSeats({ status: 'active', quantity: 300 }, { printed: 300, held: 212 })).toBe(212)
+    expect(batchHeldSeats({ status: 'paid', quantity: 300 }, { printed: 120, held: 120 })).toBe(300)
+    expect(batchHeldSeats({ status: 'cancelled', quantity: 300 }, { printed: 0, held: 0 })).toBe(0)
+  })
+})
+
+describe("the event's held printed seats (lists show sold for people)", () => {
+  const held = () => Number(db.store.get(`events/${EVENT}`)?.physical_held_seats)
+
+  it('holds the batch on order, gives a seat per sale, and nothing once released', async () => {
+    const batch = await readyBatch(100)
+    expect(held()).toBe(100)
+    const all = tickets().sort((a, b) => a.physical_serial_no - b.physical_serial_no)
+    const manager = { uid: 'm1', role: 'manager' as const }
+    for (const t of all.slice(0, 30)) {
+      await activatePhysicalTicket({ eventId: EVENT, serial: t.physical_serial, input: { name: 'Buyer' }, actor: manager })
+    }
+    expect(held()).toBe(70)
+    // The same sale again (first wins) moves nothing.
+    await activatePhysicalTicket({ eventId: EVENT, serial: all[0].physical_serial, input: { name: 'Other' }, actor: manager })
+    expect(held()).toBe(70)
+    await voidRange({ batch, range: { from: 31, to: 40 }, by: 'm1' })
+    expect(held()).toBe(70)
+    await releaseUnsold({ batch: (await getBatch(batch.id))!, by: 'm1' })
+    expect(held()).toBe(0)
+    // tickets_sold (the rollup) still counts the 30 sold seats only after release.
+    expect(soldForPeople({ tickets_sold: 30, physical_held_seats: held() })).toBe(30)
+  })
+
+  it('gives the seats back when an unpaid batch is cancelled', async () => {
+    seedEvent()
+    const created = await createBatch({ eventId: EVENT, event: db.store.get(`events/${EVENT}`)!, orgId: 'org1', tierId: 'vip', quantity: 120, method: 'moncash', createdBy: 'u1' })
+    if (!created.ok) throw new Error('create failed')
+    expect(held()).toBe(120)
+    await cancelUnpaidBatch(created.batch.id, 'u1')
+    expect(held()).toBe(0)
+  })
+
+  it('heals a drifted count when the batches are listed', async () => {
+    await readyBatch(100)
+    db.store.set(`events/${EVENT}`, { ...db.store.get(`events/${EVENT}`), physical_held_seats: 7 })
+    const list = await loadEventBatches(EVENT)
+    expect(list[0].heldSeats).toBe(100)
+    expect(held()).toBe(100)
+  })
+
+  it('soldForPeople never goes below zero and ignores a missing field', () => {
+    expect(soldForPeople({ tickets_sold: 300, physical_held_seats: 212 })).toBe(88)
+    expect(soldForPeople({ tickets_sold: 5 })).toBe(5)
+    expect(soldForPeople({ tickets_sold: 2, physical_held_seats: 9 })).toBe(0)
+    expect(soldForPeople(null)).toBe(0)
   })
 })
