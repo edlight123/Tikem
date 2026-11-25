@@ -185,6 +185,7 @@ export async function issueCompTickets(params: IssueCompParams): Promise<IssueCo
         attendee_name: recipientName,
         price_paid: 0,
         currency: event?.currency || 'HTG',
+        funds_rail: 'free',
         tier_id: tier.id,
         tier_name: tierName,
         ticket_type: tierName,

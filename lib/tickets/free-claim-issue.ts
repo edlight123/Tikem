@@ -622,6 +622,9 @@ export async function issueFreeClaim(
           price_paid: 0,
           currency: event.currency || 'HTG',
           payment_method: 'free',
+          // Where the money sits (lib/payouts/funds-rail): nowhere, or — for a
+          // pay-at-door ticket — in the organizer's hand at the door.
+          funds_rail: isDoorClaim ? 'cash' : 'free',
           // The seats behind this claim, so cancelling the RSVP can give them
           // back (/api/tickets/cancel-rsvp → releaseSeats).
           inventory_reservation_id: reservation.reservationId,

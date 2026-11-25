@@ -20,6 +20,10 @@ jest.mock('stripe', () => jest.fn(() => ({ paymentIntents: { create: mockCreate 
 jest.mock('@/lib/firebase/admin', () => ({ adminDb: {} }))
 // Never a live rate lookup from a test.
 jest.mock('@/lib/currency', () => ({ fetchStripeHTGRate: jest.fn(async () => 0.0076) }))
+jest.mock('@/lib/fx/usd-htg', () => ({
+  ...jest.requireActual('@/lib/fx/usd-htg'),
+  getUsdToHtgBaseRate: jest.fn(async () => ({ baseRate: 131.58, provider: 'test', fetchedAtIso: '2026-11-24T00:00:00Z', source: 'live' })),
+}))
 jest.mock('@/lib/auth', () => ({ getCurrentUser: jest.fn(async () => ({ id: 'u1', email: 'u@x.com' })) }))
 jest.mock('@/lib/security', () => ({
   isBlacklisted: jest.fn(async () => ({ blacklisted: false })),
@@ -57,7 +61,10 @@ jest.mock('@/lib/promo-codes', () => ({
 }))
 jest.mock('@/lib/promoters', () => ({ resolvePromoterCode: jest.fn(async () => null) }))
 jest.mock('@/lib/tracking-links', () => ({ resolveOrderAttribution: jest.fn(async () => null) }))
-jest.mock('@/lib/payment-provider', () => ({ getPaymentProviderForEventCountry: jest.fn(() => 'stripe') }))
+jest.mock('@/lib/payment-provider', () => ({
+  cardChargeRailForEventCountry: jest.fn(() => 'stripe'),
+  haitiCardEnabled: jest.fn(() => true),
+}))
 jest.mock('@/lib/admin/platform-settings', () => ({
   getPlatformSettings: jest.fn(async () => require('@/types/platform-settings').DEFAULT_PLATFORM_SETTINGS),
 }))
@@ -293,7 +300,7 @@ describe('minimum paid price at checkout', () => {
     expect((await post({ tiers: [{ tierId: 'free', quantity: 1 }, { tierId: 'ga', quantity: 1 }] })).status).toBe(200)
     Object.assign(mockEvent, { country: 'HT', currency: 'HTG' })
     tier('htcheap', 1)
-    jest.requireMock('@/lib/payment-provider').getPaymentProviderForEventCountry.mockReturnValueOnce('stripe')
+    jest.requireMock('@/lib/payment-provider').cardChargeRailForEventCountry.mockReturnValueOnce('stripe')
     const res = await post({ tierId: 'htcheap', quantity: 1 })
     expect(res.data.code).not.toBe('tier_price_below_minimum')
   })

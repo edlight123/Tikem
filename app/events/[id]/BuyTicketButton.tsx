@@ -31,9 +31,13 @@ const EmbeddedStripePayment = dynamic(() => import('./EmbeddedStripePayment'), {
  * nothing but dragging the shim in.) Please don't hoist either back up.
  */
 
-// Feature flag: Sogepay (Haiti card processing) is not live yet. While disabled, Haiti events
-// show only MonCash/NatCash (no card option). Flip to true to re-enable the Sogepay card flow.
-const SOGEPAY_ENABLED = false
+// Haiti card checkout runs on Stripe as a PLATFORM charge (lib/payment-provider:
+// cardChargeRailForEventCountry): international Visa/Mastercard, priced in HTG,
+// charged in USD at the day's rate. OFF until the owner enables it after a real
+// test payment: this build-time flag shows the button, HAITI_CARD_ENABLED on the
+// server accepts the charge. Sogepay never went live; its handler below stays
+// for the day it does, but no button reaches it.
+const HAITI_CARD_ENABLED = process.env.NEXT_PUBLIC_HAITI_CARD_ENABLED === 'true'
 
 // Feature flag: launching MonCash-only — NatCash hidden for now. The purchase
 // handler and backend path stay intact; flip to true to bring the option back.
@@ -852,14 +856,8 @@ export default function BuyTicketButton({ eventId, userId, isFree, payAtDoor = f
       }
 
       if (method === 'stripe') {
-        if (isHaitiEvent) {
-          throw new Error(
-            t('checkout.card_haiti_uses_sogepay', {
-              defaultValue: 'Card payments for Haiti events use Sogepay.',
-            })
-          )
-        }
-        // Use embedded payment instead of redirect
+        // Use embedded payment instead of redirect (Haiti events too: a platform
+        // charge in USD, see create-payment-intent).
         setShowModal(false)
         setShowEmbeddedPayment(true)
         setLoading(false)
@@ -1624,11 +1622,11 @@ export default function BuyTicketButton({ eventId, userId, isFree, payAtDoor = f
             )}
 
             <div className="space-y-3">
-              {/* Card Option (Stripe for US/CA and others; Sogepay for Haiti).
-                  Sogepay isn't live yet, so the card option is hidden for Haiti events for now. */}
-              {(!isHaitiEvent || SOGEPAY_ENABLED) && (
+              {/* Card Option — Stripe everywhere. On a Haiti event it is an
+                  international Visa/Mastercard charged in USD at the day's rate. */}
+              {(!isHaitiEvent || HAITI_CARD_ENABLED) && (
               <button
-                onClick={() => handlePurchase(isHaitiEvent ? 'sogepay' : 'stripe')}
+                onClick={() => handlePurchase('stripe')}
                 disabled={loading}
                 className="w-full flex items-center justify-between px-4 py-4 rounded-2xl bg-surface hover:bg-surface-high transition disabled:opacity-50"
               >
@@ -1640,10 +1638,14 @@ export default function BuyTicketButton({ eventId, userId, isFree, payAtDoor = f
                   </div>
                   <div className="text-left">
                     <div className="font-semibold text-fg">{t('events.credit_debit_card')}</div>
-                    <div className="text-sm text-fg-muted">{isHaitiEvent ? 'Sogepay' : t('events.visa_mastercard_amex')}</div>
+                    <div className="text-sm text-fg-muted">
+                      {isHaitiEvent
+                        ? t('events.visa_mastercard_usd', { defaultValue: 'Visa, Mastercard · charged in USD' })
+                        : t('events.visa_mastercard_amex')}
+                    </div>
                   </div>
                 </div>
-                {pendingMethod === (isHaitiEvent ? 'sogepay' : 'stripe') ? (
+                {pendingMethod === 'stripe' ? (
                   <svg className="w-5 h-5 text-fg-muted animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>

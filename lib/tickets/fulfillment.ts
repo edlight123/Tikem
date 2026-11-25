@@ -10,6 +10,7 @@
 // IMPORTANT: callers MUST verify the payment with the provider BEFORE calling fulfillPaidOrder.
 // This module does not talk to any payment gateway; it trusts that the order is paid.
 
+import { fundsRailForPaymentMethod } from '@/lib/payouts/funds-rail'
 import { createHmac } from 'node:crypto'
 import { createClient } from '@/lib/firebase-db/server'
 import { adminDb } from '@/lib/firebase/admin'
@@ -279,6 +280,9 @@ export async function fulfillPaidOrder(params: {
   completionFields?: Record<string, unknown>
 }): Promise<FulfillPaidOrderResult> {
   const { orderId, paymentMethod } = params
+  // Where the money sits (lib/payouts/funds-rail): MonCash (NatCash over the
+  // MonCash Button gateway settles there too) or Sogepay.
+  const fundsRail = fundsRailForPaymentMethod(paymentMethod)
   const transactionId = params.transactionId || null
   const logPrefix = params.logPrefix || '[fulfillment]'
 
@@ -573,6 +577,7 @@ export async function fulfillPaidOrder(params: {
         // refund returns the face value without it (lib/tickets/refundPlan.ts).
         buyer_fee_charged_amount: perTicketBuyerFee,
         payment_method: paymentMethod,
+        funds_rail: fundsRail,
         payment_id: transactionId || orderId,
         // The inventory reservation this seat is counted under, so a refund can
         // give the seat back (lib/tickets/seatReturn).
@@ -658,6 +663,7 @@ export async function fulfillPaidOrder(params: {
               charged_currency: chargedCurrency,
               buyer_fee_charged_amount: perTicketBuyerFee,
               payment_method: paymentMethod,
+              funds_rail: fundsRail,
               payment_id: transactionId || orderId,
               promoter_id: pendingTx.promoter_id || null,
               promoter_code: pendingTx.promoter_code || null,

@@ -40,6 +40,8 @@ export type AuditAction =
   | 'payout.receipt.delete'
   | 'moncash.prefunded.transfer'
   | 'moncash.prefunding_request.generate'
+  | 'money.fund_transfer.record'
+  | 'money.organizer_payout.record'
   | 'moncash.prefunding_request.update'
   | 'moncash.prefunding_letter.download'
   | 'moncash.prefunding_settings.update'
