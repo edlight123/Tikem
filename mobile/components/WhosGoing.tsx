@@ -276,7 +276,7 @@ const getStyles = (colors: any) =>
     },
     cardTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
     cardText: { flex: 1, minWidth: 0 },
-    cardTitle: { fontFamily: font.serif, fontSize: 24, lineHeight: 28, color: colors.text },
+    cardTitle: { fontFamily: font.serif, fontSize: 20, lineHeight: 24, color: colors.text },
     cardSub: { fontSize: 13, color: colors.textSecondary, marginTop: 2 },
     cardPile: { flexDirection: 'row', alignItems: 'center' },
     row: {

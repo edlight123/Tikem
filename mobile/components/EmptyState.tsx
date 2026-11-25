@@ -37,7 +37,7 @@ interface EmptyStateProps {
 }
 
 /** Widest the art poster gets, so it stays a poster on a tablet. */
-const ART_MAX_WIDTH = 360;
+const ART_MAX_WIDTH = 260;
 
 /**
  * The empty-state formula (POSH §2.6): a thin CENTERED OUTLINE icon on the bare
@@ -64,11 +64,11 @@ export default function EmptyState({
   const styles = getStyles(colors);
 
   if (art && !compact) {
-    // 4:5 like the art itself, but never taller than half the screen, so the
-    // CTA stays above the fold under a header on a small phone (there the
-    // crop simply gets wider; `cover` keeps the art centred).
+    // 4:5 like the art itself, but small (owner, TestFlight 2026-11-25:
+    // "all cards premium and smaller sized"): at most 260pt wide and a third
+    // of the screen tall; on a short phone the crop simply gets wider.
     const posterWidth = Math.min(width - 48, ART_MAX_WIDTH);
-    const posterHeight = Math.min(posterWidth * 1.25, height * 0.5);
+    const posterHeight = Math.min(posterWidth * 1.25, height * 0.36);
     return (
       <View style={styles.artContainer}>
         <View style={[styles.poster, { width: posterWidth, height: posterHeight }]}>
@@ -104,11 +104,7 @@ export default function EmptyState({
           </View>
         </View>
         {actionLabel && onAction && (
-          <WhitePillCTA
-            label={actionLabel}
-            onPress={onAction}
-            style={{ ...styles.artCta, width: posterWidth }}
-          />
+          <WhitePillCTA label={actionLabel} onPress={onAction} size="sm" style={styles.artCta} />
         )}
       </View>
     );
@@ -134,7 +130,7 @@ export default function EmptyState({
   return (
     <View style={[styles.container, compact && styles.compact]}>
       {Icon || !emoji ? (
-        React.createElement(Icon || Inbox, { size: 40, color: colors.textSecondary, strokeWidth: 1.5, style: styles.icon })
+        React.createElement(Icon || Inbox, { size: 28, color: colors.textSecondary, strokeWidth: 1.5, style: styles.icon })
       ) : (
         <Text style={styles.emoji}>{emoji}</Text>
       )}
@@ -166,8 +162,8 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       marginBottom: 16,
     },
     title: {
-      fontSize: 20,
-      fontWeight: '800',
+      fontSize: 17,
+      fontWeight: '700',
       color: colors.text,
       textAlign: 'center',
       letterSpacing: -0.3,
@@ -224,8 +220,8 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       justifyContent: 'flex-end',
     },
     posterText: {
-      paddingHorizontal: 20,
-      paddingBottom: 20,
+      paddingHorizontal: 16,
+      paddingBottom: 16,
     },
     artPlace: {
       fontSize: 11,
@@ -236,19 +232,19 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     },
     // Fixed white: the text sits on the dark scrim in every theme.
     artTitle: {
-      fontSize: 24,
-      fontWeight: '800',
+      fontSize: 18,
+      fontWeight: '700',
       color: '#FFFFFF',
-      letterSpacing: -0.4,
-      lineHeight: 28,
+      letterSpacing: -0.2,
+      lineHeight: 22,
     },
     artSubtitle: {
-      fontSize: 14,
-      lineHeight: 20,
+      fontSize: 13,
+      lineHeight: 18,
       color: 'rgba(255,255,255,0.78)',
       marginTop: 6,
     },
     artCta: {
-      marginTop: 20,
+      marginTop: 16,
     },
   });

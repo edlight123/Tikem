@@ -811,6 +811,7 @@
       "tomorrow": "Demen",
       "in_days": "Nan {{count}} jou",
       "see_events": "Gade evènman yo",
+      "see": "Gade",
       "dismiss": "Kache banyè sa a"
     }
   },
@@ -963,11 +964,8 @@
     }
   },
   "attendance_notice": {
-    "eyebrow": "Konfidansyalite",
-    "title": "Zanmi ou ka wè ki kote w prale",
-    "body": "Kounye a zanmi ou ka wè evènman ou prale yo. Se ou ki chwazi kiyès ki ka wè yo.",
-    "cta": "Gade paramèt yo",
-    "got_it": "Mwen konprann",
+    "text": "Zanmi ou ka wè ki kote w prale.",
+    "settings": "Paramèt",
     "dismiss": "Fèmen"
   },
   "checkout": {

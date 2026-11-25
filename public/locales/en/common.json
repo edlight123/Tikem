@@ -811,6 +811,7 @@
       "tomorrow": "Tomorrow",
       "in_days": "In {{count}} days",
       "see_events": "See events",
+      "see": "See",
       "dismiss": "Hide this banner"
     }
   },
@@ -963,11 +964,8 @@
     }
   },
   "attendance_notice": {
-    "eyebrow": "Privacy",
-    "title": "your friends can see your plans",
-    "body": "Events you're going to now show to your friends. You choose who sees them.",
-    "cta": "Review privacy",
-    "got_it": "Got it",
+    "text": "Your friends can see your plans.",
+    "settings": "Settings",
     "dismiss": "Dismiss"
   },
   "checkout": {

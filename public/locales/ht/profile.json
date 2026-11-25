@@ -128,10 +128,8 @@
       "logo_error": "Nou pa t ka voye logo a. Eseye ankò."
     },
     "find_friends": {
-      "eyebrow": "Zanmi",
       "title": "Jwenn moun pa w yo",
-      "body": "Gade ki moun ou konnen sou Tikèm. Plis zanmi, pi bon rekòmandasyon, epi ou ka envite yo nan evènman.",
-      "cta": "Jwenn zanmi"
+      "cta": "Jwenn"
     },
     "posters": {
       "title": "Evènman ou yo",

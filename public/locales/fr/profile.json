@@ -128,10 +128,8 @@
       "logo_error": "Impossible de téléverser le logo. Réessayez."
     },
     "find_friends": {
-      "eyebrow": "Amis",
       "title": "Retrouvez vos proches",
-      "body": "Voyez qui vous connaissez sur Tikèm. Plus d’amis, de meilleures suggestions, et des invitations aux événements.",
-      "cta": "Trouver des amis"
+      "cta": "Trouver"
     },
     "posters": {
       "title": "Vos évènements",

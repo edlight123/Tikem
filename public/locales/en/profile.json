@@ -128,10 +128,8 @@
       "logo_error": "Couldn't upload the logo. Try again."
     },
     "find_friends": {
-      "eyebrow": "Friends",
       "title": "Find your people",
-      "body": "See who you know on Tikèm. More friends, better picks, and you can invite them to events.",
-      "cta": "Find friends"
+      "cta": "Find"
     },
     "posters": {
       "title": "Your events",

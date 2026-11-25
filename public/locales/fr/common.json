@@ -811,6 +811,7 @@
       "tomorrow": "Demain",
       "in_days": "Dans {{count}} jours",
       "see_events": "Voir les événements",
+      "see": "Voir",
       "dismiss": "Masquer cette bannière"
     }
   },
@@ -963,11 +964,8 @@
     }
   },
   "attendance_notice": {
-    "eyebrow": "Confidentialité",
-    "title": "vos amis peuvent voir vos sorties",
-    "body": "Les événements auxquels vous allez sont désormais visibles par vos amis. Vous choisissez qui peut les voir.",
-    "cta": "Voir les paramètres",
-    "got_it": "Compris",
+    "text": "Vos amis voient vos sorties.",
+    "settings": "Réglages",
     "dismiss": "Fermer"
   },
   "checkout": {
