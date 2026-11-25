@@ -35,6 +35,8 @@ export interface EventTicketRow {
   isGuest: boolean
   orderKey: string
   refund: RefundPlan
+  /** A printed ticket's serial (lib/physical), '' for an online ticket. */
+  printedSerial: string
 }
 
 export interface MoneyLine {
@@ -71,6 +73,8 @@ export interface EventOrder {
     rails: string[]
   }
   canResend: boolean
+  /** Printed tickets sold at a point of sale (no online payment, never revenue). */
+  printed: boolean
 }
 
 /**
@@ -86,6 +90,25 @@ export function isSoldTicketStatus(status: unknown): boolean {
 
 function counts(status: string): boolean {
   return isSoldTicketStatus(status)
+}
+
+/** A printed (physical) ticket doc, whatever its state. */
+export function isPrintedTicketDoc(d: Record<string, any>): boolean {
+  return d?.kind === 'physical' || d?.source === 'physical' || Boolean(d?.physical_batch_id)
+}
+
+/**
+ * A printed ticket nobody has bought: still unsold, voided or released. It is
+ * a reserved seat, not a sale, an order or an attendee.
+ */
+export function isUnsoldPrintedRow(r: Pick<EventTicketRow, 'printedSerial' | 'status'>): boolean {
+  return Boolean(r.printedSerial) && ['printed_unsold', 'voided', 'released'].includes(r.status)
+}
+
+/** The same, read off a ticket doc. */
+export function isUnsoldPrintedDoc(d: Record<string, any>): boolean {
+  const s = String(d?.status ?? '')
+  return s === 'printed_unsold' || (isPrintedTicketDoc(d) && (s === 'voided' || s === 'released'))
 }
 
 export function serializeTs(v: unknown): string {
@@ -158,6 +181,7 @@ export function toTicketRow(
     isGuest: guest,
     orderKey,
     refund: planTicketRefund(d),
+    printedSerial: isPrintedTicketDoc(d) ? String(d.physical_serial || id) : '',
   }
 }
 
@@ -177,6 +201,8 @@ function orderStatus(rows: EventTicketRow[]): EventOrder['status'] {
 export function groupOrders(rows: EventTicketRow[]): EventOrder[] {
   const groups = new Map<string, EventTicketRow[]>()
   for (const row of rows) {
+    // An unsold printed ticket is a reserved seat, not an order.
+    if (isUnsoldPrintedRow(row)) continue
     const list = groups.get(row.orderKey)
     if (list) list.push(row)
     else groups.set(row.orderKey, [row])
@@ -229,6 +255,7 @@ export function groupOrders(rows: EventTicketRow[]): EventOrder[] {
         rails: Array.from(new Set(eligible.map((r) => (r.refund.eligible ? r.refund.rail : '')))).filter(Boolean),
       },
       canResend: Boolean(first.buyer.email) && list.some((r) => counts(r.status)),
+      printed: list.some((r) => Boolean(r.printedSerial)),
     })
   }
 
@@ -242,7 +269,10 @@ export interface EventAnalytics {
   checkInRate: number
   revenue: MoneyLine[]
   salesByDay: { date: string; count: number }[]
-  tiers: { name: string; sold: number; revenue: MoneyLine[] }[]
+  /** Of ticketsSold, how many per tier were printed tickets sold at a point of sale. */
+  tiers: { name: string; sold: number; printed: number; revenue: MoneyLine[] }[]
+  /** Printed tickets: sold (activated, included in ticketsSold), checked in, and seats still unsold. */
+  printed: { sold: number; checkedIn: number; unsold: number }
   cities: { city: string; buyers: number }[]
   buyersWithoutCity: number
   totalBuyers: number
@@ -261,7 +291,7 @@ export function computeEventAnalytics(rows: EventTicketRow[], capacity: number):
 
   const revenue = new Map<string, number>()
   const byDay = new Map<string, number>()
-  const tiers = new Map<string, { name: string; sold: number; revenue: Map<string, number> }>()
+  const tiers = new Map<string, { name: string; sold: number; printed: number; revenue: Map<string, number> }>()
   const buyerCity = new Map<string, string>()
 
   for (const r of live) {
@@ -271,10 +301,13 @@ export function computeEventAnalytics(rows: EventTicketRow[], capacity: number):
       byDay.set(day, (byDay.get(day) || 0) + 1)
     }
     const tierKey = r.tierId || r.tierName || 'default'
-    const tier = tiers.get(tierKey) || { name: r.tierName, sold: 0, revenue: new Map<string, number>() }
+    const tier = tiers.get(tierKey) || { name: r.tierName, sold: 0, printed: 0, revenue: new Map<string, number>() }
     tier.sold += 1
+    if (r.printedSerial) tier.printed += 1
     if (r.pricePaid > 0) tier.revenue.set(r.currency, (tier.revenue.get(r.currency) || 0) + r.pricePaid)
     tiers.set(tierKey, tier)
+    // A printed ticket's holder is a name typed at the point of sale, not a buyer account.
+    if (r.printedSerial) continue
     if (!buyerCity.has(r.buyerKey) || (!buyerCity.get(r.buyerKey) && r.buyer.city)) {
       buyerCity.set(r.buyerKey, r.buyer.city)
     }
@@ -308,10 +341,15 @@ export function computeEventAnalytics(rows: EventTicketRow[], capacity: number):
       .map(([date, count]) => ({ date, count }))
       .sort((a, b) => a.date.localeCompare(b.date)),
     tiers: Array.from(tiers.values())
-      .map((t) => ({ name: t.name, sold: t.sold, revenue: money(t.revenue) }))
+      .map((t) => ({ name: t.name, sold: t.sold, printed: t.printed, revenue: money(t.revenue) }))
       .sort((a, b) => b.sold - a.sold),
     cities: Array.from(cityCounts.values()).sort((a, b) => b.buyers - a.buyers || a.city.localeCompare(b.city)),
     buyersWithoutCity,
     totalBuyers: buyerCity.size,
+    printed: {
+      sold: live.filter((r) => r.printedSerial).length,
+      checkedIn: live.filter((r) => r.printedSerial && r.checkedIn).length,
+      unsold: rows.filter((r) => r.printedSerial && r.status === 'printed_unsold').length,
+    },
   }
 }

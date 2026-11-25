@@ -2,7 +2,8 @@ import { requireEventPage } from '../../../_lib/orgPage'
 import { AttendeesManager } from './AttendeesManager'
 import { loadTicketDocsForEvent } from '@/lib/tickets/loadTicketsForEvent'
 import { loadProfiles } from '@/lib/organizer/eventOrdersLoader'
-import { buyerIdOf, isGuestTicket, toTicketRow } from '@/lib/organizer/eventOrders'
+import { buyerIdOf, isGuestTicket, isUnsoldPrintedDoc, toTicketRow } from '@/lib/organizer/eventOrders'
+import { soldForPeople } from '@/lib/physical/rules'
 import { normalizeCurrency } from '@/lib/money'
 
 export const dynamic = 'force-dynamic'
@@ -19,7 +20,7 @@ export default async function AttendeesPage({ params }: { params: Promise<{ id: 
     organizer_id: eventData.organizer_id,
     start_datetime: eventData.start_datetime?.toDate?.()?.toISOString() || eventData.start_datetime,
     total_tickets: eventData.total_tickets,
-    tickets_sold: eventData.tickets_sold
+    tickets_sold: soldForPeople(eventData)
   }
 
   // Fetch all tickets for this event (supports legacy `eventId` field too)
@@ -39,7 +40,10 @@ export default async function AttendeesPage({ params }: { params: Promise<{ id: 
   // ticket (attendee_name / recipient_name, guest_email / recipient_email,
   // guest_phone), so they no longer show as "Unknown".
   const eventCurrency = normalizeCurrency(eventData.currency, 'HTG')
-  const datas = ticketDocs.map((doc: any) => ({ id: doc.id as string, data: (doc.data() || {}) as Record<string, any> }))
+  // A printed ticket nobody bought yet is a reserved seat, not an attendee.
+  const datas = ticketDocs
+    .map((doc: any) => ({ id: doc.id as string, data: (doc.data() || {}) as Record<string, any> }))
+    .filter(({ data }: { data: Record<string, any> }) => !isUnsoldPrintedDoc(data))
   const profiles = await loadProfiles(
     datas.filter(({ data }) => !isGuestTicket(data)).map(({ data }) => buyerIdOf(data))
   )

@@ -152,3 +152,64 @@ describe('groupOrders / computeEventAnalytics', () => {
     ])
   })
 })
+
+describe('printed tickets in orders and analytics', () => {
+  const printed = (id: string, extra: Record<string, any>) =>
+    toTicketRow(
+      id,
+      {
+        kind: 'physical',
+        source: 'physical',
+        physical_batch_id: 'b1',
+        physical_serial: `FETE-VIP-B1-${id}`,
+        tier_id: 'vip',
+        tier_name: 'VIP',
+        price_paid: 0,
+        payment_method: 'physical',
+        currency: 'HTG',
+        status: 'printed_unsold',
+        ...extra,
+      },
+      null,
+      'HTG'
+    )
+  const online = toTicketRow(
+    'o1',
+    { attendee_id: 'u1', payment_id: 'mc_1', tier_id: 'vip', tier_name: 'VIP', price_paid: 2000, currency: 'HTG', status: 'valid' },
+    { full_name: 'Ana', email: 'ana@x.co', default_city: 'Jacmel' },
+    'HTG'
+  )
+  const rows = [
+    online,
+    printed('0001', { status: 'valid', attendee_name: 'Jean', purchased_at: '2026-11-20T10:00:00.000Z', checked_in: true, checked_in_at: '2026-11-21T22:00:00.000Z' }),
+    printed('0002', { status: 'valid', attendee_name: 'Marie', purchased_at: '2026-11-20T11:00:00.000Z' }),
+    printed('0003', {}),
+    printed('0004', {}),
+    printed('0005', { status: 'voided' }),
+    printed('0006', { status: 'released' }),
+  ]
+
+  it('carries the serial on printed rows only', () => {
+    expect(online.printedSerial).toBe('')
+    expect(rows[1].printedSerial).toBe('FETE-VIP-B1-0001')
+  })
+
+  it('never lists an unsold, voided or released printed ticket as an order', () => {
+    const orders = groupOrders(rows)
+    expect(orders).toHaveLength(3)
+    expect(orders.filter((o) => o.printed).map((o) => o.buyer.name).sort()).toEqual(['Jean', 'Marie'])
+    expect(orders.find((o) => o.id === 'mc_1')!.printed).toBe(false)
+  })
+
+  it('counts sold printed tickets in the totals, never as revenue, and reports unsold seats apart', () => {
+    const a = computeEventAnalytics(rows, 300)
+    expect(a.ticketsSold).toBe(3)
+    expect(a.checkedIn).toBe(1)
+    expect(a.revenue).toEqual([{ currency: 'HTG', amount: 2000 }])
+    expect(a.tiers).toEqual([{ name: 'VIP', sold: 3, printed: 2, revenue: [{ currency: 'HTG', amount: 2000 }] }])
+    expect(a.printed).toEqual({ sold: 2, checkedIn: 1, unsold: 2 })
+    // Typed names at a point of sale are not buyer accounts with a city.
+    expect(a.totalBuyers).toBe(1)
+    expect(a.buyersWithoutCity).toBe(0)
+  })
+})

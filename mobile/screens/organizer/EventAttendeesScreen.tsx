@@ -31,6 +31,7 @@ import OrganizerScreenHeader from '../../components/organizer/OrganizerScreenHea
 import { useOverlayHeaderInset } from '../../components/OverlayHeader';
 import SegmentedTabs from '../../components/organizer/SegmentedTabs';
 import { doorBalance, doorMoney } from '../../lib/payAtDoor';
+import { isAttendeeTicket, printedSerialOf } from '../../lib/printedBundle';
 import { Users } from 'lucide-react-native';
 
 type RouteParams = {
@@ -55,6 +56,9 @@ interface Attendee {
   door_price?: number;
   door_currency?: string;
   door_paid?: boolean;
+  /** Printed tickets (lib/physical): sold at a point of sale, holder typed by the seller. */
+  kind?: string;
+  physical_serial?: string;
 }
 
 /** A ticket is checked in if any of the three signals say so. */
@@ -101,6 +105,8 @@ function slimAttendee(a: Attendee): Attendee {
     door_price: (a as any).door_price,
     door_currency: (a as any).door_currency,
     door_paid: (a as any).door_paid,
+    kind: (a as any).kind,
+    physical_serial: (a as any).physical_serial,
   } as Attendee;
 }
 
@@ -161,8 +167,9 @@ export default function EventAttendeesScreen() {
         // Ignored once the server has answered (success OR refusal): a
         // refused load must never be followed by the saved copy (fail closed).
         if (serverSettled.current) return;
-        if (saved && saved.length) {
-          setAttendees((cur) => (cur.length ? cur : saved));
+        const kept = (saved || []).filter(isAttendeeTicket);
+        if (kept.length) {
+          setAttendees((cur) => (cur.length ? cur : kept));
           setLoading(false);
         }
       });
@@ -211,10 +218,14 @@ export default function EventAttendeesScreen() {
       );
 
       const snapshot = await getDocs(q);
-      const data = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Attendee[];
+      // A printed ticket nobody bought yet is a reserved seat, not an
+      // attendee (lib/printedBundle); sold ones are listed with the rest.
+      const data = snapshot.docs
+        .map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }))
+        .filter(isAttendeeTicket) as Attendee[];
 
       serverOk.current = true;
       serverSettled.current = true;
@@ -436,7 +447,11 @@ export default function EventAttendeesScreen() {
         ? t('doorScanner.door.paidAtDoor')
         : t('doorScanner.door.owesAmount', { amount: doorMoney(door.owes, door.currency, language) })
       : '';
-    const sub = [item.tier_name, doorText, item.attendee_email].filter(Boolean).join(' · ');
+    // Printed: a small marker with the serial in place of a price (they carry
+    // price_paid 0 and are never revenue).
+    const serial = printedSerialOf(item);
+    const printedText = serial ? t('printedBundle.attendeeMarker', { serial }) : '';
+    const sub = [item.tier_name, printedText, doorText, item.attendee_email].filter(Boolean).join(' · ');
 
     return (
       <View style={styles.row}>

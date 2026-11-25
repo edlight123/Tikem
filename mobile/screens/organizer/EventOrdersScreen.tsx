@@ -200,7 +200,12 @@ export default function EventOrdersScreen() {
     // Struck through only when none of the money is still live.
     const muted = item.status === 'refunded' || item.status === 'refund_pending' || item.status === 'cancelled';
     const settled = item.status === 'paid' || item.status === 'free';
-    const amount = item.amounts.length ? formatMoneyLines(item.amounts) : t('organizerOrders.free');
+    // Printed tickets are paid at a point of sale: never shown as revenue or "Free".
+    const amount = item.amounts.length
+      ? formatMoneyLines(item.amounts)
+      : item.printed
+        ? t('printedBundle.orderMarker')
+        : t('organizerOrders.free');
     const buyer = item.buyer.name || item.buyer.email || t('organizerOrders.unknownBuyer');
 
     return (

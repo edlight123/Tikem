@@ -7,6 +7,7 @@ import {
   Animated,
   RefreshControl,
   StatusBar,
+  Linking,
   useWindowDimensions,
 } from 'react-native';
 import { useAppAlert } from '../../components/AppAlert';
@@ -56,6 +57,8 @@ import {
   TriangleAlert,
   type LucideIcon,
   Sparkles,
+  Ticket,
+  ExternalLink,
 } from 'lucide-react-native';
 import OrganizerScreenHeader from '../../components/organizer/OrganizerScreenHeader';
 import { useOverlayHeaderInset } from '../../components/OverlayHeader';
@@ -69,6 +72,15 @@ import { colors as T, radius, font } from '../../theme/tokens';
 import { eventRequiresApproval, getEventRequests } from '../../lib/attendRequests';
 import { displayCapacity } from '../../lib/ticketPricing';
 import { canOfferPublish, publishFixFor } from '../../lib/publishFix';
+import { fetchPrintedBatches } from '../../lib/physicalTicketsApi';
+import {
+  batchState,
+  hasSellableBatch,
+  printedManageUrl,
+  soldForPeople,
+  visibleBatches,
+  type PrintedBatchSummary,
+} from '../../lib/printedBundle';
 
 type ActionRow = { key: string; label: string; icon: LucideIcon; onPress: () => void };
 
@@ -82,11 +94,15 @@ type RouteParams = {
 // Derive a first-paint ticket breakdown from the fields the list already carries
 // (sold + capacity). Ticket-type rows fill in once the background refresh lands.
 const seedBreakdownFromEvent = (e: OrganizerEvent): EventTicketBreakdown => ({
-  ticketsSold: e.tickets_sold ?? 0,
+  ticketsSold: soldForPeople(e),
   ticketsCheckedIn: 0,
   capacity: e.total_tickets ?? 0,
+  printed: { sold: 0, checkedIn: 0, unsold: 0 },
   ticketTypes: [],
 });
+
+/** Batch list per event, kept for this app session so a re-open paints it at once. */
+const batchesCache = new Map<string, PrintedBatchSummary[]>();
 
 export default function OrganizerEventManagementScreen() {
   const { colors } = useTheme();
@@ -127,6 +143,13 @@ export default function OrganizerEventManagementScreen() {
   const [refreshing, setRefreshing] = useState(false);
   // Page views (lib/eventViews.ts): loaded on the side, never blocks the screen.
   const [views, setViews] = useState<EventViews | null>(null);
+  // Owner, or an admin granted read-only finances (the screen is read-only for them).
+  const activeOrg = useActiveOrg();
+  // Printed batches (lib/physical): who runs events sees them; ordering and
+  // managing stay on the web for now.
+  const canManagePrinted = activeOrg.can('manage_events');
+  const canSellPrinted = activeOrg.can('sell_physical');
+  const [batches, setBatches] = useState<PrintedBatchSummary[] | null>(() => batchesCache.get(eventId) ?? null);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -148,15 +171,23 @@ export default function OrganizerEventManagementScreen() {
       if (v) setViews(v);
     });
     try {
-      const [eventData, breakdown] = await Promise.all([
+      // The batches feed both the printed section and the sold counts (a
+      // batch awaiting payment already holds its seats).
+      const batchesP = canManagePrinted ? fetchPrintedBatches(eventId) : Promise.resolve(null);
+      const [eventData, breakdown, printedBatches] = await Promise.all([
         getEventById(eventId),
-        getEventTicketBreakdown(eventId),
+        getEventTicketBreakdown(eventId, { batches: batchesP }),
+        batchesP,
       ]);
 
       if (eventData) {
         setEvent(eventData);
         setTicketData(breakdown);
         setIsPaused(!eventData.is_published);
+      }
+      if (printedBatches) {
+        batchesCache.set(eventId, printedBatches);
+        setBatches(printedBatches);
       }
     } catch (error) {
       console.error('Error loading event management data:', error);
@@ -181,8 +212,6 @@ export default function OrganizerEventManagementScreen() {
     navigation.navigate('EventAnalytics', { eventId, eventTitle: event?.title });
   };
 
-  // Owner, or an admin granted read-only finances (the screen is read-only for them).
-  const activeOrg = useActiveOrg();
   const canSeeEarnings = activeOrg.financeView;
 
   const handleViewEarnings = () => {
@@ -229,6 +258,14 @@ export default function OrganizerEventManagementScreen() {
   );
   const handleRequests = () => {
     navigation.navigate('EventRequests', { eventId });
+  };
+
+  const handleSellPrinted = () => {
+    navigation.navigate('TicketScanner', { eventId, sellMode: true });
+  };
+
+  const handleManagePrinted = () => {
+    Linking.openURL(printedManageUrl(eventId)).catch(() => undefined);
   };
 
   const handleTrackingLinks = () => {
@@ -462,7 +499,11 @@ export default function OrganizerEventManagementScreen() {
     checkedIn: ticketsCheckedIn,
     sellThrough,
     views: views ? { total: views.total, today: views.today } : null,
+    printedSold: ticketData.printed?.sold ?? 0,
   });
+  const shownBatches = visibleBatches(batches);
+  const showPrinted = canManagePrinted && shownBatches.length > 0;
+  const showSellPrinted = canSellPrinted && hasSellableBatch(batches);
 
   const canCancel = event?.status !== 'cancelled';
   const offerPublish = canOfferPublish(event as any);
@@ -629,7 +670,27 @@ export default function OrganizerEventManagementScreen() {
                 // The 1,000,000 "unlimited" sentinel is not a real cap: show
                 // just "22 sold" and no progress bar.
                 const tierCap = displayCapacity(ticketType.capacity);
-                const pct = tierCap > 0 ? Math.min(100, (ticketType.sold / tierCap) * 100) : 0;
+                const pctOf = (n: number) => (tierCap > 0 ? Math.max(0, Math.min(100, (n / tierCap) * 100)) : 0);
+                // Printed tickets ride with the online ones: one bar, online
+                // white, printed sold grey, printed seats not sold yet dim.
+                const hasPrinted = ticketType.printedSold > 0 || ticketType.printedUnsold > 0;
+                const onlinePct = pctOf(ticketType.online);
+                const printedPct = Math.min(100 - onlinePct, pctOf(ticketType.printedSold));
+                const unsoldPct = Math.min(100 - onlinePct - printedPct, pctOf(ticketType.printedUnsold));
+                const split = [
+                  ticketType.printedSold > 0 || ticketType.online > 0
+                    ? t('printedBundle.online', { n: ticketType.online })
+                    : '',
+                  ticketType.printedSold > 0 ? t('printedBundle.printed', { n: ticketType.printedSold }) : '',
+                ]
+                  .filter(Boolean)
+                  .join(' + ');
+                const subline = [
+                  ticketType.printedSold > 0 ? split : '',
+                  ticketType.printedUnsold > 0 ? t('printedBundle.notSoldYet', { n: ticketType.printedUnsold }) : '',
+                ]
+                  .filter(Boolean)
+                  .join(' · ');
                 return (
                   <View key={index} style={[styles.tierRow, index > 0 && styles.tierRowSpaced]}>
                     <View style={styles.tierInfo}>
@@ -640,15 +701,79 @@ export default function OrganizerEventManagementScreen() {
                           : `${ticketType.sold} ${t('common.sold')}`}
                       </Text>
                     </View>
+                    {hasPrinted && !!subline && (
+                      <Text style={styles.tierSplit} numberOfLines={2}>{subline}</Text>
+                    )}
                     {tierCap > 0 && (
                       <View style={styles.tierTrack}>
-                        <View style={[styles.tierFill, { width: `${pct}%` }]} />
+                        <View style={[styles.tierFill, { width: `${onlinePct}%` }]} />
+                        {printedPct > 0 && <View style={[styles.tierFillPrinted, { width: `${printedPct}%` }]} />}
+                        {unsoldPct > 0 && <View style={[styles.tierFillHeld, { width: `${unsoldPct}%` }]} />}
                       </View>
                     )}
                   </View>
                 );
               })}
             </View>
+          </View>
+        )}
+
+        {/* Printed tickets: the batches, compact, with their counts. Ordering
+            and managing stay on the web; selling opens the scanner's sell mode. */}
+        {showPrinted && (
+          <View style={styles.section}>
+            <SectionHeader title={t('printedBundle.title')} />
+            {shownBatches.length > 0 && (
+              <View style={[styles.tierGroup, styles.batchGroup]}>
+                {shownBatches.map((b, index) => {
+                  const state = batchState(b.batch.status);
+                  const tone =
+                    state.tone === 'live' ? T.accent : state.tone === 'pending' ? T.amber : colors.textTertiary;
+                  const unsold = Math.max(0, Number(b.counts?.unsold) || 0);
+                  // Not printed yet (awaiting payment / paid): only the quantity ordered.
+                  const issued = (Number(b.counts?.printed) || 0) > 0;
+                  const line = !issued
+                    ? t('printedBundle.batchOrdered', { qty: Number(b.batch.quantity) || 0 })
+                    : [
+                        t('printedBundle.batchLine', {
+                          qty: Number(b.batch.quantity) || 0,
+                          sold: Number(b.counts?.activated) || 0,
+                          in: Number(b.counts?.checkedIn) || 0,
+                        }),
+                        unsold > 0 ? t('printedBundle.batchUnsold', { n: unsold }) : '',
+                      ]
+                        .filter(Boolean)
+                        .join(' · ');
+                  return (
+                    <View key={b.batch.id} style={[styles.tierRow, index > 0 && styles.tierRowSpaced]}>
+                      <View style={styles.tierInfo}>
+                        <Text style={styles.tierName} numberOfLines={1}>
+                          {b.batch.tier_name || t('organizerOrders.generalAdmission')}
+                          {b.batch.serial_prefix ? <Text style={styles.batchPrefix}>{`  ${b.batch.serial_prefix}`}</Text> : null}
+                        </Text>
+                        <View style={styles.batchState}>
+                          <View style={[styles.batchDot, { backgroundColor: tone }]} />
+                          <Text style={styles.batchStateText} numberOfLines={1}>
+                            {t(`printedBundle.batchStatus.${state.key}`)}
+                          </Text>
+                        </View>
+                      </View>
+                      <Text style={styles.tierSplit} numberOfLines={2}>{line}</Text>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
+            <ListGroup>
+              {showSellPrinted ? (
+                <ListRow icon={Ticket} title={t('physicalSell.mode')} onPress={handleSellPrinted} />
+              ) : null}
+              <ListRow
+                icon={ExternalLink}
+                title={t('printedBundle.manageOnWeb')}
+                onPress={handleManagePrinted}
+              />
+            </ListGroup>
           </View>
         )}
 
@@ -882,6 +1007,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     fontVariant: ['tabular-nums'],
   },
   tierTrack: {
+    flexDirection: 'row',
     marginTop: 8,
     height: 3,
     backgroundColor: T.surfaceRaised,
@@ -891,7 +1017,45 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   tierFill: {
     height: '100%',
     backgroundColor: T.white,
+  },
+  tierFillPrinted: {
+    height: '100%',
+    backgroundColor: T.textSecondary,
+  },
+  tierFillHeld: {
+    height: '100%',
+    backgroundColor: T.textTertiary,
+    opacity: 0.6,
+  },
+  tierSplit: {
+    marginTop: 4,
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.textSecondary,
+    fontVariant: ['tabular-nums'],
+  },
+  batchGroup: {
+    marginBottom: 12,
+  },
+  batchPrefix: {
+    fontSize: 12,
+    fontWeight: '400',
+    color: colors.textTertiary,
+  },
+  batchState: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexShrink: 0,
+  },
+  batchDot: {
+    width: 6,
+    height: 6,
     borderRadius: 3,
+  },
+  batchStateText: {
+    fontSize: 13,
+    color: colors.textSecondary,
   },
   ctaDock: {
     position: 'absolute',
