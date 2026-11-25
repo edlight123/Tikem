@@ -1430,6 +1430,8 @@ export default {
       sellThrough: 'vendu',
       viewsOne: 'vue',
       viewsOther: 'vues',
+      printedOne: 'imprimé',
+      printedOther: 'imprimés',
     },
     status: {
       paused: 'En pause',
@@ -4627,6 +4629,24 @@ export default {
     door: {
       notSold: "Non vendu — non valide",
       voided: "Billet imprimé annulé",
+    },
+  },
+  printedBundle: {
+    title: "Billets imprimés",
+    online: "{n} en ligne",
+    printed: "{n} imprimés",
+    notSoldYet: "{n} imprimés, pas encore vendus",
+    batchLine: "{qty} imprimés · {sold} vendus · {in} entrés",
+    batchUnsold: "{n} pas encore vendus",
+    manageOnWeb: "Gérer sur le web",
+    attendeeMarker: "Imprimé · {serial}",
+    orderMarker: "Imprimé",
+    batchStatus: {
+      awaitingPayment: "En attente de paiement",
+      printing: "En impression",
+      ready: "Prêt à vendre",
+      selling: "En vente",
+      cancelled: "Annulé",
     },
   },
   richText: {

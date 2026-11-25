@@ -44,6 +44,7 @@ import {
   PAYMENT_WINDOW_MS,
   serialPrefix,
   tallyPhysical,
+  batchHeldSeats,
   tokenFromBytes,
   validRange,
   type ActivationActor,
@@ -852,6 +853,8 @@ export async function activatePhysicalTicket(params: {
 export interface BatchSummary {
   batch: BatchDoc
   counts: BatchCounts
+  /** Seats reserved by this batch that nobody has bought yet (rules.batchHeldSeats). */
+  heldSeats: number
   bySeller: Array<{ uid: string; name: string; counts: BatchCounts }>
 }
 
@@ -868,6 +871,7 @@ export async function loadEventBatches(eventId: string): Promise<BatchSummary[]>
     out.push({
       batch,
       counts: total,
+      heldSeats: batchHeldSeats(batch, total),
       bySeller: Object.entries(bySeller)
         .filter(([uid]) => uid)
         .map(([uid, counts]) => ({ uid, name: names.get(uid) || '', counts })),

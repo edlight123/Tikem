@@ -328,10 +328,12 @@ export interface BatchCounts {
   checkedIn: number
   voided: number
   released: number
+  /** Seats still reserved by tickets nobody bought (unsold, or voided before the seat came back). */
+  held: number
 }
 
 export function emptyCounts(): BatchCounts {
-  return { printed: 0, unsold: 0, activated: 0, checkedIn: 0, voided: 0, released: 0 }
+  return { printed: 0, unsold: 0, activated: 0, checkedIn: 0, voided: 0, released: 0, held: 0 }
 }
 
 /** Tally printed tickets: overall and per seller uid ('' = unassigned). */
@@ -349,7 +351,21 @@ export function tallyPhysical(tickets: Array<Record<string, any>>): { total: Bat
       else if (s === 'released') c.released++
       else c.activated++
       if (t.checked_in === true || t.checked_in_at) c.checkedIn++
+      if ((s === 'printed_unsold' || s === 'voided') && !t.seat_returned_at) c.held++
     }
   }
   return { total, bySeller }
+}
+
+/**
+ * Seats a batch still holds on the event's inventory without a buyer: its
+ * unsold (or voided, seat not yet returned) tickets, plus the whole quantity
+ * of tickets not issued yet (a batch awaiting payment reserves its seats at
+ * order time). A cancelled batch gave its seats back. The event's
+ * tickets_sold counts these seats, so "sold" for people = tickets_sold − held.
+ */
+export function batchHeldSeats(batch: { status?: unknown; quantity?: unknown }, counts: Pick<BatchCounts, 'printed' | 'held'>): number {
+  if (String(batch?.status || '') === 'cancelled') return 0
+  const quantity = Math.max(0, Math.round(Number(batch?.quantity) || 0))
+  return Math.max(0, counts.held) + Math.max(0, quantity - Math.max(0, counts.printed))
 }

@@ -1862,6 +1862,8 @@ export default {
       sellThrough: 'sold',
       viewsOne: 'view',
       viewsOther: 'views',
+      printedOne: 'printed',
+      printedOther: 'printed',
     },
     status: {
       paused: 'Paused',
@@ -4608,6 +4610,24 @@ export default {
     door: {
       notSold: "Not sold — not valid",
       voided: "Voided printed ticket",
+    },
+  },
+  printedBundle: {
+    title: "Printed tickets",
+    online: "{n} online",
+    printed: "{n} printed",
+    notSoldYet: "{n} printed, not sold yet",
+    batchLine: "{qty} printed · {sold} sold · {in} checked in",
+    batchUnsold: "{n} not sold yet",
+    manageOnWeb: "Manage on the web",
+    attendeeMarker: "Printed · {serial}",
+    orderMarker: "Printed",
+    batchStatus: {
+      awaitingPayment: "Awaiting payment",
+      printing: "Printing",
+      ready: "Ready to sell",
+      selling: "Selling",
+      cancelled: "Cancelled",
     },
   },
   richText: {

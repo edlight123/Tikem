@@ -52,6 +52,7 @@ import {
   physicalQrPayload,
   serialPrefix,
   tallyPhysical,
+  batchHeldSeats,
   tokenFromBytes,
 } from '@/lib/physical/rules'
 import {
@@ -460,7 +461,7 @@ describe('release unsold seats', () => {
     expect(releaseSeats).not.toHaveBeenCalled()
 
     const tally = tallyPhysical(after)
-    expect(tally.total).toMatchObject({ printed: 100, activated: 30, released: 60, voided: 10, unsold: 0 })
+    expect(tally.total).toMatchObject({ printed: 100, activated: 30, released: 60, voided: 10, unsold: 0, held: 0 })
   })
 })
 
@@ -633,5 +634,26 @@ describe('seller assignments only for current team members', () => {
     db.store.delete('organizers/org1/team/s1')
     json = await (await assignmentsGET()).json()
     expect(json.assignments).toHaveLength(0)
+  })
+})
+
+describe('seats a printed batch still holds (bundled sold counts)', () => {
+  it('counts unsold and voided tickets whose seat has not come back', () => {
+    const tally = tallyPhysical([
+      { status: 'printed_unsold' },
+      { status: 'printed_unsold', seat_returned_at: '2026-11-24T00:00:00Z' },
+      { status: 'voided' },
+      { status: 'voided', seat_returned_at: '2026-11-24T00:00:00Z' },
+      { status: 'released', seat_returned_at: '2026-11-24T00:00:00Z' },
+      { status: 'valid', checked_in: true },
+    ])
+    expect(tally.total).toMatchObject({ printed: 6, unsold: 2, voided: 2, released: 1, activated: 1, checkedIn: 1, held: 2 })
+  })
+
+  it('holds the whole quantity before the tickets exist, nothing once cancelled', () => {
+    expect(batchHeldSeats({ status: 'awaiting_payment', quantity: 300 }, { printed: 0, held: 0 })).toBe(300)
+    expect(batchHeldSeats({ status: 'active', quantity: 300 }, { printed: 300, held: 212 })).toBe(212)
+    expect(batchHeldSeats({ status: 'paid', quantity: 300 }, { printed: 120, held: 120 })).toBe(300)
+    expect(batchHeldSeats({ status: 'cancelled', quantity: 300 }, { printed: 0, held: 0 })).toBe(0)
   })
 })
