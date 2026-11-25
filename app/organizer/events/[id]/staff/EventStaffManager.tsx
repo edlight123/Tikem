@@ -357,22 +357,22 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
 
                   return (
                     <tr key={m.id} className="block py-2 hover:bg-surface-low sm:table-row sm:py-0">
-                      <td className="block px-4 py-1.5 sm:table-cell sm:px-6 sm:py-4">
-                        <div className="font-medium text-fg">{displayName}</div>
+                      <td className="block min-w-0 px-4 py-1.5 sm:table-cell sm:max-w-[16rem] sm:px-6 sm:py-4">
+                        <div className="truncate font-medium text-fg" title={displayName}>{displayName}</div>
                         <div className="text-sm text-fg-muted">{tikemCrew ? tx('event_staff.tikem_crew') : m.role || 'staff'}</div>
                         {showEmail && (
-                          <div className="text-xs text-fg-muted mt-0.5">{profile.email}</div>
+                          <div className="mt-0.5 truncate text-xs text-fg-muted" title={profile.email || ''}>{profile.email}</div>
                         )}
                       </td>
                       <td className="block px-4 py-1.5 sm:table-cell sm:px-6 sm:py-4 text-sm text-fg-muted">
                         <div className="space-y-2">
                           <div className="text-fg-muted">{tx('event_staff.can_check_in')}</div>
-                          {m.role === 'owner' || tikemCrew ? (
+                          {tikemCrew ? null : m.role === 'owner' ? (
                             <div className="text-fg-muted">
                               Can view attendee list: {m.permissions?.viewAttendees ? 'Yes' : 'No'}
                             </div>
                           ) : (
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center justify-between gap-3 sm:justify-start">
                               <span className="text-fg-muted">{tx('event_staff.can_view_attendee_list')}</span>
                               <button
                                 type="button"
@@ -395,7 +395,7 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
                           )}
                         </div>
                       </td>
-                      <td className="block px-4 py-1.5 sm:table-cell sm:px-6 sm:py-4 sm:text-right">
+                      <td className={`${tikemCrew ? 'hidden' : 'block'} px-4 pb-2 pt-1.5 sm:table-cell sm:px-6 sm:py-4 sm:text-right`}>
                         {!tikemCrew && (
                         <button
                           onClick={() =>
@@ -407,7 +407,7 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
                               cta: 'Remove',
                             })
                           }
-                          className="text-sm font-medium text-danger-soft transition-colors hover:text-danger-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-danger-strong rounded"
+                          className="inline-flex h-10 w-full items-center justify-center rounded bg-surface-raised text-sm font-medium text-danger-soft transition-colors hover:bg-surface-high focus:outline-none focus-visible:ring-2 focus-visible:ring-danger-strong sm:h-auto sm:w-auto sm:bg-transparent sm:hover:bg-transparent"
                         >
                           {tx('actions.remove')}
                         </button>
@@ -451,10 +451,15 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
 
                   return (
                     <tr key={inv.id} className="block py-2 hover:bg-surface-low sm:table-row sm:py-0">
-                      <td className="block px-4 py-1.5 sm:table-cell sm:px-6 sm:py-4 text-sm text-fg">{inv.method}</td>
-                      <td className="block px-4 py-1.5 sm:table-cell sm:px-6 sm:py-4 text-sm text-fg-muted">{target || ''}</td>
-                      <td className="block px-4 py-1.5 sm:table-cell sm:px-6 sm:py-4 text-sm text-fg-muted">{status}</td>
-                      <td className="block px-4 py-1.5 sm:table-cell sm:px-6 sm:py-4 sm:text-right">
+                      <td className="hidden px-6 py-4 text-sm text-fg sm:table-cell">{inv.method}</td>
+                      <td className="block min-w-0 px-4 py-1.5 text-sm sm:table-cell sm:max-w-[16rem] sm:px-6 sm:py-4">
+                        <div className="truncate text-fg sm:text-fg-muted" title={target || ''}>{target || ''}</div>
+                        <div className="mt-0.5 text-xs text-fg-muted sm:hidden">
+                          {inv.method} · {status}
+                        </div>
+                      </td>
+                      <td className="hidden px-6 py-4 text-sm text-fg-muted sm:table-cell">{status}</td>
+                      <td className={`${!inv.revokedAt && !inv.usedAt ? 'block' : 'hidden'} px-4 pb-2 pt-1.5 sm:table-cell sm:px-6 sm:py-4 sm:text-right`}>
                         {!inv.revokedAt && !inv.usedAt ? (
                           <button
                             onClick={() =>
@@ -466,7 +471,7 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
                                 cta: 'Revoke',
                               })
                             }
-                            className="text-sm font-medium text-danger-soft transition-colors hover:text-danger-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-danger-strong rounded"
+                            className="inline-flex h-10 w-full items-center justify-center rounded bg-surface-raised text-sm font-medium text-danger-soft transition-colors hover:bg-surface-high focus:outline-none focus-visible:ring-2 focus-visible:ring-danger-strong sm:h-auto sm:w-auto sm:bg-transparent sm:hover:bg-transparent"
                           >
                             {tx('actions.revoke')}
                           </button>
@@ -493,7 +498,7 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
             aria-modal="true"
             aria-labelledby="invite-staff-title"
             onClick={(e) => e.stopPropagation()}
-            className="bg-surface-raised-solid rounded-2xl max-w-md w-full p-6"
+            className="bg-surface-raised-solid rounded max-w-md w-full p-6"
           >
             <h3 id="invite-staff-title" className="font-display italic text-xl text-fg mb-4">{tx('event_staff.invite_staff')}</h3>
 
@@ -595,7 +600,7 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
             aria-modal="true"
             aria-labelledby="staff-confirm-title"
             onClick={(e) => e.stopPropagation()}
-            className="bg-surface-raised-solid rounded-2xl max-w-md w-full p-6"
+            className="bg-surface-raised-solid rounded max-w-md w-full p-6"
           >
             <h3 id="staff-confirm-title" className="font-display italic text-xl text-fg mb-2">{pendingConfirm.title}</h3>
             <p className="text-sm text-fg-muted mb-6">{pendingConfirm.message}</p>
