@@ -1071,7 +1071,18 @@
     "permissions": "Pèmisyon",
     "staff_members": "Anplwaye yo",
     "status": "Estati",
-    "target": "Sib"
+    "target": "Sib",
+    "user": "Itilizatè",
+    "invite_status_pending": "Ap tann",
+    "invite_status_claimed": "Aksepte",
+    "invite_status_revoked": "Anile",
+    "method_email": "Imèl",
+    "method_phone": "Telefòn",
+    "method_link": "Lyen",
+    "view_attendee_list_yes": "Ka wè lis patisipan yo: wi",
+    "view_attendee_list_no": "Ka wè lis patisipan yo: non",
+    "role_owner": "Pwopriyetè",
+    "role_staff": "Anplwaye"
   },
   "earnings": {
     "available": "Disponib",

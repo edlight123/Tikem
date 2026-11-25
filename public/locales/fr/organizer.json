@@ -1071,7 +1071,18 @@
     "permissions": "Autorisations",
     "staff_members": "Membres du personnel",
     "status": "Statut",
-    "target": "Cible"
+    "target": "Cible",
+    "user": "Utilisateur",
+    "invite_status_pending": "En attente",
+    "invite_status_claimed": "Acceptée",
+    "invite_status_revoked": "Révoquée",
+    "method_email": "E-mail",
+    "method_phone": "Téléphone",
+    "method_link": "Lien",
+    "view_attendee_list_yes": "Peut voir la liste des participants : oui",
+    "view_attendee_list_no": "Peut voir la liste des participants : non",
+    "role_owner": "Propriétaire",
+    "role_staff": "Personnel"
   },
   "earnings": {
     "available": "Disponible",

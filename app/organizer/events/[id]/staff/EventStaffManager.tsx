@@ -342,7 +342,7 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
             <table className="block w-full sm:table">
               <thead className="hidden border-b border-line bg-surface-low sm:table-header-group">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-fg-muted uppercase tracking-wider">User</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-fg-muted uppercase tracking-wider">{tx('event_staff.user')}</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-fg-muted uppercase tracking-wider">{tx('event_staff.permissions')}</th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-fg-muted uppercase tracking-wider">{tx('event_staff.actions')}</th>
                 </tr>
@@ -359,7 +359,7 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
                     <tr key={m.id} className="block py-2 hover:bg-surface-low sm:table-row sm:py-0">
                       <td className="block min-w-0 px-4 py-1.5 sm:table-cell sm:max-w-[16rem] sm:px-6 sm:py-4">
                         <div className="truncate font-medium text-fg" title={displayName}>{displayName}</div>
-                        <div className="text-sm text-fg-muted">{tikemCrew ? tx('event_staff.tikem_crew') : m.role || 'staff'}</div>
+                        <div className="text-sm text-fg-muted">{tikemCrew ? tx('event_staff.tikem_crew') : tx(`event_staff.role_${m.role || 'staff'}`, { defaultValue: m.role || 'staff' })}</div>
                         {showEmail && (
                           <div className="mt-0.5 truncate text-xs text-fg-muted" title={profile.email || ''}>{profile.email}</div>
                         )}
@@ -369,7 +369,7 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
                           <div className="text-fg-muted">{tx('event_staff.can_check_in')}</div>
                           {tikemCrew ? null : m.role === 'owner' ? (
                             <div className="text-fg-muted">
-                              Can view attendee list: {m.permissions?.viewAttendees ? 'Yes' : 'No'}
+                              {m.permissions?.viewAttendees ? tx('event_staff.view_attendee_list_yes') : tx('event_staff.view_attendee_list_no')}
                             </div>
                           ) : (
                             <div className="flex items-center justify-between gap-3 sm:justify-start">
@@ -395,8 +395,8 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
                           )}
                         </div>
                       </td>
-                      <td className={`${tikemCrew ? 'hidden' : 'block'} px-4 pb-2 pt-1.5 sm:table-cell sm:px-6 sm:py-4 sm:text-right`}>
-                        {!tikemCrew && (
+                      <td className={`${tikemCrew || m.role === 'owner' ? 'hidden' : 'block'} px-4 pb-2 pt-1.5 sm:table-cell sm:px-6 sm:py-4 sm:text-right`}>
+                        {!tikemCrew && m.role !== 'owner' && (
                         <button
                           onClick={() =>
                             setPendingConfirm({
@@ -442,20 +442,21 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
               <tbody className="block divide-y divide-line sm:table-row-group">
                 {invites.map((inv) => {
                   const status = inv.revokedAt
-                    ? 'Revoked'
+                    ? tx('event_staff.invite_status_revoked')
                     : inv.usedAt
-                      ? 'Claimed'
-                      : 'Pending'
+                      ? tx('event_staff.invite_status_claimed')
+                      : tx('event_staff.invite_status_pending')
+                  const methodLabel = tx(`event_staff.method_${inv.method}`, { defaultValue: inv.method })
 
-                  const target = inv.method === 'email' ? inv.targetEmail : inv.method === 'phone' ? inv.targetPhone : 'Link'
+                  const target = inv.method === 'email' ? inv.targetEmail : inv.method === 'phone' ? inv.targetPhone : tx('event_staff.method_link')
 
                   return (
                     <tr key={inv.id} className="block py-2 hover:bg-surface-low sm:table-row sm:py-0">
-                      <td className="hidden px-6 py-4 text-sm text-fg sm:table-cell">{inv.method}</td>
+                      <td className="hidden px-6 py-4 text-sm text-fg sm:table-cell">{methodLabel}</td>
                       <td className="block min-w-0 px-4 py-1.5 text-sm sm:table-cell sm:max-w-[16rem] sm:px-6 sm:py-4">
                         <div className="truncate text-fg sm:text-fg-muted" title={target || ''}>{target || ''}</div>
                         <div className="mt-0.5 text-xs text-fg-muted sm:hidden">
-                          {inv.method} · {status}
+                          {methodLabel} · {status}
                         </div>
                       </td>
                       <td className="hidden px-6 py-4 text-sm text-fg-muted sm:table-cell">{status}</td>

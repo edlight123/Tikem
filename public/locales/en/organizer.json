@@ -1071,7 +1071,18 @@
     "permissions": "Permissions",
     "staff_members": "Staff Members",
     "status": "Status",
-    "target": "Target"
+    "target": "Target",
+    "user": "User",
+    "invite_status_pending": "Pending",
+    "invite_status_claimed": "Claimed",
+    "invite_status_revoked": "Revoked",
+    "method_email": "Email",
+    "method_phone": "Phone",
+    "method_link": "Link",
+    "view_attendee_list_yes": "Can view attendee list: Yes",
+    "view_attendee_list_no": "Can view attendee list: No",
+    "role_owner": "Owner",
+    "role_staff": "Staff"
   },
   "earnings": {
     "available": "Available",
