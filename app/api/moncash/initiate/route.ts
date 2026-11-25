@@ -86,6 +86,7 @@ export async function POST(request: Request) {
       quantity,
       amount: totalAmount,
       payment_method: 'moncash',
+      funds_rail: 'moncash',
       // Always pending: tickets are issued only by the verified callback through the
       // shared fulfillment pipeline. A row born 'completed' had no tickets at all.
       status: 'pending',

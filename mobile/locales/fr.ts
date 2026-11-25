@@ -1126,10 +1126,12 @@ export default {
     subtotal: 'Sous-total',
     serviceFee: 'Frais de service',
     serviceFeeNonRefundable: 'Les frais de service ne sont pas remboursables, sauf si l’événement est annulé.',
+    cardChargedUsd: 'Votre carte est débitée en dollars US, au taux du jour.',
     selectMethod: 'Choisissez un moyen de paiement',
     methods: {
       card: 'Carte bancaire',
       cardBrands: 'Visa, Mastercard, AmEx',
+      cardBrandsUsd: 'Visa, Mastercard · débité en USD',
       sogepay: 'Sogebank (Sogepay)',
       haitiMobileMoney: 'Mobile Money Haïti',
       moncash: 'MonCash',
@@ -1152,6 +1154,8 @@ export default {
     stripeMissingKey: 'Le paiement par carte n’est pas disponible dans cette version de l’app. Mettez Tikèm à jour ou achetez sur tikem.co.',
     errors: {
       haitiUseSogepay: 'Pour les événements en Haïti, utilisez Sogepay ou Mobile Money.',
+      cardBelowMinimum: "Le paiement par carte commence à {{amount}} HTG. Utilisez MonCash pour les petites commandes.",
+      cardFxUnavailable: "Nous ne parvenons pas à obtenir un taux de change fiable pour le moment : le paiement par carte est suspendu. Payez avec MonCash, ou réessayez dans quelques minutes.",
       stripeUnavailable: 'Stripe n’est pas disponible pour le moment.',
       paymentFailed: 'Paiement échoué. Veuillez réessayer.',
       missingSogepayUrl: 'URL de redirection Sogepay manquante.',

@@ -1559,9 +1559,11 @@ export default {
     subtotal: 'Subtotal',
     serviceFee: 'Service fee',
     serviceFeeNonRefundable: 'Service fee is non-refundable unless the event is cancelled.',
+    cardChargedUsd: "Your card is charged in US dollars at today's rate.",
     methods: {
       card: 'Credit/Debit Card',
       cardBrands: 'Visa, Mastercard, AmEx',
+      cardBrandsUsd: 'Visa, Mastercard · charged in USD',
       sogepay: 'Sogebank (Sogepay)',
       haitiMobileMoney: 'Haiti Mobile Money',
       moncash: 'MonCash',
@@ -1584,6 +1586,8 @@ export default {
     stripeMissingKey: "Card payments aren't available in this version of the app. Please update Tikèm, or buy on tikem.co.",
     errors: {
       haitiUseSogepay: 'For Haiti events, please use Sogepay or Mobile Money.',
+      cardBelowMinimum: "Card payments start at {{amount}} HTG. Please use MonCash for smaller orders.",
+      cardFxUnavailable: "We can't get a reliable exchange rate right now, so card payment is paused. Please pay with MonCash, or try again in a few minutes.",
       stripeUnavailable: 'Stripe is not available right now.',
       paymentFailed: 'Payment failed. Please try again.',
       missingSogepayUrl: 'Missing Sogepay redirect URL.',
