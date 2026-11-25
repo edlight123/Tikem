@@ -42,6 +42,8 @@ export interface PosterFacts {
   venue?: string;
   city?: string;
   lineup?: string[];
+  /** The event's country: 'HT' prints the flyer's time as "8:00 PM" in French too. */
+  country?: string;
 }
 
 export interface PosterSpec {
@@ -122,6 +124,7 @@ export function posterQuery(facts: PosterFacts, spec: PosterSpec, locale: string
     lineup: (facts.lineup || []).join('|'),
     locale: ['ht', 'fr', 'en'].includes(locale) ? locale : 'ht',
   });
+  if (facts.country) q.set('country', facts.country);
   if (spec.photo) q.set('photo', spec.photo);
   if (spec.treatment) q.set('treatment', spec.treatment);
   return q;

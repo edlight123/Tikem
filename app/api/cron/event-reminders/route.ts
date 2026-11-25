@@ -104,7 +104,8 @@ export async function GET(request: Request) {
           event.title,
           startDate(event.start_datetime) || new Date(event.start_datetime),
           attendeeIds,
-          reminder.id as 'event_reminder_24h' | 'event_reminder_3h' | 'event_reminder_30min'
+          reminder.id as 'event_reminder_24h' | 'event_reminder_3h' | 'event_reminder_30min',
+          { country: (event as any).country, timezone: (event as any).timezone, city: (event as any).city }
         )
       },
 

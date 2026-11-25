@@ -6,6 +6,7 @@
 // primary button. Every string a user or organizer typed goes through a kit block
 // that escapes it; nothing here interpolates raw text into HTML.
 
+import { isHaitiEvent } from '@/lib/datetime/eventClock'
 import {
   renderEmail,
   appUrl,
@@ -81,7 +82,8 @@ function doorsLabel(event: ReminderEvent, lang: EmailLang): string {
   if (m && Number(m[1]) < 24 && Number(m[2]) < 60) {
     const hour = Number(m[1])
     const mm = m[2]
-    if (lang === 'fr') return mm === '00' ? `${hour}h` : `${hour}h${mm}`
+    // Haiti reads AM/PM in every language (owner, 2026-11-25).
+    if (lang === 'fr' && !isHaitiEvent(event)) return mm === '00' ? `${hour}h` : `${hour}h${mm}`
     return `${hour % 12 === 0 ? 12 : hour % 12}:${mm} ${hour < 12 ? 'AM' : 'PM'}`
   }
   return raw

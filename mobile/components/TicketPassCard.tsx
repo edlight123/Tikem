@@ -4,9 +4,10 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Touchable } from './ui/Touchable';
 import { CalendarPlus, MapPin, Send, ExternalLink } from 'lucide-react-native';
 import { useTheme } from '../contexts/ThemeContext';
-import { useI18n } from '../contexts/I18nContext';
+import { useI18n, translateIn } from '../contexts/I18nContext';
 import type { Language } from '../contexts/I18nContext';
-import { safeFormatForLanguage } from '../lib/dates';
+import { formatEventTime, safeFormatForLanguage } from '../lib/dates';
+import { ticketLanguage } from '../lib/eventClock';
 import TicketQRCard from './TicketQRCard';
 import StatusChip from './StatusChip';
 import AddToWalletButton from './AddToWalletButton';
@@ -65,7 +66,11 @@ export default function TicketPassCard({
   const isLive = isLiveTicket(ticket?.status);
 
   const eventTitle = event?.title || ticket?.event_title || t('common.event');
-  const dateLabel = safeDate(start, 'EEE, MMM d · h:mm a', language);
+  // The ticket itself (QR card) of a Haiti event is French, its time "8:00 PM",
+  // on the event's own clock, whatever the phone's language (lib/eventClock).
+  const place = { country: event?.country ?? ticket?.country, timezone: event?.timezone ?? ticket?.timezone };
+  const ticketLang = ticketLanguage(place, language);
+  const dateLabel = formatEventTime(start, place, 'EEE, MMM d · h:mm a', ticketLang) || undefined;
   const tier = ticketTierLabel(ticket);
   const holder = user?.displayName || user?.email || undefined;
   const orderRef = ticketOrderRef(ticket);
@@ -112,8 +117,9 @@ export default function TicketPassCard({
           eventTitle={eventTitle}
           dateLabel={dateLabel}
           tierName={tier}
-          holderName={holder ? `${t('ticketPass.admit')} ${holder}` : undefined}
+          holderName={holder ? `${translateIn(ticketLang, 'ticketPass.admit')} ${holder}` : undefined}
           orderRef={orderRef.replace(/^TKM-/, '')}
+          orderLabel={translateIn(ticketLang, 'ticketPass.orderRef', { ref: orderRef.replace(/^TKM-/, '') })}
         />
       </Touchable>
 

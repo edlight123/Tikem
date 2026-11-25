@@ -2,6 +2,7 @@ import { adminDb } from '@/lib/firebase/admin'
 import type { NotificationType } from '@/types/database'
 import { sendExpoPushNotificationToUser } from '@/lib/push/expo'
 import { readUserNotifyPref } from '@/lib/notifications/userPreferences'
+import { formatEventDateTime, type ClockEvent } from '@/lib/datetime/eventClock'
 
 /**
  * SERVER-SIDE notification triggers
@@ -158,7 +159,9 @@ export async function sendEventReminder(
   eventTitle: string,
   startDateTime: Date,
   attendeeIds: string[],
-  reminderType: 'event_reminder_24h' | 'event_reminder_3h' | 'event_reminder_30min'
+  reminderType: 'event_reminder_24h' | 'event_reminder_3h' | 'event_reminder_30min',
+  /** The event's country/zone/city: the time is printed on ITS clock ("8:00 PM" for Haiti). */
+  place?: ClockEvent
 ): Promise<void> {
   const timeLabels = {
     event_reminder_24h: '24 hours',
@@ -167,12 +170,13 @@ export async function sendEventReminder(
   }
 
   const timeLabel = timeLabels[reminderType]
-  const formattedDate = startDateTime.toLocaleDateString('en-US', {
+  // On the event's clock (the cron runs in UTC), 12-hour: "Saturday, June 21 at 8:00 PM".
+  const formattedDate = formatEventDateTime(startDateTime, place ?? null, 'en', {
     weekday: 'long',
     month: 'long',
     day: 'numeric',
     hour: 'numeric',
-    minute: '2-digit'
+    minute: '2-digit',
   })
 
   const { createNotification } = await import('./notifications/helpers')

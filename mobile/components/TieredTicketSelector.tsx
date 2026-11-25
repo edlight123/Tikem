@@ -24,6 +24,7 @@ import { priceOrder } from '../lib/buyerPricing';
 import WhitePillCTA from './WhitePillCTA';
 import MoneyText from './MoneyText';
 import { radius } from '../theme/tokens';
+import { formatEventDateTime } from '../lib/eventClock';
 
 interface TicketTier {
   id: string;
@@ -276,7 +277,14 @@ export default function TieredTicketSelector({
     if (isNaN(d.getTime())) return '';
     // Day AND time: "Nov 17, 12:00 AM". A date alone left buyers guessing
     // whether "Nov 17" meant now (SANTA PIANO, 2026-11-17).
-    return d.toLocaleString(locale, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+    // A Haiti event reads "17 nov. 12:00 AM" in every language (lib/eventClock).
+    return formatEventDateTime(
+      d,
+      { country },
+      locale,
+      { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' },
+      { month: 'short', day: 'numeric' },
+    );
   };
 
   /** The earliest upcoming sale start among active tiers, when NOTHING can be bought yet. */

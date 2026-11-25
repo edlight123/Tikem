@@ -9,6 +9,7 @@ import { fileResponse } from '@/lib/exports/respond'
 import { marketTimezone } from '@/lib/notifications/policy'
 import { renderAttendeeListPdf, type PdfAttendee } from '@/lib/attendees/attendeeListPdf'
 import { toDate } from '@/lib/postEvent/timing'
+import { haitiHourOptions, isHaitiCountry, isHaitiZone } from '@/lib/datetime/eventClock'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -76,7 +77,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     const start = toDate(event.start_datetime)
     const fmt = (d: Date, o: Intl.DateTimeFormatOptions) => {
       try {
-        return new Intl.DateTimeFormat(l.locale, { timeZone: tz, ...o }).format(d)
+        // Haiti reads AM/PM in every language (lib/datetime/eventClock).
+        const h12 = o.hour ? haitiHourOptions(isHaitiZone(tz) || isHaitiCountry(event.country)) : {}
+        return new Intl.DateTimeFormat(l.locale, { timeZone: tz, ...o, ...h12 }).format(d)
       } catch {
         return new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', ...o }).format(d)
       }

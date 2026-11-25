@@ -4,6 +4,7 @@ import { adminDb } from '@/lib/firebase/admin'
 import Navbar from '@/components/Navbar'
 import { isAdmin } from '@/lib/admin'
 import type { QueryDocumentSnapshot } from 'firebase-admin/firestore'
+import { formatEventDateTime } from '@/lib/datetime/eventClock'
 
 export const revalidate = 0
 
@@ -78,6 +79,8 @@ export default async function StaffHomePage() {
         start_datetime: toISOString(data?.start_datetime),
         venue_name: data?.venue_name ? String(data.venue_name) : undefined,
         city: data?.city ? String(data.city) : undefined,
+        country: data?.country ? String(data.country) : undefined,
+        timezone: data?.timezone ? String(data.timezone) : undefined,
         canCheckIn,
       }
     })
@@ -109,7 +112,10 @@ export default async function StaffHomePage() {
                   <div className="min-w-0">
                     <div className="font-semibold text-fg truncate">{e.title}</div>
                     <div className="text-xs text-fg-muted mt-1">
-                      {e.start_datetime ? new Date(e.start_datetime).toLocaleString() : 'Date TBD'}
+                      {/* On the event's clock (this renders on a UTC server); "8:00 PM" for Haiti. */}
+                      {e.start_datetime
+                        ? formatEventDateTime(e.start_datetime, e, 'en', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })
+                        : 'Date TBD'}
                       {e.venue_name ? ` • ${e.venue_name}` : ''}
                       {e.city ? ` • ${e.city}` : ''}
                     </div>
