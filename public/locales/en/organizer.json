@@ -91,7 +91,8 @@
     "door_reentry_refused": "RE-ENTRY REFUSED",
     "door_overriding": "Checking…",
     "door_scan_next": "Scan next",
-    "tab_printed": "Printed tickets"
+    "tab_printed": "Printed tickets",
+    "tab_door_team": "Door team"
   },
   "your_events": "Your Events",
   "view_all_events": "View all events →",

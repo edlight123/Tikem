@@ -105,10 +105,18 @@ service cloud.firestore {
       return isSignedIn() && exists(/databases/$(database)/documents/events/$(eventId)/members/$(request.auth.uid));
     }
 
+    // A door seat may be time-boxed (Tikèm door team crew, lib/doorTeam):
+    // access_from / access_until are Timestamps; seats without them are open.
+    function memberSeatLive(m) {
+      return (m.get('access_from', null) == null || request.time >= m.access_from) &&
+             (m.get('access_until', null) == null || request.time <= m.access_until);
+    }
+
     function canCheckin(eventId) {
       return isEventOwner(eventId) || (
         isEventMember(eventId) &&
-        get(/databases/$(database)/documents/events/$(eventId)/members/$(request.auth.uid)).data.permissions.checkin == true
+        get(/databases/$(database)/documents/events/$(eventId)/members/$(request.auth.uid)).data.permissions.checkin == true &&
+        memberSeatLive(get(/databases/$(database)/documents/events/$(eventId)/members/$(request.auth.uid)).data)
       );
     }
 
@@ -1004,6 +1012,24 @@ service cloud.firestore {
     }
     // The printing price list and its change history: admin console only.
     match /config/physical_tickets {
+      allow read, write: if false;
+      match /history/{changeId} {
+        allow read, write: if false;
+      }
+    }
+
+    // Door team service (lib/doorTeam). Server-only: organizers go through
+    // /api/organizer/events/{id}/door-team, Tikèm admins through
+    // /api/admin/door-team (Admin SDK). The crew's door access is an ordinary
+    // events/{id}/members seat with an access window (memberSeatLive above).
+    match /door_team_requests/{requestId} {
+      allow read, write: if false;
+    }
+    match /door_team_orders/{orderId} {
+      allow read, write: if false;
+    }
+    // The door team price list and its change history: admin console only.
+    match /config/door_team {
       allow read, write: if false;
       match /history/{changeId} {
         allow read, write: if false;

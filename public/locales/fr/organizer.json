@@ -91,7 +91,8 @@
     "door_reentry_refused": "RÉADMISSION REFUSÉE",
     "door_overriding": "Vérification…",
     "door_scan_next": "Scanner le suivant",
-    "tab_printed": "Billets imprimés"
+    "tab_printed": "Billets imprimés",
+    "tab_door_team": "Équipe d'accueil"
   },
   "your_events": "Vos événements",
   "view_all_events": "Voir tous les événements →",

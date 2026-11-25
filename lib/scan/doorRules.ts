@@ -35,6 +35,21 @@ export type DoorAccessInput = {
    * stays per event, via `member`).
    */
   orgRole?: string | null
+  /** Clock for time-boxed seats (access_from / access_until); defaults to now. */
+  now?: number
+}
+
+/**
+ * A door seat may carry an access window (Tikèm door team crew: a day before
+ * arrival to a few hours after the event). Outside it the seat grants nothing.
+ */
+export function memberSeatIsLive(member: Record<string, any> | null | undefined, now: number): boolean {
+  if (!member) return false
+  const from = toIso(member.access_from)
+  const until = toIso(member.access_until)
+  if (from && now < Date.parse(from)) return false
+  if (until && now > Date.parse(until)) return false
+  return true
 }
 
 export type DoorAccessDecision =
@@ -61,6 +76,11 @@ export function evaluateDoorAccess(input: DoorAccessInput): DoorAccessDecision {
   }
   if (input.isAdmin) return { allowed: true, role: 'admin', canViewAttendees: true }
   if (member && member.permissions?.checkin === true) {
+    // A time-boxed seat (Tikèm's door team crew, lib/doorTeam): only inside
+    // its window. Seats without a window (invited / org staff) are unchanged.
+    if (!memberSeatIsLive(member, input.now ?? Date.now())) {
+      return { allowed: false, status: 403, error: 'Your door access for this event is not active right now' }
+    }
     return { allowed: true, role: 'staff', canViewAttendees: member.permissions?.viewAttendees === true }
   }
   return { allowed: false, status: 403, error: 'You do not have check-in access for this event' }
