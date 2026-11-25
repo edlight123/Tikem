@@ -24,6 +24,9 @@ store/
 scripts/asc-apply-metadata.mjs   dry-run / apply for App Store Connect
 ```
 
+Store binaries (IPA / AAB) build on GitHub Actions without EAS cloud quota:
+see `docs/runbooks/mobile-builds.md`.
+
 ## What is automated vs owner-only
 
 | Task | How |

@@ -1,0 +1,115 @@
+# iOS store build (IPA) on a GitHub macOS runner, using EAS's local build.
+#
+# Ported from Tikra (~/tikra/.github/workflows/ios-build.yml). `eas build
+# --local` uses no EAS cloud build quota; Apple signing and the build number
+# (appVersionSource: remote, autoIncrement) come from EAS through the EXPO_TOKEN
+# repo secret. The production profile's `environment: production` pulls every
+# EXPO_PUBLIC_* from the EAS production env, so mobile/.env is not needed here.
+# Nothing secret is stored in this repo.
+#
+# macOS minutes bill at 10x on a private repo: run it on demand only.
+# Run it: Actions -> iOS build -> Run workflow (tick "submit" to send the IPA to
+# App Store Connect / TestFlight), or push to the `build-ios` branch (build only).
+# Runbook: docs/runbooks/mobile-builds.md
+name: iOS build
+
+on:
+  workflow_dispatch:
+    inputs:
+      submit:
+        description: Submit the IPA to App Store Connect (TestFlight) after the build
+        type: boolean
+        default: false
+  push:
+    branches: [build-ios]
+
+concurrency:
+  group: ios-build
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 120
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Select Xcode
+        run: |
+          find /Applications -maxdepth 1 -name 'Xcode*.app' | sort -V
+          # Newest Xcode 26, else the newest Xcode on the image.
+          X=$(find /Applications -maxdepth 1 -name 'Xcode_26*.app' | sort -V | tail -1)
+          [ -n "$X" ] || X=$(find /Applications -maxdepth 1 -name 'Xcode*.app' | sort -V | tail -1)
+          sudo xcode-select -s "$X"
+          xcodebuild -version
+
+      # postinstall runs patch-package: the react-native (ticket crash) and
+      # stripe-react-native patches. EAS's local build installs again in its own
+      # working dir, which applies them to the build too.
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Check the Expo token is set
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then echo "::error::Add the EXPO_TOKEN repository secret (expo.dev -> Account settings -> Access tokens)."; exit 1; fi
+          npx eas-cli whoami
+
+      - name: Build the IPA
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          EAS_LOCAL_BUILD_WORKINGDIR: ${{ runner.temp }}/eas-build
+        run: npx eas-cli build --platform ios --profile production --local --non-interactive --output "$GITHUB_WORKSPACE/tikem.ipa"
+
+      # Same guard as the OTAs: the bundle must carry the real Firebase project
+      # and API host from the EAS production env. If the env didn't load,
+      # config/firebase.ts falls back to demo.firebaseapp.com and the app can't
+      # sign anyone in.
+      - name: Verify the bundle's Firebase project and API host
+        working-directory: ${{ github.workspace }}
+        run: |
+          mkdir -p ipa && cd ipa && unzip -q ../tikem.ipa
+          B=$(find . -name 'main.jsbundle' | head -1)
+          test -n "$B" || { echo "::error::No JS bundle in the IPA"; exit 1; }
+          LC_ALL=C grep -aq 'event-haiti.firebaseapp.com' "$B" || { echo "::error::Bundle has no event-haiti Firebase config (EAS production env not loaded?)"; exit 1; }
+          LC_ALL=C grep -aq 'www.tikem.co' "$B" || { echo "::error::Bundle has no www.tikem.co API URL"; exit 1; }
+          echo "Bundle OK (event-haiti, www.tikem.co)"
+          P=$(find . -maxdepth 3 -path '*.app/Info.plist' | head -1)
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' -c 'Print :CFBundleName' -c 'Print :CFBundleShortVersionString' -c 'Print :CFBundleVersion' "$P"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tikem-ios-ipa
+          path: tikem.ipa
+          retention-days: 14
+
+      # Optional. Uses the App Store Connect API key stored on EAS (eas
+      # credentials) unless the three ASC_* secrets are set, in which case it
+      # uses those. ascAppId / appleTeamId come from submit.production in eas.json.
+      - name: Submit to App Store Connect (TestFlight)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.submit }}
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          ASC_API_KEY_P8: ${{ secrets.ASC_API_KEY_P8 }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          if [ -n "$ASC_API_KEY_P8" ]; then
+            KEY="$RUNNER_TEMP/asc-api-key.p8"
+            printf '%s\n' "$ASC_API_KEY_P8" > "$KEY"
+            export EXPO_ASC_API_KEY_PATH="$KEY" EXPO_ASC_KEY_ID="$ASC_KEY_ID" EXPO_ASC_ISSUER_ID="$ASC_ISSUER_ID"
+          fi
+          npx eas-cli submit --platform ios --profile production --path "$GITHUB_WORKSPACE/tikem.ipa" --non-interactive

@@ -1,0 +1,117 @@
+# Android store build (AAB) on a GitHub runner, using EAS's local build.
+#
+# Ported from Tikra (~/tikra/.github/workflows/android-build.yml). `eas build
+# --local` uses no EAS cloud build quota; the upload keystore and versionCode
+# (appVersionSource: remote, autoIncrement) come from EAS through the EXPO_TOKEN
+# repo secret. The production profile's `environment: production` pulls every
+# EXPO_PUBLIC_* from the EAS production env. Nothing secret is stored here.
+#
+# Run it: Actions -> Android build -> Run workflow (tick "submit" to send the
+# AAB to the Play internal testing track), or push to `build-android` (build only).
+# Runbook: docs/runbooks/mobile-builds.md
+name: Android build
+
+on:
+  workflow_dispatch:
+    inputs:
+      submit:
+        description: Submit the AAB to the Google Play internal testing track after the build
+        type: boolean
+        default: false
+  push:
+    branches: [build-android]
+
+concurrency:
+  group: android-build
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      # Before setup-node/setup-java: they install into the runner's tool cache,
+      # which must not be deleted after they've run (Tikra: JAVA_HOME pointed at
+      # a removed directory, 2026-11-25).
+      - name: Free disk space (the Android NDK build needs room)
+        working-directory: ${{ github.workspace }}
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost || true
+          df -h /
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Gradle cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('mobile/package-lock.json', 'mobile/app.json') }}
+          restore-keys: gradle-${{ runner.os }}-
+
+      # postinstall runs patch-package (react-native + stripe-react-native patches).
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Check the Expo token is set
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then echo "::error::Add the EXPO_TOKEN repository secret (expo.dev -> Account settings -> Access tokens)."; exit 1; fi
+          npx eas-cli whoami
+
+      - name: Build the AAB
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          EAS_LOCAL_BUILD_WORKINGDIR: ${{ runner.temp }}/eas-build
+        run: npx eas-cli build --platform android --profile production --local --non-interactive --output "$GITHUB_WORKSPACE/tikem.aab"
+
+      # The bundle must carry the real Firebase project and API host from the
+      # EAS production env (config/firebase.ts falls back to demo.firebaseapp.com).
+      - name: Verify the bundle's Firebase project and API host
+        working-directory: ${{ github.workspace }}
+        run: |
+          mkdir -p aab && cd aab && unzip -q ../tikem.aab
+          B=$(find . -name 'index.android.bundle' | head -1)
+          test -n "$B" || { echo "::error::No JS bundle in the AAB"; exit 1; }
+          LC_ALL=C grep -aq 'event-haiti.firebaseapp.com' "$B" || { echo "::error::Bundle has no event-haiti Firebase config (EAS production env not loaded?)"; exit 1; }
+          LC_ALL=C grep -aq 'www.tikem.co' "$B" || { echo "::error::Bundle has no www.tikem.co API URL"; exit 1; }
+          echo "Bundle OK (event-haiti, www.tikem.co)"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tikem-android-aab
+          path: tikem.aab
+          retention-days: 14
+
+      # Optional. eas.json's submit profiles read ./google-play-service-account.json
+      # (gitignored), so the job writes it from the GOOGLE_PLAY_SERVICE_ACCOUNT_JSON
+      # secret. The `internal` submit profile targets the internal testing track.
+      - name: Submit to Google Play (internal track)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.submit }}
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          PLAY_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          if [ -z "$PLAY_JSON" ]; then echo "::error::Add the GOOGLE_PLAY_SERVICE_ACCOUNT_JSON repository secret (the Play service account key, see docs/runbooks/mobile-builds.md)."; exit 1; fi
+          printf '%s' "$PLAY_JSON" > google-play-service-account.json
+          npx eas-cli submit --platform android --profile internal --path "$GITHUB_WORKSPACE/tikem.aab" --non-interactive
+          rm -f google-play-service-account.json
