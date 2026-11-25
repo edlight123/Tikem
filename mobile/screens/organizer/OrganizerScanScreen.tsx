@@ -22,6 +22,7 @@ import StatusChip from '../../components/StatusChip';
 import { Skeleton } from '../../components/Skeleton';
 
 import { Touchable } from '../../components/ui/Touchable';
+import { formatEventClock } from '../../lib/eventClock';
 
 /** How many recent check-ins the list under the actions shows. */
 const RECENT_CHECKINS_MAX = 8;
@@ -132,7 +133,7 @@ export default function OrganizerScanScreen() {
   // Drop the location half when the event has none, instead of "7:00 PM • ".
   const eventSubtitle = (e: TodayEvent) =>
     [
-      new Date(e.start_datetime).toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' }),
+      formatEventClock(e.start_datetime, e, locale),
       e.location,
     ]
       .filter(Boolean)
@@ -269,7 +270,7 @@ export default function OrganizerScanScreen() {
                   )}
                 </View>
                 <Text style={styles.recentTime}>
-                  {new Date(r.at).toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' })}
+                  {formatEventClock(r.at, selectedEvent, locale)}
                 </Text>
               </View>
             ))}

@@ -21,6 +21,7 @@ import {
 import OrganizerMark from '@/components/OrganizerMark'
 import { DiscoverEventCard } from '@/components/discover/DiscoverEventCard'
 import { EmptyState } from '@/components/ui/kit'
+import { NoticeStrip } from '@/components/ui/NoticeStrip'
 import { useToast } from '@/components/ui/Toast'
 import { ProfileSection, Panel, PanelRows } from './ui'
 
@@ -134,41 +135,20 @@ export function OrganizationCard({ name, logo }: { name: string; logo: string })
 
 /**
  * The way into Friends > Find (suggestions, contact matching, invite link).
- * The house announcement anatomy, as on mobile: a fill, a faint teal glow in
- * one corner, an eyebrow with a dot, a serif headline, one line, one white CTA.
- * No counts: nothing is fetched here that could back one.
+ * One line, the house NoticeStrip (owner, 2026-11-25: no big cards): a thin
+ * icon, "Find your people", one quiet link. No counts: nothing is fetched
+ * here that could back one.
  */
 export function FindFriendsCard() {
   const { t } = useTranslation('profile')
   return (
-    <section className="relative overflow-hidden rounded bg-surface p-5 sm:p-6">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-[radial-gradient(circle,rgba(45,212,191,0.10),transparent_70%)]"
-      />
-      <div className="relative">
-        <div className="flex items-center gap-2.5">
-          <span className="flex h-8 w-8 items-center justify-center rounded bg-surface-raised text-fg-soft">
-            <Users className="h-3.5 w-3.5" aria-hidden />
-          </span>
-          <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-brand-400" />
-          <span className="text-eyebrow font-medium uppercase tracking-[0.14em] text-fg-subtle">
-            {t('dashboard.find_friends.eyebrow')}
-          </span>
-        </div>
-        <h2 className="mt-4 font-display lowercase italic !text-section !leading-snug text-fg">
-          {t('dashboard.find_friends.title')}
-        </h2>
-        <p className="mt-1.5 max-w-lg !text-sm !leading-relaxed text-fg-muted">{t('dashboard.find_friends.body')}</p>
-        <Link
-          href="/connections?tab=find"
-          className="mt-4 inline-flex h-10 items-center gap-2 rounded bg-inverse px-5 text-meta font-semibold text-on-inverse transition-colors hover:bg-inverse-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-fg/70"
-        >
-          {t('dashboard.find_friends.cta')}
-          <ArrowRight className="h-3.5 w-3.5" aria-hidden />
-        </Link>
-      </div>
-    </section>
+    <NoticeStrip
+      role="region"
+      ariaLabel={t('dashboard.find_friends.title')}
+      icon={Users}
+      text={t('dashboard.find_friends.title')}
+      action={{ label: t('dashboard.find_friends.cta'), href: '/connections?tab=find' }}
+    />
   )
 }
 

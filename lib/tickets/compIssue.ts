@@ -1,5 +1,6 @@
 import { adminDb, adminAuth } from '@/lib/firebase/admin'
 import { FieldValue } from 'firebase-admin/firestore'
+import { hhmmTo12, isHaitiEvent } from '@/lib/datetime/eventClock'
 import { sendEmail, getTicketConfirmationEmail, emailSubjects, TICKET_QR_CID } from '@/lib/email'
 import { formatEventWhen } from '@/lib/email-kit/i18n'
 import { resolveEmailLang } from '@/lib/email-kit/recipient'
@@ -248,7 +249,8 @@ export async function issueCompTickets(params: IssueCompParams): Promise<IssueCo
           ? new Date(event.start_datetime)
           : null
       const startIso = startDate && !Number.isNaN(startDate.getTime()) ? startDate.toISOString() : null
-      const lang = await resolveEmailLang({ userId: recipientUid, email: recipientEmail, event })
+      // A Haiti event's ticket is in French whatever the guest's language (owner, 2026-11-25).
+      const lang = isHaitiEvent(event) ? 'fr' : await resolveEmailLang({ userId: recipientUid, email: recipientEmail, event })
       const when = formatEventWhen(startIso, lang, event)
       const eventTitle = event?.title || { en: 'Your event', fr: 'Votre événement', ht: 'Evènman ou' }[lang]
       const venue = [event?.venue_name, event?.city].filter(Boolean).join(', ')
@@ -275,7 +277,10 @@ export async function issueCompTickets(params: IssueCompParams): Promise<IssueCo
           ticketPrice: 0,
           currency: event?.currency || 'HTG',
           posterUrl: poster,
-          doorsTime: String(event?.doors_open_time || '').trim() || undefined,
+          doorsTime: (() => {
+            const raw = String(event?.doors_open_time || '').trim()
+            return (isHaitiEvent(event) ? hhmmTo12(raw) : raw) || undefined
+          })(),
           ...(guestOrderKey && ticketLink ? { ticketsUrl: ticketLink } : {}),
         })
         const sent = await sendEmail({

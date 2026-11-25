@@ -13,6 +13,7 @@ import {
   wallClock,
 } from './cells'
 import type { CellValue, ExportColumn, ExportReport, ExportSection } from './types'
+import { haitiHourOptions, isHaitiZone } from '@/lib/datetime/eventClock'
 
 /**
  * An ExportReport as an .xlsx workbook (server only: exceljs never reaches a
@@ -71,7 +72,7 @@ function moneyFormat(currency: string): string {
   return code ? `#,##0.00 "${code}";-#,##0.00 "${code}"` : '#,##0.00'
 }
 
-function numFmtFor(col: ExportColumn, value: CellValue, lang: string): string | undefined {
+function numFmtFor(col: ExportColumn, value: CellValue, lang: string, haiti = false): string | undefined {
   switch (col.kind) {
     case 'money':
       return moneyFormat(currencyOf(col, value))
@@ -84,7 +85,8 @@ function numFmtFor(col: ExportColumn, value: CellValue, lang: string): string | 
     case 'date':
       return lang.startsWith('en') ? 'mmm d, yyyy' : 'd mmm yyyy'
     case 'datetime':
-      return lang.startsWith('en') ? 'mmm d, yyyy  h:mm AM/PM' : 'd mmm yyyy  hh:mm'
+      // Haiti reads AM/PM in every language (owner, 2026-11-25).
+      return lang.startsWith('en') ? 'mmm d, yyyy  h:mm AM/PM' : haiti ? 'd mmm yyyy  h:mm AM/PM' : 'd mmm yyyy  hh:mm'
     default:
       return undefined
   }
@@ -148,7 +150,7 @@ function writeCell(cell: ExcelJS.Cell, col: ExportColumn, v: CellValue, ctx: { t
     const d = toDateValue(v)
     if (d) {
       cell.value = wallClock(d, ctx.tz)
-      cell.numFmt = numFmtFor(col, v, ctx.lang) as string
+      cell.numFmt = numFmtFor(col, v, ctx.lang, isHaitiZone(ctx.tz)) as string
     } else {
       cell.value = safeText(v)
     }
@@ -198,6 +200,7 @@ export async function renderXlsx(report: ExportReport): Promise<Buffer> {
         year: 'numeric',
         hour: 'numeric',
         minute: '2-digit',
+        ...haitiHourOptions(isHaitiZone(report.timeZone)),
       }).format(now)}`
     } catch {
       return `${report.labels.generated} ${now.toISOString().slice(0, 16).replace('T', ' ')}`

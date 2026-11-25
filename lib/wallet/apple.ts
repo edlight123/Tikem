@@ -18,6 +18,7 @@ import type { WalletTicket } from './ticket-access'
 import { appleAuthTokenFor, appleSerialFor, appleWebServiceUrl } from './apple-web-service'
 import { PASS_ICON, PASS_LOGO } from './brandArt'
 import { fetchOwnPoster } from '@/lib/posters/hosts'
+import { isHaitiEvent, ticketDateLine } from '@/lib/datetime/eventClock'
 
 export interface ApplePassOptions {
   /**
@@ -82,24 +83,13 @@ async function buildPassBackground(
   }
 }
 
-/**
- * Build a signed `.pkpass` for one ticket.
- *
- * @throws if the certificate material is rejected by the signer. Callers turn
- *         that into a specific error code — never into a silent success.
- */
-export async function buildApplePkpass(
-  ticket: WalletTicket,
-  config: AppleWalletConfig,
-  options: ApplePassOptions = {}
-): Promise<Buffer> {
-  const voided = Boolean(options.voided)
-  const serialNumber = options.serialNumber || appleSerialFor(ticket.id, ticket.qrVersion || 0)
+function applePassClockEvent(ticket: WalletTicket) {
+  return { country: ticket.country, timezone: ticket.timezone, city: ticket.city }
+}
 
-  // Haiti events get a French pass by default (owner 2026-10-26): same brand,
-  // French field labels + door copy. Detected from the event's country ('HT').
-  const fr = (ticket.country || '').trim().toUpperCase() === 'HT'
-  const L = {
+/** Every fixed word on the pass: French for a Haiti event. Exported for tests. */
+export function applePassLabels(fr: boolean) {
+  return {
     ticket: fr ? 'BILLET' : 'TICKET',
     event: fr ? 'ÉVÉNEMENT' : 'EVENT',
     date: 'DATE',
@@ -119,6 +109,51 @@ export async function buildApplePkpass(
       ? 'Ce billet a été transféré ou n’est plus valide. Il n’admet plus personne à l’entrée.'
       : 'This ticket was transferred or is no longer valid. This pass no longer admits anyone at the door.',
   }
+}
+
+/**
+ * The pass's DATE field. Elsewhere Wallet gets the raw instant and formats it
+ * itself (dateStyle/timeStyle): the old code formatted in UTC, so a 9:30 PM
+ * Haiti event printed as "2:30 AM" the next day on the pass.
+ *
+ * Except Haiti: Wallet's timeStyle follows the PHONE's locale, so a French
+ * phone printed "20:00". Haiti reads AM/PM (owner, 2026-11-25), so a Haiti
+ * pass carries the date as French text on the event's own clock:
+ * "samedi 21 juin 2026 · 8:00 PM". Exported for tests.
+ */
+export function applePassDateField(ticket: WalletTicket, startValue: string | null) {
+  const clockEvent = applePassClockEvent(ticket)
+  const fr = isHaitiEvent(clockEvent)
+  const L = applePassLabels(fr)
+  if (!startValue) return { key: 'date', label: L.date, value: L.tba }
+  if (fr) return { key: 'date', label: L.date, value: ticketDateLine(startValue, clockEvent, 'fr') }
+  return {
+    key: 'date',
+    label: L.date,
+    value: startValue,
+    dateStyle: 'PKDateStyleMedium' as const,
+    timeStyle: 'PKDateStyleShort' as const,
+  }
+}
+
+/**
+ * Build a signed `.pkpass` for one ticket.
+ *
+ * @throws if the certificate material is rejected by the signer. Callers turn
+ *         that into a specific error code — never into a silent success.
+ */
+export async function buildApplePkpass(
+  ticket: WalletTicket,
+  config: AppleWalletConfig,
+  options: ApplePassOptions = {}
+): Promise<Buffer> {
+  const voided = Boolean(options.voided)
+  const serialNumber = options.serialNumber || appleSerialFor(ticket.id, ticket.qrVersion || 0)
+
+  // Haiti events get a French pass (owner 2026-10-26, and 2026-11-25: Haiti
+  // tickets are in French whatever the buyer's language).
+  const L = applePassLabels(isHaitiEvent(applePassClockEvent(ticket)))
+
   // The PassKit web service, so Wallet can be told when this pass changes
   // (lib/wallet/apple-web-service.ts). Omitted, rather than half-set, when the
   // deployment has no https origin or no key to derive the token from.
@@ -230,17 +265,12 @@ export async function buildApplePkpass(
   // "2:30 AM" the next day on the pass while the app showed 9:30 PM. With
   // dateStyle/timeStyle, Wallet renders in the device's own timezone and
   // locale — the same thing the app's date-fns formatting does.
-  pass.secondaryFields.push(
-    startValue
-      ? {
-          key: 'date',
-          label: L.date,
-          value: startValue,
-          dateStyle: 'PKDateStyleMedium',
-          timeStyle: 'PKDateStyleShort',
-        }
-      : { key: 'date', label: L.date, value: L.tba }
-  )
+  //
+  // Except Haiti: Wallet's timeStyle follows the PHONE's locale, so a French
+  // phone printed "20:00". Haiti reads AM/PM (owner, 2026-11-25), so a Haiti
+  // pass carries the date as text, on the event's own clock:
+  // "samedi 21 juin 2026 · 8:00 PM".
+  pass.secondaryFields.push(applePassDateField(ticket, startValue))
 
   if (ticket.venueName) {
     pass.secondaryFields.push({

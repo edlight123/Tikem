@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
+import { isTikemCrewSeat } from '@/lib/doorTeam/rules'
 import { assertEventOwner } from '@/app/api/staff/_utils'
 
 export async function POST(request: NextRequest) {
@@ -28,6 +29,10 @@ export async function POST(request: NextRequest) {
     const snap = await memberRef.get()
     if (!snap.exists) {
       return NextResponse.json({ error: 'Member not found' }, { status: 404 })
+    }
+    // Tikèm's door crew is managed by Tikèm (admin door team queue), never here.
+    if (isTikemCrewSeat(snap.data())) {
+      return NextResponse.json({ error: "Tikèm's door crew is managed by Tikèm", code: 'tikem_crew_seat' }, { status: 403 })
     }
 
     await memberRef.delete()

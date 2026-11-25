@@ -100,6 +100,7 @@ import {
   getOwnAttendRequest,
   type OwnAttendRequest,
 } from '../lib/attendRequests';
+import { isHaitiEvent } from '../lib/eventClock';
 const { width } = Dimensions.get('window');
 // Full-bleed poster (posh): the flyer spans the screen width and the same
 // art, blurred and darkened, fills the band behind the header above it and
@@ -1244,7 +1245,7 @@ export default function EventDetailScreen({ route, navigation }: any) {
 
           {/* Lineup — who is on the bill (event doc `guestlist`, same records
               the web renders). Renders nothing when there is no lineup. */}
-          <EventLineupRail guestlist={(event as any).guestlist} gutter={18} />
+          <EventLineupRail guestlist={(event as any).guestlist} gutter={18} twelveHour={isHaitiEvent(event as any)} />
 
           {/* The song — a track card that opens Spotify. Nothing when unset. */}
           <SpotifyTrackCard url={(event as any).spotify_url} />

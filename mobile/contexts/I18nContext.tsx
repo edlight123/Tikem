@@ -50,6 +50,18 @@ function interpolate(template: string, params?: Record<string, string | number>)
   )
 }
 
+/**
+ * Translate in a FIXED language, whatever the app's: a Haiti event's ticket is
+ * printed in French for every buyer (owner, 2026-11-25; lib/eventClock
+ * ticketLanguage). Falls back to English, then the key, like `t`.
+ */
+export function translateIn(lang: Language, key: string, params?: Record<string, string | number>): string {
+  const localized = getByPath(DICTS[lang] || en, key)
+  if (localized) return interpolate(localized, params)
+  const fallback = getByPath(en, key)
+  return fallback ? interpolate(fallback, params) : key
+}
+
 type I18nContextValue = {
   language: Language
   setLanguage: (lang: Language) => Promise<void>

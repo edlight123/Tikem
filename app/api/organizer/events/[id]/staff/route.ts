@@ -3,6 +3,7 @@ import { requireAuth } from '@/lib/auth'
 import { canOnEvent, eventOrgId, teamCol } from '@/lib/organizer/context'
 import { isTeamRole } from '@/lib/organizer/teamRoles'
 import { adminDb } from '@/lib/firebase/admin'
+import { isTikemCrewSeat, redactedCrewMember } from '@/lib/doorTeam/rules'
 
 type ApiInvite = {
   id: string
@@ -19,6 +20,7 @@ type ApiInvite = {
 type ApiMember = {
   id: string
   role: string
+  tikemCrew?: boolean
   permissions: { checkin?: boolean; viewAttendees?: boolean }
   createdAt: string | null
   profile: { email: string | null; full_name: string | null; photo_url: string | null }
@@ -90,7 +92,11 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       }
     })
 
-    const memberDocs = membersSnap.docs as any[]
+    // Tikèm's own door crew (lib/doorTeam) is listed redacted: first name and
+    // "Tikèm crew" only, never their uid, email or photo, and never editable here.
+    const allMemberDocs = membersSnap.docs as any[]
+    const crewDocs = allMemberDocs.filter((d: any) => isTikemCrewSeat(d.data()))
+    const memberDocs = allMemberDocs.filter((d: any) => !isTikemCrewSeat(d.data()))
     const memberIds = memberDocs.map((d: any) => d.id).filter(Boolean)
 
     // Active seats only (status active, doc id === uid): legacy/invited rows grant nothing.
@@ -139,7 +145,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       }
     })
 
-    return NextResponse.json({ invites, members, team }, { status: 200 })
+    const crew = crewDocs.map((d: any, i: number) => redactedCrewMember(d.data() || {}, i))
+
+    return NextResponse.json({ invites, members: [...members, ...crew], team }, { status: 200 })
   } catch (e) {
     console.error('GET /api/organizer/events/[id]/staff error', e)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

@@ -54,6 +54,14 @@ export type AuditAction =
   | 'physical_tickets.batch.move'
   | 'physical_tickets.batch.reprint'
   | 'physical_tickets.batch.pdf'
+  | 'door_team.config.update'
+  | 'door_team.request.quote'
+  | 'door_team.request.decline'
+  | 'door_team.request.assign_crew'
+  | 'door_team.request.remove_crew'
+  | 'door_team.request.confirm'
+  | 'door_team.request.done'
+  | 'door_team.request.mark_refunded'
 
 function toIsoTimestamp(value: unknown): string {
   if (!value) return ''

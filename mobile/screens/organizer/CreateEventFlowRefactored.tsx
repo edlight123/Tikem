@@ -1825,6 +1825,7 @@ export default function CreateEventFlowRefactored() {
       time: `${String(hh).padStart(2, '0')}:${m ? m[2] : '00'}`,
       venue: eventDraft.venue_name,
       city: eventDraft.city,
+      country: (eventDraft as any).country || undefined,
       lineup: eventDraft.lineup.map((g) => g.name.trim()).filter(Boolean),
     };
   };

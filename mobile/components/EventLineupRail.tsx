@@ -46,9 +46,11 @@ interface Props {
   guestlist: unknown;
   /** The page's horizontal gutter, so the rail can bleed past it. */
   gutter?: number;
+  /** A Haiti event: set times read "8:00 PM", never "20:00" (lib/eventClock). */
+  twelveHour?: boolean;
 }
 
-export default function EventLineupRail({ guestlist, gutter = 18 }: Props) {
+export default function EventLineupRail({ guestlist, gutter = 18, twelveHour = false }: Props) {
   const { colors } = useTheme();
   const { t } = useI18n();
   const insets = useSafeAreaInsets();
@@ -74,7 +76,7 @@ export default function EventLineupRail({ guestlist, gutter = 18 }: Props) {
         contentContainerStyle={[styles.rail, { paddingHorizontal: gutter }]}
       >
         {entries.map((g) => {
-          const when = lineupTimeRange(g.startTime, g.endTime);
+          const when = lineupTimeRange(g.startTime, g.endTime, twelveHour);
           const tappable = !!g.description || !!safeLineupLink(g.link);
           const body = (
             <>
@@ -151,8 +153,8 @@ export default function EventLineupRail({ guestlist, gutter = 18 }: Props) {
                 </Text>
                 <Text style={styles.sheetMeta}>
                   {roleLabel(open)}
-                  {lineupTimeRange(open.startTime, open.endTime)
-                    ? `  ·  ${lineupTimeRange(open.startTime, open.endTime)}`
+                  {lineupTimeRange(open.startTime, open.endTime, twelveHour)
+                    ? `  ·  ${lineupTimeRange(open.startTime, open.endTime, twelveHour)}`
                     : ''}
                 </Text>
               </View>

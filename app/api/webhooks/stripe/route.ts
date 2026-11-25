@@ -275,6 +275,31 @@ export async function POST(request: Request) {
       })
       return NextResponse.json({ received: true, physicalBatch: true, paid })
     }
+    // A door team paid on the PLATFORM account (lib/doorTeam/payments): never a
+    // ticket order. An expired session only clears the request's CURRENT attempt.
+    if (
+      (event.type === 'checkout.session.completed' ||
+        event.type === 'checkout.session.expired' ||
+        event.type === 'payment_intent.succeeded') &&
+      event.data?.object?.metadata?.kind === 'door_team'
+    ) {
+      const obj = event.data.object
+      let paid = false
+      let cleared = false
+      if (event.type === 'checkout.session.expired') {
+        const { handleDoorTeamCardSessionExpired } = await import('@/lib/doorTeam/payments')
+        cleared = await handleDoorTeamCardSessionExpired(obj)
+      } else if (event.type === 'checkout.session.completed') {
+        const { verifyCardDoorTeamPayment } = await import('@/lib/doorTeam/payments')
+        paid = (await verifyCardDoorTeamPayment(String(obj.id), String(obj.metadata?.requestId || ''))).paid
+      }
+      await markWebhookEventCompleted({
+        provider: 'stripe',
+        eventId: event.id,
+        metadata: { type: event.type, kind: 'door_team', requestId: obj.metadata?.requestId || null, paid, cleared },
+      })
+      return NextResponse.json({ received: true, doorTeam: true, paid, cleared })
+    }
     // Any other expired Checkout session: nothing of ours to do (ticket orders
     // give their seat holds back on their own expiry).
     if (event.type === 'checkout.session.expired') {

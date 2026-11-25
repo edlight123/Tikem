@@ -67,6 +67,7 @@ export class FakeFirestore {
       },
       where: (field: string, op: string, value: unknown) => self.query(name, [[field, op, value]]),
       select: () => self.query(name, []),
+      orderBy: () => self.query(name, []),
       limit: () => self.query(name, []),
       get: async () => self.query(name, []).get(),
     }
@@ -123,6 +124,11 @@ export class FakeFirestore {
     return Array.from(this.store.entries()).filter(
       ([p]) => p.startsWith(`${name}/`) && p.split('/').length === name.split('/').length + 1
     )
+  }
+
+  /** adminDb.doc('a/b/c/d'), like the Admin SDK. */
+  doc(path: string): any {
+    return this.ref(path)
   }
 
   async getAll(...refs: any[]) {

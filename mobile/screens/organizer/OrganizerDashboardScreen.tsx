@@ -49,6 +49,7 @@ import { prefetchEarningsHub } from '../../lib/earningsHubCache';
 import { useActiveOrg } from '../../lib/activeOrg';
 import { loadOrgBrand } from '../../lib/api/orgSettings';
 import { OrgSwitcherSheet, useOrgLabel } from '../../components/organizer/OrgSwitcher';
+import { formatEventClock } from '../../lib/eventClock';
 
 /** How many upcoming events the rail shows before "view all" takes over. */
 const UPCOMING_RAIL_MAX = 10;
@@ -352,8 +353,8 @@ export default function OrganizerDashboardScreen() {
       </>
     );
 
-  const eventTime = (iso: string) =>
-    new Date(iso).toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' });
+  // "8:00 PM" for a Haiti event in every language (lib/eventClock).
+  const eventTime = (event: TodayEvent) => formatEventClock(event.start_datetime, event, locale);
 
   const shortDate = (iso: string) =>
     new Date(iso).toLocaleDateString(locale, { month: 'short', day: 'numeric' });
@@ -365,7 +366,7 @@ export default function OrganizerDashboardScreen() {
     const soldOut = cap > 0 && event.ticketsSold >= cap;
     // Time, then the place when we have one. An empty location used to
     // leave a pin icon with nothing next to it (TestFlight 2026-09-06).
-    const meta = [eventTime(event.start_datetime), event.location].filter(Boolean).join(' · ');
+    const meta = [eventTime(event), event.location].filter(Boolean).join(' · ');
     const progress = cap > 0 ? Math.min(1, event.ticketsSold / cap) : 0;
 
     return (
@@ -437,7 +438,7 @@ export default function OrganizerDashboardScreen() {
   // Further events today (rare): a compact row each, with a secondary scan
   // button so the hero keeps the only primary fill.
   const renderTonightRow = (event: TodayEvent) => {
-    const meta = [eventTime(event.start_datetime), event.location].filter(Boolean).join(' · ');
+    const meta = [eventTime(event), event.location].filter(Boolean).join(' · ');
     const cap = displayCapacity(event.capacity);
     return (
       <Touchable

@@ -22,6 +22,8 @@ export interface PosterAltEvent {
   city?: string | null
   start_datetime?: unknown
   timezone?: string | null
+  /** 'HT' (or a Port-au-Prince timezone) = Haiti: the time reads "8:00 PM" in every language. */
+  country?: string | null
   ticket_price?: number | null
   currency?: string | null
   ticket_tiers?: Array<{ price?: number | null } | null> | null
@@ -111,10 +113,24 @@ function whenParts(value: unknown, timeZone?: string | null): WhenParts | null {
   }
 }
 
-function whenText(w: WhenParts, lang: Lang): string {
+/** Haiti reads AM/PM, never "20 h" (owner, 2026-11-25). Mirrors lib/datetime/eventClock. */
+function isHaiti(e: PosterAltEvent): boolean {
+  const c = String(e.country ?? '').trim().toUpperCase()
+  if (c) return c === 'HT' || c === 'HAITI' || c === 'HAÏTI' || c === 'AYITI'
+  return String(e.timezone ?? '').trim() === 'America/Port-au-Prince'
+}
+
+function whenText(w: WhenParts, lang: Lang, haiti = false): string {
   const mm = String(w.minute).padStart(2, '0')
   const day = DAYS[lang][w.weekday]
   const month = MONTHS[lang][w.month]
+  if (haiti) {
+    // "8:00 PM": 12-hour, minutes always shown, in every language.
+    const time = `${w.hour % 12 || 12}:${mm} ${w.hour < 12 ? 'AM' : 'PM'}`
+    if (lang === 'fr') return `${day} ${w.day === 1 ? '1er' : w.day} ${month} à ${time}`
+    if (lang === 'ht') return `${day} ${w.day} ${month} a ${time}`
+    return `${day} ${w.day} ${month} at ${time}`
+  }
   if (lang === 'fr') {
     const time = w.minute ? `${w.hour} h ${mm}` : `${w.hour} h`
     return `${day} ${w.day === 1 ? '1er' : w.day} ${month} à ${time}`
@@ -178,7 +194,7 @@ export function posterAltFromFacts(e: PosterAltEvent | null | undefined, languag
 
   const lead = lang === 'fr' ? 'Affiche de ' : lang === 'ht' ? 'Afich pou ' : 'Flyer for '
   let s = lead + (title || (lang === 'fr' ? 'un événement' : lang === 'ht' ? 'yon evènman' : 'an event'))
-  if (w) s += `, ${whenText(w, lang)}`
+  if (w) s += `, ${whenText(w, lang, isHaiti(ev))}`
   if (where) s += lang === 'fr' ? ` à ${where}` : lang === 'ht' ? ` nan ${where}` : ` at ${where}`
   const price = priceText(ev, lang)
   return cleanPosterAlt(`${s}.${price ? ` ${price}` : ''}`)

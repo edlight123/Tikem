@@ -91,7 +91,8 @@
     "door_reentry_refused": "LI PA KA ANTRE ANKÒ",
     "door_overriding": "N ap verifye…",
     "door_scan_next": "Eskane pwochen an",
-    "tab_printed": "Tikè enprime"
+    "tab_printed": "Tikè enprime",
+    "tab_door_team": "Ekip pòt"
   },
   "your_events": "Evènman ou yo",
   "view_all_events": "Gade tout evènman yo →",
@@ -1058,6 +1059,7 @@
     "allow_viewing_attendee_details": "Otorize wè detay patisipan yo",
     "can_check_in": "Ka fè anrejistreman",
     "can_view_attendee_list": "Ka wè lis patisipan yo",
+    "tikem_crew": "Ekip Tikèm",
     "event_scoped_access": "Aksè limite ak evènman an pou anrejistreman",
     "invite_links_one_time": "Lyen envitasyon yo sèvi yon sèl fwa. Kreye yon lòt si w pèdi l.",
     "invite_staff": "Envite anplwaye",
@@ -1069,7 +1071,18 @@
     "permissions": "Pèmisyon",
     "staff_members": "Anplwaye yo",
     "status": "Estati",
-    "target": "Sib"
+    "target": "Sib",
+    "user": "Itilizatè",
+    "invite_status_pending": "Ap tann",
+    "invite_status_claimed": "Aksepte",
+    "invite_status_revoked": "Anile",
+    "method_email": "Imèl",
+    "method_phone": "Telefòn",
+    "method_link": "Lyen",
+    "view_attendee_list_yes": "Ka wè lis patisipan yo: wi",
+    "view_attendee_list_no": "Ka wè lis patisipan yo: non",
+    "role_owner": "Pwopriyetè",
+    "role_staff": "Anplwaye"
   },
   "earnings": {
     "available": "Disponib",

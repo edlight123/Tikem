@@ -5,6 +5,8 @@ import { useTranslation } from 'react-i18next'
 import { CheckCircle, AlertTriangle, XCircle } from 'lucide-react'
 import type { CheckInResult } from '@/lib/scan/checkInTicket'
 import { intlLocaleFor } from '@/lib/dateLocale'
+import { clock12, isHaitiEvent, type ClockEvent } from '@/lib/datetime/eventClock'
+import { eventZone } from '@/lib/home/feed'
 
 interface ScanResultOverlayProps {
   result: CheckInResult
@@ -14,9 +16,11 @@ interface ScanResultOverlayProps {
   reentry?: boolean
   /** The override request is in flight. */
   overriding?: boolean
+  /** The event's country/zone: a Haiti event's check-in time reads "8:00 PM". */
+  eventPlace?: ClockEvent
 }
 
-export function ScanResultOverlay({ result, onClose, onOverride, reentry = false, overriding = false }: ScanResultOverlayProps) {
+export function ScanResultOverlay({ result, onClose, onOverride, reentry = false, overriding = false, eventPlace }: ScanResultOverlayProps) {
   // The door reads this under pressure, in Haiti — it speaks the staff's language.
   const { t, i18n } = useTranslation('organizer')
   useEffect(() => {
@@ -100,10 +104,12 @@ export function ScanResultOverlay({ result, onClose, onOverride, reentry = false
                   <div>
                     <div className="text-xs text-warning-soft uppercase tracking-wide">{t('door.previous_checkin', { defaultValue: 'Previous Check-in' })}</div>
                     <div className="font-semibold">
-                      {new Date(result.checkedInAt).toLocaleTimeString(intlLocaleFor(i18n.language), {
-                        hour: 'numeric',
-                        minute: '2-digit',
-                      })}
+                      {isHaitiEvent(eventPlace)
+                        ? clock12(result.checkedInAt, eventZone(eventPlace))
+                        : new Date(result.checkedInAt).toLocaleTimeString(intlLocaleFor(i18n.language), {
+                            hour: 'numeric',
+                            minute: '2-digit',
+                          })}
                     </div>
                   </div>
                   <div>
