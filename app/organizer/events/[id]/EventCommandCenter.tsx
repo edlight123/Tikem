@@ -19,6 +19,7 @@ import {
   Users,
 } from 'lucide-react'
 import { formatMoneyFromCents, normalizeCurrency } from '@/lib/money'
+import AddOnSalesCard from '@/components/organizer/AddOnSalesCard'
 import { stripRichText } from '@/lib/richText'
 
 interface EventCommandCenterProps {
@@ -210,6 +211,9 @@ export function EventCommandCenter({ event, stats, tickets, tiers }: EventComman
               </p>
             )}
           </section>
+
+          {/* Add-on sales: nothing when the event sells none or the viewer lacks finance access. */}
+          <AddOnSalesCard eventId={event.id} />
 
           {/* Recent activity */}
           <section className="rounded-lg bg-surface-low p-4">

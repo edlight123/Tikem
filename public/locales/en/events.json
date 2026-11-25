@@ -25,5 +25,94 @@
     "selling_fast": "Selling Fast",
     "almost_full": "Almost Full",
     "last_tickets": "Last tickets remaining"
+  },
+  "addOns": {
+    "editor": {
+      "title": "Add-ons",
+      "info": "Bottle packages, VIP upgrades, parking, drinks or merch, bought with the tickets.",
+      "fixTitle": "Check your add-ons",
+      "fixMsg": "Each add-on needs a name and a price above 0, and its sales must end after they start.",
+      "add": "Other",
+      "untitled": "New add-on",
+      "stockCount": "{{count}} available",
+      "unlimited": "Unlimited",
+      "hiddenBadge": "Paused",
+      "needsName": "Give this add-on a name.",
+      "needsPrice": "Set a price above 0.",
+      "badWindow": "Sales must end after they start.",
+      "name": "Name",
+      "namePlaceholder": "Bottle package, Parking, T-shirt…",
+      "price": "Price ({{currency}})",
+      "description": "Description (optional)",
+      "descriptionPlaceholder": "1 bottle + mixers, for 4",
+      "options": "Sizes or options (optional)",
+      "optionsPlaceholder": "S, M, L, XL",
+      "optionsHint": "Separate with commas. Buyers pick one; all options share the stock.",
+      "quantity": "Stock",
+      "maxPerOrder": "Max per order",
+      "salesStart": "Sales start (optional)",
+      "salesEnd": "Sales end (optional)",
+      "onlyWith": "Only with these tickets",
+      "onlyWithSaveFirst": "Sold with any ticket. Save the event first to limit it to certain tickets.",
+      "ticket": "Ticket",
+      "anyTicket": "None selected: sold with any ticket.",
+      "onSale": "On sale",
+      "remove": "Remove"
+    },
+    "presets": {
+      "bottle": "Bottle package",
+      "table": "Table",
+      "vip": "VIP upgrade",
+      "parking": "Parking",
+      "drinks": "Drink tickets",
+      "merch": "T-shirt"
+    },
+    "buyer": {
+      "title": "Add-ons",
+      "subtitle": "Picked up at the event",
+      "soldOut": "Sold out",
+      "decrease": "Fewer {{name}}",
+      "increase": "More {{name}}",
+      "limit": "Up to {{count}} per order",
+      "option": "Size",
+      "chooseTickets": "Choose tickets",
+      "ticketsOne": "1 ticket",
+      "ticketsOther": "{{count}} tickets",
+      "itemsOne": "+ 1 add-on",
+      "itemsOther": "+ {{count}} add-ons",
+      "left": "{{count}} left"
+    },
+    "errors": {
+      "soldOut": "One of your add-ons just sold out. Remove it or lower the quantity and try again.",
+      "unavailable": "One of your add-ons is no longer on sale. Remove it and try again.",
+      "needsTier": "One of your add-ons is only sold with a different ticket.",
+      "limit": "You picked more of an add-on than one order allows.",
+      "option": "Choose a size or option for each add-on.",
+      "rail": "Add-ons can be paid by card or MonCash.",
+      "generic": "We couldn't add your add-ons. Please try again."
+    },
+    "ticket": {
+      "title": "Your add-ons",
+      "pickedUp": "Picked up",
+      "toCollect": "To collect",
+      "howToCollect": "Show this ticket at the event to collect them.",
+      "onFirstTicket": "Your order's add-ons are on its first ticket."
+    },
+    "door": {
+      "title": "Add-ons to hand over",
+      "close": "Close",
+      "pickedUp": "Picked up",
+      "toHandOver": "To hand over",
+      "markPickedUp": "Hand over",
+      "undo": "Undo",
+      "loadFailed": "Couldn't load this order's add-ons.",
+      "saveFailed": "Couldn't save. Try again."
+    },
+    "dashboard": {
+      "title": "Add-on sales",
+      "none": "No add-ons sold yet.",
+      "soldPicked": "{{sold}} sold · {{picked}} picked up",
+      "total": "Total"
+    }
   }
 }

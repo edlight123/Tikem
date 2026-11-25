@@ -2,11 +2,14 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Minus, Plus } from 'lucide-react'
-import { allSelectionsFree, computeSelectionTotal, isFreeTier, MAX_FREE_TICKETS_PER_PERSON, tierMaxPerOrder } from '@/lib/ticketPricing'
+import { allSelectionsFree, isFreeTier, MAX_FREE_TICKETS_PER_PERSON, tierMaxPerOrder } from '@/lib/ticketPricing'
 import { priceCart } from '@/lib/checkout/buyer-pricing'
+import { formatMoney } from '@/lib/money'
 import { MAX_DOOR_TICKETS_PER_PERSON, doorMoney, doorPriceLabel, doorPriceOf, isDoorTier } from '@/lib/tickets/pay-at-door'
 import { ticketScarcity, scarcityCopy, isUrgent } from '@/lib/ticketScarcity'
+import QtyStepper from '@/components/QtyStepper'
+import AddOnsPicker, { selectedAddOnsFrom, type SelectedAddOn } from '@/components/AddOnsPicker'
+import { addOnAvailability, eventAddOns } from '@/lib/addons/addOns'
 
 interface TicketTier {
   id: string
@@ -79,11 +82,15 @@ interface EventbriteStyleTicketSelectorProps {
    * server re-prices the order from Firestore and has the final say. `promo` is
    * the applied code's terms, so the checkout summary can show the same discount.
    */
+  /** The event's add-ons (events.add_ons) and their sold rollup, offered after the tiers. */
+  addOns?: unknown
+  addOnsSold?: Record<string, unknown> | null
   onPurchase: (
     selections: { tierId: string; quantity: number; price: number; tierName?: string }[],
     promoCodeId?: string,
     discountedTotal?: number,
-    promo?: { discount_type: string; discount_value: number }
+    promo?: { discount_type: string; discount_value: number },
+    addOns?: SelectedAddOn[]
   ) => void
 }
 
@@ -97,8 +104,12 @@ export default function EventbriteStyleTicketSelector({
   allowGuest = false,
   freeClaimHeld = false,
   freeCap = MAX_FREE_TICKETS_PER_PERSON,
+  addOns: rawAddOns,
+  addOnsSold = null,
   onPurchase
 }: EventbriteStyleTicketSelectorProps) {
+  const addOnList = eventAddOns({ add_ons: rawAddOns })
+  const [addOnQty, setAddOnQty] = useState<Record<string, number>>({})
   /** Who may press "checkout": a signed-in user, or a guest when guests are allowed. */
   const canPurchase = Boolean(userId) || allowGuest
   const { t, i18n } = useTranslation('common')
@@ -225,15 +236,29 @@ export default function EventbriteStyleTicketSelector({
 
   // The whole cart, priced once: promo per ticket, then the fee on the post-promo
   // face total, honouring the organizer's absorb/pass-on choice for this event.
+  // Add-ons (no promo) join the face total, so the one fee covers the full
+  // subtotal. Not offered with pay-at-the-door spots (never a card order).
+  const doorSelected = tiers.some((tier) => isDoorTier(tier) && (quantities[tier.id] || 0) > 0)
+  const getSelectedAddOns = (): SelectedAddOn[] =>
+    doorSelected
+      ? []
+      : selectedAddOnsFrom(
+          // Only add-ons the CURRENT tiers allow (a tier removed after picking drops its add-ons).
+          addOnList.filter(
+            (a) => addOnAvailability(a, { cartTierIds: getSelections().map((s) => s.tierId), soldMap: addOnsSold }) === 'available'
+          ),
+          addOnQty
+        )
   const getCartPricing = () =>
-    priceCart(getSelections(), { country, currency, fee_incidence: feeIncidence }, { promo: appliedPromo, currency })
+    priceCart(getSelections(), { country, currency, fee_incidence: feeIncidence }, {
+      promo: appliedPromo,
+      currency,
+      addOns: getSelectedAddOns().map((a) => ({ unitPrice: a.unitPrice, quantity: a.quantity })),
+    })
 
   /** Post-promo face total. */
   const getTotalPrice = (): number => getCartPricing().faceValue
 
-  /** Format a unit/line amount, showing a genuine zero as "Free" rather than "0.00 HTG". */
-  const formatMoney = (amount: number): string =>
-    amount === 0 ? t('common.free') : `${amount.toFixed(2)} ${currency}`
 
   const validatePromoCode = async () => {
     if (!promoCode.trim() || !canPurchase) return
@@ -271,18 +296,18 @@ export default function EventbriteStyleTicketSelector({
 
     if (selections.length === 0) return
 
-    onPurchase(selections, promoValidation?.promoCode?.id, getTotalPrice(), appliedPromo || undefined)
+    onPurchase(selections, promoValidation?.promoCode?.id, getTotalPrice(), appliedPromo || undefined, getSelectedAddOns())
   }
 
   if (loading) {
-    return <p className="text-fg-muted">{t('events.loading_ticket_options')}</p>
+    return <div className="text-fg-muted">{t('events.loading_ticket_options')}</div>
   }
 
   if (tiers.length === 0) {
     return (
       <div className="text-center py-8">
-        <p className="text-fg-muted mb-4">{t('events.no_ticket_tiers')}</p>
-        <p className="text-sm text-fg-muted">{t('events.no_ticket_tiers_desc')}</p>
+        <div className="text-fg-muted mb-4">{t('events.no_ticket_tiers')}</div>
+        <div className="text-sm text-fg-muted">{t('events.no_ticket_tiers_desc')}</div>
       </div>
     )
   }
@@ -299,156 +324,141 @@ export default function EventbriteStyleTicketSelector({
   // Free ISSUANCE is decided by each selected tier's OWN price, not by the total.
   // A cart zeroed by a 100%-off promo still has to go through checkout — the
   // free-claim endpoint requires the tier itself to cost 0 and would refuse it.
-  const isFreeOrder = allSelectionsFree(getSelections())
+  const chosenAddOns = getSelectedAddOns()
+  const isFreeOrder = allSelectionsFree(getSelections()) && chosenAddOns.length === 0
   /** Pay at the door: what the chosen spots will cost on arrival (nothing online). */
   const doorDue = tiers.reduce((sum, tier) => sum + doorPriceOf(tier) * (quantities[tier.id] || 0), 0)
 
+  const addOnCount = chosenAddOns.reduce((sum, a) => sum + a.quantity, 0)
+  const te = (key: string, opts?: Record<string, unknown>) => t(key, { ns: 'events', ...(opts || {}) })
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <h3 className="font-display lowercase italic !text-section !leading-snug text-fg">{t('events.select_tickets')}</h3>
 
-      {/* Tier List with Quantity Selectors */}
-      <div className="space-y-3">
-        {tiers.map((tier) => {
-          const available = getAvailableQuantity(tier)
-          // A held free claim closes every free tier; the route would refuse it.
-          const freeClaimClosed = freeClaimHeld && isFreeTier(tier) && !isDoorTier(tier)
-          const isAvailable = isTierAvailable(tier) && !freeClaimClosed
-          const quantity = quantities[tier.id] || 0
-
-          return (
-            <div
-              key={tier.id}
-              /* A FILL, not a hairline around an empty box — the house rule
-                 ("not everything needs to be a border w no fill"). The
-                 selected state used to be `border-brand-500` with no
-                 background at all, so a chosen tier and an unchosen one
-                 differed by one pixel of teal. */
-              className={`rounded-xl p-4 transition-colors ${
-                quantity > 0
-                  ? 'bg-surface-raised ring-1 ring-inset ring-brand-400/50'
-                  : isAvailable
-                  ? 'bg-surface-low hover:bg-surface'
-                  : 'bg-surface-low opacity-50'
-              }`}
-            >
-              <div className="flex items-start justify-between gap-4">
-                {/* Tier Info */}
-                <div className="flex-1 min-w-0">
-                  <h4 className="font-semibold text-fg">{tier.name}</h4>
-                  {tier.description && (
-                    <p className="text-sm text-fg-muted mt-1">{tier.description}</p>
-                  )}
-                  {/* Two lines on purpose. These shared one `flex gap-3` row,
-                      and once the stepper has taken its ~140px the tier column
-                      is about 200px wide on a phone — so "10.00 HTG + fees"
-                      and "100 available" wrapped INSIDE their spans and the
-                      price broke across two lines. Price leads on its own
-                      line; availability is a quiet second. */}
-                  <p className="mt-2 text-sm font-medium text-brand-400">
-                    {isDoorTier(tier)
-                      ? doorPriceLabel(doorPriceOf(tier), currency, i18n.language)
-                      : isFreeTier(tier)
-                        ? t('common.free')
-                        : `${tier.price.toFixed(2)} ${currency}`}
-                    {/* Never let a bare face value read as the total. The all-in
-                        number is itemized in the summary below, where the fee can be
-                        stated for the order as a whole. */}
-                    {!isFreeTier(tier) && orderPricing.feeOnTop && (
-                      <span className="ml-1 font-normal text-fg-subtle">
-                        {t('checkout.plus_fees', { defaultValue: '+ fees' })}
-                      </span>
-                    )}
-                  </p>
-                  {/* Scarcity, not inventory. This printed the raw count on
-                      every tier — "100 available" — which tells a buyer to come
-                      back later. The exact number now appears only when it is
-                      genuinely small; see lib/ticketScarcity for why each rung
-                      has to be true. Nothing is rendered when there is plenty,
-                      so the line's presence is itself the signal. */}
-                  {(() => {
-                    if (freeClaimClosed) return null
-                    const copy = scarcityCopy(scarcityFor(tier))
-                    if (!copy) return null
-                    const urgent = isUrgent(scarcityFor(tier))
-                    return (
-                      <p
-                        className={`mt-1 inline-flex items-center gap-1.5 text-xs font-medium ${
-                          urgent ? 'text-warning-soft' : 'text-danger'
-                        }`}
-                      >
-                        {urgent && (
-                          <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-current" />
-                        )}
-                        {t(copy.key, { defaultValue: copy.defaultValue, count: copy.count })}
-                      </p>
-                    )
-                  })()}
-                  {freeClaimClosed && (
-                    <p className="mt-1 inline-flex items-center gap-1.5 text-xs font-medium text-success-soft">
-                      <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-success" />
-                      {t('events.free_tier_already_claimed', { defaultValue: 'You already have your free ticket' })}
-                    </p>
-                  )}
-                  {!freeClaimClosed && !isAvailable && available > 0 && (
-                    <p className="text-xs text-warning mt-1">
-                      {tier.sales_start && new Date(tier.sales_start) > new Date()
-                        ? `${t('events.sales_start')} ${new Date(tier.sales_start).toLocaleDateString()}`
-                        : `${t('events.sales_ended')} ${new Date(tier.sales_end!).toLocaleDateString()}`}
-                    </p>
+      {/* Tickets: plain rows on the canvas split by a thin divider, the way the
+          app's selector reads (no boxed cards, no teal ring). Name left, price
+          right in white, one muted detail line, the 40px stepper. */}
+      <section aria-labelledby="choose-tickets-label">
+        <div className="mb-1 flex items-baseline justify-between gap-3">
+          <div id="choose-tickets-label" className="text-caption font-bold uppercase tracking-[0.07em] text-fg-muted">
+            {te('addOns.buyer.chooseTickets', { defaultValue: 'Choose tickets' })}
+          </div>
+        </div>
+        <ul>
+          {tiers.map((tier, index) => {
+            const available = getAvailableQuantity(tier)
+            // A held free claim closes every free tier; the route would refuse it.
+            const freeClaimClosed = freeClaimHeld && isFreeTier(tier) && !isDoorTier(tier)
+            const isAvailable = isTierAvailable(tier) && !freeClaimClosed
+            const quantity = quantities[tier.id] || 0
+            const priceText = isDoorTier(tier)
+              ? doorPriceLabel(doorPriceOf(tier), currency, i18n.language)
+              : isFreeTier(tier)
+                ? t('common.free')
+                : formatMoney(tier.price, currency)
+            // One muted line: scarcity / claim state / sale window, then the description.
+            const detail: Array<{ text: string; tone: 'muted' | 'warn' | 'danger' | 'ok'; dot?: boolean }> = []
+            if (freeClaimClosed) {
+              detail.push({ text: t('events.free_tier_already_claimed', { defaultValue: 'You already have your free ticket' }), tone: 'ok', dot: true })
+            } else if (!isAvailable && available > 0) {
+              detail.push({
+                text:
+                  tier.sales_start && new Date(tier.sales_start) > new Date()
+                    ? `${t('events.sales_start')} ${new Date(tier.sales_start).toLocaleDateString()}`
+                    : `${t('events.sales_ended')} ${new Date(tier.sales_end!).toLocaleDateString()}`,
+                tone: 'warn',
+              })
+            } else {
+              const copy = scarcityCopy(scarcityFor(tier))
+              if (copy) {
+                detail.push({
+                  text: t(copy.key, { defaultValue: copy.defaultValue, count: copy.count }),
+                  tone: isUrgent(scarcityFor(tier)) ? 'warn' : 'danger',
+                  dot: isUrgent(scarcityFor(tier)),
+                })
+              }
+            }
+            if (!isFreeTier(tier) && orderPricing.feeOnTop) {
+              detail.push({ text: t('checkout.plus_fees', { defaultValue: '+ fees' }), tone: 'muted' })
+            }
+            if (tier.description) detail.push({ text: tier.description, tone: 'muted' })
+            return (
+              <li
+                key={tier.id}
+                className={`flex items-center gap-3 py-2.5 ${index < tiers.length - 1 ? 'border-b border-line' : ''} ${
+                  isAvailable ? '' : 'opacity-70'
+                }`}
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-baseline gap-2.5">
+                    <span className="min-w-0 flex-1 truncate text-body font-semibold text-fg">{tier.name}</span>
+                    <span className="shrink-0 text-body font-bold tabular-nums text-fg">{priceText}</span>
+                  </div>
+                  {detail.length > 0 && (
+                    <div className="mt-0.5 truncate text-eyebrow text-fg-muted">
+                      {detail.map((d, i) => (
+                        <span key={i}>
+                          {i > 0 ? ' · ' : ''}
+                          <span
+                            className={
+                              d.tone === 'warn'
+                                ? 'text-warning-soft'
+                                : d.tone === 'danger'
+                                  ? 'text-danger'
+                                  : d.tone === 'ok'
+                                    ? 'text-success-soft'
+                                    : ''
+                            }
+                          >
+                            {d.dot ? <span aria-hidden className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-current align-middle" /> : null}
+                            {d.text}
+                          </span>
+                        </span>
+                      ))}
+                    </div>
                   )}
                 </div>
+                <QtyStepper
+                  value={quantity}
+                  hidden={!isAvailable}
+                  onMinus={() => updateQuantity(tier.id, -1)}
+                  onPlus={() => updateQuantity(tier.id, 1)}
+                  plusDisabled={quantity >= available}
+                  decreaseLabel={`${t('events.decrease_quantity', { defaultValue: 'Decrease quantity' })}, ${tier.name}`}
+                  increaseLabel={`${t('events.increase_quantity', { defaultValue: 'Increase quantity' })}, ${tier.name}`}
+                />
+              </li>
+            )
+          })}
+        </ul>
+      </section>
 
-                {/* Quantity Selector */}
-                {isAvailable && (
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => updateQuantity(tier.id, -1)}
-                      disabled={quantity === 0}
-                      aria-label={`${t('events.decrease_quantity', { defaultValue: 'Decrease quantity' })}, ${tier.name}`}
-                      className="flex h-11 w-11 items-center justify-center rounded-lg bg-surface-raised transition-colors hover:bg-surface-high disabled:opacity-30 disabled:cursor-not-allowed sm:h-9 sm:w-9"
-                    >
-                      <Minus className="w-4 h-4 text-fg-soft" />
-                    </button>
-                    <span className="w-12 text-center font-semibold text-fg text-lg">
-                      {quantity}
-                    </span>
-                    <button
-                      onClick={() => updateQuantity(tier.id, 1)}
-                      disabled={quantity >= available}
-                      aria-label={`${t('events.increase_quantity', { defaultValue: 'Increase quantity' })}, ${tier.name}`}
-                      className="flex h-11 w-11 items-center justify-center rounded-lg bg-surface-raised transition-colors hover:bg-surface-high disabled:opacity-30 disabled:cursor-not-allowed sm:h-9 sm:w-9"
-                    >
-                      <Plus className="w-4 h-4 text-fg-soft" />
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          )
-        })}
-      </div>
+      {/* Add-ons, after the tickets (lib/addons/addOns.ts). */}
+      {addOnList.length > 0 && totalTickets > 0 && !doorSelected && (
+        <AddOnsPicker
+          addOns={addOnList}
+          soldMap={addOnsSold}
+          cartTierIds={getSelections().map((s) => s.tierId)}
+          quantities={addOnQty}
+          onChange={setAddOnQty}
+          currency={currency}
+        />
+      )}
 
-      {/* Promo code — one line until somebody wants it.
-          It was a bordered card with its own heading and 16px of padding above
-          an input row: roughly 110px of a phone sheet spent on a field most
-          buyers never touch, pushing the total and the checkout button below
-          the fold. Now it is a text link that expands in place, and it stays
-          expanded once a code is applied so the discount is never hidden. */}
+      {/* Promo code: one quiet line until somebody wants it. */}
       {!promoOpen && !promoValidation?.valid ? (
         <button
           type="button"
           onClick={() => setPromoOpen(true)}
           disabled={!canPurchase}
-          className="min-h-11 text-left text-sm font-medium text-brand-400 transition-colors hover:text-brand-300 disabled:opacity-40"
+          className="min-h-10 text-left text-meta text-fg-muted transition-colors hover:text-fg disabled:opacity-40"
         >
-          {/* An invitation, not a field label: "Promo Code (optional)" is what
-              the heading above an input says, and reads oddly as a link. */}
           {t('events.promo_code_prompt', { defaultValue: 'Have a promo code?' })}
         </button>
       ) : (
         <div>
-          <label htmlFor="promo-code" className="mb-1.5 block text-xs uppercase tracking-wider text-fg-subtle">
+          <label htmlFor="promo-code" className="mb-1.5 block text-caption font-bold uppercase tracking-[0.07em] text-fg-muted">
             {t('events.promo_code_optional')}
           </label>
           <div className="flex gap-2">
@@ -461,12 +471,12 @@ export default function EventbriteStyleTicketSelector({
               placeholder={t('events.enter_code')}
               disabled={!canPurchase || validatingPromo}
               /* Filled, and 16px so iOS does not zoom the sheet on focus. */
-              className="min-w-0 flex-1 rounded-lg bg-surface px-3 py-2.5 text-base uppercase text-fg placeholder:text-fg-faint placeholder:normal-case focus:outline-none focus:ring-2 focus:ring-brand-400/50 disabled:opacity-50"
+              className="h-10 min-w-0 flex-1 rounded bg-surface px-3 text-base uppercase text-fg placeholder:text-fg-faint placeholder:normal-case focus:outline-none focus:ring-2 focus:ring-brand-400/50 disabled:opacity-50"
             />
             <button
               onClick={validatePromoCode}
               disabled={!canPurchase || !promoCode.trim() || validatingPromo}
-              className="min-h-11 shrink-0 rounded-lg bg-inverse px-4 text-sm font-semibold text-on-inverse transition-colors hover:bg-inverse-hover disabled:bg-surface-raised disabled:text-fg-subtle disabled:cursor-not-allowed"
+              className="h-10 shrink-0 rounded bg-inverse px-4 text-sm font-semibold text-on-inverse transition-colors hover:bg-inverse-hover disabled:bg-surface-raised disabled:text-fg-subtle disabled:cursor-not-allowed"
             >
               {validatingPromo ? '…' : t('events.apply')}
             </button>
@@ -485,66 +495,59 @@ export default function EventbriteStyleTicketSelector({
         </div>
       )}
 
-      {/* Total Summary */}
+      {/* Totals, like the app's footer: what is in the cart on the left, the
+          one number to pay on the right. Discount and fee stay itemized above it. */}
       {totalTickets > 0 && (
-        <div className="rounded-xl bg-surface-low p-4">
-          <div className="space-y-2">
-            {tiers
-              .filter(tier => quantities[tier.id] > 0)
-              .map(tier => (
-                <div key={tier.id} className="flex justify-between text-sm">
-                  <span className="text-fg-muted">
-                    {quantities[tier.id]}× {tier.name}
-                  </span>
-                  <span className="text-fg">
-                    {isDoorTier(tier)
-                      ? doorMoney(doorPriceOf(tier) * quantities[tier.id], currency, i18n.language)
-                      : formatMoney(
-                          computeSelectionTotal([{ price: tier.price, quantity: quantities[tier.id] }])
-                        )}
-                  </span>
+        <div className="border-t border-line pt-3">
+          {promoValidation?.valid && promoValidation.promoCode && orderPricing.discount > 0 && (
+            <div className="flex justify-between text-meta text-success">
+              <span>
+                {t('events.promo_discount')} ({promoValidation.promoCode.code})
+              </span>
+              <span className="tabular-nums">-{formatMoney(orderPricing.discount, currency)}</span>
+            </div>
+          )}
+          {showFeeLine && (
+            <div className="flex justify-between text-meta text-fg-muted">
+              <span>{t('checkout.service_fee', { defaultValue: 'Service fee' })}</span>
+              <span className="tabular-nums">{formatMoney(orderPricing.buyerFee, currency)}</span>
+            </div>
+          )}
+          <div className="mt-1 flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <div className="text-lead font-semibold text-fg">
+                {isFreeOrder && doorDue > 0
+                  ? t('events.due_at_door', { defaultValue: 'Due at the door' })
+                  : totalTickets === 1
+                    ? te('addOns.buyer.ticketsOne', { defaultValue: '1 ticket' })
+                    : te('addOns.buyer.ticketsOther', { defaultValue: '{{count}} tickets', count: totalTickets })}
+              </div>
+              {addOnCount > 0 && (
+                <div className="text-caption text-brand-400">
+                  {addOnCount === 1
+                    ? te('addOns.buyer.itemsOne', { defaultValue: '+ 1 add-on' })
+                    : te('addOns.buyer.itemsOther', { defaultValue: '+ {{count}} add-ons', count: addOnCount })}
                 </div>
-              ))}
-            {promoValidation?.valid && promoValidation.promoCode && (
-              <div className="flex justify-between text-sm text-success">
-                <span>
-                  {t('events.promo_discount')} ({promoValidation.promoCode.code})
-                </span>
-                {/* The amount actually taken off this cart, computed per ticket the
-                    way the server applies it — not the code's headline value. */}
-                <span>-{orderPricing.discount.toFixed(2)} {currency}</span>
-              </div>
-            )}
-            {showFeeLine && (
-              <div className="flex justify-between text-sm text-fg-muted">
-                <span>{t('checkout.service_fee', { defaultValue: 'Service fee' })}</span>
-                <span className="text-fg">{formatMoney(orderPricing.buyerFee)}</span>
-              </div>
-            )}
-            {isFreeOrder && doorDue > 0 ? (
-              // Pay at the door: nothing is charged online; the whole amount is
-              // paid to the organizer on arrival (Tikem takes no fee on it).
-              <div className="border-t border-line pt-2 flex justify-between font-semibold text-lg">
-                <span>{t('events.due_at_door', { defaultValue: 'Due at the door' })}</span>
-                <span className="text-brand-400">{doorMoney(doorDue, currency, i18n.language)}</span>
-              </div>
-            ) : (
-              <div className="border-t border-line pt-2 flex justify-between font-semibold text-lg">
-                <span>{t('events.total')} ({totalTickets} {t('ticket.ticket')}{totalTickets !== 1 ? 's' : ''})</span>
-                <span className="text-brand-400">{formatMoney(orderPricing.total)}</span>
-              </div>
-            )}
-            {showFeeLine && (
-              <p className="text-xs text-fg-subtle">
-                {t('checkout.total_includes_fees', {
-                  defaultValue: 'Total includes all fees. This is what you pay.',
-                })}{' '}
-                {t('checkout.service_fee_nonrefundable', {
-                  defaultValue: 'Service fee is non-refundable unless the event is cancelled.',
-                })}
-              </p>
-            )}
+              )}
+            </div>
+            <div className="shrink-0 text-headline font-bold tabular-nums text-fg">
+              {isFreeOrder && doorDue > 0
+                ? doorMoney(doorDue, currency, i18n.language)
+                : orderPricing.total === 0
+                  ? t('common.free')
+                  : formatMoney(orderPricing.total, currency)}
+            </div>
           </div>
+          {showFeeLine && (
+            <div className="mt-1 text-caption text-fg-subtle">
+              {t('checkout.total_includes_fees', {
+                defaultValue: 'Total includes all fees. This is what you pay.',
+              })}{' '}
+              {t('checkout.service_fee_nonrefundable', {
+                defaultValue: 'Service fee is non-refundable unless the event is cancelled.',
+              })}
+            </div>
+          )}
         </div>
       )}
 
@@ -552,7 +555,7 @@ export default function EventbriteStyleTicketSelector({
       <button
         onClick={handlePurchase}
         disabled={!canPurchase || totalTickets === 0}
-        className="h-14 w-full rounded bg-inverse px-6 font-semibold text-on-inverse transition-colors hover:bg-inverse-hover disabled:bg-surface-raised disabled:text-fg-subtle disabled:cursor-not-allowed"
+        className="h-12 w-full rounded bg-inverse px-6 font-semibold text-on-inverse transition-colors hover:bg-inverse-hover disabled:bg-surface-raised disabled:text-fg-subtle disabled:cursor-not-allowed"
       >
         {!canPurchase
           ? t('events.sign_in_to_purchase')
@@ -566,7 +569,7 @@ export default function EventbriteStyleTicketSelector({
           ? totalTickets === 1
             ? t('events.get_free_ticket', { defaultValue: 'Get free ticket' })
             : t('events.get_free_tickets', { defaultValue: 'Get free tickets' })
-          : `${t('events.checkout')} - ${formatMoney(orderPricing.total)}`
+          : `${t('events.checkout')} · ${formatMoney(orderPricing.total, currency)}`
         }
       </button>
     </div>

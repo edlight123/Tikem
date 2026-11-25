@@ -24,6 +24,8 @@ const TICKET_FIELDS = [
   'funds_rail',
   'source',
   'price_paid',
+  // Add-ons booked on an order's first ticket (lib/addons/addOns.ts).
+  'add_ons_face_total',
   'currency',
   'original_currency',
   'charged_amount',

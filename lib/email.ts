@@ -290,11 +290,15 @@ export function getTicketConfirmationEmail(params: {
   walletUrl?: string
   /** The host approved the guest's request (approval lists): status "Approved" + a line saying so. */
   approved?: boolean
+  /** Add-ons bought with the order (lib/addons/addOns.ts), already labelled: "T-shirt (M) × 2". */
+  addOns?: string[]
   lang?: EmailLang
 }) {
   const lang = pickLang(params.lang)
   const t = L(lang, {
     en: {
+      addOns: 'your add-ons',
+      addOnsNote: 'Show your ticket to collect them at the event.',
       approvedStatus: 'Approved',
       approvedLine: 'The host approved your request. Your tickets are below.',
       status: 'Confirmed',
@@ -316,6 +320,8 @@ export function getTicketConfirmationEmail(params: {
       follow: 'Follow on Instagram',
     },
     fr: {
+      addOns: 'vos extras',
+      addOnsNote: "Présentez votre billet pour les récupérer sur place.",
       approvedStatus: 'Approuvé',
       approvedLine: "L'organisateur a approuvé votre demande. Vos billets sont ci-dessous.",
       status: 'Confirmé',
@@ -337,6 +343,8 @@ export function getTicketConfirmationEmail(params: {
       follow: 'Suivre sur Instagram',
     },
     ht: {
+      addOns: 'ekstra ou yo',
+      addOnsNote: 'Montre tikè ou a pou w resevwa yo nan evènman an.',
       approvedStatus: 'Apwouve',
       approvedLine: 'Òganizatè a apwouve demann ou. Tikè ou yo anba a.',
       status: 'Konfime',
@@ -404,6 +412,9 @@ export function getTicketConfirmationEmail(params: {
       button(t.view, ticketsUrl),
       params.ticketsUrlNote ? `<div style="margin:12px 0 0;text-align:center;font-family:Helvetica,Arial,sans-serif;font-size:13px;line-height:1.6;color:#6B6B6B;">${escapeHtml(params.ticketsUrlNote)}</div>` : '',
       params.walletUrl ? textLink(t.wallet, params.walletUrl) : '',
+      ...(params.addOns && params.addOns.length > 0
+        ? [gap(32), serifHeading(t.addOns), lines([...params.addOns, t.addOnsNote])]
+        : []),
       gap(40),
       serifHeading(t.before),
       lines([...(params.doorsTime ? [t.doors(params.doorsTime)] : []), ...t.tips]),

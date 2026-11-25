@@ -25,5 +25,94 @@
     "selling_fast": "K ap vann vit",
     "almost_full": "Prèske epize",
     "last_tickets": "Dènye tikè ki rete"
+  },
+  "addOns": {
+    "editor": {
+      "title": "Ekstra",
+      "info": "Pakè boutey, VIP, pakin, bwason oswa mèch, yo achte ansanm ak tikè yo.",
+      "fixTitle": "Verifye ekstra ou yo",
+      "fixMsg": "Chak ekstra bezwen yon non ak yon pri ki pi wo pase 0, epi fen lavant lan dwe vini apre kòmansman an.",
+      "add": "Lòt",
+      "untitled": "Nouvo ekstra",
+      "stockCount": "{{count}} disponib",
+      "unlimited": "San limit",
+      "hiddenBadge": "Kanpe",
+      "needsName": "Bay ekstra sa a yon non.",
+      "needsPrice": "Mete yon pri ki pi wo pase 0.",
+      "badWindow": "Fen lavant lan dwe vini apre kòmansman an.",
+      "name": "Non",
+      "namePlaceholder": "Pakè boutey, Pakin, Mayo…",
+      "price": "Pri ({{currency}})",
+      "description": "Deskripsyon (si ou vle)",
+      "descriptionPlaceholder": "1 boutey + sòf, pou 4 moun",
+      "options": "Gwosè oswa opsyon (si ou vle)",
+      "optionsPlaceholder": "S, M, L, XL",
+      "optionsHint": "Separe yo ak vigil. Moun k ap achte a chwazi youn; tout opsyon yo pataje menm stòk la.",
+      "quantity": "Stòk",
+      "maxPerOrder": "Maksimòm pa kòmand",
+      "salesStart": "Kòmansman lavant (si ou vle)",
+      "salesEnd": "Fen lavant (si ou vle)",
+      "onlyWith": "Sèlman ak tikè sa yo",
+      "onlyWithSaveFirst": "Li vann ak nenpòt tikè. Anrejistre evènman an anvan pou w limite l ak kèk tikè.",
+      "ticket": "Tikè",
+      "anyTicket": "Okenn pa chwazi: li vann ak nenpòt tikè.",
+      "onSale": "An vant",
+      "remove": "Retire"
+    },
+    "presets": {
+      "bottle": "Pakè boutey",
+      "table": "Tab",
+      "vip": "Pase VIP",
+      "parking": "Pakin",
+      "drinks": "Tikè bwason",
+      "merch": "Mayo"
+    },
+    "buyer": {
+      "title": "Ekstra",
+      "subtitle": "Pou w pran nan evènman an",
+      "soldOut": "Fini",
+      "decrease": "Mwens {{name}}",
+      "increase": "Plis {{name}}",
+      "limit": "Jiska {{count}} pa kòmand",
+      "option": "Gwosè",
+      "chooseTickets": "Chwazi tikè",
+      "ticketsOne": "1 tikè",
+      "ticketsOther": "{{count}} tikè",
+      "itemsOne": "+ 1 ekstra",
+      "itemsOther": "+ {{count}} ekstra",
+      "left": "Rete {{count}}"
+    },
+    "errors": {
+      "soldOut": "Youn nan ekstra ou yo fèk fini. Retire l oswa diminye kantite a, epi eseye ankò.",
+      "unavailable": "Youn nan ekstra ou yo pa an vant ankò. Retire l epi eseye ankò.",
+      "needsTier": "Youn nan ekstra ou yo vann sèlman ak yon lòt tikè.",
+      "limit": "Ou chwazi plis ekstra pase sa yon kòmand pèmèt.",
+      "option": "Chwazi yon gwosè oswa yon opsyon pou chak ekstra.",
+      "rail": "Ou ka peye ekstra yo ak kat oswa ak MonCash.",
+      "generic": "Nou pa t ka ajoute ekstra ou yo. Tanpri eseye ankò."
+    },
+    "ticket": {
+      "title": "Ekstra ou yo",
+      "pickedUp": "Resevwa",
+      "toCollect": "Pou w pran",
+      "howToCollect": "Montre tikè sa a nan evènman an pou w resevwa yo.",
+      "onFirstTicket": "Ekstra kòmand ou a yo sou premye tikè a."
+    },
+    "door": {
+      "title": "Ekstra pou bay",
+      "close": "Fèmen",
+      "pickedUp": "Bay deja",
+      "toHandOver": "Pou bay",
+      "markPickedUp": "Bay",
+      "undo": "Anile",
+      "loadFailed": "Nou pa t ka chaje ekstra kòmand sa a.",
+      "saveFailed": "Nou pa t ka anrejistre. Eseye ankò."
+    },
+    "dashboard": {
+      "title": "Lavant ekstra",
+      "none": "Poko gen ekstra ki vann.",
+      "soldPicked": "{{sold}} vann · {{picked}} bay",
+      "total": "Total"
+    }
   }
 }

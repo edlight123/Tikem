@@ -18,7 +18,8 @@ describe('organizer sale notification copy', () => {
 
   it('a paid sale shows the amount in its own currency, not a hard-coded $', () => {
     const htg = organizerSaleCopy(2, 14000, 'HTG')
-    expect(htg.push).toMatch(/^2 tickets sold for HTG\s?14,000\.00$/)
+    // Whole gourdes drop ".00" (owner, 2026-11-25).
+    expect(htg.push).toMatch(/^2 tickets sold for HTG\s?14,000$/)
     expect(htg.push).not.toContain('$')
     expect(organizerSaleCopy(1, 59.29, 'USD').push).toBe('1 ticket sold for $59.29')
   })

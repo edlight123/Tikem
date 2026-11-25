@@ -305,3 +305,52 @@ export function dropQueuedCheckIn(uid: string, eventId: string, ticketId: string
     if (next.length !== queue.length) await writeCheckInQueue(uid, next);
   });
 }
+
+// ---------------------------------------------------------------------------
+// Add-ons to hand over (meals, merch…): lib/addons on the server
+// ---------------------------------------------------------------------------
+
+export type DoorAddOnItem = {
+  index: number;
+  id: string;
+  name: string;
+  option: string | null;
+  quantity: number;
+  pickedUp: boolean;
+  pickedUpAt: string | null;
+};
+
+/** The add-ons the scanned ticket's order carries (null = none). */
+export type DoorOrderAddOns = { ticketId: string; items: DoorAddOnItem[] } | null;
+
+/** GET the order's add-ons for any of its tickets. Needs a connection. */
+export async function fetchOrderAddOns(eventId: string, ticketId: string): Promise<DoorOrderAddOns> {
+  const res = await fetchWithTimeout(
+    `/api/staff/events/${encodeURIComponent(eventId)}/add-ons/pickup?ticketId=${encodeURIComponent(ticketId)}`,
+    { method: 'GET' },
+    CHECK_IN_TIMEOUT_MS,
+  );
+  const json: any = await res.json().catch(() => null);
+  if (!res.ok) throw new DoorOfflineError();
+  return json?.addOns && Array.isArray(json.addOns.items) ? json.addOns : null;
+}
+
+/** Mark one add-on line handed over (or undo it). Not queued offline. */
+export async function postAddOnPickup(
+  eventId: string,
+  ticketId: string,
+  index: number,
+  pickedUp: boolean,
+): Promise<DoorOrderAddOns> {
+  const res = await fetchWithTimeout(
+    `/api/staff/events/${encodeURIComponent(eventId)}/add-ons/pickup`,
+    { method: 'POST', body: JSON.stringify({ ticketId, index, pickedUp }) },
+    CHECK_IN_TIMEOUT_MS,
+  );
+  const json: any = await res.json().catch(() => null);
+  if (res.status === 401 || res.status === 403 || res.status === 404 || res.status === 400 || res.status === 409) {
+    throw new DoorAccessError(res.status, String(json?.error || 'Forbidden'));
+  }
+  if (!res.ok) throw new DoorOfflineError();
+  return json?.addOns || null;
+}

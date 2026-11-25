@@ -111,6 +111,8 @@ interface PaymentModalProps {
   tiers?: { tierId: string; quantity: number }[];
   /** Tickets the per-ticket service fee applies to (free tiers are excluded). */
   feeQuantity?: number;
+  /** Add-ons picked with the tickets (lib/addOns). Their face is inside totalAmount; the server re-prices. */
+  addOns?: { id: string; option: string | null; quantity: number; name: string; unitPrice: number }[];
   promoCodeId?: string;
   /** Promoter ref (`?ref=` on the event link) — resolved and attributed server-side. */
   refCode?: string;
@@ -143,6 +145,7 @@ function PaymentForm({
   tierId,
   tiers,
   feeQuantity,
+  addOns,
   promoCodeId,
   refCode,
   attribution,
@@ -181,6 +184,11 @@ function PaymentForm({
     { quantity: feeQuantity ?? quantity }
   );
   const showFeeLine = orderPricing.feeOnTop && orderPricing.buyerFee > 0;
+  // Add-ons (lib/addOns) ride with every rail: only id / option / quantity,
+  // the server prices them from the stored event.
+  const addOnsBody =
+    addOns && addOns.length > 0 ? { addOns: addOns.map((a) => ({ id: a.id, option: a.option, quantity: a.quantity })) } : {};
+  const addOnsKey = JSON.stringify(addOnsBody);
   // Default to MonCash if Stripe not available (Expo Go)
   const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'moncash' | 'natcash' | 'sogepay'>(
     isHaitiEvent ? 'moncash' : 'stripe'
@@ -202,7 +210,7 @@ function PaymentForm({
     setHtgQuote(null);
     backendJson<MonCashQuote>(`/api/moncash-button/quote`, {
       method: 'POST',
-      body: JSON.stringify({ eventId, quantity, tierId, ...orderLines, promoCodeId }),
+      body: JSON.stringify({ eventId, quantity, tierId, ...orderLines, ...addOnsBody, promoCodeId }),
     })
       .then((q) => {
         if (cancelled) return;
@@ -219,7 +227,7 @@ function PaymentForm({
     return () => {
       cancelled = true;
     };
-  }, [needsHtgQuote, eventId, quantity, tierId, tiersKey, promoCodeId]);
+  }, [needsHtgQuote, eventId, quantity, tierId, tiersKey, addOnsKey, promoCodeId]);
 
   // Whether to name Apple Pay on the card row.
   //
@@ -291,6 +299,10 @@ function PaymentForm({
           quantity,
           tierId,
           ...orderLines,
+          // Only id / option / quantity: the server prices add-ons from the event.
+          ...(addOns && addOns.length > 0
+            ? { addOns: addOns.map((a) => ({ id: a.id, option: a.option, quantity: a.quantity })) }
+            : {}),
           promoCodeId,
           ...(refCode ? { refCode } : {}),
           ...(attribution ? { attribution } : {}),
@@ -433,6 +445,7 @@ function PaymentForm({
           quantity,
           tierId,
           ...orderLines,
+          ...addOnsBody,
           promoCode: promoCodeId,
           ...(refCode ? { refCode } : {}),
           ...(attribution ? { attribution } : {}),
@@ -468,6 +481,7 @@ function PaymentForm({
           quantity,
           tierId,
           ...orderLines,
+          ...addOnsBody,
           promoCode: promoCodeId,
           ...(refCode ? { refCode } : {}),
           ...(attribution ? { attribution } : {}),
@@ -507,6 +521,7 @@ function PaymentForm({
           quantity,
           tierId,
           ...orderLines,
+          ...addOnsBody,
           promoCode: promoCodeId,
           ...(refCode ? { refCode } : {}),
           ...(attribution ? { attribution } : {}),
@@ -749,6 +764,21 @@ function PaymentForm({
         {error && (
           <View style={styles.errorContainer}>
             <Text style={styles.errorText}>{error}</Text>
+          </View>
+        )}
+
+        {/* Add-ons in the order, itemized above the total. */}
+        {addOns && addOns.length > 0 && (
+          <View style={styles.feeBreakdown}>
+            <Text style={styles.feeRowLabel}>{t('addOns.sectionTitle')}</Text>
+            {addOns.map((a) => (
+              <View key={`${a.id}|${a.option || ''}`} style={styles.feeRow}>
+                <Text style={styles.feeRowLabel} numberOfLines={1}>
+                  {`${a.name}${a.option ? ` (${a.option})` : ''} × ${a.quantity}`}
+                </Text>
+                <Text style={styles.feeRowValue}>{formatCurrency(a.unitPrice * a.quantity, currency)}</Text>
+              </View>
+            ))}
           </View>
         )}
 

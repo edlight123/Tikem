@@ -27,6 +27,7 @@ import SectionHeader from '../components/SectionHeader';
 import { Touchable } from '../components/ui/Touchable';
 import { doorBalance, doorMoney } from '../lib/payAtDoor';
 import { Text as UIText } from '../components/ui/Text';
+import { addOnLabel, ticketAddOns } from '../lib/addOns';
 
 export default function TicketDetailScreen({ route }: any) {
   const { colors } = useTheme();
@@ -451,6 +452,30 @@ export default function TicketDetailScreen({ route }: any) {
               </Text>
             </View>
           </View>
+
+          {/* Add-ons bought with the order (lib/addOns): on its first ticket. */}
+          {ticketAddOns(ticket).length > 0 ? (
+            <>
+              <SectionHeader title={t('addOns.yourAddOns')} />
+              <View style={styles.detailsCard}>
+                {ticketAddOns(ticket).map((a, i) => (
+                  <View key={`${a.id}|${a.option || ''}|${i}`} style={[styles.detailRow, i === 0 && styles.detailRowFirst]}>
+                    <Text style={[styles.detailLabel, { color: colors.text, flex: 1 }]} numberOfLines={2}>
+                      {addOnLabel(a)}
+                    </Text>
+                    <Text style={[styles.detailValue, { color: a.picked_up_at ? colors.success : colors.textSecondary }]}>
+                      {a.picked_up_at ? t('addOns.pickedUp') : t('addOns.toCollect')}
+                    </Text>
+                  </View>
+                ))}
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>{t('addOns.collectHint')}</Text>
+                </View>
+              </View>
+            </>
+          ) : ticket.add_ons_ticket_id ? (
+            <Text style={[styles.detailLabel, { marginTop: -20, marginBottom: 24 }]}>{t('addOns.onFirstTicket')}</Text>
+          ) : null}
 
           {/* Add to Wallet + post-purchase action stack */}
           {isActive && (

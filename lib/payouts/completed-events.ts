@@ -29,6 +29,8 @@ const TICKET_FIELDS = [
   'status',
   'refund_status',
   'price_paid',
+  // Add-ons booked on an order's first ticket (lib/addons/addOns.ts).
+  'add_ons_face_total',
   'pricePaid',
   'end_datetime',
   'start_datetime',

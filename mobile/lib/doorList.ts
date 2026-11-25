@@ -41,6 +41,10 @@ export type DoorRow = {
   qrVersion?: number;
   /** Pay at the door: still owed on arrival (null/absent for any other ticket). */
   doorOwes?: number | null;
+  /** Add-ons to hand over, on the order's first ticket (lib/addOns). */
+  addOns?: Array<{ index: number; name: string; option: string | null; quantity: number; pickedUp: boolean }>;
+  /** The ticket that carries this order's add-ons (itself, or its order's first ticket). */
+  addOnsTicketId?: string | null;
   doorCurrency?: string | null;
   doorPaid?: boolean;
 };

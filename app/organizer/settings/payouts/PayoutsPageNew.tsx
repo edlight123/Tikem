@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { formatMoneyFromCents } from '@/lib/money'
 import { useTranslation } from 'react-i18next'
 import { ChevronRight, AlertCircle, CheckCircle, Clock, Ban, ArrowLeft, Globe, Wallet, Check } from 'lucide-react'
 import Link from 'next/link'
@@ -754,12 +755,8 @@ export default function PayoutsPageNew({
   const formatCurrency = (amountCents: number, currencyRaw?: string) => {
     const normalized = amountCents / 100
     const currency = String(currencyRaw || 'HTG').toUpperCase() === 'USD' ? 'USD' : 'HTG'
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency,
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }).format(normalized)
+    // Shared formatter: whole gourdes drop ".00".
+    return formatMoneyFromCents(Math.round(normalized * 100), currency)
   }
 
   const formatDate = (dateString: string) => {

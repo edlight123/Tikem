@@ -39,6 +39,7 @@ import { fromCents, toCents } from '@/lib/ticketPricing'
 import { fixedFeeMinorFor, locationFeesForCountry, type LocationFeeConfig } from '@/types/platform-settings'
 import { getPlatformFeeConfig } from '@/lib/checkout/fee-config-store'
 import { calculateDiscount, type DiscountInput } from '@/lib/promo-code-shared'
+import { addOnFaceCents as addOnLinesFaceCents } from '@/lib/addons/addOns'
 
 export type { BuyerPricing, FeeIncidence }
 
@@ -247,9 +248,17 @@ export function applyPromoToLines<T extends CartLineInput>(
   })
 }
 
+/** An add-on line as priced: stored unit price (major units, event currency). Promos never apply. */
+export interface AddOnPriceLine {
+  unitPrice: number
+  quantity: number
+}
+
 export interface PricedLinesCents {
-  /** Post-promo face total in the CHARGE currency's minor units. */
+  /** Post-promo face total in the CHARGE currency's minor units (add-ons included). */
   faceValueCents: number
+  /** The add-ons' share of faceValueCents (0 when none). */
+  addOnFaceCents: number
   /** Tickets that still cost something after the promo — the fixed-fee count. */
   paidQuantity: number
   /** Every ticket in the cart, free ones included. */
@@ -268,7 +277,7 @@ export interface PricedLinesCents {
 export function priceTierLinesCents(
   lines: PricedCartLine[],
   event: PricingEvent,
-  options?: OrderPricingOptions & { exchangeRate?: number | null }
+  options?: OrderPricingOptions & { exchangeRate?: number | null; addOns?: AddOnPriceLine[] | null }
 ): PricedLinesCents {
   const rate = Number(options?.exchangeRate) > 0 ? Number(options!.exchangeRate) : 1
   let faceValueCents = 0
@@ -282,12 +291,18 @@ export function priceTierLinesCents(
     faceValueCents += Math.round(unit * rate * qty * 100)
     paidQuantity += qty
   }
+  // Add-ons (lib/addons/addOns.ts) join the face total, so the ONE fee formula
+  // runs over the whole subtotal. They are not tickets: the market's fixed
+  // per-ticket amount still counts paid tickets only (at least one when the
+  // order costs anything, as fixedFeeTotalFor always has).
+  const addOnFaceCents = addOnLinesFaceCents(options?.addOns || [], rate)
+  faceValueCents += addOnFaceCents
   const pricing = priceOrderCents(faceValueCents, event, {
     currency: options?.currency,
     config: options?.config,
     quantity: paidQuantity,
   })
-  return { faceValueCents, paidQuantity, totalQuantity, pricing }
+  return { faceValueCents, addOnFaceCents, paidQuantity, totalQuantity, pricing }
 }
 
 export interface CartPricing extends OrderPricing {
@@ -297,6 +312,8 @@ export interface CartPricing extends OrderPricing {
   discount: number
   /** Tickets that still cost something after the promo. */
   paidQuantity: number
+  /** Add-ons' face total (major units); included in faceValue and total. */
+  addOnSubtotal: number
 }
 
 /**
@@ -307,14 +324,21 @@ export interface CartPricing extends OrderPricing {
 export function priceCart(
   lines: CartLineInput[],
   event: PricingEvent,
-  options?: { promo?: DiscountInput | null; currency?: string | null; config?: Partial<LocationFeeConfig> | null }
+  options?: {
+    promo?: DiscountInput | null
+    currency?: string | null
+    config?: Partial<LocationFeeConfig> | null
+    /** Add-ons in the cart, at their stored prices (no promo). */
+    addOns?: AddOnPriceLine[] | null
+  }
 ): CartPricing {
   const priced = applyPromoToLines(lines, options?.promo)
-  const { pricing, paidQuantity } = priceTierLinesCents(priced, event, {
+  const { pricing, paidQuantity, addOnFaceCents } = priceTierLinesCents(priced, event, {
     currency: options?.currency,
     config: options?.config,
+    addOns: options?.addOns,
   })
-  const beforeCents = priced.reduce((sum, l) => sum + toCents(l.unitOriginal) * l.quantity, 0)
+  const beforeCents = priced.reduce((sum, l) => sum + toCents(l.unitOriginal) * l.quantity, 0) + addOnFaceCents
   return {
     incidence: pricing.incidence,
     feeOnTop: pricing.incidence === 'buyer',
@@ -325,5 +349,6 @@ export function priceCart(
     subtotalBeforePromo: fromCents(beforeCents),
     discount: fromCents(Math.max(0, beforeCents - pricing.faceValue)),
     paidQuantity,
+    addOnSubtotal: fromCents(addOnFaceCents),
   }
 }

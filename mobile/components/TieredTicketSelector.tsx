@@ -23,8 +23,17 @@ import { MAX_DOOR_TICKETS_PER_PERSON, doorPriceLabel, doorPriceOf, isDoorTier } 
 import { priceOrder } from '../lib/buyerPricing';
 import WhitePillCTA from './WhitePillCTA';
 import MoneyText from './MoneyText';
-import { radius } from '../theme/tokens';
+import { colors as T, radius } from '../theme/tokens';
 import { formatEventDateTime } from '../lib/eventClock';
+import {
+  addOnAvailability,
+  addOnOrderLimit,
+  addOnRemaining,
+  addOnSubtotal,
+  eventAddOns,
+  type AddOnSelection,
+  type EventAddOn,
+} from '../lib/addOns';
 
 interface TicketTier {
   id: string;
@@ -78,10 +87,14 @@ export interface PurchaseSelectionMeta {
   lines: { tierId: string; quantity: number }[];
   /** Tickets the per-ticket service fee applies to (free tiers excluded). */
   paidQuantity: number;
+  /** Add-ons picked after the tickets (lib/addOns). Their face is inside finalPrice. */
+  addOns: AddOnSelection[];
 }
 
 interface TieredTicketSelectorProps {
   eventId: string;
+  /** Most free tickets one claim may take (family events allow more): freeClaimCapFor(event). */
+  freeClaimCap?: number;
   visible: boolean;
   onClose: () => void;
   onPurchase: (
@@ -104,6 +117,9 @@ interface TieredTicketSelectorProps {
   freeClaimHeld?: boolean;
   /** Free tickets one person may claim here: 2, or the family size (lib/family). */
   freeCap?: number;
+  /** The event's stored `add_ons` and their sold rollup `add_ons_sold`. */
+  addOns?: unknown;
+  addOnsSold?: Record<string, unknown> | null;
 }
 
 interface TierQuantity {
@@ -132,6 +148,8 @@ export default function TieredTicketSelector({
   feeIncidence,
   freeClaimHeld = false,
   freeCap = MAX_FREE_TICKETS_PER_PERSON,
+  addOns: rawAddOns,
+  addOnsSold = null,
 }: TieredTicketSelectorProps) {
   const { colors } = useTheme();
   const styles = getStyles(colors);
@@ -158,6 +176,10 @@ export default function TieredTicketSelector({
   const promoExpanded = promoOpen || !!promoValidation;
   // Shown above the CTA when the cart can't go through as selected.
   const [cartNotice, setCartNotice] = useState<string | null>(null);
+  // Add-ons: quantity per `${id}|${option}`, and the option shown per add-on.
+  const [addOnQty, setAddOnQty] = useState<Record<string, number>>({});
+  const [addOnOption, setAddOnOption] = useState<Record<string, string>>({});
+  const allAddOns: EventAddOn[] = eventAddOns({ add_ons: rawAddOns });
 
   useEffect(() => {
     if (visible) {
@@ -319,14 +341,56 @@ export default function TieredTicketSelector({
 
     // Only a code the server has validated changes the price. The discount is
     // per ticket, matching how both checkout routes price a promo.
-    if (promoValidation?.valid) {
-      return computeSelectionTotal(selections, {
-        percentage: promoValidation.discount_percentage,
-        amount: promoValidation.discount_amount,
-      });
-    }
+    const tickets = promoValidation?.valid
+      ? computeSelectionTotal(selections, {
+          percentage: promoValidation.discount_percentage,
+          amount: promoValidation.discount_amount,
+        })
+      : computeSelectionTotal(selections);
+    // Add-ons at their stored price (a promo never applies to them), on cents.
+    return Math.round((tickets + addOnSubtotal(selectedAddOns())) * 100) / 100;
+  };
 
-    return computeSelectionTotal(selections);
+  /** Tier ids in the cart: what a tier-restricted add-on needs. */
+  const cartTierIds = (): string[] => tiers.filter((tr) => (tierQuantities[tr.id] || 0) > 0).map((tr) => tr.id);
+
+  /** Add-ons a buyer can see for this cart: on sale, or sold out (shown closed). */
+  const visibleAddOns = (): Array<{ addOn: EventAddOn; soldOut: boolean }> => {
+    const ids = cartTierIds();
+    return allAddOns
+      .map((addOn) => ({ addOn, state: addOnAvailability(addOn, { cartTierIds: ids, soldMap: addOnsSold }) }))
+      .filter((x) => x.state === 'available' || x.state === 'sold_out')
+      .map((x) => ({ addOn: x.addOn, soldOut: x.state === 'sold_out' }));
+  };
+
+  /** The picked add-ons still valid for the cart, as sent to checkout. */
+  const selectedAddOns = (): AddOnSelection[] => {
+    const offered = new Map(visibleAddOns().filter((x) => !x.soldOut).map((x) => [x.addOn.id, x.addOn]));
+    const out: AddOnSelection[] = [];
+    for (const [key, qty] of Object.entries(addOnQty)) {
+      if (!(qty > 0)) continue;
+      const [id, option] = key.split('|');
+      const addOn = offered.get(id);
+      if (!addOn) continue;
+      if ((addOn.options || []).length > 0 && !(addOn.options || []).includes(option)) continue;
+      out.push({ id, option: option || null, quantity: qty, name: addOn.name, unitPrice: addOn.price });
+    }
+    return out;
+  };
+
+  const addOnTotalFor = (id: string) =>
+    Object.entries(addOnQty).reduce((sum, [key, q]) => (key.split('|')[0] === id ? sum + (q || 0) : sum), 0);
+
+  const updateAddOnQuantity = (addOn: EventAddOn, delta: number) => {
+    const options = addOn.options || [];
+    const option = options.length > 0 ? addOnOption[addOn.id] || options[0] : '';
+    const key = `${addOn.id}|${option}`;
+    const current = addOnQty[key] || 0;
+    const remaining = addOnRemaining(addOn, addOnsSold);
+    const cap = Math.min(addOnOrderLimit(addOn), remaining ?? Infinity);
+    const others = addOnTotalFor(addOn.id) - current;
+    const next = Math.max(0, Math.min(current + delta, cap - others));
+    setAddOnQty((prev) => ({ ...prev, [key]: next }));
   };
 
   const updateTierQuantity = (tierId: string, delta: number) => {
@@ -372,9 +436,13 @@ export default function TieredTicketSelector({
     const quantity = lines.reduce((sum, l) => sum + l.quantity, 0);
     const finalPrice = getTotalPrice();
     // Undiscounted total, on integer cents like every other amount here.
-    const grossPrice = computeSelectionTotal(
-      lines.map(l => ({ price: l.tier.price, quantity: l.quantity }))
-    );
+    const pickedAddOns = selectedAddOns();
+    const grossPrice =
+      Math.round(
+        (computeSelectionTotal(lines.map(l => ({ price: l.tier.price, quantity: l.quantity }))) +
+          addOnSubtotal(pickedAddOns)) *
+          100
+      ) / 100;
     // The fixed part of the service fee is per PAID ticket.
     const paidQuantity = lines.reduce((sum, l) => sum + (l.tier.price > 0 ? l.quantity : 0), 0);
 
@@ -401,10 +469,13 @@ export default function TieredTicketSelector({
       isFree: finalPrice <= 0,
       grossPrice,
       promoZeroed: finalPrice <= 0 && grossPrice > 0,
+      addOns: pickedAddOns,
     });
 
     // Reset state
     setTierQuantities({});
+    setAddOnQty({});
+    setAddOnOption({});
     setPromoCode('');
     setPromoValidation(null);
     setPromoOpen(false);
@@ -617,6 +688,106 @@ export default function TieredTicketSelector({
                 );
               })}
 
+              {/* Add-ons — after the tickets (lib/addOns). Prices are the stored
+                  ones; the server re-prices and re-checks stock at checkout. */}
+              {getTotalQuantity() > 0 && visibleAddOns().length > 0 && (
+                <View style={styles.addOnBlock}>
+                  <View style={styles.sectionHeader}>
+                    <Text style={styles.sectionLabel}>{t('addOns.sectionTitle')}</Text>
+                    <Text style={styles.addOnHint}>{t('addOns.sectionHint')}</Text>
+                  </View>
+                  {visibleAddOns().map(({ addOn, soldOut }, index, list) => {
+                    const options = addOn.options || [];
+                    const option = options.length > 0 ? addOnOption[addOn.id] || options[0] : '';
+                    const qty = addOnQty[`${addOn.id}|${option}`] || 0;
+                    const total = addOnTotalFor(addOn.id);
+                    const remaining = addOnRemaining(addOn, addOnsSold);
+                    const cap = Math.min(addOnOrderLimit(addOn), remaining ?? Infinity);
+                    const atMax = total >= cap;
+                    const picked = options
+                      .map((o) => ({ o, q: addOnQty[`${addOn.id}|${o}`] || 0 }))
+                      .filter((x) => x.q > 0)
+                      .map((x) => `${x.o} × ${x.q}`)
+                      .join(', ');
+                    const note = soldOut
+                      ? t('addOns.soldOut')
+                      : remaining !== null && remaining <= LOW_STOCK_THRESHOLD
+                        ? t('addOns.leftCount', { count: remaining })
+                        : null;
+                    return (
+                      <View
+                        key={addOn.id}
+                        style={[styles.tierRow, index === list.length - 1 && styles.tierRowLast, soldOut && styles.tierRowDisabled]}
+                      >
+                        <View style={styles.tierMain}>
+                          <View style={styles.tierTitleLine}>
+                            <Text style={[styles.tierName, soldOut && styles.tierNameDisabled]} numberOfLines={1}>
+                              {addOn.name}
+                            </Text>
+                            <Text style={styles.tierPrice} numberOfLines={1}>
+                              {formatCurrency(addOn.price, displayCurrency)}
+                            </Text>
+                          </View>
+                          {(note || addOn.description) && (
+                            <View style={styles.tierMetaLine}>
+                              {note && <Text style={[styles.tierMeta, soldOut && styles.tierMetaSoldOut]} numberOfLines={1}>{note}</Text>}
+                              {!!note && !!addOn.description && <Text style={styles.tierMetaDot}>·</Text>}
+                              {!!addOn.description && (
+                                <Text style={styles.tierMetaDescription} numberOfLines={1}>{addOn.description}</Text>
+                              )}
+                            </View>
+                          )}
+                          {!soldOut && options.length > 0 && (
+                            <View style={styles.optionChips} accessibilityLabel={t('addOns.optionLabel')}>
+                              {options.map((o) => (
+                                <TouchableOpacity
+                                  key={o}
+                                  onPress={() => setAddOnOption((prev) => ({ ...prev, [addOn.id]: o }))}
+                                  style={[styles.optionChip, o === option && styles.optionChipOn]}
+                                  accessibilityRole="radio"
+                                  accessibilityState={{ selected: o === option }}
+                                  hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
+                                >
+                                  <Text style={[styles.optionChipText, o === option && styles.optionChipTextOn]}>{o}</Text>
+                                </TouchableOpacity>
+                              ))}
+                            </View>
+                          )}
+                          {!!picked && <Text style={styles.tierMeta}>{picked}</Text>}
+                        </View>
+                        <View style={styles.stepper}>
+                          {!soldOut && (
+                            <>
+                              <TouchableOpacity
+                                onPress={() => updateAddOnQuantity(addOn, -1)}
+                                disabled={qty === 0}
+                                hitSlop={STEPPER_HIT_SLOP}
+                                accessibilityRole="button"
+                                accessibilityLabel={`${t('a11y.decrease')}, ${addOn.name}`}
+                                style={[styles.stepperButton, qty === 0 && styles.stepperButtonDisabled]}
+                              >
+                                <Minus size={16} color={qty === 0 ? colors.textTertiary : colors.primary} />
+                              </TouchableOpacity>
+                              <Text style={styles.stepperCount} accessibilityLiveRegion="polite">{qty}</Text>
+                              <TouchableOpacity
+                                onPress={() => updateAddOnQuantity(addOn, 1)}
+                                disabled={atMax}
+                                hitSlop={STEPPER_HIT_SLOP}
+                                accessibilityRole="button"
+                                accessibilityLabel={`${t('a11y.increase')}, ${addOn.name}`}
+                                style={[styles.stepperButton, atMax && styles.stepperButtonDisabled]}
+                              >
+                                <Plus size={16} color={atMax ? colors.textTertiary : colors.primary} />
+                              </TouchableOpacity>
+                            </>
+                          )}
+                        </View>
+                      </View>
+                    );
+                  })}
+                </View>
+              )}
+
               {/* Promo Code — collapsed behind a quiet toggle */}
               {getTotalQuantity() > 0 && (
                 <View style={styles.promoBlock}>
@@ -734,6 +905,14 @@ export default function TieredTicketSelector({
                     {t('ticketSelector.promoApplied')}
                   </Text>
                 )}
+                {(() => {
+                  const n = selectedAddOns().reduce((s, a) => s + a.quantity, 0);
+                  return n > 0 ? (
+                    <Text style={styles.discountLabel}>
+                      {n === 1 ? t('addOns.itemsOne') : t('addOns.itemsOther', { count: n })}
+                    </Text>
+                  ) : null;
+                })()}
               </View>
               <View style={styles.priceContainer}>
                 {isFreeOrder && doorDue > 0 ? (
@@ -781,6 +960,14 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     flex: 1,
     backgroundColor: colors.background,
   },
+  addOnBlock: { marginTop: 18 },
+  addOnHint: { fontSize: 12, color: colors.textTertiary },
+  // Size / option choice: the one 4px corner, the white "chosen" fill.
+  optionChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 },
+  optionChip: { minWidth: 40, height: 32, paddingHorizontal: 10, alignItems: 'center', justifyContent: 'center', borderRadius: radius.sm, backgroundColor: colors.surface },
+  optionChipOn: { backgroundColor: T.white },
+  optionChipText: { fontSize: 13, color: colors.text },
+  optionChipTextOn: { color: T.onWhite, fontWeight: '700' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

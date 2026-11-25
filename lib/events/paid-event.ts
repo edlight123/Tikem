@@ -1,4 +1,5 @@
 import { isPublicHttpsUrl } from '@/lib/import/url'
+import { hasAddOns } from '@/lib/addons/addOns'
 
 /**
  * Tickets are sold somewhere else, not through Tikèm: a copy of an Eventbrite
@@ -29,5 +30,8 @@ export function sellsTicketsElsewhere(eventData: any, tiers: any[] | null | unde
 export function isPaidEvent(eventData: any, tiers: any[]): boolean {
   if (sellsTicketsElsewhere(eventData, tiers)) return false
   if ((eventData?.ticket_price || 0) > 0) return true
+  // Add-ons are paid items (lib/addons/addOns.ts): an event selling them takes
+  // money even when its tickets are free, so it passes the same paid gate.
+  if (hasAddOns(eventData)) return true
   return tiers.some((t: any) => (t?.price || 0) > 0)
 }

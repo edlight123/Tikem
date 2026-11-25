@@ -86,6 +86,8 @@ export async function sendTicketConfirmation(params: {
   guestToken?: string | null
   /** The host approved a request for these tickets (approval lists): re-heads the email. */
   approved?: boolean
+  /** Add-ons bought with the order, labelled ("T-shirt (M) × 2"), for the receipt. */
+  addOns?: string[]
   logPrefix?: string
 }): Promise<SendTicketConfirmationResult> {
   const logPrefix = params.logPrefix || '[confirmation]'
@@ -144,6 +146,7 @@ export async function sendTicketConfirmation(params: {
           posterUrl: poster,
           doorsTime: doorsClock(params.event, lang),
           approved: params.approved === true,
+          ...(params.addOns && params.addOns.length > 0 ? { addOns: params.addOns } : {}),
           ...(guestUrl ? { ticketsUrl: guestUrl, ticketsUrlNote: guestNote } : {}),
         }),
         attachments: qrPng

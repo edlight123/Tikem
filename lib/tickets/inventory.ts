@@ -12,11 +12,12 @@ import {
   convertHeldSeats,
   releaseSeats,
   reserveSeats,
+  type AddOnIncrement,
   type ReserveOutcome,
   type TierSoldIncrement,
 } from '@/lib/tickets/inventoryShards'
 
-export type { TierSoldIncrement } from '@/lib/tickets/inventoryShards'
+export type { TierSoldIncrement, AddOnIncrement } from '@/lib/tickets/inventoryShards'
 
 /**
  * Normalize raw tier selections into per-tier sold-quantity increments.
@@ -157,6 +158,8 @@ export async function convertSeatHold(params: {
   eventId: string
   quantity: number
   tierIncrements: TierSoldIncrement[]
+  /** Add-on stock held with the seats; converted in the same transaction. */
+  addOnIncrements?: AddOnIncrement[]
   reservationId: string
   logPrefix?: string
 }): Promise<InventoryReservationResult> {
@@ -164,6 +167,7 @@ export async function convertSeatHold(params: {
     eventId: params.eventId,
     quantity: params.quantity,
     tierIncrements: params.tierIncrements,
+    addOnIncrements: params.addOnIncrements,
     reservationId: params.reservationId,
     source: 'order',
     logPrefix: params.logPrefix,

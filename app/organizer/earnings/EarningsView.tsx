@@ -82,9 +82,11 @@ export default function EarningsView({ summary, organizerId, withdrawable, readO
       (summary.currency === 'HTG' || summary.currency === 'USD' || summary.currency === 'CAD' || summary.currency === 'EUR' ? summary.currency : 'USD')
 
     if (currency === 'HTG') {
+      // Whole gourdes drop ".00" (owner, 2026-11-25); real cents stay.
+      const whole = Math.abs(amount - Math.round(amount)) < 1e-9
       const formatted = amount.toLocaleString('en-US', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
+        minimumFractionDigits: whole ? 0 : 2,
+        maximumFractionDigits: whole ? 0 : 2,
       })
       return `HTG ${formatted}`
     }

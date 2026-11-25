@@ -89,6 +89,7 @@ import {
   normalizeSupportedCountry,
   providerForCountry,
   countrySupport,
+  isPaidAllowed,
 } from '../../lib/countrySupport';
 import { orderCountriesByMarkets, useDeclaredMarkets } from '../../lib/organizerMarkets';
 import { API_BASE_URL, backendFetch, backendJson } from '../../lib/api/backend';
@@ -106,6 +107,8 @@ import PosterTemplateSheet, {
   type PosterFacts,
   type PosterSpec,
 } from '../../components/organizer/PosterTemplateSheet';
+import AddOnsEditor from '../../components/organizer/AddOnsEditor';
+import { eventAddOns, type EventAddOn } from '../../lib/addOns';
 import { incidenceForEvent, type FeeIncidence } from '../../lib/buyerPricing';
 import { isBelowMinPaidPrice, minPaidPriceFor } from '../../lib/minPaidPrice';
 import { lineupFromEvent, lineupEntryToRecord, type LineupEntry } from '../../lib/lineup';
@@ -201,6 +204,10 @@ export interface EventDraft {
 
   // The lineup — artists/hosts/DJs/guests, stored on the doc as `guestlist`.
   lineup: LineupEntry[];
+
+  // Add-ons (lib/addOns): paid extras sold with tickets, stored on the event
+  // doc as `add_ons` (+ `add_ons_enabled`). They make the event paid for every gate.
+  add_ons: EventAddOn[];
 
   // Free RSVP path — no paid tiers, a single attendance cap instead.
   is_rsvp: boolean;
@@ -623,6 +630,7 @@ export default function CreateEventFlowRefactored() {
     venue_setting: null,
     age_policy: null,
     dress_code: null,
+    add_ons: [],
   });
 
   // Track keyboard visibility AND height. The height drives the canvas's
@@ -821,6 +829,7 @@ export default function CreateEventFlowRefactored() {
               : '',
           lineup: lineupFromEvent((event as any).guestlist),
           ...venueDetailsOf(event),
+          add_ons: eventAddOns(event as any),
         });
         // Capture the series membership so edit mode can offer "apply to series".
         setSeriesId((event as any).series_id || null);
@@ -1128,15 +1137,21 @@ export default function CreateEventFlowRefactored() {
   // Coming-soon markets (e.g. Dominican Republic): browsable + selectable, but no
   // payout rail yet → paid tickets are disabled, only free/RSVP is allowed.
   const countryComingSoon = isComingSoon(selectedCountry);
+  // Add-ons are paid items, offered only where Tikèm takes money and not on an
+  // RSVP or pay-at-the-door event (nothing is charged online there).
+  const addOnsAllowed =
+    !eventDraft.is_rsvp && !eventDraft.pay_at_door && !countryComingSoon && isPaidAllowed(selectedCountry);
+  const sellsAddOns = addOnsAllowed && eventDraft.add_ons.length > 0;
   // Pay at the door: the typed amounts are door prices (saved as door_price,
   // price 0), so the event is never paid: no payout notice, no paid gate.
   const hasPaidTier =
-    !eventDraft.is_rsvp &&
-    !eventDraft.pay_at_door &&
-    eventDraft.ticket_tiers.some((tier) => {
-      const price = parseFloat(tier.price);
-      return Number.isFinite(price) && price > 0;
-    });
+    sellsAddOns ||
+    (!eventDraft.is_rsvp &&
+      !eventDraft.pay_at_door &&
+      eventDraft.ticket_tiers.some((tier) => {
+        const price = parseFloat(tier.price);
+        return Number.isFinite(price) && price > 0;
+      }));
   // Approval is for free events only (v1): a paid tier switches it off.
   useEffect(() => {
     if (hasPaidTier && eventDraft.requires_approval) updateDraft({ requires_approval: false });
@@ -1785,6 +1800,7 @@ export default function CreateEventFlowRefactored() {
       return {
         ...draft,
         ...shared,
+        add_ons: [],
         currency: draft.currency || 'HTG',
         ticket_tiers: [
           {
@@ -1804,6 +1820,9 @@ export default function CreateEventFlowRefactored() {
     return {
       ...draft,
       ...shared,
+      // Add-ons only where they can be sold (see addOnsAllowed).
+      add_ons:
+        draft.pay_at_door || isComingSoon(draft.country || 'HT') || !isPaidAllowed(draft.country || 'HT') ? [] : draft.add_ons,
       ticket_tiers: draft.ticket_tiers.map((tier) => ({
         ...tier,
         // Pay at the door: the typed amount is owed on arrival; online it costs 0.
@@ -1863,10 +1882,13 @@ export default function CreateEventFlowRefactored() {
     // looked healthy and the organizer published tickets nobody could buy. It
     // also only covered US/CA and silently let paid FR events through.
     const draftCountry = String((eventDraft as any).country || 'HT').toUpperCase();
-    const hasPaidTickets = !eventDraft.is_rsvp && (eventData.ticket_tiers || []).some((tier) => {
+    const paidTicketTiers = !eventDraft.is_rsvp && (eventData.ticket_tiers || []).some((tier) => {
       const price = parseFloat(String((tier as any).price ?? '0'));
       return Number.isFinite(price) && price > 0;
     });
+    // Add-ons are paid items: an event selling them passes the same payout gates.
+    const sellsAddOnsNow = ((eventData as any).add_ons || []).length > 0;
+    const hasPaidTickets = paidTicketTiers || sellsAddOnsNow;
     // `publish` is undefined on the edit-mode save (handleSubmit({ applyToSeries }))
     // and on that path updateEvent() leaves is_published untouched — so an edit
     // only needs the gate when it explicitly asks to publish. createEvent()
@@ -3243,6 +3265,18 @@ export default function CreateEventFlowRefactored() {
                     <Ionicons name="add" size={20} color={colors.text} />
                     <Text style={styles.addTierText}>{t('organizerCreateEventFlow.canvas.addTicketType')}</Text>
                   </TouchableOpacity>
+
+                  {/* ADD-ONS — paid extras sold with the tickets (lib/addOns). */}
+                  {addOnsAllowed && (
+                    <View style={{ marginTop: 16 }}>
+                      <AddOnsEditor
+                        value={eventDraft.add_ons}
+                        onChange={(add_ons) => updateDraft({ add_ons })}
+                        tiers={eventDraft.ticket_tiers.map((tier) => ({ id: tier.id, name: tier.name }))}
+                        currency={eventDraft.currency || 'HTG'}
+                      />
+                    </View>
+                  )}
 
                   {/* WHO PAYS THE SERVICE FEE — only meaningful once something
                       costs money (web parity). */}

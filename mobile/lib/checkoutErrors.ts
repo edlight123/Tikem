@@ -26,6 +26,7 @@ export type CheckoutErrorKind =
   | 'only_n_left'
   | 'busy'
   | 'network'
+  | 'addon'
   | 'other';
 
 type Translate = (key: string, params?: Record<string, string | number>) => string;
@@ -61,6 +62,8 @@ export function classifyCheckoutError(err: any): CheckoutErrorKind {
   if (code === 'sold_out') return 'sold_out';
   if (code === 'only_n_left') return 'only_n_left';
   if (code === 'busy_try_again') return 'busy';
+  // Add-ons (lib/addOns): every refusal code starts with addon_.
+  if (code.startsWith('addon_')) return 'addon';
   const message = String(err?.message || '').toLowerCase();
   if (message.includes('network request failed') || message.includes('failed to fetch')) return 'network';
   // A server that predates the typed code still says so in words.
@@ -103,6 +106,8 @@ export function friendlyCheckoutError(
       return t('paymentModal.errors.busyTryAgain');
     case 'network':
       return t('paymentModal.errors.network');
+    case 'addon':
+      return addOnErrorMessage(err, t);
     default:
       break;
   }
@@ -122,4 +127,36 @@ export function friendlyCheckoutError(
   if (sdkMessage && !looksInternal(sdkMessage)) return sdkMessage;
 
   return t(fallbackKey);
+}
+
+/** The add-on refusals of create-payment-intent (and its seat hold), localized. */
+export function addOnErrorMessage(err: any, t: Translate): string {
+  const code = String(err?.code || err?.payload?.code || '');
+  switch (code) {
+    case 'addon_sold_out':
+      return t('addOns.errors.soldOut');
+    case 'addon_only_n_left': {
+      const count = Number(err?.payload?.remaining);
+      return Number.isFinite(count) && count > 0 ? t('addOns.errors.onlyNLeft', { count }) : t('addOns.errors.soldOut');
+    }
+    case 'addon_unavailable':
+      return t('addOns.errors.unavailable');
+    case 'addon_not_started':
+      return t('addOns.errors.notStarted');
+    case 'addon_ended':
+      return t('addOns.errors.ended');
+    case 'addon_needs_tier':
+      return t('addOns.errors.needsTier');
+    case 'addon_option_required':
+    case 'addon_option_invalid':
+      return t('addOns.errors.option');
+    case 'addon_limit':
+      return t('addOns.errors.limit');
+    case 'addon_too_many_lines':
+      return t('addOns.errors.tooMany');
+    case 'addon_rail_unsupported':
+      return t('addOns.errors.rail');
+    default:
+      return t('addOns.errors.generic');
+  }
 }

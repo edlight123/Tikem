@@ -3,6 +3,14 @@ service cloud.firestore {
   match /databases/{database}/documents {
     
     // Helper function to check if user is authenticated
+    // Add-ons (lib/addons/addOns.ts) ride on the event doc, written by the
+    // organizer with the rest of the event. A list with entries must be flagged
+    // add_ons_enabled (it makes the event take money). Capped at 20 entries.
+    function addOnsShapeOk(data) {
+      return data.get('add_ons', []) is list
+        && data.get('add_ons', []).size() <= 20
+        && (data.get('add_ons', []).size() == 0 || data.get('add_ons_enabled', false) == true);
+    }
     function isSignedIn() {
       return request.auth != null;
     }
@@ -370,6 +378,9 @@ service cloud.firestore {
         // by the Admin SDK only: a lower count would hide shards from the
         // capacity check.
         && request.resource.data.get('inventory_shards_n', null) == null
+        // Add-on stock rollup (lib/tickets/inventoryShards.ts): Admin SDK only.
+        && request.resource.data.get('add_ons_sold', null) == null
+        && addOnsShapeOk(request.resource.data)
         && validPosterAlt(request.resource.data)
         // Import bookkeeping, the Eventbrite ticket link and Eventbrite's
         // public counts (lib/import): Admin SDK only, so a link out or an
@@ -442,6 +453,9 @@ service cloud.firestore {
           // Admin SDK when the event's shards are created. Lowering it would hide
           // shards (and the seats they hold or sold) from the capacity check.
           request.resource.data.get('inventory_shards_n', null) == resource.data.get('inventory_shards_n', null) &&
+          // add_ons_sold is the add-on stock rollup of the shards: Admin SDK only.
+          request.resource.data.get('add_ons_sold', null) == resource.data.get('add_ons_sold', null) &&
+          addOnsShapeOk(request.resource.data) &&
           validPosterAlt(request.resource.data) &&
           // Import fields (lib/import) are the server's. The one client change
           // allowed: marking a synced Eventbrite copy as edited here

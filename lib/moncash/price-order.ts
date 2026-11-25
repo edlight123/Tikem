@@ -31,6 +31,7 @@ import {
 } from '@/lib/tickets/purchasable'
 import { priceOrderCents } from '@/lib/checkout/buyer-pricing'
 import { fromCents } from '@/lib/ticketPricing'
+import { addOnFeeShareCents, type AddOnLine } from '@/lib/addons/addOns'
 
 export type TierSelection = { tierId: string; quantity: number }
 
@@ -289,12 +290,24 @@ export type ExchangeRateRecord = {
   source: UsdHtgRateSource
 }
 
+/** An add-on line as MonCash charges it: stored price, and the same price in the charge currency. */
+export type AddOnChargeLine = AddOnLine & { chargeUnitPrice: number }
+
 export type MonCashCharge = {
   ok: true
   chargeCurrency: string
   chargeSelections: ChargeLine[]
-  /** Face value in the charge currency (before any passed-on fee). */
+  /** Face value in the charge currency (before any passed-on fee), add-ons included. */
   faceChargeAmount: number
+  /** Add-on lines (lib/addons/addOns.ts), priced in the charge currency too. Empty when none. */
+  addOnLines: AddOnChargeLine[]
+  /** The add-ons' face, event currency. */
+  addOnFaceOriginal: number
+  /** The add-ons' face, charge currency (inside faceChargeAmount). */
+  addOnFaceCharged: number
+  /** The add-ons' share of the passed-on fee, event currency / charge currency (0 when absorbed). */
+  addOnFeeOriginal: number
+  addOnFeeCharged: number
   /** What the gateway is asked to collect. */
   chargeAmount: number
   feeIncidence: 'buyer' | 'organizer'
@@ -317,9 +330,18 @@ export async function priceMonCashCharge(input: {
   feeConfig: any
   lang?: 'en' | 'fr' | 'ht'
   getRate?: () => Promise<UsdToHtgRateResult>
+  /**
+   * Add-ons already validated by resolveAddOnLines (stored prices, event
+   * currency). They join the face total, so the ONE fee formula runs over
+   * tickets + add-ons exactly as the card rail prices them.
+   */
+  addOnLines?: AddOnLine[] | null
 }): Promise<MonCashCharge | PricingRefusal> {
   const { event, face } = input
   const { originalCurrency, originalAmount, normalizedSelections, totalQuantity } = face
+  const addOnLinesIn = (input.addOnLines || []).filter((l) => l && l.quantity > 0 && l.unitPrice > 0)
+  const addOnFaceOriginal = sumMoney(addOnLinesIn.map((l) => l.quantity * l.unitPrice))
+  let addOnLines: AddOnChargeLine[] = addOnLinesIn.map((l) => ({ ...l, chargeUnitPrice: l.unitPrice }))
 
   let chargeCurrency = originalCurrency
   let chargeSelections: ChargeLine[] = normalizedSelections
@@ -356,6 +378,7 @@ export async function priceMonCashCharge(input: {
       unitPrice: convertUsdToHtgAmount(s.unitPrice, rate.effectiveRate),
     }))
     chargeAmount = sumMoney(chargeSelections.map((s) => s.quantity * s.unitPrice))
+    addOnLines = addOnLinesIn.map((l) => ({ ...l, chargeUnitPrice: convertUsdToHtgAmount(l.unitPrice, rate.effectiveRate) }))
   } else if (originalCurrency !== 'HTG') {
     return {
       ok: false,
@@ -364,7 +387,10 @@ export async function priceMonCashCharge(input: {
     }
   }
 
-  const buyerPricing = priceOrderCents(Math.round(originalAmount * 100), event, {
+  const addOnFaceCharged = sumMoney(addOnLines.map((l) => l.quantity * l.chargeUnitPrice))
+  chargeAmount = sumMoney([chargeAmount, addOnFaceCharged])
+  const orderFaceOriginalCents = Math.round(sumMoney([originalAmount, addOnFaceOriginal]) * 100)
+  const buyerPricing = priceOrderCents(orderFaceOriginalCents, event, {
     quantity: totalQuantity,
     currency: originalCurrency,
     config: input.feeConfig,
@@ -376,6 +402,26 @@ export async function priceMonCashCharge(input: {
   if (buyerFeeOriginal > 0) {
     buyerFeeCharged = exchange ? convertUsdToHtgAmount(buyerFeeOriginal, exchange.used) : buyerFeeOriginal
   }
+  // The add-ons' share of the passed-on fee, by their share of the face
+  // (lib/addons/addOns.ts addOnFeeShareCents: rounded down, the remainder
+  // stays with the tickets). Fulfillment books it on the order's first ticket.
+  const addOnFeeOriginal = fromCents(
+    addOnFeeShareCents({
+      buyerFeeCents: Math.round(buyerFeeOriginal * 100),
+      faceValueCents: orderFaceOriginalCents,
+      addOnFaceCents: Math.round(addOnFaceOriginal * 100),
+    })
+  )
+  const addOnFeeCharged =
+    addOnFeeOriginal > 0
+      ? fromCents(
+          addOnFeeShareCents({
+            buyerFeeCents: Math.round(buyerFeeCharged * 100),
+            faceValueCents: Math.round(chargeAmount * 100),
+            addOnFaceCents: Math.round(addOnFaceCharged * 100),
+          })
+        )
+      : 0
   const faceChargeAmount = chargeAmount
   chargeAmount = sumMoney([faceChargeAmount, buyerFeeCharged])
 
@@ -389,5 +435,10 @@ export async function priceMonCashCharge(input: {
     buyerFeeOriginal,
     buyerFeeCharged,
     exchange,
+    addOnLines,
+    addOnFaceOriginal,
+    addOnFaceCharged,
+    addOnFeeOriginal,
+    addOnFeeCharged,
   }
 }

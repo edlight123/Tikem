@@ -40,6 +40,12 @@ import {
   takeFreeClaimForOrder,
   type FreeClaimant,
 } from '@/lib/tickets/free-claim-policy'
+import {
+  addOnIncrements,
+  addOnLabel,
+  purchasedAddOnsFor,
+  type PurchasedAddOn,
+} from '@/lib/addons/addOns'
 
 // Window after which a stuck "processing" claim is considered stale and may be re-claimed
 // (e.g. if a previous fulfillment attempt crashed mid-way).
@@ -437,6 +443,24 @@ export async function fulfillPaidOrder(params: {
     ? issuedSelections.reduce((sum, sel) => sum + (Number(sel.quantity) || 0), 0)
     : Number(pendingTx.quantity || 1)
 
+  // ADD-ONS (lib/addons/addOns.ts), priced and stored on the order at initiate:
+  // booked on the order's FIRST ticket, their stock converted with the seats.
+  const orderAddOnLines = storedAddOnLines(pendingTx)
+  const hasAddOnLines = orderAddOnLines.length > 0
+  if (hasAddOnLines && issuedSelections.length === 0) {
+    // A free ticket + add-ons order whose free claim went to another order has no
+    // ticket left to carry the add-ons. Never sell add-ons alone: refund it.
+    console.warn(`${logPrefix} no ticket left to carry the add-ons (free claim already used) — flagging for refund`, {
+      orderId,
+    })
+    await supabase
+      .from('pending_transactions')
+      .update({ status: 'failed', failure_reason: 'already_claimed', needs_refund: true })
+      .eq('order_id', orderId)
+    await releaseSeatHold(pendingTx.seat_hold_id, { logPrefix })
+    return { outcome: 'invalid_order', ticketId: null, reason: 'already_claimed' }
+  }
+
   const eventCurrency =
     String(pendingTx.original_currency || pendingTx.currency || 'HTG').toUpperCase() === 'USD' ? 'USD' : 'HTG'
   const chargedCurrency = String(pendingTx.currency || 'HTG').toUpperCase() === 'USD' ? 'USD' : 'HTG'
@@ -456,8 +480,15 @@ export async function fulfillPaidOrder(params: {
   // stamp (every order before pass-on reached the Haitian rails) charged the face
   // value only, so the organizer absorbed the fee.
   const orderBuyerFee = Number(pendingTx.buyer_fee || 0)
-  const orderChargedBuyerFee =
+  const orderChargedBuyerFeeTotal =
     pendingTx.fee_incidence === 'buyer' && Number.isFinite(orderBuyerFee) && orderBuyerFee > 0 ? orderBuyerFee : 0
+  // The add-ons' share of that fee rides on the first ticket with them; the
+  // tickets split the rest exactly as before.
+  const addOnFeeCharged =
+    hasAddOnLines && orderChargedBuyerFeeTotal > 0
+      ? Math.min(orderChargedBuyerFeeTotal, positiveAmount(pendingTx.add_ons_buyer_fee))
+      : 0
+  const orderChargedBuyerFee = Math.round((orderChargedBuyerFeeTotal - addOnFeeCharged) * 100) / 100
   const orderQuantityForFee = Math.max(1, issuedQuantity)
   /** The buyer fee carried by ONE ticket, in the charged currency. */
   const perTicketBuyerFee =
@@ -467,7 +498,10 @@ export async function fulfillPaidOrder(params: {
   const orderBuyerFeeOriginal = (() => {
     if (orderChargedBuyerFee <= 0) return 0
     const recorded = Number(pendingTx.buyer_fee_original)
-    if (Number.isFinite(recorded) && recorded > 0) return recorded
+    if (Number.isFinite(recorded) && recorded > 0) {
+      const addOnShare = hasAddOnLines ? positiveAmount(pendingTx.add_ons_buyer_fee_original) : 0
+      return Math.max(0, Math.round((recorded - addOnShare) * 100) / 100)
+    }
     return eventCurrency === chargedCurrency ? orderChargedBuyerFee : 0
   })()
   /**
@@ -479,7 +513,53 @@ export async function fulfillPaidOrder(params: {
    */
   const buyerFeeChargedMinor =
     orderBuyerFeeOriginal > 0 ? Math.max(1, Math.round((orderBuyerFeeOriginal * 100) / orderQuantityForFee)) : 0
-  const feeIncidence: 'buyer' | 'organizer' = buyerFeeChargedMinor > 0 ? 'buyer' : 'organizer'
+  /** The add-ons' fee share, event-currency minor units: added to the first ticket's proof. */
+  const addOnFeeOriginalMinor =
+    addOnFeeCharged > 0
+      ? Math.round(
+          (positiveAmount(pendingTx.add_ons_buyer_fee_original) ||
+            (eventCurrency === chargedCurrency ? addOnFeeCharged : 0)) * 100
+        )
+      : 0
+  const feeIncidence: 'buyer' | 'organizer' =
+    buyerFeeChargedMinor > 0 || addOnFeeOriginalMinor > 0 ? 'buyer' : 'organizer'
+
+  // What the first ticket carries for the add-ons: each line's charge is its
+  // face in the charge currency plus its share of the add-on fee, adding up to
+  // exactly what the buyer paid for them, so the per-ticket refund returns them.
+  const purchasedAddOns: PurchasedAddOn[] = hasAddOnLines
+    ? purchasedAddOnsFor(
+        orderAddOnLines.map((l) => ({ ...l, unitPrice: l.chargeUnitPrice })),
+        { addOnFeeCents: Math.round(addOnFeeCharged * 100) }
+      ).map((a, i) => ({
+        ...a,
+        // Face stays in the EVENT currency (what the organizer sold).
+        unit_price: orderAddOnLines[i].unitPrice,
+        face_total: Math.round(orderAddOnLines[i].unitPrice * orderAddOnLines[i].quantity * 100) / 100,
+      }))
+    : []
+  const addOnFaceOriginal = hasAddOnLines
+    ? Math.round(orderAddOnLines.reduce((sum, l) => sum + l.unitPrice * l.quantity, 0) * 100) / 100
+    : 0
+  const addOnChargedAmount = Math.round(purchasedAddOns.reduce((sum, a) => sum + a.charged_amount, 0) * 100) / 100
+  const firstTicketId = orderTicketId(orderId, 0)
+  /** Fields the add-ons put on one ticket of the order (none when it has no add-ons). */
+  const addOnTicketFields = (
+    index: number,
+    base: { charged: number; buyerFee: number; buyerFeeMinor: number }
+  ): Record<string, any> =>
+    !hasAddOnLines
+      ? {}
+      : index === 0
+        ? {
+            add_ons: purchasedAddOns,
+            add_ons_charged_amount: addOnChargedAmount,
+            add_ons_face_total: addOnFaceOriginal,
+            charged_amount: Math.round((base.charged + addOnChargedAmount) * 100) / 100,
+            buyer_fee_charged_amount: Math.round((base.buyerFee + addOnFeeCharged) * 100) / 100,
+            ...(addOnFeeOriginalMinor > 0 ? { buyer_fee_charged: base.buyerFeeMinor + addOnFeeOriginalMinor } : {}),
+          }
+        : { add_ons_ticket_id: firstTicketId }
   // Visit attribution stored on the order at initiate (already re-resolved there).
   // Orders created before attribution existed still carry their promoter code.
   const attribution = withResolvedPromoter(
@@ -499,6 +579,10 @@ export async function fulfillPaidOrder(params: {
     eventId: String(pendingTx.event_id),
     quantity: issuedQuantity,
     tierIncrements,
+    // Add-on stock held at initiate, converted in the same transaction.
+    ...(hasAddOnLines
+      ? { addOnIncrements: addOnIncrements(orderAddOnLines.map((l) => ({ addOnId: l.addOnId, quantity: l.quantity }))) }
+      : {}),
     reservationId,
     logPrefix,
   })
@@ -544,7 +628,14 @@ export async function fulfillPaidOrder(params: {
   for (const selection of issuedSelections) {
     const selectionQty = selection.quantity || 0
     for (let i = 0; i < selectionQty; i++) {
-      const ticketId = orderTicketId(orderId, ticketIndex++)
+      const thisIndex = ticketIndex++
+      const ticketId = orderTicketId(orderId, thisIndex)
+      const baseCharged = Math.round((Number(selection.unitPrice) + perTicketBuyerFee) * 100) / 100
+      const addOnFields = addOnTicketFields(thisIndex, {
+        charged: baseCharged,
+        buyerFee: perTicketBuyerFee,
+        buyerFeeMinor: buyerFeeChargedMinor,
+      })
       const organizerUnitPrice = (() => {
         if (eventCurrency === 'USD') {
           const raw = selection.originalUnitPrice
@@ -605,6 +696,7 @@ export async function fulfillPaidOrder(params: {
               guest_phone: guestRecipient.phone || null,
             }
           : {}),
+        ...addOnFields,
       }
 
       const insertResult = await writeOrderTicket(ticketId, ticketData)
@@ -671,6 +763,9 @@ export async function fulfillPaidOrder(params: {
               purchased_at: new Date().toISOString(),
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString(),
+              // The add-on list itself is written once, with the ticket, so a
+              // re-run never resets a picked-up flag.
+              ...omitKey(addOnFields, 'add_ons'),
             },
             { merge: true }
           )
@@ -755,7 +850,8 @@ export async function fulfillPaidOrder(params: {
       eventId: String(pendingTx.event_id),
       orderKey: orderId,
       quantity: issuedQuantity || createdTickets.length || 1,
-      revenueCents: Math.round(Number(pendingTx.original_amount || pendingTx.amount || 0) * 100),
+      revenueCents:
+        Math.round(Number(pendingTx.original_amount || pendingTx.amount || 0) * 100) + Math.round(addOnFaceOriginal * 100),
       currency: eventCurrency,
       paymentMethod,
     })
@@ -780,7 +876,9 @@ export async function fulfillPaidOrder(params: {
   // stale claim re-runs fulfilment (the step is taken BEFORE booking: a crash
   // in between under-counts, which an admin can see, rather than paying out twice).
   if (await takeOrderStep(orderId, 'earnings')) try {
-    const grossEventCents = Math.round(Number(pendingTx.original_amount || pendingTx.amount || 0) * 100)
+    // Add-ons are part of what the organizer sold (event currency).
+    const grossEventCents =
+      Math.round(Number(pendingTx.original_amount || pendingTx.amount || 0) * 100) + Math.round(addOnFaceOriginal * 100)
     await addTicketToEarnings(pendingTx.event_id, grossEventCents, issuedQuantity || 1, {
       currency: eventCurrency,
       paymentMethod,
@@ -890,6 +988,7 @@ export async function fulfillPaidOrder(params: {
           },
           quantity: issuedQuantity || 1,
           guestToken: guestRecipient?.guestToken || null,
+          ...(purchasedAddOns.length > 0 ? { addOns: purchasedAddOns.map(addOnLabel) } : {}),
           logPrefix,
         })
       }
@@ -899,4 +998,54 @@ export async function fulfillPaidOrder(params: {
   }
 
   return { outcome: 'fulfilled', ticketId: ticket?.id || null }
+}
+
+function positiveAmount(value: unknown): number {
+  const n = Number(value)
+  return Number.isFinite(n) && n > 0 ? n : 0
+}
+
+function omitKey(obj: Record<string, any>, key: string): Record<string, any> {
+  const rest = { ...obj }
+  delete rest[key]
+  return rest
+}
+
+/** One add-on line as stored on a MonCash order at initiate. */
+export interface StoredAddOnLine {
+  addOnId: string
+  name: string
+  option: string | null
+  quantity: number
+  /** Stored price, event currency. */
+  unitPrice: number
+  /** The same price in the charge currency (HTG). */
+  chargeUnitPrice: number
+}
+
+/**
+ * The add-on lines a pending order carries (`add_on_lines`, written by
+ * /api/moncash-button/initiate from the event's stored add-ons). Junk lines are
+ * dropped; an order without any reads as none.
+ */
+export function storedAddOnLines(order: Record<string, any> | null | undefined): StoredAddOnLine[] {
+  const raw = order?.add_on_lines
+  if (!Array.isArray(raw)) return []
+  const out: StoredAddOnLine[] = []
+  for (const l of raw) {
+    const quantity = Number(l?.quantity)
+    const unitPrice = Number(l?.unitPrice)
+    const chargeUnitPrice = Number(l?.chargeUnitPrice ?? l?.unitPrice)
+    if (!l?.addOnId || !Number.isInteger(quantity) || quantity <= 0) continue
+    if (!(unitPrice > 0) || !(chargeUnitPrice > 0)) continue
+    out.push({
+      addOnId: String(l.addOnId),
+      name: String(l.name || 'Add-on'),
+      option: l.option ? String(l.option) : null,
+      quantity,
+      unitPrice,
+      chargeUnitPrice,
+    })
+  }
+  return out
 }

@@ -1,5 +1,6 @@
 import { venueDetailsFields, venueDetailsOf } from '../venueDetails';
 import { parseOccasion } from '../occasions';
+import { eventAddOns, type EventAddOn } from '../addOns';
 import { cleanPosterAlt } from '../posterAlt';
 import { auth, db, storage } from '../../config/firebase';
 import {
@@ -133,6 +134,8 @@ export interface CreateEventData {
   fee_incidence?: 'buyer' | 'organizer';
   /** The lineup, stored on the doc as `guestlist` — see lib/lineup. */
   guestlist?: LineupRecord[];
+  /** Add-ons sold with the tickets (lib/addOns), already normalized by the caller. */
+  add_ons?: EventAddOn[];
   /** Free RSVP event — no paid tiers; a single free tier caps attendance. */
   is_rsvp?: boolean;
   /** Reserve free, pay the organizer on arrival. */
@@ -484,7 +487,8 @@ function maxPerOrderOf(tier: CreateEventData['ticket_tiers'][number]): number | 
  * that never set them leaves an existing value alone.
  */
 function webParityFields(eventData: CreateEventData) {
-  const paid = !eventData.is_rsvp && hasPaidTier(eventData.ticket_tiers);
+  // Add-ons are paid items too (lib/addOns): approval and family registration stay off.
+  const paid = (!eventData.is_rsvp && hasPaidTier(eventData.ticket_tiers)) || (eventData.add_ons || []).length > 0;
   return {
     // Approval lists are for free events only; the rule refuses approval + paid.
     requires_approval: !paid && !!eventData.requires_approval,
@@ -507,6 +511,13 @@ function webParityFields(eventData: CreateEventData) {
     eventData.age_policy !== undefined ||
     eventData.dress_code !== undefined
       ? venueDetailsFields(venueDetailsOf(eventData), !!eventData.is_online)
+      : {}),
+    // Add-ons ride on the event doc; firestore.rules require add_ons_enabled with them.
+    ...(eventData.add_ons !== undefined
+      ? (() => {
+          const addOns = eventAddOns({ add_ons: eventData.add_ons });
+          return { add_ons: addOns, add_ons_enabled: addOns.length > 0 };
+        })()
       : {}),
   };
 }

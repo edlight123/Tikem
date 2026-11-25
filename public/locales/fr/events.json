@@ -25,5 +25,94 @@
     "selling_fast": "Se vend rapidement",
     "almost_full": "Presque complet",
     "last_tickets": "Derniers billets restants"
+  },
+  "addOns": {
+    "editor": {
+      "title": "Suppléments",
+      "info": "Formules bouteille, surclassement VIP, parking, boissons ou merch, achetés avec les billets.",
+      "fixTitle": "Vérifiez vos suppléments",
+      "fixMsg": "Chaque supplément doit avoir un nom et un prix supérieur à 0, et la fin des ventes doit suivre leur début.",
+      "add": "Autre",
+      "untitled": "Nouvel supplément",
+      "stockCount": "{{count}} disponibles",
+      "unlimited": "Illimité",
+      "hiddenBadge": "En pause",
+      "needsName": "Donnez un nom à ce supplément.",
+      "needsPrice": "Indiquez un prix supérieur à 0.",
+      "badWindow": "La fin des ventes doit suivre leur début.",
+      "name": "Nom",
+      "namePlaceholder": "Formule bouteille, Parking, T-shirt…",
+      "price": "Prix ({{currency}})",
+      "description": "Description (facultatif)",
+      "descriptionPlaceholder": "1 bouteille + softs, pour 4",
+      "options": "Tailles ou options (facultatif)",
+      "optionsPlaceholder": "S, M, L, XL",
+      "optionsHint": "Séparez par des virgules. L'acheteur en choisit une ; toutes partagent le même stock.",
+      "quantity": "Stock",
+      "maxPerOrder": "Max. par commande",
+      "salesStart": "Début des ventes (facultatif)",
+      "salesEnd": "Fin des ventes (facultatif)",
+      "onlyWith": "Uniquement avec ces billets",
+      "onlyWithSaveFirst": "Vendu avec tous les billets. Enregistrez d'abord l'événement pour le réserver à certains billets.",
+      "ticket": "Billet",
+      "anyTicket": "Aucun choisi : vendu avec tous les billets.",
+      "onSale": "En vente",
+      "remove": "Retirer"
+    },
+    "presets": {
+      "bottle": "Formule bouteille",
+      "table": "Table",
+      "vip": "Surclassement VIP",
+      "parking": "Parking",
+      "drinks": "Tickets boisson",
+      "merch": "T-shirt"
+    },
+    "buyer": {
+      "title": "Suppléments",
+      "subtitle": "À récupérer sur place",
+      "soldOut": "Épuisé",
+      "decrease": "Moins de {{name}}",
+      "increase": "Plus de {{name}}",
+      "limit": "{{count}} maximum par commande",
+      "option": "Taille",
+      "chooseTickets": "Choisir des billets",
+      "ticketsOne": "1 billet",
+      "ticketsOther": "{{count}} billets",
+      "itemsOne": "+ 1 supplément",
+      "itemsOther": "+ {{count}} suppléments",
+      "left": "Plus que {{count}}"
+    },
+    "errors": {
+      "soldOut": "L'un de vos suppléments vient d'être épuisé. Retirez-le ou réduisez la quantité, puis réessayez.",
+      "unavailable": "L'un de vos suppléments n'est plus en vente. Retirez-le et réessayez.",
+      "needsTier": "L'un de vos suppléments n'est vendu qu'avec un autre billet.",
+      "limit": "Vous avez choisi plus d'un supplément que ce qu'une commande permet.",
+      "option": "Choisissez une taille ou une option pour chaque supplément.",
+      "rail": "Les suppléments se paient par carte ou par MonCash.",
+      "generic": "Impossible d'ajouter vos suppléments. Veuillez réessayer."
+    },
+    "ticket": {
+      "title": "Vos suppléments",
+      "pickedUp": "Récupéré",
+      "toCollect": "À récupérer",
+      "howToCollect": "Présentez ce billet sur place pour les récupérer.",
+      "onFirstTicket": "Les suppléments de votre commande sont sur son premier billet."
+    },
+    "door": {
+      "title": "Suppléments à remettre",
+      "close": "Fermer",
+      "pickedUp": "Remis",
+      "toHandOver": "À remettre",
+      "markPickedUp": "Remettre",
+      "undo": "Annuler",
+      "loadFailed": "Impossible de charger les suppléments de cette commande.",
+      "saveFailed": "Impossible d'enregistrer. Réessayez."
+    },
+    "dashboard": {
+      "title": "Ventes de suppléments",
+      "none": "Aucun supplément vendu pour l'instant.",
+      "soldPicked": "{{sold}} vendus · {{picked}} remis",
+      "total": "Total"
+    }
   }
 }

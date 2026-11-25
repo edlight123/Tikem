@@ -14,6 +14,7 @@ import { getPlatformSettings } from '@/lib/admin/platform-settings'
 import { getFundedCommissionForEvent } from '@/lib/promoters'
 import { isLiveTicketStatus, liveTicketStatusesForQuery } from '@/lib/tickets/status'
 import { ticketFeeIncidence } from '@/lib/payouts/fee-incidence'
+import { ticketAddOnFace } from '@/lib/addons/addOns'
 import { ticketPurchasedAt } from '@/lib/payouts/availability'
 import { bookDebtRepaymentInTransaction, netDebtAgainstWithdrawal, readDebtInTransaction } from '@/lib/payouts/organizer-debt'
 
@@ -318,7 +319,8 @@ async function deriveEventEarningsFromTickets(eventId: string): Promise<EventEar
     if (!isLiveTicketStatus(ticket.status)) continue
     if (String(ticket.refund_status || '').toLowerCase() === 'approved') continue
 
-    const pricePaid = Number(ticket.price_paid ?? ticket.pricePaid ?? 0)
+    // Add-ons ride on the order's first ticket (lib/addons/addOns.ts).
+    const pricePaid = Number(ticket.price_paid ?? ticket.pricePaid ?? 0) + ticketAddOnFace(ticket)
     const grossEventCents = Math.round(pricePaid * 100)
     if (!Number.isFinite(grossEventCents) || grossEventCents <= 0) continue
 

@@ -142,7 +142,8 @@ describe('Haitian rails stamp fee_incidence from the payment (F2)', () => {
     const src = read('lib/tickets/fulfillment.ts')
     expect(src.match(/buyer_fee_charged: buyerFeeChargedMinor,/g)).toHaveLength(2)
     // 'buyer' is stamped only when the proof is there.
-    expect(src).toContain("const feeIncidence: 'buyer' | 'organizer' = buyerFeeChargedMinor > 0 ? 'buyer' : 'organizer'")
+    // An order's add-ons carry their own share of the fee proof (lib/addons/addOns.ts).
+    expect(src).toContain('buyerFeeChargedMinor > 0 || addOnFeeOriginalMinor > 0 ? \'buyer\' : \'organizer\'')
   })
   it('SogePay initiate prices pass-on and records it on the order like MonCash', () => {
     const src = read('app/api/sogepay/initiate/route.ts')
