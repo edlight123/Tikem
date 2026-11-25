@@ -358,6 +358,24 @@ export function tallyPhysical(tickets: Array<Record<string, any>>): { total: Bat
 }
 
 /**
+ * On the event doc: seats printed batches hold without a buyer (sum of
+ * batchHeldSeats over the event's batches). Kept by lib/physical/batches.ts
+ * (recomputed on every batch change, minus one per activation) so every
+ * list / card can show sold for people without loading the batches.
+ */
+export const EVENT_HELD_SEATS_FIELD = 'physical_held_seats'
+
+/**
+ * Tickets sold to people: the event's tickets_sold rollup counts every seat a
+ * printed batch reserved, sold or not; take the unsold ones out.
+ */
+export function soldForPeople(event: { tickets_sold?: unknown; physical_held_seats?: unknown } | null | undefined): number {
+  const sold = Math.max(0, Math.round(Number(event?.tickets_sold) || 0))
+  const held = Math.max(0, Math.round(Number(event?.physical_held_seats) || 0))
+  return Math.max(0, sold - held)
+}
+
+/**
  * Seats a batch still holds on the event's inventory without a buyer: its
  * unsold (or voided, seat not yet returned) tickets, plus the whole quantity
  * of tickets not issued yet (a batch awaiting payment reserves its seats at

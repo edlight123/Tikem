@@ -105,6 +105,17 @@ function holdsSeat(t: TicketDoc): boolean {
   return isPrintedTicket(t) && (s === 'printed_unsold' || s === 'voided') && !t.seat_returned_at;
 }
 
+/**
+ * Tickets sold to people, off the event doc alone: tickets_sold counts every
+ * seat a printed batch reserved, and the server keeps physical_held_seats
+ * (lib/physical/rules.soldForPeople, same rule) for the unsold ones.
+ */
+export function soldForPeople(event: { tickets_sold?: unknown; physical_held_seats?: unknown } | null | undefined): number {
+  const sold = Math.max(0, Math.round(Number(event?.tickets_sold) || 0));
+  const held = Math.max(0, Math.round(Number(event?.physical_held_seats) || 0));
+  return Math.max(0, sold - held);
+}
+
 /** Seats held by unsold printed tickets among these docs (no batch data: misses batches awaiting payment). */
 export function heldSeatsFromTickets(tickets: TicketDoc[]): number {
   return tickets.filter(holdsSeat).length;

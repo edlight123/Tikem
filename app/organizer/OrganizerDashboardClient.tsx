@@ -9,6 +9,7 @@ import { PayoutsWidget } from '@/components/organizer/PayoutsWidget'
 import WelcomeDashboard from '@/components/organizer/WelcomeDashboard'
 import { PageHeader, SectionHeader, OrgEmptyState } from '@/components/organizer/ui'
 import Link from 'next/link'
+import { soldForPeople } from '@/lib/physical/rules'
 import { CalendarPlus, AlertTriangle, RefreshCw } from 'lucide-react'
 
 interface Alert {
@@ -187,7 +188,7 @@ export default function OrganizerDashboardClient({
                     banner_image_url: event.banner_image_url || undefined,
                     start_datetime: String(event.start_datetime || ''),
                     is_published: Boolean(event.is_published),
-                    tickets_sold: stats?.ticketsSold ?? (Number(event.tickets_sold) || 0),
+                    tickets_sold: stats?.ticketsSold ?? soldForPeople(event),
                     total_tickets: Number(event.total_tickets || event.max_attendees || 0),
                     city: event.city || undefined,
                     location_name: event.location_name || event.venue_name || undefined,

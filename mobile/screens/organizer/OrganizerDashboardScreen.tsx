@@ -39,6 +39,7 @@ import { Banknote, ChartColumn, Wallet, RotateCcw, Users, type LucideIcon } from
 import { refreshOrganizerUnread } from '../../lib/organizerUnread';
 import { readPersisted, writePersisted } from '../../lib/persistentCache';
 import { displayCapacity } from '../../lib/ticketPricing';
+import { soldForPeople } from '../../lib/printedBundle';
 import SectionHeader from '../../components/SectionHeader';
 import { TikemWordmark } from '../../components/TikemWordmark';
 import PosterImage from '../../components/PosterImage';
@@ -615,7 +616,7 @@ export default function OrganizerDashboardScreen() {
                     <Text style={styles.railTitle} numberOfLines={2}>{event.title}</Text>
                     {!!meta && <Text style={styles.railMeta} numberOfLines={1}>{meta}</Text>}
                     <Text style={styles.railSold} numberOfLines={1}>
-                      {`${event.tickets_sold || 0} ${t('common.sold')}`}
+                      {`${soldForPeople(event)} ${t('common.sold')}`}
                     </Text>
                   </Touchable>
                 );

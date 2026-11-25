@@ -8,10 +8,12 @@ import {
   isUnsoldPrintedTicket,
   printedManageUrl,
   printedSerialOf,
+  soldForPeople as appSoldForPeople,
   visibleBatches,
   type PrintedBatchSummary,
 } from '../mobile/lib/printedBundle'
-import { batchHeldSeats, tallyPhysical } from '@/lib/physical/rules'
+import { batchHeldSeats, soldForPeople, tallyPhysical } from '@/lib/physical/rules'
+import { isUnsoldPrintedDoc } from '@/lib/organizer/eventOrders'
 import { eventStatLines } from '../mobile/lib/eventStatLines'
 import en from '../mobile/locales/en'
 
@@ -166,5 +168,24 @@ describe('event stat line with printed tickets', () => {
       '220/300 sold · 88 printed · 40 checked in',
     ])
     expect(text(eventStatLines(t, 'en', { sold: 5, capacity: 0, checkedIn: 0, sellThrough: null, views: null }))).toEqual(['5 sold · 0 checked in'])
+  })
+})
+
+describe('sold for people off the event doc (cards and lists)', () => {
+  it('app and server agree', () => {
+    const cases = [
+      { tickets_sold: 300, physical_held_seats: 212 },
+      { tickets_sold: 5 },
+      { tickets_sold: 2, physical_held_seats: 9 },
+      { tickets_sold: '40', physical_held_seats: '10' },
+      {},
+    ]
+    for (const e of cases) expect(appSoldForPeople(e)).toBe(soldForPeople(e))
+    expect(appSoldForPeople({ tickets_sold: 300, physical_held_seats: 212 })).toBe(88)
+  })
+
+  it('the web attendee list drops the same printed tickets as the app', () => {
+    const docs = [printed(1), printed(2, { status: 'valid' }), printed(3, { status: 'voided' }), printed(4, { status: 'released' }), online(), online({ status: 'refunded' })]
+    expect(docs.map((d) => !isUnsoldPrintedDoc(d))).toEqual(docs.map((d) => isAttendeeTicket(d)))
   })
 })

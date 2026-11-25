@@ -105,6 +105,12 @@ export function isUnsoldPrintedRow(r: Pick<EventTicketRow, 'printedSerial' | 'st
   return Boolean(r.printedSerial) && ['printed_unsold', 'voided', 'released'].includes(r.status)
 }
 
+/** The same, read off a ticket doc. */
+export function isUnsoldPrintedDoc(d: Record<string, any>): boolean {
+  const s = String(d?.status ?? '')
+  return s === 'printed_unsold' || (isPrintedTicketDoc(d) && (s === 'voided' || s === 'released'))
+}
+
 export function serializeTs(v: unknown): string {
   if (!v) return ''
   if (typeof v === 'string') return v

@@ -77,6 +77,7 @@ import {
   batchState,
   hasSellableBatch,
   printedManageUrl,
+  soldForPeople,
   visibleBatches,
   type PrintedBatchSummary,
 } from '../../lib/printedBundle';
@@ -93,7 +94,7 @@ type RouteParams = {
 // Derive a first-paint ticket breakdown from the fields the list already carries
 // (sold + capacity). Ticket-type rows fill in once the background refresh lands.
 const seedBreakdownFromEvent = (e: OrganizerEvent): EventTicketBreakdown => ({
-  ticketsSold: e.tickets_sold ?? 0,
+  ticketsSold: soldForPeople(e),
   ticketsCheckedIn: 0,
   capacity: e.total_tickets ?? 0,
   printed: { sold: 0, checkedIn: 0, unsold: 0 },

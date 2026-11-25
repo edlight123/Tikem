@@ -18,7 +18,7 @@ import {
   sumRevenueByCurrency,
   ticketPurchaseDate,
 } from '../organizerStats';
-import { bundleBreakdown, heldSeatsFromTickets, type BundledBreakdown, type PrintedBatchSummary } from '../printedBundle';
+import { bundleBreakdown, soldForPeople, type BundledBreakdown, type PrintedBatchSummary } from '../printedBundle';
 
 export interface OrganizerEvent {
   id: string;
@@ -33,6 +33,8 @@ export interface OrganizerEvent {
   organizer_id: string;
   is_published: boolean;
   tickets_sold: number;
+  /** Seats printed batches hold without a buyer (server-kept); see soldForPeople. */
+  physical_held_seats?: number;
   total_tickets: number;
   status: 'draft' | 'published' | 'cancelled' | 'completed';
   created_at: string;
@@ -328,7 +330,8 @@ export async function getTodayEvents(
           location: eventLocationLabel(event),
           posterUri: event.banner_image_url || event.cover_image_url || null,
           category: event.category,
-          ticketsSold: event.tickets_sold || 0,
+          // Unsold printed seats sit inside tickets_sold: people only.
+          ticketsSold: soldForPeople(event),
           capacity: event.total_tickets || 0,
         };
         try {
@@ -340,22 +343,9 @@ export async function getTodayEvents(
             where('event_id', '==', event.id),
             where('checked_in', '==', true)
           );
-          // Printed tickets nobody bought yet hold seats inside tickets_sold:
-          // take them out so the door's "of N sold" counts people only.
-          const [checkedInSnapshot, printedHeld] = await Promise.all([
-            getDocs(ticketsQuery),
-            getDocs(
-              query(collection(db, 'tickets'), where('event_id', '==', event.id), where('kind', '==', 'physical'))
-            )
-              .then((snap) => heldSeatsFromTickets(snap.docs.map((d) => d.data())))
-              .catch(() => 0),
-          ]);
+          const checkedInSnapshot = await getDocs(ticketsQuery);
 
-          return {
-            ...base,
-            ticketsSold: Math.max(0, base.ticketsSold - printedHeld),
-            ticketsCheckedIn: checkedInSnapshot.size,
-          };
+          return { ...base, ticketsCheckedIn: checkedInSnapshot.size };
         } catch (error) {
           console.error(`Error fetching tickets for event ${event.id}:`, error);
           return { ...base, ticketsCheckedIn: 0 };
