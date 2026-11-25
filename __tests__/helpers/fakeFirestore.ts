@@ -13,7 +13,12 @@ export class FakeFirestore {
       _path: path,
       get: async () => self.snap(path),
       set: async (data: Doc, opts?: { merge?: boolean }) => self.write(path, data, opts),
-      update: async (data: Doc) => self.write(path, data, { merge: true }),
+      update: async (data: Doc) => self.write(path, data, { merge: true, update: true }),
+      // create(): fails like Firestore (ALREADY_EXISTS, code 6) when the doc exists.
+      create: async (data: Doc) => {
+        if (self.store.has(path)) throw Object.assign(new Error('6 ALREADY_EXISTS: document already exists'), { code: 6 })
+        self.write(path, data)
+      },
       delete: async () => {
         self.store.delete(path)
       },
@@ -26,15 +31,31 @@ export class FakeFirestore {
     return { id: path.split('/').pop(), exists: data !== undefined, data: () => (data ? { ...data } : undefined), ref: this.ref(path) }
   }
 
-  write(path: string, data: Doc, opts?: { merge?: boolean }) {
+  write(path: string, data: Doc, opts?: { merge?: boolean; update?: boolean }) {
     const prev = opts?.merge ? this.store.get(path) || {} : {}
-    this.store.set(path, { ...prev, ...data })
+    if (!opts?.update || !Object.keys(data).some((k) => k.includes('.'))) {
+      this.store.set(path, { ...prev, ...data })
+      return
+    }
+    // update() treats "a.b" as a field path, like Firestore.
+    const next: Doc = { ...prev }
+    for (const [key, value] of Object.entries(data)) {
+      const parts = key.split('.')
+      let cur: Doc = next
+      for (let i = 0; i < parts.length - 1; i++) {
+        cur[parts[i]] = cur[parts[i]] && typeof cur[parts[i]] === 'object' ? { ...cur[parts[i]] } : {}
+        cur = cur[parts[i]]
+      }
+      cur[parts[parts.length - 1]] = value
+    }
+    this.store.set(path, next)
   }
 
   collection(name: string): any {
     const self = this
     return {
-      doc: (id: string) => self.ref(`${name}/${id}`),
+      // doc() with no id mints one, like the Admin SDK.
+      doc: (id?: string) => self.ref(`${name}/${id ?? `auto_${++self.autoId}`}`),
       add: async (data: Doc) => {
         const ref = self.ref(`${name}/auto_${++self.autoId}`)
         self.write(ref._path, data)
@@ -92,7 +113,7 @@ export class FakeFirestore {
       // A doc ref has a _path; a query (where/limit) is read through its own get().
       get: async (ref: any) => (ref?._path ? this.snap(ref._path) : ref.get()),
       set: (ref: any, data: Doc, opts?: any) => writes.push([ref._path, data, opts]),
-      update: (ref: any, data: Doc) => writes.push([ref._path, data, { merge: true }]),
+      update: (ref: any, data: Doc) => writes.push([ref._path, data, { merge: true, update: true }]),
       delete: (ref: any) => writes.push([ref._path, {}, { delete: true }]),
     }
     const result = await fn(tx)
@@ -107,8 +128,14 @@ export class FakeFirestore {
     const writes: [string, Doc, any][] = []
     return {
       set: (ref: any, data: Doc, opts?: any) => writes.push([ref._path, data, opts]),
+      update: (ref: any, data: Doc) => writes.push([ref._path, data, { merge: true, update: true }]),
+      create: (ref: any, data: Doc) => writes.push([ref._path, data, { create: true }]),
       commit: async () => {
-        for (const [p, d, o] of writes) this.write(p, d, o)
+        // All-or-nothing, like a WriteBatch: one existing create fails the batch.
+        if (writes.some(([p, , o]) => o?.create && this.store.has(p))) {
+          throw Object.assign(new Error('6 ALREADY_EXISTS: document already exists'), { code: 6 })
+        }
+        for (const [p, d, o] of writes) this.write(p, d, o?.create ? undefined : o)
       },
     }
   }

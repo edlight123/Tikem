@@ -3,6 +3,7 @@ import { FieldValue } from 'firebase-admin/firestore'
 import { isLiveTicketStatus } from '@/lib/tickets/status'
 import { ticketQrVersionOf } from '@/lib/scan/doorRules'
 import { verifyScannedTicketCode } from '@/lib/tickets/qr'
+import { physicalDoorReason } from '@/lib/physical/rules'
 
 /**
  * Why the scanned code itself refuses entry, or null when it is the ticket's
@@ -74,7 +75,11 @@ async function resolveAttendeeName(ticketData: any): Promise<string> {
  */
 export function ticketBlockReason(
   ticketData: Record<string, any>
-): 'REFUNDED' | 'CANCELLED' | 'PENDING_PAYMENT' | null {
+): 'REFUNDED' | 'CANCELLED' | 'PENDING_PAYMENT' | 'NOT_SOLD' | 'VOIDED' | null {
+  // A printed ticket that was never sold (activated) is not a ticket yet.
+  const physical = physicalDoorReason(ticketData)
+  if (physical === 'NOT_SOLD') return 'NOT_SOLD'
+  if (physical) return 'VOIDED'
   const status = String(ticketData?.status ?? '').toLowerCase().trim()
   const refundStatus = String(ticketData?.refund_status ?? '').toLowerCase().trim()
 
@@ -99,7 +104,18 @@ export type CheckInResult =
   | {
       success: false
       type: 'INVALID'
-      reason: 'NOT_FOUND' | 'WRONG_EVENT' | 'REFUNDED' | 'CANCELLED' | 'PENDING_PAYMENT' | 'TRANSFERRED' | 'INVALID_CODE'
+      reason:
+        | 'NOT_FOUND'
+        | 'WRONG_EVENT'
+        | 'REFUNDED'
+        | 'CANCELLED'
+        | 'PENDING_PAYMENT'
+        | 'TRANSFERRED'
+        | 'INVALID_CODE'
+        /** A printed ticket nobody has sold yet: not valid. */
+        | 'NOT_SOLD'
+        /** A printed ticket voided (lost range) or released back to online sales. */
+        | 'VOIDED'
     }
 
 export interface CheckInParams {

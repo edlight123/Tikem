@@ -14,12 +14,14 @@
  *   manager  runs events: create, edit, publish, tickets, orders, guests,
  *            check-in, messages, promo codes, analytics
  *   staff    nothing org-wide; door access comes per event (Staff tab)
+ *   seller   activates PRINTED tickets only, and only the serial ranges
+ *            assigned to them (lib/physical); sees no orders, guests or money
  */
 
-export type OrgRole = 'owner' | 'admin' | 'manager' | 'staff'
+export type OrgRole = 'owner' | 'admin' | 'manager' | 'staff' | 'seller'
 export type TeamRole = Exclude<OrgRole, 'owner'>
 
-export const TEAM_ROLES: TeamRole[] = ['admin', 'manager', 'staff']
+export const TEAM_ROLES: TeamRole[] = ['admin', 'manager', 'staff', 'seller']
 
 export type OrgAction =
   /** See the organizer dashboard, events, orders, guests, analytics. */
@@ -32,6 +34,8 @@ export type OrgAction =
   | 'manage_settings'
   /** Payouts, withdrawals, bank/MonCash details, verification, deleting the org. */
   | 'owner_only'
+  /** Activate (sell) printed tickets. Sellers: only their assigned serial ranges. */
+  | 'sell_physical'
 
 const ALLOWED: Record<OrgAction, OrgRole[]> = {
   view: ['owner', 'admin', 'manager'],
@@ -39,6 +43,7 @@ const ALLOWED: Record<OrgAction, OrgRole[]> = {
   manage_team: ['owner', 'admin'],
   manage_settings: ['owner', 'admin'],
   owner_only: ['owner'],
+  sell_physical: ['owner', 'admin', 'manager', 'seller'],
 }
 
 export function isTeamRole(value: unknown): value is TeamRole {

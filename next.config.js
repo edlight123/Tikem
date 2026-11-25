@@ -88,6 +88,8 @@ const nextConfig = {
     // Poster templates are drawn server-side with these typefaces.
     '/api/posters/preview': ['./assets/fonts/**'],
     '/api/posters/create': ['./assets/fonts/**'],
+    // The printed-ticket sheet (lib/physical/pdf.ts) embeds the brand fonts.
+    '/api/admin/physical-tickets/batches/[batchId]/pdf': ['./assets/fonts/**'],
     // The flyer reader's worker script, its WebAssembly engine (the LSTM
     // builds only) and the English/French models are all opened by path at
     // runtime, which tracing cannot follow.

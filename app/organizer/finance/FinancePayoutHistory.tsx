@@ -73,7 +73,7 @@ export default function FinancePayoutHistory({ payouts }: { payouts: FinancePayo
             >
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-fg">
-                  {p.method === 'bank_transfer' ? t('finance_view.method_bank') : t('finance_view.method_moncash')}
+                  {p.method === 'bank_transfer' ? t('finance_view.method_bank') : p.method === 'balance_offset' ? t('finance_view.method_balance_offset') : t('finance_view.method_moncash')}
                 </p>
                 <p className="mt-0.5 font-mono text-xs tabular-nums text-fg-subtle">
                   {new Date(p.createdAt).toLocaleDateString(i18n.language || undefined, {

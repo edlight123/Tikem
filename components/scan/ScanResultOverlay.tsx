@@ -154,6 +154,8 @@ export function ScanResultOverlay({ result, onClose, onOverride, reentry = false
       defaultValue: 'This ticket was transferred. The old code is no longer valid.',
     }),
     INVALID_CODE: t('door.reason_invalid_code', { defaultValue: 'This code is not valid.' }),
+    NOT_SOLD: t('door.reason_not_sold', { defaultValue: 'Not sold. Not valid.' }),
+    VOIDED: t('door.reason_voided', { defaultValue: 'This printed ticket was voided.' }),
   }[result.reason]
 
   return (

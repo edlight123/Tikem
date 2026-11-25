@@ -51,6 +51,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { db, isDemoMode } from '../config/firebase';
 import { colors as T, radius, font } from '../theme/tokens';
 import { getStaffEventIds } from '../lib/staffAssignments';
+import { fetchSellerAssignments } from '../lib/physicalTicketsApi';
 import { countAttended, liveTicketEventIds, sortPostersNewestFirst, toDateOrNull } from '../lib/profileStats';
 import { getVerificationRequest, type VerificationRequest } from '../lib/verification';
 import { updateSocialProfile } from '../lib/api/social';
@@ -148,6 +149,9 @@ export default function ProfileScreen() {
   // Every event this user holds a ticket to (newest first); the rail shows the head.
   const [myEvents, setMyEvents] = useState<any[]>([]);
   const [staffEventIds, setStaffEventIdsState] = useState<string[]>([]);
+  // Printed-ticket ranges assigned to this account (org role 'seller'): they
+  // sell from the staff tools too.
+  const [sellerAssignments, setSellerAssignments] = useState(0);
 
   const activeOrg = useActiveOrg();
   // An organizer in their own right (their own org, brand and payouts).
@@ -158,7 +162,7 @@ export default function ProfileScreen() {
   // Organizer mode also opens for admins and managers of someone else's org
   // (docs/specs/org-teams.md). Staff-only members keep the staff tools.
   const canUseOrganizerMode = isOwnOrganizer || activeOrg.hasTeamAccess;
-  const canUseStaffTools = staffEventIds.length > 0;
+  const canUseStaffTools = staffEventIds.length > 0 || sellerAssignments > 0;
 
   const displayName = useMemo(() => {
     const name = (userProfile?.full_name || '').trim();
@@ -185,6 +189,9 @@ export default function ProfileScreen() {
     } catch {
       setStaffEventIdsState([]);
     }
+    fetchSellerAssignments()
+      .then((a) => setSellerAssignments(a.length))
+      .catch(() => setSellerAssignments(0));
   }, []);
 
   const loadAccountStats = useCallback(async () => {

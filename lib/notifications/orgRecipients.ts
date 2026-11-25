@@ -49,6 +49,8 @@ const ROLE_KINDS: Record<TeamRole, ReadonlySet<OrgNotificationKind>> = {
   admin: new Set<OrgNotificationKind>(['event_ops', 'event_day', 'finance', 'team']),
   manager: new Set<OrgNotificationKind>(['event_ops', 'event_day']),
   staff: new Set<OrgNotificationKind>(['event_day']),
+  // Sellers only activate printed tickets: no org notifications.
+  seller: new Set<OrgNotificationKind>(),
 }
 
 /** Does one seat receive this kind? Pure. */
