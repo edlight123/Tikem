@@ -85,7 +85,18 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const origin = new URL(request.url).origin
   if (method === 'balance') {
     // Debited atomically from released money, or nothing happens.
-    const paid = await payBatchFromBalance({ batch: created.batch, user })
+    let paid: Awaited<ReturnType<typeof payBatchFromBalance>>
+    try {
+      paid = await payBatchFromBalance({ batch: created.batch, user })
+    } catch (err: any) {
+      // The debit may or may not have landed: keep the batch (and its seats).
+      // "Pay" on it resumes, and the sweep / "check payment" finish it either way.
+      console.error('[physical] balance payment interrupted', { batchId: created.batch.id, message: err?.message })
+      return NextResponse.json(
+        { error: 'The payment was interrupted. Open the batch and tap Pay again; you will not be charged twice.', code: 'balance_pending', batchId: created.batch.id, retryable: true },
+        { status: 503 }
+      )
+    }
     if (!paid.ok) {
       await cancelUnpaidBatch(created.batch.id, user.id, 'balance_refused').catch(() => null)
       return NextResponse.json({ error: paid.error, code: paid.code }, { status: paid.status })

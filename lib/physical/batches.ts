@@ -274,14 +274,25 @@ export async function getBatch(batchId: string): Promise<BatchDoc | null> {
   return snap.exists ? ({ id: snap.id, ...(snap.data() as any) } as BatchDoc) : null
 }
 
-/** Cancel an unpaid batch and give its seats back. */
+/**
+ * Cancel an unpaid batch and give its seats back.
+ *
+ * Refused (code 'offset_debited') when the organizer's balance was already
+ * debited for it (withdrawal_requests/physoffset_{batchId}, a crash between the
+ * debit and marking the batch paid): cancelling then would keep their money.
+ * The caller finishes that payment instead (balanceOffset.reconcileOffset).
+ */
 export async function cancelUnpaidBatch(batchId: string, by: string, reason: string | null = null): Promise<{ ok: boolean; code?: string }> {
   const ref = adminDb.collection(PHYSICAL_BATCHES).doc(batchId)
+  const offsetRef = adminDb.collection('withdrawal_requests').doc(`physoffset_${batchId}`)
   const cancelled = await adminDb.runTransaction(async (tx: any) => {
     const snap = await tx.get(ref)
+    const offset = await tx.get(offsetRef)
     if (!snap.exists) return 'not_found'
     const b = snap.data() || {}
     if (!canMoveBatch(b.status, 'cancelled')) return 'not_cancellable'
+    const o = offset.exists ? offset.data() || {} : null
+    if (o && o.status === 'completed' && !o.reversedAt) return 'offset_debited'
     tx.update(ref, {
       status: 'cancelled',
       cancelled_by: by,
@@ -313,6 +324,9 @@ export async function markBatchPaid(
   batchId: string,
   proof: { funds_rail: FundsRail; reference: string; amount: number; currency: string; extra?: Record<string, any> }
 ): Promise<{ ok: boolean; alreadyPaid?: boolean; code?: string; needsRefund?: boolean }> {
+  // A balance payment is never refunded by hand: the caller credits it straight
+  // back to the balance (balanceOffset.creditBackOffset), so it is not flagged.
+  const selfCrediting = proof.funds_rail === 'balance_offset'
   const ref = adminDb.collection(PHYSICAL_BATCHES).doc(batchId)
   const outcome: { kind: string; issue: boolean } = await adminDb.runTransaction(async (tx: any) => {
     const snap = await tx.get(ref)
@@ -327,13 +341,13 @@ export async function markBatchPaid(
       }
     }
     if (b.status === 'cancelled') {
-      flagLate()
+      if (!selfCrediting) flagLate()
       return { kind: 'cancelled', issue: false }
     }
     if (b.status !== 'awaiting_payment') {
       if (String(b.payment?.reference || '') !== String(proof.reference)) {
         // Paid twice (e.g. card AND MonCash): keep the first, flag the second for a refund.
-        flagLate()
+        if (!selfCrediting) flagLate()
         return { kind: 'duplicate', issue: b.tickets_issued_complete !== true }
       }
       return { kind: 'already', issue: b.tickets_issued_complete !== true }
@@ -357,14 +371,15 @@ export async function markBatchPaid(
   })
   if (outcome.kind === 'not_found') return { ok: false, code: 'not_found' }
   if (outcome.kind === 'cancelled') {
+    if (selfCrediting) return { ok: false, code: 'cancelled' }
     console.error('[physical] payment landed on a cancelled batch; flagged needs_refund', { batchId, reference: proof.reference })
     return { ok: false, code: 'cancelled', needsRefund: true }
   }
   if (outcome.issue) await issueBatchTickets(batchId)
   return {
-    ok: true,
+    ok: outcome.kind !== 'duplicate' || !selfCrediting,
     alreadyPaid: outcome.kind !== 'ok',
-    ...(outcome.kind === 'duplicate' ? { needsRefund: true, code: 'duplicate_payment' } : {}),
+    ...(outcome.kind === 'duplicate' ? (selfCrediting ? { code: 'duplicate_payment' } : { needsRefund: true, code: 'duplicate_payment' }) : {}),
   }
 }
 
@@ -482,6 +497,27 @@ export async function loadBatchTickets(batchId: string): Promise<Array<{ id: str
     .sort((a: any, b: any) => Number(a.physical_serial_no) - Number(b.physical_serial_no))
 }
 
+/**
+ * The print room downloaded the sheet: from now on Tikèm has (or may have)
+ * printed it, so the batch moves to 'printing' and gets printed_at, in one
+ * transaction. Cancel-for-credit refuses once printed_at is set.
+ */
+export async function markBatchPrinted(batchId: string, by: string): Promise<{ ok: boolean; code?: string }> {
+  const ref = adminDb.collection(PHYSICAL_BATCHES).doc(batchId)
+  return adminDb.runTransaction(async (tx: any) => {
+    const snap = await tx.get(ref)
+    if (!snap.exists) return { ok: false, code: 'not_found' }
+    const b = snap.data() || {}
+    if (['awaiting_payment', 'cancelled'].includes(b.status)) return { ok: false, code: 'not_paid' }
+    const nowIso = new Date().toISOString()
+    const patch: Record<string, any> = {}
+    if (!b.printed_at) Object.assign(patch, { printed_at: nowIso, printed_by: by })
+    if (b.status === 'paid') Object.assign(patch, { status: 'printing', printing_at: nowIso, printing_by: by })
+    if (Object.keys(patch).length) tx.update(ref, { ...patch, updated_at: nowIso })
+    return { ok: true }
+  })
+}
+
 /** Admin: move a batch one step along the flow (paid → printing → ready → active). */
 export async function moveBatch(batchId: string, to: BatchStatus, by: string): Promise<{ ok: boolean; code?: string; from?: string }> {
   const ref = adminDb.collection(PHYSICAL_BATCHES).doc(batchId)
@@ -491,7 +527,13 @@ export async function moveBatch(batchId: string, to: BatchStatus, by: string): P
     const from = String(snap.data()?.status || '') as BatchStatus
     if (!canMoveBatch(from, to)) return { ok: false, code: 'bad_transition', from }
     const nowIso = new Date().toISOString()
-    tx.update(ref, { status: to, [`${to}_at`]: nowIso, [`${to}_by`]: by, updated_at: nowIso })
+    tx.update(ref, {
+      status: to,
+      [`${to}_at`]: nowIso,
+      [`${to}_by`]: by,
+      ...(to === 'printing' && !snap.data()?.printed_at ? { printed_at: nowIso, printed_by: by } : {}),
+      updated_at: nowIso,
+    })
     return { ok: true, from }
   })
 }

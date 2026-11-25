@@ -184,3 +184,40 @@ describe('unpaid batches expire', () => {
     expect((await getBatch(b.id))!.status).toBe('awaiting_payment')
   })
 })
+
+describe('an expired card session never cancels a live batch', () => {
+  it('retry: the new session id is saved BEFORE the old one is expired', async () => {
+    const batch = await newBatch()
+    const first = await startCardBatchPayment(batch, 'https://x')
+    let idAtExpiry: string | null = null
+    stripeExpire.mockImplementationOnce(async (id: string) => {
+      idAtExpiry = db.store.get(`physical_batches/${batch.id}`)!.payment.stripe_session_id
+      sessions.get(id).status = 'expired'
+    })
+    const second = await startCardBatchPayment((await getBatch(batch.id))!, 'https://x')
+    expect(idAtExpiry).toBe(second.sessionId)
+    expect(await handleCardSessionExpired(sessions.get(first.sessionId))).toBe(false)
+    expect((await getBatch(batch.id))!.status).toBe('awaiting_payment')
+  })
+
+  it('card then MonCash: the card session is cleared and expired, and its expiry cancels nothing', async () => {
+    const batch = await newBatch()
+    const card = await startCardBatchPayment(batch, 'https://x')
+    await startMonCashBatchPayment((await getBatch(batch.id))!)
+    const b = (await getBatch(batch.id))!
+    expect(b.payment.stripe_session_id).toBeNull()
+    expect(b.payment.method).toBe('moncash')
+    expect(stripeExpire).toHaveBeenCalledWith(card.sessionId)
+    expect(await handleCardSessionExpired(sessions.get(card.sessionId))).toBe(false)
+    expect((await getBatch(batch.id))!.status).toBe('awaiting_payment')
+  })
+
+  it('the handler also requires the batch to be on card', async () => {
+    const batch = await newBatch()
+    const card = await startCardBatchPayment(batch, 'https://x')
+    // Someone switched the method without clearing the id (older data).
+    db.store.set(`physical_batches/${batch.id}`, { ...db.store.get(`physical_batches/${batch.id}`)!, payment: { ...db.store.get(`physical_batches/${batch.id}`)!.payment, method: 'moncash' } })
+    expect(await handleCardSessionExpired(sessions.get(card.sessionId))).toBe(false)
+    expect((await getBatch(batch.id))!.status).toBe('awaiting_payment')
+  })
+})

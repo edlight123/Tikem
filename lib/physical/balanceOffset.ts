@@ -30,6 +30,7 @@ import { gateHaitiWithdrawal } from '@/lib/payouts/withdrawal-gate'
 import { syncOrganizerDebt } from '@/lib/payouts/organizer-debt'
 import { teamSeatIn, type CurrentUser } from '@/lib/organizer/context'
 import { getBatch, markBatchPaid, retireBatchTickets, type BatchDoc } from './batches'
+import { retireCardSession } from './payments'
 import { PHYSICAL_BATCHES } from './rules'
 
 export const OFFSET_ROW_PREFIX = 'physoffset_'
@@ -119,6 +120,8 @@ export async function payBatchFromBalance(params: { batch: BatchDoc; user: Curre
     return { ok: false, status: 409, code: 'not_awaiting_payment', error: 'This batch is not waiting for payment' }
   }
 
+  // Paying from the balance: an open card session must not be able to pay too.
+  await retireCardSession(batch)
   await syncOrganizerDebt(orgId).catch(() => null)
   const candidates = await loadOffsetCandidates(orgId)
   const source = pickOffsetSource(candidates, totalMinor, batch.event_id)
@@ -199,25 +202,41 @@ export async function payBatchFromBalance(params: { batch: BatchDoc; user: Curre
 }
 
 /**
- * Credit a balance-offset payment back, once: the event's ledger row gets the
- * amount back (withdrawnAmount −= amount, the same reversal a failed withdrawal
- * gets) and the withdrawal row becomes 'cancelled' (void, so the availability
- * engine stops counting it). Used when a paid-from-balance batch is cancelled
- * before printing, and when the debit landed on a batch that was cancelled.
+ * Credit a balance-offset payment back, once, in ONE transaction: the event's
+ * ledger row gets the amount back (withdrawnAmount −= amount, the same reversal
+ * a failed withdrawal gets), the withdrawal row becomes 'cancelled' (void, so
+ * the availability engine stops counting it) and the batch is stamped
+ * refunded_to_balance_at. With `cancelBatch` the batch is cancelled in the same
+ * transaction. Refused once the batch has been printed (printed_at): Tikèm has
+ * done the work.
  */
-export async function creditBackOffset(batchId: string, by: string): Promise<{ ok: boolean; code?: string; amountMinor?: number }> {
+async function creditInTransaction(
+  batchId: string,
+  by: string,
+  mode: { cancelBatch: boolean; requirePaid?: boolean }
+): Promise<{ ok: boolean; code?: string; amountMinor?: number }> {
   const rowRef = adminDb.collection('withdrawal_requests').doc(offsetWithdrawalId(batchId))
   const batchRef = adminDb.collection(PHYSICAL_BATCHES).doc(batchId)
   return adminDb.runTransaction(async (tx: any) => {
+    const batchSnap = await tx.get(batchRef)
     const rowSnap = await tx.get(rowRef)
+    const b = batchSnap.exists ? batchSnap.data() || {} : null
+    if (b?.printed_at) return { ok: false, code: 'already_printed' }
+    if (mode.requirePaid) {
+      if (!b) return { ok: false, code: 'not_found' }
+      if (b.payment?.funds_rail !== 'balance_offset') return { ok: false, code: 'not_balance' }
+      // A retry after a crash: cancelled before printing but never credited.
+      const retry = b.status === 'cancelled' && b.cancel_reason === 'cancelled_before_printing' && !b.payment?.refunded_to_balance_at
+      if (b.status !== 'paid' && !retry) return { ok: false, code: b.status === 'cancelled' ? 'already_credited' : 'already_printing' }
+    }
     if (!rowSnap.exists) return { ok: false, code: 'no_offset' }
     const row = rowSnap.data() || {}
     if (row.method !== 'balance_offset' || row.physicalBatchId !== batchId) return { ok: false, code: 'not_offset' }
     if (row.status !== 'completed' || row.reversedAt) return { ok: false, code: 'already_credited' }
     const amount = Math.max(0, Math.round(Number(row.reservedCents ?? row.amount) || 0))
     const found = await findEventEarningsDocInTransaction(tx, String(row.eventId))
-    const batchSnap = await tx.get(batchRef)
     const now = new Date()
+    const nowIso = now.toISOString()
     if (found && amount > 0) {
       const e = found.data || {}
       const available = Math.max(0, Number(e.availableToWithdraw || 0) || 0) + amount
@@ -225,37 +244,74 @@ export async function creditBackOffset(batchId: string, by: string): Promise<{ o
         availableToWithdraw: available,
         withdrawnAmount: Math.max(0, (Number(e.withdrawnAmount || 0) || 0) - amount),
         settlementStatus: available === 0 ? 'locked' : 'ready',
-        updatedAt: now.toISOString(),
+        updatedAt: nowIso,
       })
     }
     tx.update(rowRef, { status: 'cancelled', reversedAt: now, reversedBy: by, reversalReason: 'physical_batch_cancelled', updatedAt: now })
-    if (batchSnap.exists) {
-      tx.update(batchRef, { 'payment.refunded_to_balance_at': now.toISOString(), 'payment.refunded_to_balance_by': by, updated_at: now.toISOString() })
+    if (b) {
+      tx.update(batchRef, {
+        'payment.refunded_to_balance_at': nowIso,
+        'payment.refunded_to_balance_by': by,
+        ...(mode.cancelBatch && b.status !== 'cancelled'
+          ? { status: 'cancelled', cancelled_by: by, cancel_reason: 'cancelled_before_printing', cancelled_at: nowIso }
+          : {}),
+        updated_at: nowIso,
+      })
     }
     return { ok: true, amountMinor: amount }
   })
 }
 
+/** Credit back a debit whose batch can no longer be paid (it was cancelled). */
+export async function creditBackOffset(batchId: string, by: string): Promise<{ ok: boolean; code?: string; amountMinor?: number }> {
+  return creditInTransaction(batchId, by, { cancelBatch: false })
+}
+
 /**
- * Cancel a batch PAID FROM BALANCE before it goes to the printer: the batch is
- * cancelled, the money is credited back, the tickets are retired and the seats
- * return to online sales.
+ * Cancel a batch PAID FROM BALANCE before it goes to the printer: cancel and
+ * credit in one transaction, then retire the tickets and return the seats.
+ * Safe to retry (a cancelled-but-uncredited batch is credited; tickets already
+ * retired are skipped).
  */
 export async function cancelPaidFromBalance(batchId: string, by: string): Promise<{ ok: boolean; code?: string; creditedMinor?: number }> {
-  const ref = adminDb.collection(PHYSICAL_BATCHES).doc(batchId)
-  const claimed: string = await adminDb.runTransaction(async (tx: any) => {
-    const snap = await tx.get(ref)
-    if (!snap.exists) return 'not_found'
-    const b = snap.data() || {}
-    if (b.payment?.funds_rail !== 'balance_offset') return 'not_balance'
-    if (b.status !== 'paid') return 'already_printing'
-    const nowIso = new Date().toISOString()
-    tx.update(ref, { status: 'cancelled', cancelled_by: by, cancel_reason: 'cancelled_before_printing', cancelled_at: nowIso, updated_at: nowIso })
-    return 'ok'
-  })
-  if (claimed !== 'ok') return { ok: false, code: claimed }
-  const credit = await creditBackOffset(batchId, by)
+  const credit = await creditInTransaction(batchId, by, { cancelBatch: true, requirePaid: true })
+  if (!credit.ok) return { ok: false, code: credit.code }
   const batch = await getBatch(batchId)
   if (batch) await retireBatchTickets(batch, by)
   return { ok: true, creditedMinor: credit.amountMinor || 0 }
+}
+
+export type OffsetReconcile = 'none' | 'finished_paid' | 'credited' | 'kept'
+
+/**
+ * The debit and "mark the batch paid" are two steps: a crash between them
+ * leaves the balance debited and the batch unpaid. Every path that would act
+ * on an unpaid batch (the expiry sweep, "check payment", cancel) calls this
+ * first:
+ *   - still awaiting payment → finish it (mark paid with the existing debit);
+ *   - cancelled (and never printed) → credit the debit back;
+ *   - otherwise nothing to do.
+ */
+export async function reconcileOffset(batchId: string): Promise<OffsetReconcile> {
+  const rowSnap = await adminDb.collection('withdrawal_requests').doc(offsetWithdrawalId(batchId)).get()
+  const row = rowSnap.exists ? rowSnap.data() || {} : null
+  if (!row || row.method !== 'balance_offset' || row.status !== 'completed' || row.reversedAt) return 'none'
+  const batch = await getBatch(batchId)
+  if (!batch) return 'none'
+  if (batch.status === 'awaiting_payment') {
+    const paid = await markBatchPaid(batchId, {
+      funds_rail: 'balance_offset',
+      reference: rowSnap.id,
+      amount: Number(batch.total_htg),
+      currency: 'HTG',
+      extra: { offset_event_id: row.eventId, withdrawal_id: rowSnap.id, recovered: true },
+    })
+    if (paid.ok) return 'finished_paid'
+  }
+  const fresh = await getBatch(batchId)
+  if (fresh?.status === 'cancelled' && !fresh.payment?.refunded_to_balance_at) {
+    const c = await creditBackOffset(batchId, 'system')
+    return c.ok ? 'credited' : 'kept'
+  }
+  return 'kept'
 }

@@ -596,6 +596,13 @@ describe('bulk range operations re-check each ticket inside the transaction', ()
 })
 
 describe('print PDF holds only unsold tickets', () => {
+  it('the first download moves a paid batch to printing', async () => {
+    requireAdmin.mockResolvedValue({ user: { id: 'a1', email: 'a@tikem.co' }, error: null })
+    const batch = await paidBatch(100)
+    expect((await pdfGET(new Request('http://localhost/x') as any, { params: Promise.resolve({ batchId: batch.id }) })).status).toBe(200)
+    expect((await getBatch(batch.id))!).toMatchObject({ status: 'printing', printed_by: 'a1' })
+  })
+
   it('after sales and a reprint, sold / voided / released tickets are never printed', async () => {
     requireAdmin.mockResolvedValue({ user: { id: 'a1', email: 'a@tikem.co' }, error: null })
     const batch = await readyBatch(100)
@@ -608,6 +615,8 @@ describe('print PDF holds only unsold tickets', () => {
     expect(res.status).toBe(200)
     const printed = renderBatchPdf.mock.calls[0][0].tickets
     expect(printed).toHaveLength(90)
+    // The download is the print: the batch now carries printed_at.
+    expect((await getBatch(batch.id))!.printed_at).toBeTruthy()
     expect(printed.every((t: any) => parsePhysicalQr(t.qrPayload)?.v === 2)).toBe(true)
   })
 })

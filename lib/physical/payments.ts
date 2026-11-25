@@ -37,6 +37,34 @@ export function batchPageUrl(origin: string, batch: { id: string; event_id: stri
   return `${origin}/organizer/events/${encodeURIComponent(batch.event_id)}/printed?batch=${encodeURIComponent(batch.id)}${extra}`
 }
 
+/** Expire a Checkout session if it is still open. Never throws. */
+async function expireOpenSession(sessionId: string, batchId: string): Promise<void> {
+  if (!sessionId || !process.env.STRIPE_SECRET_KEY) return
+  try {
+    const stripe = getStripe()
+    const old = await stripe.checkout.sessions.retrieve(sessionId)
+    if (old?.status === 'open') await stripe.checkout.sessions.expire(sessionId)
+  } catch (err: any) {
+    console.warn('[physical] could not expire a card session', { batchId, message: err?.message })
+  }
+}
+
+/**
+ * Switching AWAY from card (to MonCash or the balance): forget the batch's card
+ * session FIRST (so its later checkout.session.expired cannot match and cancel
+ * the batch), then expire it if it is still open.
+ */
+export async function retireCardSession(batch: Pick<BatchDoc, 'id' | 'payment'>): Promise<void> {
+  const sessionId = String(batch.payment?.stripe_session_id || '')
+  if (!sessionId) return
+  await adminDb.collection(PHYSICAL_BATCHES).doc(batch.id).update({
+    'payment.stripe_session_id': null,
+    'payment.retired_stripe_session_id': sessionId,
+    updated_at: new Date().toISOString(),
+  })
+  await expireOpenSession(sessionId, batch.id)
+}
+
 /** Start a MonCash payment; returns the gateway URL to send the organizer to. */
 export async function startMonCashBatchPayment(batch: BatchDoc): Promise<{ redirectUrl: string; orderId: string }> {
   // Same numeric order id shape as the ticket checkout (Digicel expects digits).
@@ -47,6 +75,7 @@ export async function startMonCashBatchPayment(batch: BatchDoc): Promise<{ redir
     amount_htg: batch.total_htg,
     created_at: new Date().toISOString(),
   })
+  await retireCardSession(batch)
   await adminDb.collection(PHYSICAL_BATCHES).doc(batch.id).update({
     'payment.order_id': orderId,
     'payment.method': 'moncash',
@@ -125,16 +154,7 @@ export async function startCardBatchPayment(
   const amountUsdCents = htgToUsdCentsAtHtgPerUsd(batch.total_htg, htgPerUsd)
   const stripe = getStripe()
 
-  // Never two live sessions for one batch.
   const previous = String(batch.payment?.stripe_session_id || '')
-  if (previous) {
-    try {
-      const old = await stripe.checkout.sessions.retrieve(previous)
-      if (old?.status === 'open') await stripe.checkout.sessions.expire(previous)
-    } catch (err: any) {
-      console.warn('[physical] could not expire the previous card session', { batchId: batch.id, message: err?.message })
-    }
-  }
 
   const expiresAtSec = Math.floor(Date.now() / 1000) + CARD_SESSION_TTL_SECONDS
   const metadata = {
@@ -175,6 +195,9 @@ export async function startCardBatchPayment(
     'payment.session_expires_at': expiresAt,
     updated_at: new Date().toISOString(),
   })
+  // Never two live sessions for one batch. The NEW id is saved first, so the
+  // old session's checkout.session.expired no longer matches the batch.
+  if (previous && previous !== session.id) await expireOpenSession(previous, batch.id)
   return { redirectUrl: String(session.url), sessionId: session.id, amountUsdCents, rate: htgPerUsd, expiresAt }
 }
 
@@ -219,7 +242,14 @@ export async function handleCardSessionExpired(session: { id: string; metadata?:
   if (session?.metadata?.kind !== 'physical_batch' || !batchId) return false
   const snap = await adminDb.collection(PHYSICAL_BATCHES).doc(batchId).get()
   const b = snap.exists ? snap.data() || {} : null
-  if (!b || b.status !== 'awaiting_payment' || String(b.payment?.stripe_session_id || '') !== String(session.id)) return false
+  if (
+    !b ||
+    b.status !== 'awaiting_payment' ||
+    b.payment?.method !== 'card' ||
+    String(b.payment?.stripe_session_id || '') !== String(session.id)
+  ) {
+    return false
+  }
   const r = await cancelUnpaidBatch(batchId, 'system', 'card_session_expired')
   return r.ok
 }
@@ -243,6 +273,14 @@ export async function expireUnpaidBatches(opts: { now?: number; limit?: number }
     if (!(expires < now)) continue
     checked++
     try {
+      // A balance debit that landed without the batch being marked paid (a
+      // crash in between): finish it, never cancel over it.
+      const { reconcileOffset } = await import('./balanceOffset')
+      const offset = await reconcileOffset(doc.id)
+      if (offset === 'finished_paid') {
+        paid++
+        continue
+      }
       if (b.payment?.method === 'card' && b.payment?.stripe_session_id) {
         const r = await verifyCardBatchPayment(String(b.payment.stripe_session_id), doc.id)
         if (r.paid) {

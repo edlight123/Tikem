@@ -8,7 +8,7 @@ import {
   verifyCardBatchPayment,
   verifyMonCashBatchPayment,
 } from '@/lib/physical/payments'
-import { cancelPaidFromBalance, payBatchFromBalance } from '@/lib/physical/balanceOffset'
+import { cancelPaidFromBalance, payBatchFromBalance, reconcileOffset } from '@/lib/physical/balanceOffset'
 import { PAYMENT_WINDOW_MS, validRange } from '@/lib/physical/rules'
 import { adminDb } from '@/lib/firebase/admin'
 
@@ -68,6 +68,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       }
       case 'check_payment': {
         if (paid) return NextResponse.json({ paid: true, status: batch.status })
+        // A balance debit that landed without the batch being marked paid.
+        if ((await reconcileOffset(batch.id)) === 'finished_paid') return NextResponse.json({ paid: true })
         const sessionId = String(body?.sessionId || batch.payment?.stripe_session_id || '')
         if (batch.payment?.method === 'card' && sessionId) {
           const r = await verifyCardBatchPayment(sessionId, batch.id)
@@ -80,13 +82,23 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         return NextResponse.json({ paid: false, reason: 'no_payment_started' })
       }
       case 'cancel': {
-        if (batch.status === 'paid' && batch.payment?.funds_rail === 'balance_offset') {
+        const balanceRetry = batch.status === 'cancelled' && batch.payment?.funds_rail === 'balance_offset' && !batch.payment?.refunded_to_balance_at
+        if ((batch.status === 'paid' && batch.payment?.funds_rail === 'balance_offset') || balanceRetry) {
           const r = await cancelPaidFromBalance(batch.id, user.id)
           return r.ok
             ? NextResponse.json({ ok: true, creditedHtg: (r.creditedMinor || 0) / 100 })
             : NextResponse.json({ error: 'This batch can no longer be cancelled', code: r.code }, { status: 409 })
         }
-        const r = await cancelUnpaidBatch(batch.id, user.id, 'organizer_cancelled')
+        let r = await cancelUnpaidBatch(batch.id, user.id, 'organizer_cancelled')
+        if (!r.ok && r.code === 'offset_debited') {
+          // The balance was debited but the batch never marked paid: finish it,
+          // then cancel it the balance way (credited back in one transaction).
+          await reconcileOffset(batch.id)
+          const c = await cancelPaidFromBalance(batch.id, user.id)
+          return c.ok
+            ? NextResponse.json({ ok: true, creditedHtg: (c.creditedMinor || 0) / 100 })
+            : NextResponse.json({ error: 'This batch can no longer be cancelled', code: c.code }, { status: 409 })
+        }
         return r.ok
           ? NextResponse.json({ ok: true })
           : NextResponse.json({ error: 'Only an unpaid batch (or one paid from the balance, before printing) can be cancelled', code: r.code }, { status: 409 })
