@@ -998,6 +998,10 @@ service cloud.firestore {
     match /physical_batch_orders/{orderId} {
       allow read, write: if false;
     }
+    // Per-event batch sequence (serials FETE-VIP-B2-0001): server-only.
+    match /physical_batch_seq/{eventId} {
+      allow read, write: if false;
+    }
     // The printing price list and its change history: admin console only.
     match /config/physical_tickets {
       allow read, write: if false;

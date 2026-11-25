@@ -66,6 +66,9 @@ const DISPUTE_EVENT_TYPES = new Set([
 // Event types this webhook actually fulfills. Only these are deduped/claimed.
 const HANDLED_EVENT_TYPES = new Set([
   'checkout.session.completed',
+  // Printed-ticket batch card sessions (lib/physical/payments) that expire
+  // unpaid give their seats back. Needs the endpoint subscribed to it.
+  'checkout.session.expired',
   'payment_intent.succeeded',
   // An abandoned / canceled PaymentIntent gives its seat hold back early. The
   // endpoint must be subscribed to this event in the Stripe dashboard for it to
@@ -244,9 +247,21 @@ export async function POST(request: Request) {
     // A printed-ticket batch paid on the PLATFORM account (lib/physical/payments):
     // never a ticket order, so it must not reach the fulfilment paths below.
     if (
-      (event.type === 'checkout.session.completed' || event.type === 'payment_intent.succeeded') &&
+      (event.type === 'checkout.session.completed' ||
+        event.type === 'checkout.session.expired' ||
+        event.type === 'payment_intent.succeeded') &&
       event.data?.object?.metadata?.kind === 'physical_batch'
     ) {
+      if (event.type === 'checkout.session.expired') {
+        const { handleCardSessionExpired } = await import('@/lib/physical/payments')
+        const cancelled = await handleCardSessionExpired(event.data.object)
+        await markWebhookEventCompleted({
+          provider: 'stripe',
+          eventId: event.id,
+          metadata: { type: event.type, kind: 'physical_batch', batchId: event.data.object.metadata?.batchId || null, cancelled },
+        })
+        return NextResponse.json({ received: true, physicalBatch: true, cancelled })
+      }
       const obj = event.data.object
       let paid = false
       if (event.type === 'checkout.session.completed') {
@@ -259,6 +274,12 @@ export async function POST(request: Request) {
         metadata: { type: event.type, kind: 'physical_batch', batchId: obj.metadata?.batchId || null, paid },
       })
       return NextResponse.json({ received: true, physicalBatch: true, paid })
+    }
+    // Any other expired Checkout session: nothing of ours to do (ticket orders
+    // give their seat holds back on their own expiry).
+    if (event.type === 'checkout.session.expired') {
+      await markWebhookEventCompleted({ provider: 'stripe', eventId: event.id, metadata: { type: event.type, skipped: 'not_a_batch' } })
+      return NextResponse.json({ received: true, skipped: 'not_a_batch' })
     }
 
     // Connect: the organizer's account requirements / capabilities changed.

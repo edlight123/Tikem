@@ -2,10 +2,14 @@
  * Print-ready PDF for a printed batch (Tikèm prints in-house).
  *
  * Letter or A4, 8 tickets per page (2 × 4) with crop marks in the gutters.
- * Each ticket is the brand's dark tone: black ground, the event in Instrument
- * Serif, everything else in Plus Jakarta Sans, the tier in the teal accent, and
- * a perforated stub on the right (serial + tier, kept by the seller). The QR
- * sits on a white square: a light-on-dark QR scans unreliably on phones.
+ *
+ * WHITE paper, black ink (owner, 2026-11-24): solid black grounds are
+ * ink-heavy and print streaky on cybercafé printers. Each ticket is white with
+ * black text, the event in Instrument Serif, everything else in Plus Jakarta
+ * Sans, one thin teal accent (a hairline rule on the left edge, the eyebrow and
+ * the tier), a light grey dashed divider before the stub (serial + tier, kept
+ * by the seller), light grey crop marks, and a black-on-white QR with its
+ * quiet zone.
  *
  * Colours come from lib/design/tokens.ts (solid steps only: PDF has no alpha
  * on the canvas the way CSS does).
@@ -41,14 +45,11 @@ const GUTTER = 18
 const MARK = 8
 
 const INK = {
-  ground: color.canvas,
-  panel: color.surface.solid,
-  line: color.line.solid,
-  text: color.fg.DEFAULT,
-  muted: color.fg['muted-solid'],
-  accent: color.brand[400],
-  paper: color.inverse.DEFAULT,
-  mark: color.fg['muted-solid'],
+  paper: color.inverse.DEFAULT, // white
+  text: color.shade, // black
+  secondary: color.line.solid, // near-black, for the smaller lines
+  accent: color.brand[700], // brand teal, dark enough for cheap printers
+  hairline: color.fg['muted-solid'], // light grey: divider, crop marks
   qrDark: color.shade,
 }
 
@@ -103,7 +104,7 @@ export function ticketBox(paper: PaperSize, indexOnPage: number) {
 }
 
 function cropMarks(doc: jsPDF, b: { x: number; y: number; w: number; h: number }) {
-  doc.setDrawColor(INK.mark)
+  doc.setDrawColor(INK.hairline)
   doc.setLineWidth(0.4)
   const gap = 3
   for (const [cx, cy, dx, dy] of [
@@ -130,7 +131,7 @@ function fit(doc: jsPDF, text: string, maxWidth: number, maxLines: number): stri
 async function qrPng(payload: string): Promise<string> {
   return QRCode.toDataURL(payload, {
     errorCorrectionLevel: 'M',
-    margin: 1,
+    margin: 2,
     width: 360,
     color: { dark: INK.qrDark, light: INK.paper },
   })
@@ -149,14 +150,12 @@ function drawTicket(
   const mainW = b.w - stubW
   const left = b.x + pad
   const right = b.x + mainW - pad
-  // Ground + stub panel (a brightness step, not a border).
-  doc.setFillColor(INK.ground)
-  doc.rect(b.x, b.y, b.w, b.h, 'F')
-  doc.setFillColor(INK.panel)
-  doc.rect(b.x + mainW, b.y, stubW, b.h, 'F')
-  // Perforation between ticket and stub.
-  doc.setDrawColor(INK.line)
-  doc.setLineWidth(0.8)
+  // White paper: no fill at all. One thin teal accent on the left edge.
+  doc.setFillColor(INK.accent)
+  doc.rect(b.x, b.y, 1.6, b.h, 'F')
+  // Light grey dashed divider before the stub (fold / tear line).
+  doc.setDrawColor(INK.hairline)
+  doc.setLineWidth(0.5)
   doc.setLineDashPattern([2, 2.5], 0)
   doc.line(b.x + mainW, b.y + 6, b.x + mainW, b.y + b.h - 6)
   doc.setLineDashPattern([], 0)
@@ -165,7 +164,7 @@ function drawTicket(
   let y = b.y + pad + 6
   doc.setFont(f.sansBold, 'normal')
   doc.setFontSize(6.5)
-  doc.setTextColor(INK.muted)
+  doc.setTextColor(INK.accent)
   doc.text('TIKÈM  ·  ADMIT ONE', left, y, { charSpace: 0.8 })
   y += 19
   doc.setFont(f.serif, 'normal')
@@ -179,19 +178,18 @@ function drawTicket(
   const foot = b.y + b.h - pad
   const qx = right - q
   const qy = foot - q - 8
-  doc.setFillColor(INK.paper)
-  doc.roundedRect(qx - 3, qy - 3, q + 6, q + 6, 4, 4, 'F')
+  // The PNG carries its own white quiet zone (margin 2 modules).
   doc.addImage(qr, 'PNG', qx, qy, q, q)
   doc.setFont(f.sans, 'normal')
   doc.setFontSize(5.6)
-  doc.setTextColor(INK.muted)
+  doc.setTextColor(INK.secondary)
   doc.text('Valid only once sold', qx + q / 2, foot + 2, { align: 'center' })
 
   const textW = qx - 3 - left - 8
   let dy = qy + 4
   doc.setFont(f.sans, 'normal')
   doc.setFontSize(7.5)
-  doc.setTextColor(INK.muted)
+  doc.setTextColor(INK.secondary)
   for (const line of [ev.dateLine, ev.venueLine].filter(Boolean)) {
     const lines = fit(doc, line, textW, 2)
     doc.text(lines, left, dy, { lineHeightFactor: 1.2 })
@@ -210,7 +208,7 @@ function drawTicket(
   const sx = b.x + mainW + stubW / 2
   doc.setFont(f.sansBold, 'normal')
   doc.setFontSize(6)
-  doc.setTextColor(INK.muted)
+  doc.setTextColor(INK.secondary)
   doc.text('STUB', sx, b.y + pad + 4, { align: 'center', charSpace: 0.8 })
   doc.setFont(f.sans, 'normal')
   doc.setFontSize(9)
@@ -246,7 +244,7 @@ export async function renderBatchPdf(params: {
     const { w, h } = PAGE[paper]
     doc.setFont(f.sans, 'normal')
     doc.setFontSize(6.5)
-    doc.setTextColor(INK.mark)
+    doc.setTextColor(INK.secondary)
     const span = slice.length ? `${slice[0].serial} to ${slice[slice.length - 1].serial}` : ''
     doc.text(`${params.batchLabel || ''}   ${span}   page ${p + 1} of ${pages}`.trim(), w / 2, h - 12, { align: 'center' })
   }

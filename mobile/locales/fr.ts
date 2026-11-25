@@ -4612,6 +4612,7 @@ export default {
       nameRequired: "Le nom de l'acheteur est obligatoire.",
       wrongEvent: "Ce billet est pour un autre événement.",
       batchNotReady: "Ce lot n'est pas encore prêt à la vente.",
+      ambiguousSerial: "Deux billets imprimés portent ce numéro. Scannez plutôt le code QR.",
       notPrinted: "Ce n'est pas un billet imprimé.",
       notFound: "Billet introuvable. Vérifiez le numéro.",
       noAccess: "Vous ne pouvez pas vendre de billets imprimés pour cet événement.",

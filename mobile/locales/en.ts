@@ -4593,6 +4593,7 @@ export default {
       nameRequired: "The buyer's name is required.",
       wrongEvent: "This ticket is for another event.",
       batchNotReady: "This batch is not ready to sell yet.",
+      ambiguousSerial: "Two printed tickets have this serial. Scan the QR code instead.",
       notPrinted: "This is not a printed ticket.",
       notFound: "Ticket not found. Check the serial.",
       noAccess: "You cannot sell printed tickets for this event.",

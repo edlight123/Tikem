@@ -182,7 +182,7 @@ describe('offline queue: sync', () => {
 describe('messages', () => {
   const get = (obj: any, path: string) => path.split('.').reduce((o, k) => (o == null ? o : o[k]), obj)
   it('every refusal code maps to a key present in en/fr/ht', () => {
-    const codes = ['NOT_FOUND', 'WRONG_EVENT', 'NOT_PHYSICAL', 'NAME_REQUIRED', 'ALREADY_ACTIVATED', 'VOIDED', 'RELEASED', 'INVALID_CODE', 'NOT_YOUR_RANGE', 'BATCH_NOT_READY'] as const
+    const codes = ['NOT_FOUND', 'WRONG_EVENT', 'NOT_PHYSICAL', 'NAME_REQUIRED', 'ALREADY_ACTIVATED', 'VOIDED', 'RELEASED', 'INVALID_CODE', 'NOT_YOUR_RANGE', 'BATCH_NOT_READY', 'AMBIGUOUS_SERIAL'] as const
     for (const c of codes) {
       const key = activationMessageKey(c)
       for (const dict of [en, fr, ht]) expect(typeof get(dict, key)).toBe('string')

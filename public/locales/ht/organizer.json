@@ -1776,7 +1776,8 @@
     "toggle_label": "Ka wè finans yo (lekti sèlman)",
     "toggle_desc": "Revni, istorik peman ak rapò lavant. Li pa janm ka retire lajan, ni wè enfòmasyon labank oswa MonCash.",
     "row_marker": "Finans",
-    "access_note": "Pwopriyetè a ka kite yon admin wè finans yo tou, men lekti sèlman."
+    "access_note": "Pwopriyetè a ka kite yon admin wè finans yo tou, men lekti sèlman.",
+    "method_balance_offset": "Tikè enprime (sou balans)"
   },
   "payout_phone_check": {
     "no_sms_body": "Nou poko ka voye kòd pa tèks, kidonk pa gen anyen pou w fè la a. Si se nimewo w itilize pou konekte a, li deja konfime. Sinon, ekip nou an ap verifye l lè w fè premye retrè w."

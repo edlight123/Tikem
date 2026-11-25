@@ -3,10 +3,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
-import { CreditCard, Printer, Smartphone } from 'lucide-react'
+import { CreditCard, Printer, Smartphone, Wallet } from 'lucide-react'
 import { Drawer, FormField, OrgEmptyState, SectionHeader, StatusChip, type ChipTone } from '@/components/organizer/ui'
 import { quoteBatch, type PhysicalTicketsConfig } from '@/lib/physical/config'
-import { formatSerial, type BatchCounts } from '@/lib/physical/rules'
+import { formatSerial, showBalanceOption, type BatchCounts } from '@/lib/physical/rules'
+
+interface BalanceInfo {
+  canUse: boolean
+  availableHtg: number
+}
 
 interface Tier {
   id: string
@@ -24,7 +29,8 @@ interface BatchSummary {
     status: string
     total_htg: number
     unit_price_htg: number
-    payment?: { method?: string }
+    payment?: { method?: string; funds_rail?: string; refunded_to_balance_at?: string }
+    payment_expires_at?: string
     assignments?: Array<{ uid: string; name: string; from: number; to: number }>
     voided_ranges?: Array<{ from: number; to: number; count: number }>
     released_count?: number
@@ -65,6 +71,7 @@ export default function PrintedClient({ eventId, currency, tiers }: { eventId: s
   const [config, setConfig] = useState<PhysicalTicketsConfig | null>(null)
   const [batches, setBatches] = useState<BatchSummary[]>([])
   const [sellers, setSellers] = useState<Seller[]>([])
+  const [balance, setBalance] = useState<BalanceInfo | null>(null)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(false)
   const [panel, setPanel] = useState<Panel>(null)
@@ -78,6 +85,7 @@ export default function PrintedClient({ eventId, currency, tiers }: { eventId: s
       setConfig(data.config)
       setBatches(data.batches || [])
       setSellers(data.sellers || [])
+      setBalance(data.balance || null)
       setLoadError(false)
     } catch {
       setLoadError(true)
@@ -148,7 +156,19 @@ export default function PrintedClient({ eventId, currency, tiers }: { eventId: s
       )}
 
       {panel?.kind === 'order' && config && (
-        <OrderDrawer eventId={eventId} currency={currency} tiers={tiers} config={config} onClose={() => setPanel(null)} />
+        <OrderDrawer
+          eventId={eventId}
+          currency={currency}
+          tiers={tiers}
+          config={config}
+          balance={balance}
+          onClose={() => setPanel(null)}
+          onPaid={async () => {
+            setPanel(null)
+            setNotice(t('physical.payment_received'))
+            await load()
+          }}
+        />
       )}
       {panel && panel.kind !== 'order' && (
         <RangeDrawer
@@ -238,21 +258,45 @@ function BatchCard({
 
       {unpaid ? (
         <div className="mt-4 flex flex-wrap items-center gap-3">
-          <p className="mr-auto text-sm text-fg-muted">
-            {t('physical.awaiting_payment_line', { total: nf(batch.total_htg) })}
-          </p>
+          <div className="mr-auto">
+            <p className="text-sm text-fg-muted">{t('physical.awaiting_payment_line', { total: nf(batch.total_htg) })}</p>
+            {batch.payment_expires_at && (
+              <p className="mt-0.5 text-caption text-fg-subtle">
+                {t('physical.pay_by', {
+                  time: new Date(batch.payment_expires_at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }),
+                })}
+              </p>
+            )}
+          </div>
           <button type="button" className={btnQuiet} disabled={busy} onClick={() => act({ action: 'check_payment' })}>
             {t('physical.check_payment')}
           </button>
           <button type="button" className={btnQuiet} disabled={busy} onClick={() => act({ action: 'cancel' })}>
             {t('physical.cancel_batch')}
           </button>
-          <button type="button" className={btnPrimary} disabled={busy} onClick={() => act({ action: 'pay', method: batch.payment?.method === 'card' ? 'card' : 'moncash' })}>
+          <button
+            type="button"
+            className={btnPrimary}
+            disabled={busy}
+            onClick={() => act({ action: 'pay', method: batch.payment?.method === 'card' ? 'card' : batch.payment?.method === 'balance' ? 'balance' : 'moncash' })}
+          >
             {t('physical.pay_now')}
           </button>
         </div>
-      ) : batch.status === 'cancelled' ? null : (
+      ) : batch.status === 'cancelled' ? (
+        batch.payment?.refunded_to_balance_at ? (
+          <p className="mt-3 text-sm text-fg-muted">{t('physical.credited_back')}</p>
+        ) : null
+      ) : (
         <>
+          {batch.status === 'paid' && batch.payment?.funds_rail === 'balance_offset' && (
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <p className="mr-auto text-sm text-fg-muted">{t('physical.paid_from_balance')}</p>
+              <button type="button" className={btnQuiet} disabled={busy} onClick={() => act({ action: 'cancel' })}>
+                {t('physical.cancel_credit_balance')}
+              </button>
+            </div>
+          )}
           <div className="mt-5 flex flex-wrap gap-x-8 gap-y-4">
             <Stat label={t('physical.count_printed')} value={counts.printed} />
             <Stat label={t('physical.count_sold')} value={counts.activated} />
@@ -317,24 +361,30 @@ function OrderDrawer({
   currency,
   tiers,
   config,
+  balance,
   onClose,
+  onPaid,
 }: {
   eventId: string
   currency: string
   tiers: Tier[]
   config: PhysicalTicketsConfig
+  balance: BalanceInfo | null
   onClose: () => void
+  onPaid: () => Promise<void>
 }) {
   const { t } = useTranslation('common')
   const [tierId, setTierId] = useState(tiers[0]?.id || '')
   const [qty, setQty] = useState(String(config.minBatch))
-  const [method, setMethod] = useState<'moncash' | 'card'>('moncash')
+  const [method, setMethod] = useState<'moncash' | 'card' | 'balance'>('moncash')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const quantity = Math.round(Number(qty))
   const quote = useMemo(() => quoteBatch(config, quantity), [config, quantity])
   const tier = tiers.find((x) => x.id === tierId)
   const overCapacity = tier?.remaining != null && quantity > tier.remaining
+  const balanceShown = quote.ok && showBalanceOption(balance, quote.totalHtg)
+  const chosen = method === 'balance' && !balanceShown ? 'moncash' : method
 
   const submit = async () => {
     if (!quote.ok || overCapacity) return
@@ -344,9 +394,13 @@ function OrderDrawer({
       const res = await fetch(`/api/organizer/events/${eventId}/physical-batches`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tierId, quantity, method }),
+        body: JSON.stringify({ tierId, quantity, method: chosen }),
       })
       const data = await res.json().catch(() => ({}))
+      if (res.ok && data?.paid) {
+        await onPaid()
+        return
+      }
       if (!res.ok || !data?.redirectUrl) throw new Error(data?.error || t('physical.generic_error'))
       window.location.href = data.redirectUrl
     } catch (e: any) {
@@ -379,7 +433,11 @@ function OrderDrawer({
             {t('physical.cancel')}
           </button>
           <button type="button" className={btnPrimary} disabled={busy || !!quoteError || !tierId} onClick={submit}>
-            {quote.ok ? t('physical.pay_total', { total: nf(quote.totalHtg) }) : t('physical.pay')}
+            {quote.ok
+              ? chosen === 'balance'
+                ? t('physical.pay_from_balance_total', { total: nf(quote.totalHtg) })
+                : t('physical.pay_total', { total: nf(quote.totalHtg) })
+              : t('physical.pay')}
           </button>
         </div>
       }
@@ -452,23 +510,27 @@ function OrderDrawer({
               [
                 { id: 'moncash', icon: Smartphone, label: t('physical.method_moncash') },
                 { id: 'card', icon: CreditCard, label: t('physical.method_card') },
-              ] as const
+                ...(balanceShown ? [{ id: 'balance', icon: Wallet, label: t('physical.method_balance') }] : []),
+              ] as Array<{ id: 'moncash' | 'card' | 'balance'; icon: typeof Wallet; label: string }>
             ).map((m) => (
               <button
                 key={m.id}
                 type="button"
-                aria-pressed={method === m.id}
+                aria-pressed={chosen === m.id}
                 onClick={() => setMethod(m.id)}
                 className={`flex h-10 items-center gap-2 rounded px-3 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
-                  method === m.id ? 'bg-surface-high text-fg' : 'bg-surface text-fg-muted hover:bg-surface-raised'
-                }`}
+                  m.id === 'balance' ? 'col-span-2' : ''
+                } ${chosen === m.id ? 'bg-surface-high text-fg' : 'bg-surface text-fg-muted hover:bg-surface-raised'}`}
               >
                 <m.icon className="h-4 w-4" strokeWidth={1.75} />
                 {m.label}
               </button>
             ))}
           </div>
-          {method === 'card' && <p className="mt-2 text-caption text-fg-subtle">{t('physical.card_note')}</p>}
+          {chosen === 'card' && <p className="mt-2 text-caption text-fg-subtle">{t('physical.card_note')}</p>}
+          {chosen === 'balance' && balance && (
+            <p className="mt-2 text-caption text-fg-subtle">{t('physical.balance_note', { amount: nf(balance.availableHtg) })}</p>
+          )}
           {currency !== 'HTG' && <p className="mt-2 text-caption text-fg-subtle">{t('physical.htg_note')}</p>}
         </fieldset>
 

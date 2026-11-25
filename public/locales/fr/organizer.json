@@ -1776,7 +1776,8 @@
     "toggle_label": "Peut voir les finances (lecture seule)",
     "toggle_desc": "Revenus, historique des versements et rapports de recettes. Jamais les retraits ni les coordonnées bancaires ou MonCash.",
     "row_marker": "Finances",
-    "access_note": "Le propriétaire peut aussi permettre à un admin de voir les finances, en lecture seule."
+    "access_note": "Le propriétaire peut aussi permettre à un admin de voir les finances, en lecture seule.",
+    "method_balance_offset": "Billets imprimés (sur le solde)"
   },
   "payout_phone_check": {
     "no_sms_body": "Nous ne pouvons pas encore envoyer de codes par SMS, il n’y a donc rien à faire ici. Si c’est le numéro avec lequel vous vous connectez, il est déjà confirmé. Sinon, notre équipe le vérifie lors de votre premier retrait."

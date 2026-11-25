@@ -26,7 +26,8 @@ export type ActivationCode =
   | 'RELEASED'
   | 'INVALID_CODE'
   | 'NOT_YOUR_RANGE'
-  | 'BATCH_NOT_READY';
+  | 'BATCH_NOT_READY'
+  | 'AMBIGUOUS_SERIAL';
 
 export type ActivationResponse =
   | { ok: true; ticketId: string; serial: string; holderName: string; tier: string; alreadyDone?: boolean }
@@ -58,7 +59,7 @@ export function normalizeSerial(raw: unknown): string {
 }
 
 export function looksLikeSerial(raw: unknown): boolean {
-  return /^[A-Z0-9]{1,8}-[A-Z0-9]{1,8}-\d{3,6}$/.test(normalizeSerial(raw));
+  return /^[A-Z0-9]{1,8}-[A-Z0-9]{1,8}(-B\d{1,4})?-\d{3,6}$/.test(normalizeSerial(raw));
 }
 
 export function cleanHolderName(raw: unknown): string {
@@ -203,6 +204,8 @@ export function activationMessageKey(code: ActivationCode): string {
       return 'physicalSell.result.wrongEvent';
     case 'BATCH_NOT_READY':
       return 'physicalSell.result.batchNotReady';
+    case 'AMBIGUOUS_SERIAL':
+      return 'physicalSell.result.ambiguousSerial';
     case 'NOT_PHYSICAL':
       return 'physicalSell.result.notPrinted';
     case 'INVALID_CODE':

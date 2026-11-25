@@ -1776,7 +1776,8 @@
     "toggle_label": "Can see finances (read only)",
     "toggle_desc": "Earnings, payout history and revenue reports. Never withdrawals or bank and MonCash details.",
     "row_marker": "Finances",
-    "access_note": "The owner can also let an admin see finances, read only."
+    "access_note": "The owner can also let an admin see finances, read only.",
+    "method_balance_offset": "Printed tickets (from balance)"
   },
   "payout_phone_check": {
     "no_sms_body": "We can't text verification codes yet, so there is nothing to do here. If this is the number you sign in with, it is already confirmed. Otherwise our team checks it with your first withdrawal."

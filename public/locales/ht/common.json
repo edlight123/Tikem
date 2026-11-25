@@ -2534,8 +2534,16 @@
         "RELEASED": "Yo remèt tikè sa a an vant, li pa valab ankò.",
         "INVALID_CODE": "Kòd sa a pa valab.",
         "NOT_YOUR_RANGE": "Tikè sa a pa nan seri pa w la.",
-        "BATCH_NOT_READY": "Lo sa a poko pare pou vann."
+        "BATCH_NOT_READY": "Lo sa a poko pare pou vann.",
+        "AMBIGUOUS_SERIAL": "De tikè enprime gen menm nimewo sa a. Eskane kòd QR la pito."
       }
-    }
+    },
+    "pay_by": "Peye anvan {{time}}, si se pa sa plas yo ap retounen an vant.",
+    "method_balance": "Peye ak balans Tikèm mwen",
+    "balance_note": "Nou retire l nan lajan ou ki disponib deja ({{amount}} HTG disponib sou yon evènman). L ap parèt nan istorik peman ou.",
+    "pay_from_balance_total": "Peye {{total}} HTG ak balans lan",
+    "paid_from_balance": "Peye ak balans Tikèm ou. Ou ka anile jiskaske enpresyon an kòmanse.",
+    "cancel_credit_balance": "Anile epi remèt lajan an sou balans mwen",
+    "credited_back": "Anile. Nou remèt lajan an sou balans ou."
   }
 }

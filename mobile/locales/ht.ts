@@ -4579,6 +4579,7 @@ export default {
       nameRequired: "Non moun k ap achte a obligatwa.",
       wrongEvent: "Tikè sa a se pou yon lòt evènman.",
       batchNotReady: "Lo sa a poko pare pou vann.",
+      ambiguousSerial: "De tikè enprime gen menm nimewo sa a. Eskane kòd QR la pito.",
       notPrinted: "Sa a se pa yon tikè enprime.",
       notFound: "Nou pa jwenn tikè a. Verifye nimewo a.",
       noAccess: "Ou pa ka vann tikè enprime pou evènman sa a.",

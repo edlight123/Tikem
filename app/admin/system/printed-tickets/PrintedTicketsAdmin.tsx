@@ -33,6 +33,10 @@ interface AdminBatch {
   reprintCount: number
   createdAt: string
   paidAt: string | null
+  /** A payment landed on a cancelled batch, or a batch was paid twice: refund it. */
+  needsRefund?: boolean
+  latePayments?: Array<{ fundsRail: string; amount: number; currency: string; reference: string }>
+  refundedToBalanceAt?: string | null
 }
 
 const NEXT: Record<string, { to: string; label: string } | undefined> = {
@@ -41,7 +45,7 @@ const NEXT: Record<string, { to: string; label: string } | undefined> = {
   ready: { to: 'active', label: 'Mark selling' },
 }
 
-const RAIL: Record<string, string> = { moncash: 'MonCash', stripe_platform: 'Card (platform)' }
+const RAIL: Record<string, string> = { moncash: 'MonCash', stripe_platform: 'Card (platform)', balance_offset: 'Organizer balance' }
 
 const LABEL: Record<string, string> = {
   awaiting_payment: 'Awaiting payment',
@@ -291,7 +295,18 @@ export function PrintedTicketsAdmin() {
                   <p className="label-mono text-xs tabular-nums text-console-faint">
                     {nf(b.totalHtg)} HTG · {RAIL[b.fundsRail] || b.paymentMethod || 'not paid'} · {b.createdAt.slice(0, 10)}
                     {b.reprintCount ? ` · reprinted ${b.reprintCount}×` : ''}
+                    {b.refundedToBalanceAt ? ' · credited back to balance' : ''}
                   </p>
+                  {b.needsRefund && (
+                    <div className="mt-1">
+                      <ConsoleState tone="bad">
+                        Needs refund:{' '}
+                        {(b.latePayments || [])
+                          .map((p) => `${nf(p.amount)} ${p.currency} by ${RAIL[p.fundsRail] || p.fundsRail} (${p.reference})`)
+                          .join('; ') || 'payment after cancel'}
+                      </ConsoleState>
+                    </div>
+                  )}
                 </div>
                 <ConsoleState tone={tone(b.status)}>{LABEL[b.status] || b.status}</ConsoleState>
                 <div className="flex flex-wrap gap-2">

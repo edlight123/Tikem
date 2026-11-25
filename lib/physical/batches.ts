@@ -10,7 +10,10 @@
  *   printing          Tikèm prints them (admin downloads the PDF)
  *   ready             picked up / delivered
  *   active            selling (first activation flips it, or the admin does)
- *   cancelled         never paid; seats given back
+ *   cancelled         never paid (or expired after PAYMENT_WINDOW_MS, or
+ *                     cancelled before printing); seats given back. A payment
+ *                     that lands on a cancelled batch is recorded and the batch
+ *                     is flagged needs_refund for the print room.
  *
  * Rules (pure) live in ./rules.ts; prices in ./config.ts.
  */
@@ -37,6 +40,8 @@ import {
   parsePhysicalQr,
   physicalQrPayload,
   physicalReservationId,
+  physicalTicketId,
+  PAYMENT_WINDOW_MS,
   serialPrefix,
   tallyPhysical,
   tokenFromBytes,
@@ -95,7 +100,36 @@ export async function savePhysicalConfig(value: PhysicalTicketsConfig, admin: { 
 
 // ── batches ──────────────────────────────────────────────────────────────────
 
-export type PayMethod = 'moncash' | 'card'
+export type PayMethod = 'moncash' | 'card' | 'balance'
+export type FundsRail = 'moncash' | 'stripe_platform' | 'balance_offset'
+export const PHYSICAL_BATCH_SEQ = 'physical_batch_seq'
+
+/**
+ * Allocate this batch's sequence within the event (counter doc, transaction)
+ * and make sure no other batch of the event already uses the prefix, so two
+ * batches of the same tier never print the same serial (FETE-VIP-B1-0001 vs
+ * FETE-VIP-B2-0001).
+ */
+async function allocateSerialPrefix(eventId: string, eventTitle: string, tierName: string): Promise<{ seq: number; prefix: string }> {
+  const counterRef = adminDb.collection(PHYSICAL_BATCH_SEQ).doc(eventId)
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const seq: number = await adminDb.runTransaction(async (tx: any) => {
+      const snap = await tx.get(counterRef)
+      const next = Math.max(1, Math.round(Number(snap.exists ? snap.data()?.next : 1) || 1))
+      tx.set(counterRef, { next: next + 1, updated_at: new Date().toISOString() }, { merge: true })
+      return next
+    })
+    const prefix = serialPrefix(eventTitle, tierName, seq)
+    const clash = await adminDb
+      .collection(PHYSICAL_BATCHES)
+      .where('event_id', '==', eventId)
+      .where('serial_prefix', '==', prefix)
+      .limit(1)
+      .get()
+    if (clash.empty) return { seq, prefix }
+  }
+  throw new Error('Could not allocate a unique serial prefix')
+}
 
 export interface BatchDoc {
   id: string
@@ -185,8 +219,17 @@ export async function createBatch(params: {
     }
   }
 
-  const nowIso = new Date().toISOString()
+  const now = Date.now()
+  const nowIso = new Date(now).toISOString()
   const tierName = String(tier.name || 'Ticket')
+  let serial: { seq: number; prefix: string }
+  try {
+    serial = await allocateSerialPrefix(params.eventId, String(params.event?.title || ''), tierName)
+  } catch (err) {
+    await releaseSeats({ reservationId, logPrefix: '[physical]' })
+    throw err
+  }
+  const rail: FundsRail = params.method === 'moncash' ? 'moncash' : params.method === 'balance' ? 'balance_offset' : 'stripe_platform'
   const batch: BatchDoc = {
     id: ref.id,
     event_id: params.eventId,
@@ -197,12 +240,15 @@ export async function createBatch(params: {
     tier_price: Number(tier.price) || 0,
     currency: String(params.event?.currency || 'HTG').toUpperCase(),
     quantity: quote.quantity,
-    serial_prefix: serialPrefix(String(params.event?.title || ''), tierName),
+    serial_prefix: serial.prefix,
+    batch_seq: serial.seq,
     unit_price_htg: quote.unitPriceHtg,
     total_htg: quote.totalHtg,
     status: 'awaiting_payment',
     reservation_id: reservationId,
-    payment: { method: params.method, funds_rail: params.method === 'moncash' ? 'moncash' : 'stripe_platform', status: 'pending' },
+    payment: { method: params.method, funds_rail: rail, status: 'pending' },
+    // Unpaid, the seats come back after this (the inventory sweep cancels it).
+    payment_expires_at: new Date(now + PAYMENT_WINDOW_MS).toISOString(),
     assignments: [],
     seller_uids: [],
     voided_ranges: [],
@@ -229,14 +275,20 @@ export async function getBatch(batchId: string): Promise<BatchDoc | null> {
 }
 
 /** Cancel an unpaid batch and give its seats back. */
-export async function cancelUnpaidBatch(batchId: string, by: string): Promise<{ ok: boolean; code?: string }> {
+export async function cancelUnpaidBatch(batchId: string, by: string, reason: string | null = null): Promise<{ ok: boolean; code?: string }> {
   const ref = adminDb.collection(PHYSICAL_BATCHES).doc(batchId)
   const cancelled = await adminDb.runTransaction(async (tx: any) => {
     const snap = await tx.get(ref)
     if (!snap.exists) return 'not_found'
     const b = snap.data() || {}
     if (!canMoveBatch(b.status, 'cancelled')) return 'not_cancellable'
-    tx.update(ref, { status: 'cancelled', cancelled_by: by, cancelled_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+    tx.update(ref, {
+      status: 'cancelled',
+      cancelled_by: by,
+      cancel_reason: reason,
+      cancelled_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
     return 'ok'
   })
   if (cancelled !== 'ok') return { ok: false, code: cancelled }
@@ -245,22 +297,47 @@ export async function cancelUnpaidBatch(batchId: string, by: string): Promise<{ 
 }
 
 /**
- * The batch was paid: record the payment once (idempotent) and issue its
- * tickets. Safe to call from the MonCash return, the Stripe webhook and the
- * organizer's "check payment" button at the same time.
+ * The batch was paid: record the payment once and issue its tickets.
+ *
+ * Safe to call from the MonCash return, the Stripe webhook and the organizer's
+ * "check payment" button at the same time:
+ *   - only the call that performs awaiting_payment → paid issues, plus any later
+ *     call that finds issuance incomplete (a crash mid-way); issuance itself
+ *     takes a lease and writes deterministic ids with create(), so each of the N
+ *     tickets is created at most once;
+ *   - a payment that lands on a CANCELLED batch, or a second, different payment
+ *     on an already-paid one, is recorded and the batch is flagged needs_refund
+ *     (it is never silently kept).
  */
 export async function markBatchPaid(
   batchId: string,
-  proof: { funds_rail: 'moncash' | 'stripe_platform'; reference: string; amount: number; currency: string; extra?: Record<string, any> }
-): Promise<{ ok: boolean; alreadyPaid?: boolean; code?: string }> {
+  proof: { funds_rail: FundsRail; reference: string; amount: number; currency: string; extra?: Record<string, any> }
+): Promise<{ ok: boolean; alreadyPaid?: boolean; code?: string; needsRefund?: boolean }> {
   const ref = adminDb.collection(PHYSICAL_BATCHES).doc(batchId)
-  const outcome = await adminDb.runTransaction(async (tx: any) => {
+  const outcome: { kind: string; issue: boolean } = await adminDb.runTransaction(async (tx: any) => {
     const snap = await tx.get(ref)
-    if (!snap.exists) return 'not_found'
+    if (!snap.exists) return { kind: 'not_found', issue: false }
     const b = snap.data() || {}
-    if (b.status === 'cancelled') return 'cancelled'
-    if (b.status !== 'awaiting_payment') return 'already'
     const nowIso = new Date().toISOString()
+    const record = { ...proof, received_at: nowIso }
+    const late = Array.isArray(b.late_payments) ? b.late_payments : []
+    const flagLate = () => {
+      if (!late.some((p: any) => p?.reference === proof.reference)) {
+        tx.update(ref, { needs_refund: true, late_payments: [...late, record], updated_at: nowIso })
+      }
+    }
+    if (b.status === 'cancelled') {
+      flagLate()
+      return { kind: 'cancelled', issue: false }
+    }
+    if (b.status !== 'awaiting_payment') {
+      if (String(b.payment?.reference || '') !== String(proof.reference)) {
+        // Paid twice (e.g. card AND MonCash): keep the first, flag the second for a refund.
+        flagLate()
+        return { kind: 'duplicate', issue: b.tickets_issued_complete !== true }
+      }
+      return { kind: 'already', issue: b.tickets_issued_complete !== true }
+    }
     tx.update(ref, {
       status: 'paid',
       payment: {
@@ -276,24 +353,49 @@ export async function markBatchPaid(
       paid_at: nowIso,
       updated_at: nowIso,
     })
-    return 'ok'
+    return { kind: 'ok', issue: true }
   })
-  if (outcome === 'not_found' || outcome === 'cancelled') {
-    console.error('[physical] payment for a batch that cannot take it', { batchId, outcome, reference: proof.reference })
-    return { ok: false, code: outcome }
+  if (outcome.kind === 'not_found') return { ok: false, code: 'not_found' }
+  if (outcome.kind === 'cancelled') {
+    console.error('[physical] payment landed on a cancelled batch; flagged needs_refund', { batchId, reference: proof.reference })
+    return { ok: false, code: 'cancelled', needsRefund: true }
   }
-  await issueBatchTickets(batchId)
-  return { ok: true, alreadyPaid: outcome === 'already' }
+  if (outcome.issue) await issueBatchTickets(batchId)
+  return {
+    ok: true,
+    alreadyPaid: outcome.kind !== 'ok',
+    ...(outcome.kind === 'duplicate' ? { needsRefund: true, code: 'duplicate_payment' } : {}),
+  }
+}
+
+const ISSUE_LEASE_MS = 2 * 60 * 1000
+
+function isAlreadyExists(err: any): boolean {
+  const code = err?.code
+  return code === 6 || code === 'already-exists' || code === 'ALREADY_EXISTS' || /already exists/i.test(String(err?.message || ''))
 }
 
 /**
- * Create the batch's tickets as printed_unsold. Idempotent: serial numbers that
- * already exist are skipped, so a retry after a crash completes the batch
- * without duplicating a serial.
+ * Create the batch's tickets as printed_unsold, at ids phys_{batchId}_{n}.
+ *
+ * One issuer at a time (a lease claimed in a transaction); every ticket is
+ * written with create(), so even two issuers racing past the lease cannot make
+ * a serial twice. A retry after a crash finds what exists and completes it.
  */
 export async function issueBatchTickets(batchId: string): Promise<number> {
-  const batch = await getBatch(batchId)
-  if (!batch || ['awaiting_payment', 'cancelled'].includes(batch.status)) return 0
+  const ref = adminDb.collection(PHYSICAL_BATCHES).doc(batchId)
+  const claimed: BatchDoc | null = await adminDb.runTransaction(async (tx: any) => {
+    const snap = await tx.get(ref)
+    if (!snap.exists) return null
+    const b = snap.data() || {}
+    if (['awaiting_payment', 'cancelled'].includes(b.status) || b.tickets_issued_complete === true) return null
+    const now = Date.now()
+    if (Number(b.issue_lease_until) > now) return null
+    tx.update(ref, { issue_lease_until: now + ISSUE_LEASE_MS })
+    return { id: snap.id, ...b } as BatchDoc
+  })
+  if (!claimed) return 0
+  const batch = claimed
   const [existing, eventSnap] = await Promise.all([
     adminDb.collection('tickets').where('physical_batch_id', '==', batchId).select('physical_serial_no').get(),
     adminDb.collection('events').doc(batch.event_id).get(),
@@ -301,56 +403,72 @@ export async function issueBatchTickets(batchId: string): Promise<number> {
   const event = eventSnap.exists ? eventSnap.data() || {} : {}
   const have = new Set<number>(existing.docs.map((d: any) => Number(d.data()?.physical_serial_no)))
   const nowIso = new Date().toISOString()
-  let created = 0
-  let writer = adminDb.batch()
-  let pending = 0
-  for (let n = 1; n <= batch.quantity; n++) {
-    if (have.has(n)) continue
-    const ref = adminDb.collection('tickets').doc()
-    const payload = physicalQrPayload(ref.id, 1, newPhysicalToken())
-    writer.set(ref, {
-      kind: PHYSICAL_KIND,
-      source: 'physical',
-      status: 'printed_unsold',
-      event_id: batch.event_id,
-      event_title: event.title || batch.event_title || '',
-      organizer_id: batch.organizer_id,
-      tier_id: batch.tier_id,
-      tier_name: batch.tier_name,
-      ticket_type: batch.tier_name,
-      quantity: 1,
-      price_paid: 0,
-      payment_method: 'physical',
-      currency: batch.currency || event.currency || 'HTG',
-      physical_batch_id: batchId,
-      physical_serial: formatSerial(batch.serial_prefix, n, batch.quantity),
-      physical_serial_no: n,
-      physical_seller_uid: null,
-      reservation_id: batch.reservation_id,
-      qr_version: 1,
-      qr_code: payload,
-      qr_code_data: payload,
-      checked_in: false,
-      checked_in_at: null,
-      start_datetime: event.start_datetime || null,
-      end_datetime: event.end_datetime || null,
-      venue_name: event.venue_name || null,
-      city: event.city || null,
-      created_at: nowIso,
-      updated_at: nowIso,
-    })
-    pending++
-    created++
-    if (pending >= WRITE_CHUNK) {
-      await writer.commit()
-      writer = adminDb.batch()
-      pending = 0
+  const docFor = (n: number) => {
+    const id = physicalTicketId(batchId, n)
+    const payload = physicalQrPayload(id, 1, newPhysicalToken())
+    return {
+      id,
+      data: {
+        kind: PHYSICAL_KIND,
+        source: 'physical',
+        status: 'printed_unsold',
+        event_id: batch.event_id,
+        event_title: event.title || batch.event_title || '',
+        organizer_id: batch.organizer_id,
+        tier_id: batch.tier_id,
+        tier_name: batch.tier_name,
+        ticket_type: batch.tier_name,
+        quantity: 1,
+        price_paid: 0,
+        payment_method: 'physical',
+        currency: batch.currency || event.currency || 'HTG',
+        physical_batch_id: batchId,
+        physical_serial: formatSerial(batch.serial_prefix, n, batch.quantity),
+        physical_serial_no: n,
+        physical_seller_uid: null,
+        reservation_id: batch.reservation_id,
+        qr_version: 1,
+        qr_code: payload,
+        qr_code_data: payload,
+        checked_in: false,
+        checked_in_at: null,
+        start_datetime: event.start_datetime || null,
+        end_datetime: event.end_datetime || null,
+        venue_name: event.venue_name || null,
+        city: event.city || null,
+        created_at: nowIso,
+        updated_at: nowIso,
+      },
     }
   }
-  if (pending > 0) await writer.commit()
-  await adminDb.collection(PHYSICAL_BATCHES).doc(batchId).update({
+  const missing: number[] = []
+  for (let n = 1; n <= batch.quantity; n++) if (!have.has(n)) missing.push(n)
+  let created = 0
+  for (let i = 0; i < missing.length; i += WRITE_CHUNK) {
+    const chunk = missing.slice(i, i + WRITE_CHUNK).map(docFor)
+    const writer = adminDb.batch()
+    for (const d of chunk) writer.create(adminDb.collection('tickets').doc(d.id), d.data)
+    try {
+      await writer.commit()
+      created += chunk.length
+    } catch (err: any) {
+      if (!isAlreadyExists(err)) throw err
+      // Someone else wrote part of this chunk: one by one, skipping what exists.
+      for (const d of chunk) {
+        try {
+          await adminDb.collection('tickets').doc(d.id).create(d.data)
+          created++
+        } catch (e: any) {
+          if (!isAlreadyExists(e)) throw e
+        }
+      }
+    }
+  }
+  await ref.update({
     tickets_issued: have.size + created,
+    tickets_issued_complete: true,
     tickets_issued_at: nowIso,
+    issue_lease_until: null,
     updated_at: nowIso,
   })
   return created
@@ -381,73 +499,81 @@ export async function moveBatch(batchId: string, to: BatchStatus, by: string): P
 /**
  * Reprint: every still-unsold ticket gets a NEW random token at version+1, so
  * the old sheets stop scanning everywhere (online and on the offline door
- * list). Activated tickets keep their code (their holder already has the paper).
+ * list). Activated tickets keep their code (their holder already has the
+ * paper), and each ticket is re-checked inside a transaction, so a sale that
+ * lands mid-reprint is never rotated. The batch keeps its status: an active
+ * batch stays active.
  */
-export async function reprintBatch(batchId: string, by: string): Promise<{ ok: boolean; reissued: number; code?: string }> {
+export async function reprintBatch(batchId: string, by: string): Promise<{ ok: boolean; reissued: number; skipped?: number; code?: string }> {
   const batch = await getBatch(batchId)
   if (!batch) return { ok: false, reissued: 0, code: 'not_found' }
   if (['awaiting_payment', 'cancelled'].includes(batch.status)) return { ok: false, reissued: 0, code: 'not_paid' }
-  const tickets = await loadBatchTickets(batchId)
   const nowIso = new Date().toISOString()
-  let writer = adminDb.batch()
-  let pending = 0
-  let reissued = 0
-  for (const t of tickets) {
-    if (t.status !== 'printed_unsold') continue
-    const current = parsePhysicalQr(t.qr_code_data)
-    const next = (current?.v || Number(t.qr_version) || 1) + 1
-    const payload = physicalQrPayload(t.id, next, newPhysicalToken())
-    writer.update(adminDb.collection('tickets').doc(t.id), {
-      qr_version: next,
-      qr_code: payload,
-      qr_code_data: payload,
-      qr_rotated_at: nowIso,
-      updated_at: nowIso,
-    })
-    pending++
-    reissued++
-    if (pending >= WRITE_CHUNK) {
-      await writer.commit()
-      writer = adminDb.batch()
-      pending = 0
+  const r = await updateRange(
+    batchId,
+    { from: 1, to: batch.quantity },
+    (t) => t.status === 'printed_unsold',
+    (t) => {
+      const current = parsePhysicalQr(t.qr_code_data)
+      const next = (current?.v || Number(t.qr_version) || 1) + 1
+      const payload = physicalQrPayload(t.id, next, newPhysicalToken())
+      return { qr_version: next, qr_code: payload, qr_code_data: payload, qr_rotated_at: nowIso, updated_at: nowIso }
     }
-  }
-  if (pending > 0) await writer.commit()
+  )
   await adminDb.collection(PHYSICAL_BATCHES).doc(batchId).update({
     reprint_count: (Number(batch.reprint_count) || 0) + 1,
     last_reprint_at: nowIso,
     last_reprint_by: by,
-    status: batch.status === 'paid' ? 'paid' : 'printing',
     updated_at: nowIso,
   })
-  return { ok: true, reissued }
+  return { ok: true, reissued: r.touched.length, skipped: r.skipped }
 }
 
-/** Apply `patch` to the batch's tickets whose serial is in range and that `match`. */
+const TX_CHUNK = 200
+
+/**
+ * Apply `patch` to the batch's tickets whose serial is in range and that
+ * `match`. Each chunk runs in a transaction that RE-READS every ticket and
+ * re-checks `match`, so a ticket sold (activated) between the listing and the
+ * write is skipped, never overwritten. Returns what changed and how many were
+ * skipped because they changed underneath.
+ */
 async function updateRange(
   batchId: string,
   range: SerialRange,
   match: (t: Record<string, any>) => boolean,
-  patch: (t: Record<string, any>) => Record<string, any>
-): Promise<string[]> {
-  const tickets = await loadBatchTickets(batchId)
+  patch: (t: { id: string } & Record<string, any>) => Record<string, any>
+): Promise<{ touched: string[]; skipped: number }> {
+  const candidates = (await loadBatchTickets(batchId))
+    .filter((t) => {
+      const n = Number(t.physical_serial_no)
+      return n >= range.from && n <= range.to && match(t)
+    })
+    .map((t) => t.id)
   const touched: string[] = []
-  let writer = adminDb.batch()
-  let pending = 0
-  for (const t of tickets) {
-    const n = Number(t.physical_serial_no)
-    if (n < range.from || n > range.to || !match(t)) continue
-    writer.update(adminDb.collection('tickets').doc(t.id), patch(t))
-    touched.push(t.id)
-    pending++
-    if (pending >= WRITE_CHUNK) {
-      await writer.commit()
-      writer = adminDb.batch()
-      pending = 0
-    }
+  let skipped = 0
+  for (let i = 0; i < candidates.length; i += TX_CHUNK) {
+    const ids = candidates.slice(i, i + TX_CHUNK)
+    const res: { done: string[]; skipped: number } = await adminDb.runTransaction(async (tx: any) => {
+      const refs = ids.map((id) => adminDb.collection('tickets').doc(id))
+      const snaps = await Promise.all(refs.map((r) => tx.get(r)))
+      const done: string[] = []
+      let skip = 0
+      snaps.forEach((snap: any, k: number) => {
+        const data = snap.exists ? snap.data() || {} : null
+        if (!data || !match(data)) {
+          skip++
+          return
+        }
+        tx.update(refs[k], patch({ id: ids[k], ...data }))
+        done.push(ids[k])
+      })
+      return { done, skipped: skip }
+    })
+    touched.push(...res.done)
+    skipped += res.skipped
   }
-  if (pending > 0) await writer.commit()
-  return touched
+  return { touched, skipped }
 }
 
 /**
@@ -458,11 +584,11 @@ export async function assignRange(params: {
   batch: BatchDoc
   range: SerialRange
   seller: { uid: string; name: string }
-}): Promise<{ ok: boolean; code?: string; assigned?: number }> {
+}): Promise<{ ok: boolean; code?: string; assigned?: number; skipped?: number }> {
   const { batch, range, seller } = params
   if (!validRange(range, batch.quantity)) return { ok: false, code: 'bad_range' }
   const nowIso = new Date().toISOString()
-  const touched = await updateRange(
+  const { touched, skipped } = await updateRange(
     batch.id,
     range,
     (t) => t.status === 'printed_unsold',
@@ -484,7 +610,7 @@ export async function assignRange(params: {
     seller_uids: Array.from(new Set(assignments.map((a) => a.uid))),
     updated_at: nowIso,
   })
-  return { ok: true, assigned: touched.length }
+  return { ok: true, assigned: touched.length, skipped }
 }
 
 /** Void a lost / stolen range: its unsold tickets stop admitting and can never be activated. */
@@ -492,7 +618,7 @@ export async function voidRange(params: { batch: BatchDoc; range: SerialRange; b
   const { batch, range, by } = params
   if (!validRange(range, batch.quantity)) return { ok: false, code: 'bad_range', voided: 0 }
   const nowIso = new Date().toISOString()
-  const touched = await updateRange(
+  const { touched, skipped } = await updateRange(
     batch.id,
     range,
     (t) => t.status === 'printed_unsold',
@@ -505,7 +631,7 @@ export async function voidRange(params: { batch: BatchDoc; range: SerialRange; b
     ],
     updated_at: nowIso,
   })
-  return { ok: true, voided: touched.length }
+  return { ok: true, voided: touched.length, skipped }
 }
 
 /**
@@ -518,7 +644,7 @@ export async function releaseUnsold(params: { batch: BatchDoc; by: string; range
   const { batch, by } = params
   const range = params.range && validRange(params.range, batch.quantity) ? params.range : { from: 1, to: batch.quantity }
   const nowIso = new Date().toISOString()
-  const touched = await updateRange(
+  const { touched, skipped } = await updateRange(
     batch.id,
     range,
     (t) => (t.status === 'printed_unsold' || t.status === 'voided') && !t.seat_returned_at,
@@ -542,7 +668,25 @@ export async function releaseUnsold(params: { batch: BatchDoc; by: string; range
     released_count: (Number(batch.released_count) || 0) + touched.length,
     updated_at: nowIso,
   })
-  return { ok: true, released: touched.length }
+  return { ok: true, released: touched.length, skipped }
+}
+
+/**
+ * A paid batch cancelled before printing (balance offset credited back): every
+ * unsold ticket is released and the batch's whole reservation goes back to
+ * online sales. Nothing was sold (sales need printing / ready).
+ */
+export async function retireBatchTickets(batch: BatchDoc, by: string): Promise<number> {
+  const nowIso = new Date().toISOString()
+  const { touched } = await updateRange(
+    batch.id,
+    { from: 1, to: batch.quantity },
+    (t) => t.status === 'printed_unsold' && !t.seat_returned_at,
+    () => ({ status: 'released', released_by: by, seat_returned_at: nowIso, seat_reservation_id: batch.reservation_id, updated_at: nowIso })
+  )
+  const res = await releaseSeats({ reservationId: batch.reservation_id, logPrefix: '[physical]' })
+  if (!res.released && res.error) console.warn('[physical] seats not released on cancel', { batchId: batch.id, error: res.error })
+  return touched.length
 }
 
 // ── activation ───────────────────────────────────────────────────────────────
@@ -551,8 +695,15 @@ export type ActivationResult =
   | { ok: true; ticketId: string; serial: string; holderName: string; tier: string; alreadyDone?: boolean }
   | { ok: false; code: ActivationRefusal; serial?: string | null; holderName?: string | null; activatedAt?: string | null }
 
-/** Find a printed ticket by its scanned code or its typed serial, within the event. */
-export async function resolvePhysicalTicketId(eventId: string, opts: { code?: string | null; serial?: string | null }): Promise<string | null> {
+/**
+ * Find a printed ticket by its scanned code or its typed serial, within the
+ * event. A serial that matches more than one ticket (batches from before
+ * serials carried a batch number) is AMBIGUOUS: never guess which one to sell.
+ */
+export async function resolvePhysicalTicketId(
+  eventId: string,
+  opts: { code?: string | null; serial?: string | null }
+): Promise<string | null | 'AMBIGUOUS'> {
   const parsed = parsePhysicalQr(opts.code)
   if (parsed) return parsed.ticketId
   const serial = normalizeSerial(opts.serial || opts.code)
@@ -561,9 +712,11 @@ export async function resolvePhysicalTicketId(eventId: string, opts: { code?: st
     .collection('tickets')
     .where('event_id', '==', eventId)
     .where('physical_serial', '==', serial)
-    .limit(1)
+    .limit(2)
     .get()
-  return snap.empty ? null : snap.docs[0].id
+  if (snap.empty) return null
+  if (snap.docs.length > 1) return 'AMBIGUOUS'
+  return snap.docs[0].id
 }
 
 /**
@@ -583,6 +736,7 @@ export async function activatePhysicalTicket(params: {
   offline?: boolean
 }): Promise<ActivationResult> {
   const ticketId = await resolvePhysicalTicketId(params.eventId, { code: params.code, serial: params.serial })
+  if (ticketId === 'AMBIGUOUS') return { ok: false, code: 'AMBIGUOUS_SERIAL', serial: normalizeSerial(params.serial || params.code) }
   if (!ticketId) return { ok: false, code: 'NOT_FOUND' }
   const ref = adminDb.collection('tickets').doc(ticketId)
   const clientRef = params.clientRef ? String(params.clientRef).slice(0, 80) : null
@@ -687,6 +841,7 @@ export async function loadSellerAssignments(uid: string) {
     const b = d.data() || {}
     return {
       batchId: d.id,
+      organizerId: String(b.organizer_id || ''),
       eventId: String(b.event_id || ''),
       eventTitle: String(b.event_title || ''),
       tierName: String(b.tier_name || ''),

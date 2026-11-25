@@ -2534,8 +2534,16 @@
         "RELEASED": "This ticket was released and is no longer valid.",
         "INVALID_CODE": "This code is not valid.",
         "NOT_YOUR_RANGE": "This ticket is not in your range.",
-        "BATCH_NOT_READY": "This batch is not ready to sell yet."
+        "BATCH_NOT_READY": "This batch is not ready to sell yet.",
+        "AMBIGUOUS_SERIAL": "Two printed tickets have this serial. Scan the QR code instead."
       }
-    }
+    },
+    "pay_by": "Pay by {{time}} or the seats go back on sale.",
+    "method_balance": "Pay from my Tikèm balance",
+    "balance_note": "Taken from your released earnings ({{amount}} HTG available on one event). It shows in your payout history.",
+    "pay_from_balance_total": "Pay {{total}} HTG from balance",
+    "paid_from_balance": "Paid from your Tikèm balance. You can cancel until printing starts.",
+    "cancel_credit_balance": "Cancel and credit my balance",
+    "credited_back": "Cancelled. The amount was credited back to your balance."
   }
 }

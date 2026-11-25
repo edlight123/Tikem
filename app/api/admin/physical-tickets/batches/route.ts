@@ -25,6 +25,11 @@ export async function GET() {
       reprintCount: Number(b.reprint_count) || 0,
       createdAt: String(b.created_at || ''),
       paidAt: b.paid_at ? String(b.paid_at) : null,
+      needsRefund: b.needs_refund === true,
+      latePayments: Array.isArray(b.late_payments)
+        ? b.late_payments.map((p: any) => ({ fundsRail: String(p?.funds_rail || ''), amount: Number(p?.amount) || 0, currency: String(p?.currency || ''), reference: String(p?.reference || '') }))
+        : [],
+      refundedToBalanceAt: b.payment?.refunded_to_balance_at ? String(b.payment.refunded_to_balance_at) : null,
     }
   })
   return NextResponse.json({ batches })

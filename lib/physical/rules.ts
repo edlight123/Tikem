@@ -36,6 +36,15 @@ export const PHYSICAL_KIND = 'physical'
 export const PHYSICAL_BATCHES = 'physical_batches'
 /** Where a batch's seats are counted on the sharded inventory. */
 export const physicalReservationId = (batchId: string) => `phys_${batchId}`
+/**
+ * Deterministic ticket doc id for serial n of a batch. Written with create(), so
+ * two concurrent issuers (webhook + return + "check payment") can never mint the
+ * same serial twice: the second create fails harmlessly. The id is not a
+ * secret: only the random token in the QR admits.
+ */
+export const physicalTicketId = (batchId: string, n: number) => `phys_${batchId}_${n}`
+/** An unpaid batch holds its seats this long, then is cancelled by the sweep. */
+export const PAYMENT_WINDOW_MS = 2 * 60 * 60 * 1000
 
 export type PhysicalTicketStatus = 'printed_unsold' | 'valid' | 'voided' | 'released'
 
@@ -75,9 +84,13 @@ export function serialCode(text: string, max = 4, fallback = 'TKT'): string {
   return first.length >= 2 ? first : (words.join('').slice(0, max) || fallback)
 }
 
-/** "FETE-VIP" from an event title and a tier name. */
-export function serialPrefix(eventTitle: string, tierName: string): string {
-  return `${serialCode(eventTitle, 4, 'EVT')}-${serialCode(tierName, 4, 'GEN')}`
+/**
+ * "FETE-VIP-B2" from an event title, a tier name and the batch's sequence
+ * within the event: two batches of the same tier never share a serial.
+ */
+export function serialPrefix(eventTitle: string, tierName: string, batchSeq?: number): string {
+  const base = `${serialCode(eventTitle, 4, 'EVT')}-${serialCode(tierName, 4, 'GEN')}`
+  return batchSeq && batchSeq > 0 ? `${base}-B${batchSeq}` : base
 }
 
 /** Serial for ticket n (1-based) of a batch; zero-padded to at least 4 digits. */
@@ -97,7 +110,7 @@ export function normalizeSerial(raw: unknown): string {
 }
 
 export function looksLikeSerial(raw: unknown): boolean {
-  return /^[A-Z0-9]{1,8}-[A-Z0-9]{1,8}-\d{3,6}$/.test(normalizeSerial(raw))
+  return /^[A-Z0-9]{1,8}-[A-Z0-9]{1,8}(-B\d{1,4})?-\d{3,6}$/.test(normalizeSerial(raw))
 }
 
 // ── QR payload ───────────────────────────────────────────────────────────────
@@ -171,6 +184,8 @@ export type ActivationRefusal =
   | 'INVALID_CODE'
   | 'NOT_YOUR_RANGE'
   | 'BATCH_NOT_READY'
+  /** A typed serial that matches more than one ticket (legacy batches): scan the QR instead. */
+  | 'AMBIGUOUS_SERIAL'
 
 export interface ActivationInput {
   name: string
@@ -289,6 +304,19 @@ export function validRange(r: Partial<SerialRange> | null | undefined, total: nu
 
 export function inRange(n: number, r: SerialRange): boolean {
   return n >= r.from && n <= r.to
+}
+
+// ── pay from balance ─────────────────────────────────────────────────────────
+
+/**
+ * Show "Pay from my Tikèm balance"? Only to who may spend it, and only when the
+ * RELEASED HTG balance one event holds covers the WHOLE batch (no partial).
+ * Display only: the server re-checks everything when it debits.
+ */
+export function showBalanceOption(balance: { canUse?: boolean; availableHtg?: number } | null | undefined, totalHtg: number): boolean {
+  if (!balance?.canUse) return false
+  const total = Number(totalHtg)
+  return Number.isFinite(total) && total > 0 && Number(balance.availableHtg) >= total
 }
 
 // ── dashboard ────────────────────────────────────────────────────────────────

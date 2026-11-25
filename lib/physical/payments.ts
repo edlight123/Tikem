@@ -4,8 +4,10 @@
  *     → redirect → /api/moncash-button/return, verified with
  *     retrieveMonCashOrderPayment). funds_rail 'moncash'.
  *   - Card: a Stripe Checkout session on the PLATFORM account (no Connect
- *     destination: this is Tikèm's revenue), HTG converted to USD at Stripe's
- *     rate like /api/create-payment-intent. funds_rail 'stripe_platform'.
+ *     destination: this is Tikèm's revenue), HTG converted to USD with the
+ *     guarded FX engine (lib/fx/usd-htg.ts). funds_rail 'stripe_platform'.
+ *   - Balance: the organizer's released balance (./balanceOffset.ts).
+ *     funds_rail 'balance_offset'.
  *
  * Every confirmation path ends in markBatchPaid, which is idempotent.
  */
@@ -14,18 +16,21 @@ import crypto from 'node:crypto'
 import { adminDb } from '@/lib/firebase/admin'
 import { createMonCashButtonCheckoutToken, getMonCashButtonRedirectUrl, isMonCashButtonPaidAmountAcceptable } from '@/lib/moncash-button'
 import { retrieveMonCashOrderPayment } from '@/lib/moncash'
-import { PHYSICAL_BATCH_ORDERS, markBatchPaid, type BatchDoc } from './batches'
-import { PHYSICAL_BATCHES } from './rules'
+import { PHYSICAL_BATCH_ORDERS, cancelUnpaidBatch, markBatchPaid, type BatchDoc } from './batches'
+import { PAYMENT_WINDOW_MS, PHYSICAL_BATCHES } from './rules'
 
 function getStripe() {
   if (!process.env.STRIPE_SECRET_KEY) throw new Error('STRIPE_SECRET_KEY is not configured')
   return require('stripe')(process.env.STRIPE_SECRET_KEY)
 }
 
-/** USD cents for an HTG amount at a USD-per-HTG rate (Stripe has no HTG). */
-export function htgToUsdCents(htg: number, usdPerHtg: number): number {
-  if (!Number.isFinite(htg) || !Number.isFinite(usdPerHtg) || usdPerHtg <= 0) throw new Error('Invalid amount or rate')
-  return Math.max(50, Math.round(htg * usdPerHtg * 100))
+/**
+ * USD cents for an HTG amount at an HTG-per-USD rate (Stripe has no HTG).
+ * Rounded UP, so the platform is never short; 50¢ is Stripe's floor.
+ */
+export function htgToUsdCentsAtHtgPerUsd(htg: number, htgPerUsd: number): number {
+  if (!Number.isFinite(htg) || !Number.isFinite(htgPerUsd) || htgPerUsd <= 0 || htg <= 0) throw new Error('Invalid amount or rate')
+  return Math.max(50, Math.ceil((htg / htgPerUsd) * 100 - 1e-9))
 }
 
 export function batchPageUrl(origin: string, batch: { id: string; event_id: string }, extra = ''): string {
@@ -80,15 +85,70 @@ export async function verifyMonCashBatchPayment(orderId: string): Promise<{ paid
   return { paid: res.ok, batchId: order.batch_id, eventId: order.event_id, reason: res.code }
 }
 
-/** Start a card payment (Stripe Checkout on the platform account). */
-export async function startCardBatchPayment(batch: BatchDoc, origin: string): Promise<{ redirectUrl: string; sessionId: string; amountUsdCents: number; rate: number }> {
-  const { fetchStripeHTGRate } = await import('@/lib/currency')
-  const rate = await fetchStripeHTGRate()
-  const amountUsdCents = htgToUsdCents(batch.total_htg, rate)
+/** Thrown when no trustworthy USD/HTG rate exists: card is refused, MonCash still works. */
+export class CardFxUnavailableError extends Error {
+  code = 'fx_unavailable'
+  constructor() {
+    super('No reliable USD to HTG rate right now. Pay with MonCash, or try card later.')
+  }
+}
+
+/** Stripe's minimum Checkout lifetime is 30 minutes; a little more for clock skew. */
+export const CARD_SESSION_TTL_SECONDS = 31 * 60
+
+/**
+ * Start a card payment (Stripe Checkout on the platform account).
+ *
+ * The USD amount comes from the guarded FX engine (lib/fx/usd-htg.ts) with the
+ * 'lowest' fallback: charging USD for an HTG price, a lower HTG-per-USD rate
+ * means MORE dollars, never fewer. No rate → refused (never a hard-coded one).
+ * The amount is written into the session's own metadata so each session is
+ * verified against what IT asked for; a restart expires the earlier open
+ * session so two can never both be paid.
+ */
+export async function startCardBatchPayment(
+  batch: BatchDoc,
+  origin: string
+): Promise<{ redirectUrl: string; sessionId: string; amountUsdCents: number; rate: number; expiresAt: string }> {
+  const { getUsdToHtgBaseRate, isFxRateUnavailableError } = await import('@/lib/fx/usd-htg')
+  let htgPerUsd: number
+  let rateSource: string
+  try {
+    const r = await getUsdToHtgBaseRate({ fallback: 'lowest' })
+    htgPerUsd = r.baseRate
+    rateSource = r.source
+  } catch (e) {
+    if (isFxRateUnavailableError(e)) throw new CardFxUnavailableError()
+    throw e
+  }
+  if (!Number.isFinite(htgPerUsd) || htgPerUsd <= 0) throw new CardFxUnavailableError()
+  const amountUsdCents = htgToUsdCentsAtHtgPerUsd(batch.total_htg, htgPerUsd)
   const stripe = getStripe()
-  const metadata = { kind: 'physical_batch', batchId: batch.id, eventId: batch.event_id, organizerId: batch.organizer_id }
+
+  // Never two live sessions for one batch.
+  const previous = String(batch.payment?.stripe_session_id || '')
+  if (previous) {
+    try {
+      const old = await stripe.checkout.sessions.retrieve(previous)
+      if (old?.status === 'open') await stripe.checkout.sessions.expire(previous)
+    } catch (err: any) {
+      console.warn('[physical] could not expire the previous card session', { batchId: batch.id, message: err?.message })
+    }
+  }
+
+  const expiresAtSec = Math.floor(Date.now() / 1000) + CARD_SESSION_TTL_SECONDS
+  const metadata = {
+    kind: 'physical_batch',
+    batchId: batch.id,
+    eventId: batch.event_id,
+    organizerId: batch.organizer_id,
+    expectedUsdCents: String(amountUsdCents),
+    htgTotal: String(batch.total_htg),
+    htgPerUsd: String(htgPerUsd),
+  }
   const session = await stripe.checkout.sessions.create({
     mode: 'payment',
+    expires_at: expiresAtSec,
     line_items: [
       {
         quantity: 1,
@@ -104,15 +164,27 @@ export async function startCardBatchPayment(batch: BatchDoc, origin: string): Pr
     success_url: batchPageUrl(origin, batch, '&card=return&session_id={CHECKOUT_SESSION_ID}'),
     cancel_url: batchPageUrl(origin, batch, '&card=cancelled'),
   })
+  const expiresAt = new Date(expiresAtSec * 1000).toISOString()
   await adminDb.collection(PHYSICAL_BATCHES).doc(batch.id).update({
     'payment.method': 'card',
     'payment.funds_rail': 'stripe_platform',
     'payment.stripe_session_id': session.id,
     'payment.amount_usd_cents': amountUsdCents,
-    'payment.fx_usd_per_htg': rate,
+    'payment.fx_htg_per_usd': htgPerUsd,
+    'payment.fx_source': rateSource,
+    'payment.session_expires_at': expiresAt,
     updated_at: new Date().toISOString(),
   })
-  return { redirectUrl: String(session.url), sessionId: session.id, amountUsdCents, rate }
+  return { redirectUrl: String(session.url), sessionId: session.id, amountUsdCents, rate: htgPerUsd, expiresAt }
+}
+
+/** Pure: is this Checkout session paid in full for what IT asked for? */
+export function cardSessionPaidInFull(session: { payment_status?: string; amount_total?: number | null; currency?: string | null; metadata?: Record<string, any> | null }): boolean {
+  if (session?.payment_status !== 'paid') return false
+  const expected = Number(session?.metadata?.expectedUsdCents)
+  if (!Number.isFinite(expected) || expected <= 0) return false
+  if (String(session?.currency || 'usd').toLowerCase() !== 'usd') return false
+  return Number(session?.amount_total) >= expected
 }
 
 /** Confirm a card payment from its Checkout session (return page, webhook). */
@@ -123,10 +195,8 @@ export async function verifyCardBatchPayment(sessionId: string, expectBatchId?: 
   if (session?.metadata?.kind !== 'physical_batch' || !batchId) return { paid: false, batchId: null, reason: 'not_a_batch' }
   if (expectBatchId && expectBatchId !== batchId) return { paid: false, batchId, reason: 'batch_mismatch' }
   if (session.payment_status !== 'paid') return { paid: false, batchId, reason: 'not_paid' }
-  const snap = await adminDb.collection(PHYSICAL_BATCHES).doc(batchId).get()
-  const expected = Number(snap.data()?.payment?.amount_usd_cents)
-  if (Number.isFinite(expected) && expected > 0 && Number(session.amount_total) < expected) {
-    console.error('[physical] card amount below the batch price; NOT marked paid', { batchId, expected, paid: session.amount_total })
+  if (!cardSessionPaidInFull(session)) {
+    console.error('[physical] card amount below what the session asked for; NOT marked paid', { batchId, sessionId, paid: session.amount_total })
     return { paid: false, batchId, reason: 'amount_mismatch' }
   }
   const res = await markBatchPaid(batchId, {
@@ -137,4 +207,62 @@ export async function verifyCardBatchPayment(sessionId: string, expectBatchId?: 
     extra: { stripe_session_id: session.id },
   })
   return { paid: res.ok, batchId, reason: res.code }
+}
+
+/**
+ * checkout.session.expired: the organizer never paid. Cancel the batch (seats
+ * back) only when it is still waiting AND this is its CURRENT session; an older
+ * session expiring after a restart must not cancel the batch.
+ */
+export async function handleCardSessionExpired(session: { id: string; metadata?: Record<string, any> | null }): Promise<boolean> {
+  const batchId = String(session?.metadata?.batchId || '')
+  if (session?.metadata?.kind !== 'physical_batch' || !batchId) return false
+  const snap = await adminDb.collection(PHYSICAL_BATCHES).doc(batchId).get()
+  const b = snap.exists ? snap.data() || {} : null
+  if (!b || b.status !== 'awaiting_payment' || String(b.payment?.stripe_session_id || '') !== String(session.id)) return false
+  const r = await cancelUnpaidBatch(batchId, 'system', 'card_session_expired')
+  return r.ok
+}
+
+/**
+ * The sweep (from /api/cron/inventory-sweep): unpaid batches past their
+ * payment window are cancelled and their seats given back. Before cancelling,
+ * the gateway is asked once more, so a payment that landed but was never
+ * confirmed marks the batch paid instead.
+ */
+export async function expireUnpaidBatches(opts: { now?: number; limit?: number } = {}): Promise<{ checked: number; cancelled: number; paid: number }> {
+  const now = opts.now ?? Date.now()
+  const snap = await adminDb.collection(PHYSICAL_BATCHES).where('status', '==', 'awaiting_payment').limit(opts.limit ?? 100).get()
+  let cancelled = 0
+  let paid = 0
+  let checked = 0
+  for (const doc of snap.docs) {
+    const b = doc.data() || {}
+    const stamped = Date.parse(String(b.payment_expires_at || ''))
+    const expires = Number.isFinite(stamped) ? stamped : Date.parse(String(b.created_at || '')) + PAYMENT_WINDOW_MS
+    if (!(expires < now)) continue
+    checked++
+    try {
+      if (b.payment?.method === 'card' && b.payment?.stripe_session_id) {
+        const r = await verifyCardBatchPayment(String(b.payment.stripe_session_id), doc.id)
+        if (r.paid) {
+          paid++
+          continue
+        }
+      } else if (b.payment?.order_id) {
+        const r = await verifyMonCashBatchPayment(String(b.payment.order_id))
+        if (r.paid) {
+          paid++
+          continue
+        }
+      }
+    } catch (err: any) {
+      // Cannot tell whether it was paid: keep the seats held and try next sweep.
+      console.warn('[physical] expiry check failed; batch kept', { batchId: doc.id, message: err?.message })
+      continue
+    }
+    const r = await cancelUnpaidBatch(doc.id, 'system', 'payment_window_expired')
+    if (r.ok) cancelled++
+  }
+  return { checked, cancelled, paid }
 }

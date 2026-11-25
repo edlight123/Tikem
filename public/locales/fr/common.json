@@ -2534,8 +2534,16 @@
         "RELEASED": "Ce billet a été remis en vente et n'est plus valide.",
         "INVALID_CODE": "Ce code n'est pas valide.",
         "NOT_YOUR_RANGE": "Ce billet n'est pas dans votre série.",
-        "BATCH_NOT_READY": "Ce lot n'est pas encore prêt à la vente."
+        "BATCH_NOT_READY": "Ce lot n'est pas encore prêt à la vente.",
+        "AMBIGUOUS_SERIAL": "Deux billets imprimés portent ce numéro. Scannez plutôt le code QR."
       }
-    }
+    },
+    "pay_by": "Payez avant le {{time}}, sinon les places sont remises en vente.",
+    "method_balance": "Payer avec mon solde Tikèm",
+    "balance_note": "Prélevé sur vos gains disponibles ({{amount}} HTG disponibles sur un événement). Visible dans votre historique de versements.",
+    "pay_from_balance_total": "Payer {{total}} HTG avec le solde",
+    "paid_from_balance": "Payé avec votre solde Tikèm. Vous pouvez annuler jusqu'au début de l'impression.",
+    "cancel_credit_balance": "Annuler et recréditer mon solde",
+    "credited_back": "Annulé. Le montant a été recrédité sur votre solde."
   }
 }

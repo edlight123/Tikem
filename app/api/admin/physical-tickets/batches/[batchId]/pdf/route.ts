@@ -11,9 +11,13 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
 /**
- * GET /api/admin/physical-tickets/batches/:batchId/pdf?paper=letter|a4&lang=fr|en|ht&only=unsold
+ * GET /api/admin/physical-tickets/batches/:batchId/pdf?paper=letter|a4&lang=fr|en|ht
  * The print-ready sheet for a paid batch (platform admins only: the PDF holds
- * every ticket's live QR). Every download is audited.
+ * live QRs). Every download is audited.
+ *
+ * Only UNSOLD tickets are ever printed: a sold ticket's paper is already in its
+ * buyer's hands, and printing its working QR again (e.g. after a reprint)
+ * would put a second valid copy into the world.
  */
 export async function GET(request: NextRequest, { params }: { params: Promise<{ batchId: string }> }) {
   const { user, error } = await requireAdmin()
@@ -28,15 +32,13 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const paper = url.searchParams.get('paper') === 'a4' ? 'a4' : 'letter'
   const langRaw = url.searchParams.get('lang')
   const lang = langRaw === 'en' || langRaw === 'ht' ? langRaw : 'fr'
-  const onlyUnsold = url.searchParams.get('only') === 'unsold'
 
   const [eventSnap, tickets] = await Promise.all([adminDb.collection('events').doc(batch.event_id).get(), loadBatchTickets(batch.id)])
   const event = eventSnap.exists ? eventSnap.data() || {} : {}
   const start = event.start_datetime?.toDate ? event.start_datetime.toDate().toISOString() : event.start_datetime
   const when = formatEventWhen(start, lang, event)
   const printable = tickets
-    .filter((t) => t.status !== 'voided' && t.status !== 'released')
-    .filter((t) => !onlyUnsold || t.status === 'printed_unsold')
+    .filter((t) => t.status === 'printed_unsold')
     .map((t) => ({ serial: String(t.physical_serial || ''), qrPayload: String(t.qr_code_data || ''), tierName: String(t.tier_name || batch.tier_name) }))
   if (printable.length === 0) return NextResponse.json({ error: 'Nothing to print' }, { status: 409 })
 

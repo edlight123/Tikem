@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { sweepInventory } from '@/lib/tickets/inventoryShards'
 import { sweepWaitlists } from '@/lib/waitlist'
+import { expireUnpaidBatches } from '@/lib/physical/payments'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -21,6 +22,10 @@ export const maxDuration = 120
  *    once per person per release burst. Runs after the hold expiry above, so
  *    seats an expired hold just returned count.
  *
+ *  - Printed-ticket batches (lib/physical) still unpaid after their payment
+ *    window are cancelled and their seats given back, after one last check
+ *    with MonCash / Stripe that the payment did not land.
+ *
  * Correctness never depends on this job: if it stops, nothing oversells; the
  * display counters just lag until the next sale on that event.
  *
@@ -35,8 +40,13 @@ export async function GET(request: Request) {
     const result = await sweepInventory({ logPrefix: '[inventory_sweep]' })
     // Never lets a waitlist problem fail the inventory sweep (it does not throw).
     const waitlist = await sweepWaitlists()
-    console.info('[inventory_sweep] run complete', { ...result, waitlist })
-    return NextResponse.json({ ok: true, ...result, waitlist })
+    // Never lets a printed-batch problem fail the inventory sweep.
+    const physical = await expireUnpaidBatches().catch((err: any) => {
+      console.error('[inventory_sweep] printed batch expiry failed', { message: err?.message })
+      return null
+    })
+    console.info('[inventory_sweep] run complete', { ...result, waitlist, physical })
+    return NextResponse.json({ ok: true, ...result, waitlist, physical })
   } catch (error: any) {
     console.error('[inventory_sweep] failed', { message: error?.message })
     return NextResponse.json({ error: 'Sweep failed' }, { status: 500 })

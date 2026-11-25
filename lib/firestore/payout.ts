@@ -6,6 +6,8 @@ import { getIdentityStatus } from '@/lib/kyc/identity'
 
 export type PayoutStatus = 'not_setup' | 'pending_verification' | 'active' | 'on_hold'
 export type PayoutMethod = 'bank_transfer' | 'mobile_money'
+/** A payout-history row's method: also 'balance_offset' (printed tickets paid from the balance). */
+export type PayoutHistoryMethod = PayoutMethod | 'balance_offset'
 export type PayoutProvider = 'stripe_connect' | 'moncash' | 'natcash' | 'bank_transfer'
 export type PayoutProfileId = 'haiti' | 'stripe_connect'
 
@@ -307,7 +309,7 @@ export interface Payout {
   amount: number // in cents
   currency?: string // HTG (default), USD, etc.
   status: 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled'
-  method: PayoutMethod
+  method: PayoutHistoryMethod
   failureReason?: string
   scheduledDate: string
   processedDate?: string
@@ -849,8 +851,11 @@ export async function getPayoutHistory(organizerId: string, limit: number = 10):
     }
 
     // withdrawal_requests store method as 'moncash' | 'bank'; map onto PayoutMethod.
-    const normalizeMethod = (m: any): PayoutMethod =>
-      String(m || '').toLowerCase() === 'bank' ? 'bank_transfer' : 'mobile_money'
+    // 'balance_offset': printed tickets paid from the balance (lib/physical/balanceOffset).
+    const normalizeMethod = (m: any): PayoutHistoryMethod => {
+      const v = String(m || '').toLowerCase()
+      return v === 'bank' ? 'bank_transfer' : v === 'balance_offset' ? 'balance_offset' : 'mobile_money'
+    }
 
     const normalizeStatus = (s: any): Payout['status'] => {
       const v = String(s || 'pending').toLowerCase()

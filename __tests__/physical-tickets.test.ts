@@ -23,10 +23,13 @@ jest.mock('@/lib/tickets/inventoryShards', () => ({
 }))
 
 const requireAdmin = jest.fn()
+const getCurrentUser = jest.fn(async (): Promise<any> => null)
 jest.mock('@/lib/auth', () => ({
   requireAdmin: () => requireAdmin(),
-  getCurrentUser: jest.fn(async () => null),
+  getCurrentUser: () => getCurrentUser(),
 }))
+const renderBatchPdf = jest.fn(async (_args: any) => new Uint8Array([37, 80, 68, 70]))
+jest.mock('@/lib/physical/pdf', () => ({ renderBatchPdf: (a: any) => renderBatchPdf(a) }))
 const logAdminAction = jest.fn()
 jest.mock('@/lib/admin/audit-log', () => ({ logAdminAction: (...a: any[]) => logAdminAction(...a) }))
 
@@ -68,8 +71,11 @@ import { activationRoleFor } from '@/lib/physical/access'
 import { ticketBlockReason } from '@/lib/scan/checkInTicket'
 import { belongsOnDoorList, judgeDoorRow, judgeScannedCodeAgainstRow, toDoorRow } from '@/lib/scan/doorRules'
 import { verifyScannedTicketCode } from '@/lib/tickets/qr'
-import { htgToUsdCents } from '@/lib/physical/payments'
+import { htgToUsdCentsAtHtgPerUsd } from '@/lib/physical/payments'
 import { GET as configGET, PUT as configPUT } from '@/app/api/admin/physical-tickets/config/route'
+import { GET as pdfGET } from '@/app/api/admin/physical-tickets/batches/[batchId]/pdf/route'
+import { GET as assignmentsGET } from '@/app/api/staff/physical/assignments/route'
+import { physicalTicketId } from '@/lib/physical/rules'
 
 beforeEach(() => {
   db.store.clear()
@@ -77,6 +83,8 @@ beforeEach(() => {
   releaseSeats.mockReset().mockResolvedValue({ released: true, state: 'sold' })
   requireAdmin.mockReset()
   logAdminAction.mockReset()
+  getCurrentUser.mockReset().mockResolvedValue(null)
+  renderBatchPdf.mockClear()
 })
 
 // ── pricing ──────────────────────────────────────────────────────────────────
@@ -114,10 +122,11 @@ describe('pricing tiers from config', () => {
     expect(q.ok && q.display.USD).toEqual({ unit: 0.23, total: 115 })
   })
 
-  it('card amount: HTG → USD cents at the rate, 50¢ floor', () => {
-    expect(htgToUsdCents(12000, 0.0076)).toBe(9120)
-    expect(htgToUsdCents(10, 0.0076)).toBe(50)
-    expect(() => htgToUsdCents(100, 0)).toThrow()
+  it('card amount: HTG → USD cents at HTG-per-USD, rounded up, 50¢ floor', () => {
+    expect(htgToUsdCentsAtHtgPerUsd(12000, 131.5)).toBe(9126)
+    expect(htgToUsdCentsAtHtgPerUsd(13150, 131.5)).toBe(10000)
+    expect(htgToUsdCentsAtHtgPerUsd(10, 131.5)).toBe(50)
+    expect(() => htgToUsdCentsAtHtgPerUsd(100, 0)).toThrow()
   })
 })
 
@@ -195,6 +204,8 @@ describe('QR tokens', () => {
   })
   it('serials', () => {
     expect(serialPrefix('Fête de la Musique', 'VIP')).toBe('FETE-VIP')
+    expect(serialPrefix('Fête de la Musique', 'VIP', 2)).toBe('FETE-VIP-B2')
+    expect(looksLikeSerial('fete-vip-b2-0007')).toBe(true)
     expect(formatSerial('FETE-VIP', 7, 300)).toBe('FETE-VIP-0007')
     expect(formatSerial('A-B', 7, 12000)).toBe('A-B-00007')
     expect(normalizeSerial(' fete–vip 0007 ')).toBe('FETE-VIP-0007')
@@ -238,7 +249,7 @@ describe('batch creation', () => {
     expect(reserveSeats).toHaveBeenCalledWith(
       expect.objectContaining({ eventId: EVENT, quantity: 300, tierIncrements: [{ tierId: 'vip', quantity: 300 }], mode: 'sold', reservationId: `phys_${r.batch.id}` })
     )
-    expect(r.batch).toMatchObject({ status: 'awaiting_payment', unit_price_htg: 35, total_htg: 10500, serial_prefix: 'FETE-VIP' })
+    expect(r.batch).toMatchObject({ status: 'awaiting_payment', unit_price_htg: 35, total_htg: 10500, serial_prefix: 'FETE-VIP-B1' })
     expect(r.batch.payment.funds_rail).toBe('stripe_platform')
     // Nothing issued before payment.
     expect(tickets()).toHaveLength(0)
@@ -435,7 +446,7 @@ describe('release unsold seats', () => {
     }
     await voidRange({ batch, range: { from: 31, to: 40 }, by: 'm1' })
     const r = await releaseUnsold({ batch: (await getBatch(batch.id))!, by: 'm1' })
-    expect(r).toEqual({ ok: true, released: 70 })
+    expect(r).toEqual({ ok: true, released: 70, skipped: 0 })
     expect(releaseSeats).toHaveBeenCalledWith(
       expect.objectContaining({ reservationId: `phys_${batch.id}`, quantity: 70, tierIncrements: [{ tierId: 'vip', quantity: 70 }] })
     )
@@ -445,7 +456,7 @@ describe('release unsold seats', () => {
     expect(after.filter((t) => t.status === 'voided')).toHaveLength(10)
     // Running it again releases nothing more.
     releaseSeats.mockClear()
-    expect(await releaseUnsold({ batch: (await getBatch(batch.id))!, by: 'm1' })).toEqual({ ok: true, released: 0 })
+    expect(await releaseUnsold({ batch: (await getBatch(batch.id))!, by: 'm1' })).toEqual({ ok: true, released: 0, skipped: 0 })
     expect(releaseSeats).not.toHaveBeenCalled()
 
     const tally = tallyPhysical(after)
@@ -463,5 +474,155 @@ describe('batch status flow', () => {
     expect(canMoveBatch('active', 'printing')).toBe(false)
     expect(canMoveBatch('awaiting_payment', 'cancelled')).toBe(true)
     expect(canMoveBatch('paid', 'cancelled')).toBe(false)
+  })
+})
+
+// ── review fixes ─────────────────────────────────────────────────────────────
+
+describe('no double issuance (webhook + return + check payment racing)', () => {
+  it('concurrent confirmations issue exactly N tickets at deterministic ids', async () => {
+    seedEvent()
+    const created = await createBatch({ eventId: EVENT, event: db.store.get(`events/${EVENT}`)!, orgId: 'org1', tierId: 'vip', quantity: 100, method: 'card', createdBy: 'u1' })
+    if (!created.ok) throw new Error('create failed')
+    const id = created.batch.id
+    const proof = { funds_rail: 'stripe_platform' as const, reference: 'pi_1', amount: 30, currency: 'USD' }
+    await Promise.all([markBatchPaid(id, proof), markBatchPaid(id, proof), markBatchPaid(id, proof), issueBatchTickets(id)])
+    const all = tickets()
+    expect(all).toHaveLength(100)
+    expect(new Set(all.map((t) => t.id)).size).toBe(100)
+    expect(all.map((t) => t.id).sort()).toEqual(Array.from({ length: 100 }, (_, i) => physicalTicketId(id, i + 1)).sort())
+    expect((await getBatch(id))!.tickets_issued_complete).toBe(true)
+  })
+
+  it('a second issuer that slips past the lease cannot duplicate (create() refuses existing ids)', async () => {
+    const batch = await paidBatch(100)
+    // Pretend issuance was never marked complete and the lease expired.
+    db.store.set(`physical_batches/${batch.id}`, { ...db.store.get(`physical_batches/${batch.id}`)!, tickets_issued_complete: false, issue_lease_until: 0 })
+    expect(await issueBatchTickets(batch.id)).toBe(0)
+    expect(tickets()).toHaveLength(100)
+  })
+
+  it('a crash mid-issuance is completed by the next confirmation', async () => {
+    const batch = await paidBatch(100)
+    for (let n = 51; n <= 100; n++) db.store.delete(`tickets/${physicalTicketId(batch.id, n)}`)
+    db.store.set(`physical_batches/${batch.id}`, { ...db.store.get(`physical_batches/${batch.id}`)!, tickets_issued_complete: false, issue_lease_until: 0 })
+    const r = await markBatchPaid(batch.id, { funds_rail: 'moncash', reference: 'tx1', amount: 4000, currency: 'HTG' })
+    expect(r).toMatchObject({ ok: true, alreadyPaid: true })
+    expect(tickets()).toHaveLength(100)
+  })
+
+  it('an issuer holding the lease blocks a second one', async () => {
+    const batch = await paidBatch(100)
+    db.store.set(`physical_batches/${batch.id}`, { ...db.store.get(`physical_batches/${batch.id}`)!, tickets_issued_complete: false, issue_lease_until: Date.now() + 60_000 })
+    expect(await issueBatchTickets(batch.id)).toBe(0)
+  })
+})
+
+describe('payment after cancel / paid twice', () => {
+  it('a payment on a cancelled batch is recorded and flagged needs_refund (once)', async () => {
+    seedEvent()
+    const c = await createBatch({ eventId: EVENT, event: {}, orgId: 'org1', tierId: 'vip', quantity: 100, method: 'moncash', createdBy: 'u1' })
+    if (!c.ok) throw new Error()
+    const { cancelUnpaidBatch } = await import('@/lib/physical/batches')
+    await cancelUnpaidBatch(c.batch.id, 'u1')
+    const proof = { funds_rail: 'moncash' as const, reference: 'late1', amount: 4000, currency: 'HTG' }
+    expect(await markBatchPaid(c.batch.id, proof)).toMatchObject({ ok: false, code: 'cancelled', needsRefund: true })
+    await markBatchPaid(c.batch.id, proof)
+    const b = (await getBatch(c.batch.id))!
+    expect(b.status).toBe('cancelled')
+    expect(b.needs_refund).toBe(true)
+    expect(b.late_payments).toHaveLength(1)
+    expect(tickets()).toHaveLength(0)
+  })
+
+  it('a second, different payment on a paid batch is flagged, the first kept', async () => {
+    const batch = await paidBatch(100)
+    const r = await markBatchPaid(batch.id, { funds_rail: 'stripe_platform', reference: 'pi_other', amount: 30, currency: 'USD' })
+    expect(r).toMatchObject({ ok: true, needsRefund: true, code: 'duplicate_payment' })
+    const b = (await getBatch(batch.id))!
+    expect(b.payment.reference).toBe('tx1')
+    expect(b.needs_refund).toBe(true)
+    expect(tickets()).toHaveLength(100)
+  })
+})
+
+describe('serials never collide across batches', () => {
+  it('two batches of the same tier get B1 / B2 serials', async () => {
+    const first = await paidBatch(100)
+    const second = await createBatch({ eventId: EVENT, event: db.store.get(`events/${EVENT}`)!, orgId: 'org1', tierId: 'vip', quantity: 100, method: 'moncash', createdBy: 'u1' })
+    if (!second.ok) throw new Error()
+    expect(first.serial_prefix).toBe('FETE-VIP-B1')
+    expect(second.batch.serial_prefix).toBe('FETE-VIP-B2')
+  })
+
+  it('a serial that matches two tickets is refused as ambiguous, never guessed', async () => {
+    seedEvent()
+    const twin = { kind: 'physical', status: 'printed_unsold', event_id: EVENT, physical_serial: 'FETE-VIP-0001', physical_batch_id: 'old', physical_seller_uid: null }
+    db.store.set('tickets/a', twin)
+    db.store.set('tickets/b', twin)
+    expect(await activatePhysicalTicket({ eventId: EVENT, serial: 'FETE-VIP-0001', input: { name: 'X' }, actor: { uid: 'm1', role: 'manager' } })).toMatchObject({
+      ok: false,
+      code: 'AMBIGUOUS_SERIAL',
+    })
+  })
+})
+
+describe('bulk range operations re-check each ticket inside the transaction', () => {
+  it('a ticket sold between listing and writing is skipped, not voided', async () => {
+    const batch = await readyBatch(100)
+    const sold = physicalTicketId(batch.id, 3)
+    const real = db.runTransaction.bind(db)
+    const spy = jest.spyOn(db, 'runTransaction').mockImplementationOnce(async (fn: any) => {
+      // A seller activates ticket 3 right after the range was listed.
+      db.store.set(`tickets/${sold}`, { ...db.store.get(`tickets/${sold}`)!, status: 'valid', attendee_name: 'Marie' })
+      return real(fn)
+    })
+    const r = await voidRange({ batch, range: { from: 1, to: 10 }, by: 'm1' })
+    spy.mockRestore()
+    expect(r).toMatchObject({ ok: true, voided: 9, skipped: 1 })
+    expect(db.store.get(`tickets/${sold}`)).toMatchObject({ status: 'valid', attendee_name: 'Marie' })
+  })
+
+  it('reprint keeps an active batch active and leaves sold tickets alone', async () => {
+    const batch = await readyBatch(100)
+    await activatePhysicalTicket({ eventId: EVENT, serial: formatSerial(batch.serial_prefix, 1, 100), input: { name: 'Marie' }, actor: { uid: 'm1', role: 'manager' } })
+    expect((await getBatch(batch.id))!.status).toBe('active')
+    const soldBefore = db.store.get(`tickets/${physicalTicketId(batch.id, 1)}`)!.qr_code_data
+    const r = await reprintBatch(batch.id, 'admin')
+    expect(r).toMatchObject({ ok: true, reissued: 99 })
+    expect((await getBatch(batch.id))!.status).toBe('active')
+    expect(db.store.get(`tickets/${physicalTicketId(batch.id, 1)}`)!.qr_code_data).toBe(soldBefore)
+  })
+})
+
+describe('print PDF holds only unsold tickets', () => {
+  it('after sales and a reprint, sold / voided / released tickets are never printed', async () => {
+    requireAdmin.mockResolvedValue({ user: { id: 'a1', email: 'a@tikem.co' }, error: null })
+    const batch = await readyBatch(100)
+    for (let n = 1; n <= 5; n++) {
+      await activatePhysicalTicket({ eventId: EVENT, serial: formatSerial(batch.serial_prefix, n, 100), input: { name: 'B' }, actor: { uid: 'm1', role: 'manager' } })
+    }
+    await voidRange({ batch: (await getBatch(batch.id))!, range: { from: 6, to: 10 }, by: 'm1' })
+    await reprintBatch(batch.id, 'admin')
+    const res = await pdfGET(new Request('http://localhost/x') as any, { params: Promise.resolve({ batchId: batch.id }) })
+    expect(res.status).toBe(200)
+    const printed = renderBatchPdf.mock.calls[0][0].tickets
+    expect(printed).toHaveLength(90)
+    expect(printed.every((t: any) => parsePhysicalQr(t.qrPayload)?.v === 2)).toBe(true)
+  })
+})
+
+describe('seller assignments only for current team members', () => {
+  it('a removed seller no longer sees their range', async () => {
+    const batch = await readyBatch(100)
+    await assignRange({ batch, range: { from: 1, to: 10 }, seller: { uid: 's1', name: 'Seller' } })
+    getCurrentUser.mockResolvedValue({ id: 's1', role: 'attendee' })
+    db.store.set('organizers/org1/team/s1', { status: 'active', role: 'seller' })
+    let json = await (await assignmentsGET()).json()
+    expect(json.assignments).toHaveLength(1)
+    expect(json.assignments[0]).not.toHaveProperty('organizerId')
+    db.store.delete('organizers/org1/team/s1')
+    json = await (await assignmentsGET()).json()
+    expect(json.assignments).toHaveLength(0)
   })
 })
