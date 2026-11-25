@@ -4,8 +4,6 @@ import { EMPTY_VALUE } from '@/lib/format'
 import { useTranslation } from 'react-i18next'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { collection, onSnapshot, orderBy, query } from 'firebase/firestore'
-import { db } from '@/lib/firebase/client'
 import { useToast } from '@/components/ui/Toast'
 import { useOrgClientAuth } from '@/lib/organizer/useOrgClientAuth'
 
@@ -104,98 +102,65 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
     return true
   }, [method, targetEmail, targetPhone])
 
+  // The staff list comes from the server (GET /api/organizer/events/:id/staff),
+  // never a direct Firestore read of events/{id}/members: that route redacts
+  // Tikèm's door crew (first name + "Tikèm crew", no uid / email / request id)
+  // and resolves the organizer's own staff profiles in the same call. It is
+  // refetched after every action and polled while the tab is visible, so the
+  // list stays as live as the old listener for invite redemptions.
+  const refresh = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/organizer/events/${encodeURIComponent(eventId)}/staff`, { cache: 'no-store' })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setListenerError('Unable to load staff members. You may not have permission for this event.')
+        return
+      }
+      const apiMembers: any[] = Array.isArray(json?.members) ? json.members : []
+      setInvites(Array.isArray(json?.invites) ? json.invites : [])
+      setMembers(
+        apiMembers.map((m) => ({
+          id: String(m.id),
+          role: String(m.role || 'staff'),
+          permissions: m.permissions || {},
+          createdAt: m.createdAt || null,
+          ...(m.tikemCrew ? { source: 'tikem_door_team', first_name: String(m.profile?.full_name || '') } : {}),
+        }))
+      )
+      const profiles: Record<string, MemberProfile> = {}
+      for (const m of apiMembers) {
+        if (!m.tikemCrew) profiles[String(m.id)] = { email: m.profile?.email ?? null, full_name: m.profile?.full_name ?? null }
+      }
+      setMemberProfiles(profiles)
+      setListenerError(null)
+    } catch (err) {
+      console.error('Staff list load failed:', err)
+      setListenerError('Unable to load staff members. Check your connection and try again.')
+    }
+  }, [eventId])
+
   useEffect(() => {
     if (!authReady) return
     if (!authUid) {
-      // Not signed in yet (or session-only auth); avoid starting listeners that will permission-deny.
       setInvites([])
       setMembers([])
       setMemberProfiles({})
       setListenerError(null)
       return
     }
-
-    setListenerError(null)
-
-    const invitesRef = collection(db, 'events', eventId, 'invites')
-    const membersRef = collection(db, 'events', eventId, 'members')
-
-    const unsubInvites = onSnapshot(
-      query(invitesRef, orderBy('createdAt', 'desc')),
-      (snap) => {
-        const next: EventInvite[] = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }))
-        setInvites(next)
-      },
-      (error) => {
-        // Prevent unhandled snapshot errors from crashing the page.
-        console.error('Invites listener error:', error)
-        setListenerError('Unable to load invites. You may not have permission for this event.')
-      }
-    )
-
-    const unsubMembers = onSnapshot(
-      query(membersRef, orderBy('createdAt', 'desc')),
-      (snap) => {
-        const next: EventMember[] = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }))
-        setMembers(next)
-      },
-      (error) => {
-        console.error('Members listener error:', error)
-        setListenerError('Unable to load staff members. You may not have permission for this event.')
-      }
-    )
-
+    void refresh()
+    const poll = setInterval(() => {
+      if (typeof document === 'undefined' || document.visibilityState === 'visible') void refresh()
+    }, 15000)
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void refresh()
+    }
+    document.addEventListener('visibilitychange', onVisible)
     return () => {
-      unsubInvites()
-      unsubMembers()
+      clearInterval(poll)
+      document.removeEventListener('visibilitychange', onVisible)
     }
-  }, [authReady, authUid, eventId])
-
-  useEffect(() => {
-    if (!authReady || !authUid) return
-    if (members.length === 0) {
-      setMemberProfiles({})
-      return
-    }
-
-    const missingUids = Array.from(
-      new Set(
-        members
-          .filter((m) => m.source !== 'tikem_door_team')
-          .map((m) => m.id)
-          .filter((uid) => uid && !memberProfiles[uid])
-      )
-    )
-
-    if (missingUids.length === 0) return
-
-    let cancelled = false
-    ;(async () => {
-      try {
-        const res = await fetch('/api/staff/members/resolve', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ eventId, uids: missingUids }),
-        })
-        const json = await res.json().catch(() => ({}))
-        if (!res.ok) {
-          console.error('Failed to resolve profiles:', json?.error || res.statusText)
-          return
-        }
-
-        const profiles = (json as any)?.profiles as Record<string, MemberProfile> | undefined
-        if (!profiles || cancelled) return
-
-        setMemberProfiles((prev) => ({ ...prev, ...profiles }))
-      } catch (e) {
-        console.error('Failed to resolve member profiles:', e)
-      }
-    })()
-
-    return () => {
-      cancelled = true
-    }
-  }, [authReady, authUid, eventId, members, memberProfiles])
+  }, [authReady, authUid, refresh])
 
   const handleCreateInvite = useCallback(async () => {
     if (!canSubmit) return
@@ -234,12 +199,13 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
       }
 
       closeInviteModal()
+      void refresh()
     } catch (err: any) {
       showToast({ title: 'Error', message: err?.message || 'Failed to create invite', type: 'error' })
     } finally {
       setIsSubmitting(false)
     }
-  }, [canSubmit, closeInviteModal, eventId, method, showToast, targetEmail, targetPhone, viewAttendees])
+  }, [canSubmit, closeInviteModal, eventId, method, refresh, showToast, targetEmail, targetPhone, viewAttendees])
 
   const handleRevokeInvite = useCallback(
     async (inviteId: string) => {
@@ -255,11 +221,12 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
           return
         }
         showToast({ title: 'Invite revoked', message: 'The link can no longer be used.', type: 'success' })
+        void refresh()
       } catch (err: any) {
         showToast({ title: 'Error', message: err?.message || 'Failed to revoke invite', type: 'error' })
       }
     },
-    [eventId, showToast]
+    [eventId, refresh, showToast]
   )
 
   const handleRemoveMember = useCallback(
@@ -276,11 +243,14 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
           return
         }
         showToast({ title: 'Member removed', message: 'Staff access removed.', type: 'success' })
+        // Drop the row now; the refetch confirms it.
+        setMembers((prev) => prev.filter((m) => m.id !== memberId))
+        void refresh()
       } catch (err: any) {
         showToast({ title: 'Error', message: err?.message || 'Failed to remove member', type: 'error' })
       }
     },
-    [eventId, showToast]
+    [eventId, refresh, showToast]
   )
 
   const handleToggleViewAttendees = useCallback(
@@ -355,13 +325,13 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
       <div className="flex justify-end">
         <button
           onClick={() => setShowInviteModal(true)}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-inverse hover:bg-inverse-hover text-on-inverse font-semibold rounded transition-colors"
+          className="inline-flex h-10 w-full items-center justify-center gap-2 px-4 bg-inverse hover:bg-inverse-hover text-on-inverse font-semibold rounded transition-colors sm:w-auto"
         >
           {tx('event_staff.invite_staff')}
         </button>
       </div>
 
-      <div className="bg-surface rounded-2xl overflow-hidden">
+      <div className="bg-surface rounded overflow-hidden">
         <div className="px-6 py-4 border-b border-line">
           <h3 className="font-display lowercase italic !text-section !leading-snug text-fg">{tx('event_staff.staff_members')}</h3>
         </div>
@@ -369,15 +339,15 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
           <div className="px-6 py-8 text-sm text-fg-muted">{tx('event_staff.no_staff_yet')}</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-surface-low border-b border-line">
+            <table className="block w-full sm:table">
+              <thead className="hidden border-b border-line bg-surface-low sm:table-header-group">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-fg-muted uppercase tracking-wider">User</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-fg-muted uppercase tracking-wider">{tx('event_staff.permissions')}</th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-fg-muted uppercase tracking-wider">{tx('event_staff.actions')}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-line">
+              <tbody className="block divide-y divide-line sm:table-row-group">
                 {members.map((m) => {
                   // Tikèm's door crew: first name only, read-only (managed by Tikèm).
                   const tikemCrew = m.source === 'tikem_door_team'
@@ -386,15 +356,15 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
                   const showEmail = profile?.full_name && profile?.email
 
                   return (
-                    <tr key={m.id} className="hover:bg-surface-low">
-                      <td className="px-6 py-4">
+                    <tr key={m.id} className="block py-2 hover:bg-surface-low sm:table-row sm:py-0">
+                      <td className="block px-4 py-1.5 sm:table-cell sm:px-6 sm:py-4">
                         <div className="font-medium text-fg">{displayName}</div>
                         <div className="text-sm text-fg-muted">{tikemCrew ? tx('event_staff.tikem_crew') : m.role || 'staff'}</div>
                         {showEmail && (
                           <div className="text-xs text-fg-muted mt-0.5">{profile.email}</div>
                         )}
                       </td>
-                      <td className="px-6 py-4 text-sm text-fg-muted">
+                      <td className="block px-4 py-1.5 sm:table-cell sm:px-6 sm:py-4 text-sm text-fg-muted">
                         <div className="space-y-2">
                           <div className="text-fg-muted">{tx('event_staff.can_check_in')}</div>
                           {m.role === 'owner' || tikemCrew ? (
@@ -425,7 +395,7 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
                           )}
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-right">
+                      <td className="block px-4 py-1.5 sm:table-cell sm:px-6 sm:py-4 sm:text-right">
                         {!tikemCrew && (
                         <button
                           onClick={() =>
@@ -452,7 +422,7 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
         )}
       </div>
 
-      <div className="bg-surface rounded-2xl overflow-hidden">
+      <div className="bg-surface rounded overflow-hidden">
         <div className="px-6 py-4 border-b border-line">
           <h3 className="font-display lowercase italic !text-section !leading-snug text-fg">{tx('event_staff.invites')}</h3>
         </div>
@@ -460,8 +430,8 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
           <div className="px-6 py-8 text-sm text-fg-muted">{tx('event_staff.no_invites_yet')}</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-surface-low border-b border-line">
+            <table className="block w-full sm:table">
+              <thead className="hidden border-b border-line bg-surface-low sm:table-header-group">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-fg-muted uppercase tracking-wider">{tx('event_staff.method')}</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-fg-muted uppercase tracking-wider">{tx('event_staff.target')}</th>
@@ -469,7 +439,7 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
                   <th className="px-6 py-3 text-right text-xs font-medium text-fg-muted uppercase tracking-wider">{tx('event_staff.actions')}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-line">
+              <tbody className="block divide-y divide-line sm:table-row-group">
                 {invites.map((inv) => {
                   const status = inv.revokedAt
                     ? 'Revoked'
@@ -480,11 +450,11 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
                   const target = inv.method === 'email' ? inv.targetEmail : inv.method === 'phone' ? inv.targetPhone : 'Link'
 
                   return (
-                    <tr key={inv.id} className="hover:bg-surface-low">
-                      <td className="px-6 py-4 text-sm text-fg">{inv.method}</td>
-                      <td className="px-6 py-4 text-sm text-fg-muted">{target || ''}</td>
-                      <td className="px-6 py-4 text-sm text-fg-muted">{status}</td>
-                      <td className="px-6 py-4 text-right">
+                    <tr key={inv.id} className="block py-2 hover:bg-surface-low sm:table-row sm:py-0">
+                      <td className="block px-4 py-1.5 sm:table-cell sm:px-6 sm:py-4 text-sm text-fg">{inv.method}</td>
+                      <td className="block px-4 py-1.5 sm:table-cell sm:px-6 sm:py-4 text-sm text-fg-muted">{target || ''}</td>
+                      <td className="block px-4 py-1.5 sm:table-cell sm:px-6 sm:py-4 text-sm text-fg-muted">{status}</td>
+                      <td className="block px-4 py-1.5 sm:table-cell sm:px-6 sm:py-4 sm:text-right">
                         {!inv.revokedAt && !inv.usedAt ? (
                           <button
                             onClick={() =>

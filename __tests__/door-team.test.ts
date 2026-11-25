@@ -906,3 +906,12 @@ describe('review fixes', () => {
     expect(fn).toContain('memberSeatLive(')
   })
 })
+
+describe('web staff list reads the redacted API, never events/{id}/members', () => {
+  it('EventStaffManager has no direct Firestore members read', () => {
+    const src = readFileSync(join(process.cwd(), 'app/organizer/events/[id]/staff/EventStaffManager.tsx'), 'utf8')
+    expect(src).not.toMatch(/onSnapshot|firebase\/firestore/)
+    expect(src).not.toMatch(/collection\(db,\s*'events'/)
+    expect(src).toContain('/api/organizer/events/${encodeURIComponent(eventId)}/staff')
+  })
+})
