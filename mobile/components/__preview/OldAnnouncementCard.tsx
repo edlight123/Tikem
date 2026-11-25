@@ -2,8 +2,8 @@ import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, type StyleProp, type ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import type { LucideIcon } from 'lucide-react-native';
-import { useTheme } from '../contexts/ThemeContext';
-import { radius, font } from '../theme/tokens';
+import { useTheme } from '../../contexts/ThemeContext';
+import { radius, font } from '../../theme/tokens';
 
 export interface AnnouncementAction {
   label: string;

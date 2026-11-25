@@ -24,6 +24,7 @@ import { useActiveLocationCopy } from '../lib/locationCopy';
 import { MapPin, ChevronDown, CloudOff } from 'lucide-react-native';
 import MessagesButton from '../components/MessagesButton';
 import LocationDetectionBanner from '../components/LocationDetectionBanner';
+import PreviewNotices from '../components/__preview/PreviewNotices';
 import LocationPickerSheet from '../components/LocationPickerSheet';
 import ElsewhereRail from '../components/ElsewhereRail';
 import { elsewhereEvents, isEventInMetro } from '../data/metros';
@@ -466,6 +467,7 @@ export default function HomeScreen({ navigation }: any) {
         <Animated.View style={{ height: headerSpacerHeight }} />
         {/* In the scroll content (not pinned over it) so it scrolls away. */}
         <LocationDetectionBanner />
+        <PreviewNotices />
         {loading ? (
           <HomeFeedSkeleton />
         ) : error && events.length === 0 ? (
@@ -580,7 +582,7 @@ export default function HomeScreen({ navigation }: any) {
 
             {/* "Find your friends": once, after the first ticket, while the
                 account has no friends yet. Renders nothing otherwise. */}
-            <FindFriendsCard variant="home" style={styles.section} />
+            <FindFriendsCard variant="home" style={styles.notice} />
 
             {/* The two deepest categories (see applyEventLists) */}
             {categoryRails.map((rail) => (
@@ -730,6 +732,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     flex: 1,
     backgroundColor: colors.background,
   },
+  notice: { marginHorizontal: 16, marginBottom: 24 },
   section: {
     marginBottom: 24,
     paddingHorizontal: 16,

@@ -12,24 +12,15 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Animated,
-  ActivityIndicator,
-} from 'react-native';
-import { X } from 'lucide-react-native';
+import { StyleSheet, Animated } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
 import { useFilters } from '../contexts/FiltersContext';
 import { useI18n } from '../contexts/I18nContext';
 import { getDeviceLocationInfo, DEFAULT_CITIES } from '../utils/deviceLocation';
 import { locationLabel } from '../data/metros';
-import { useTheme } from '../contexts/ThemeContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { radius } from '../theme/tokens';
 import Flag from './Flag';
+import { NoticeStrip } from './ui/NoticeStrip';
 
 const BANNER_DISMISSED_KEY = 'location_banner_dismissed';
 const BANNER_DISMISSED_EXPIRY = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -38,9 +29,7 @@ const BANNER_ACCEPTED_KEY = 'location_banner_accepted';
 const RESOLVED_COUNTRY_KEY = 'resolved_user_country';
 
 export default function LocationDetectionBanner() {
-  const { colors } = useTheme();
   const { t } = useI18n();
-  const styles = getStyles(colors);
   const { user, userProfile, loading: authLoading, updateUserProfile } = useAuth();
   const { setUserCountry, setActiveCity } = useFilters();
 
@@ -185,80 +174,31 @@ export default function LocationDetectionBanner() {
         { opacity: progress, transform: [{ translateY }] },
       ]}
     >
-      <View style={styles.bar} accessibilityRole="alert">
-        {detectedCountry ? <Flag code={detectedCountry} size={18} style={styles.flagRound} /> : null}
-        <Text style={styles.question} numberOfLines={1}>
-          {question}
-        </Text>
-
-        <TouchableOpacity
-          onPress={handleAccept}
-          disabled={updating}
-          hitSlop={{ top: 12, bottom: 12, left: 8, right: 4 }}
-          accessibilityRole="button"
-          accessibilityLabel={city ? t('locationBanner.subtitle', { city }) : t('locationBanner.show')}
-          style={styles.action}
-        >
-          {updating ? (
-            <ActivityIndicator size="small" color={colors.text} />
-          ) : (
-            <Text style={styles.showText}>{t('locationBanner.show')}</Text>
-          )}
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={handleDismiss}
-          disabled={updating}
-          hitSlop={{ top: 12, bottom: 12, left: 4, right: 12 }}
-          accessibilityRole="button"
-          accessibilityLabel={t('locationBanner.notNow')}
-          style={styles.close}
-        >
-          <X size={14} color={colors.textTertiary} strokeWidth={1.75} />
-        </TouchableOpacity>
-      </View>
+      <NoticeStrip
+        leading={<Flag code={detectedCountry} size={18} />}
+        text={question}
+        action={{
+          label: updating ? '…' : t('locationBanner.show'),
+          onPress: () => {
+            if (!updating) handleAccept();
+          },
+          accessibilityLabel: city ? t('locationBanner.subtitle', { city }) : t('locationBanner.show'),
+        }}
+        onDismiss={() => {
+          if (!updating) handleDismiss();
+        }}
+        dismissLabel={t('locationBanner.notNow')}
+      />
     </Animated.View>
   );
 }
 
-const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
+const styles = StyleSheet.create({
   // Part of the scroll content, not pinned over it: a pinned banner covered
   // the feed while scrolling (simulator audit 2026-11-16).
   container: {
     marginHorizontal: 16,
     marginTop: 4,
     marginBottom: 8,
-  },
-  // One quiet line on a faint fill (no hairline, no shadow, no card).
-  bar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    height: 40,
-    paddingLeft: 12,
-    paddingRight: 6,
-    borderRadius: radius.sm,
-    backgroundColor: colors.surface,
-  },
-  flagRound: {
-    marginRight: 10,
-  },
-  question: {
-    flex: 1,
-    minWidth: 0,
-    fontSize: 14,
-    color: colors.textSecondary,
-  },
-  action: {
-    paddingHorizontal: 10,
-    minWidth: 28,
-    alignItems: 'center',
-  },
-  showText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  close: {
-    padding: 6,
   },
 });

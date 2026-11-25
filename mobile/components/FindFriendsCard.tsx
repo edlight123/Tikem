@@ -10,7 +10,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { db, isDemoMode } from '../config/firebase';
 import { fetchConnections } from '../lib/api/social';
 import { radius } from '../theme/tokens';
-import AnnouncementCard from './AnnouncementCard';
+import { NoticeStrip } from './ui/NoticeStrip';
 import PersonAvatar from './PersonAvatar';
 import type { PublicUserSummary } from '../types/social';
 
@@ -144,12 +144,13 @@ export default function FindFriendsCard({ variant, style }: { variant: 'profile'
   }
 
   return (
-    <AnnouncementCard
+    <NoticeStrip
       icon={Users}
-      eyebrow={t('profile.findFriends.eyebrow')}
-      title={t('profile.findFriends.title')}
-      primary={{ label: t('profile.findFriends.cta'), onPress: open }}
-      secondary={variant === 'home' ? { label: t('profile.findFriends.notNow'), onPress: markDone } : undefined}
+      text={t('profile.findFriends.title')}
+      onPress={open}
+      action={{ label: t('profile.findFriends.rowAction'), onPress: open }}
+      onDismiss={markDone}
+      dismissLabel={t('profile.findFriends.dismiss')}
       style={style}
     />
   );

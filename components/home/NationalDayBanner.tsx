@@ -1,15 +1,12 @@
 'use client'
 
-// The national-day banner at the top of the homepage (lib/nationalDays.ts):
-// the day's screenprint, a small caption naming the place in the piece, the
-// day's title and one line, and one white button to the events tagged for it.
+// The national-day notice at the top of the homepage (lib/nationalDays.ts),
+// as the house NoticeStrip (owner, TestFlight 2026-11-25: no big cards; this
+// used to be a 4:5 poster up to 78% of a phone screen): a small 4:5 thumb of
+// the day's art, the day's name in the serif, when it is (a dot and a label),
+// one quiet "See" link to the events tagged for it, and a ×.
 //
-// A phone gets a 4:5 poster with the words on a bottom scrim, like the app's
-// empty states. From lg the art keeps its 4:5 crop on the right and the words
-// sit on a fill to its left, because a portrait piece stretched into a wide
-// band loses everything but a slice of sky.
-//
-// Low-key days (Jou Mò, Fèt Travay…) show the button only when organizers
+// Low-key days (Jou Mò, Fèt Travay…) show the link only when organizers
 // tagged events for them.
 //
 // Dismissible, with the app's semantics (mobile/lib/nationalDaysRemote): the
@@ -25,12 +22,11 @@
 
 import { useEffect, useLayoutEffect, useState } from 'react'
 import Image from 'next/image'
-import Link from 'next/link'
-import { X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { nationalDayDismissId, nationalDayText, type ActiveNationalDay } from '@/lib/nationalDays'
 import { nationalDayArt } from '@/lib/nationalDayArt'
 import { color } from '@/lib/design/tokens'
+import { NoticeStrip } from '@/components/ui/NoticeStrip'
 
 const TEAL = color.brand[500]
 
@@ -83,28 +79,6 @@ export default function NationalDayBanner({
   // Day swaps it for the flag's blue, the one place the theme recolours.
   const dot = day.accent || (phase === 'today' ? TEAL : 'rgba(255,255,255,0.55)')
 
-  const words = (
-    <>
-      <p className="flex min-w-0 items-center gap-2 font-mono text-eyebrow uppercase tracking-[0.14em] text-fg-muted">
-        <span aria-hidden className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: dot }} />
-        <span className="shrink-0 whitespace-nowrap">{when}</span>
-      </p>
-      {/* Few words on the picture (owner 2026-11-16: "too many words, reads too
-          much"): when, the day's name in the serif, one action. */}
-      <h2 className="mt-3 font-display italic font-normal text-fg text-balance !text-[clamp(38px,5.5vw,72px)] !leading-[0.95]">
-        {title}
-      </h2>
-      {showCta && (
-        <Link
-          href={href}
-          className="mt-6 inline-flex h-12 items-center self-start rounded bg-inverse px-6 font-grotesk text-body font-semibold text-on-inverse outline-none transition-colors hover:bg-inverse-hover focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black"
-        >
-          {t('home.nationalDay.see_events', { defaultValue: 'See events' })}
-        </Link>
-      )}
-    </>
-  )
-
   if (dismissed) return null
 
   const dismiss = () => {
@@ -130,56 +104,39 @@ export default function NationalDayBanner({
       className="mx-auto max-w-7xl px-4 pt-4 sm:px-6 sm:pt-6 lg:px-8"
     >
       <script dangerouslySetInnerHTML={{ __html: hideIfDismissed }} />
-      <div className="relative">
-        {/* Phone and tablet: the poster, words on the scrim. */}
-        <div className="relative overflow-hidden rounded bg-surface-low lg:hidden">
-          <div className="relative aspect-[4/5] max-h-[78vh] w-full sm:aspect-[16/11]">
-            <Image
-              src={art.src}
-              alt={art.alt}
-              fill
-              priority
-              sizes="(min-width: 1024px) 1px, 100vw"
-              className="object-cover object-[50%_35%]"
-            />
-            <div
+      <NoticeStrip
+        role="region"
+        ariaLabel={title}
+        className="!pl-2"
+        leading={
+          <span className="relative block h-10 w-8 shrink-0 overflow-hidden rounded bg-surface-raised">
+            <Image src={art.src} alt={art.alt} fill sizes="32px" className="object-cover" />
+          </span>
+        }
+        serif
+        text={title}
+        sub={
+          <>
+            <span
               aria-hidden
-              className="absolute inset-0"
-              style={{
-                background:
-                  art.scrim === 'strong'
-                    ? 'linear-gradient(to bottom, rgba(10,10,10,0) 20%, rgba(10,10,10,0.6) 50%, rgba(10,10,10,0.97) 100%)'
-                    : 'linear-gradient(to bottom, rgba(10,10,10,0) 30%, rgba(10,10,10,0.45) 55%, rgba(10,10,10,0.95) 100%)',
-              }}
+              className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full align-middle"
+              style={{ backgroundColor: dot }}
             />
-            <div className="absolute inset-x-0 bottom-0 p-5 sm:p-8">{words}</div>
-          </div>
-        </div>
-
-        {/* Desktop: words on a fill, the art at its own 4:5 on the right. */}
-        <div className="hidden overflow-hidden rounded bg-surface-low lg:grid lg:grid-cols-12">
-          <div className="flex flex-col justify-end p-12 lg:col-span-7 xl:p-14">{words}</div>
-          <div className="relative aspect-[4/5] max-h-[520px] w-full lg:col-span-5">
-            <Image src={art.src} alt={art.alt} fill sizes="(min-width: 1024px) 40vw, 1px" className="object-cover" />
-          </div>
-        </div>
-
-        {/* Quiet close: a bare white/60 glyph in the corner, no box around it
-          (fill, not hairline). The soft shadow keeps it legible on bright art. */}
-        <button
-          type="button"
-          onClick={dismiss}
-          aria-label={t('home.nationalDay.dismiss', {
-            defaultValue: 'Hide this banner',
-          })}
-          title={t('home.nationalDay.dismiss', {
-            defaultValue: 'Hide this banner',
-          })}
-          className="absolute right-1.5 top-1.5 flex h-11 w-11 items-center justify-center rounded text-fg-muted outline-none transition-colors [filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.6))] hover:text-fg focus-visible:text-fg focus-visible:ring-2 focus-visible:ring-fg/70"
-        >
-          <X aria-hidden className="h-5 w-5" strokeWidth={2} />
-        </button>
-      </div>
+            {when}
+          </>
+        }
+        action={
+          showCta
+            ? {
+                label: t('home.nationalDay.see', { defaultValue: 'See' }),
+                href,
+                ariaLabel: t('home.nationalDay.see_events', { defaultValue: 'See events' }),
+              }
+            : undefined
+        }
+        onDismiss={dismiss}
+        dismissLabel={t('home.nationalDay.dismiss', { defaultValue: 'Hide this banner' })}
+      />
     </section>
   )
 }

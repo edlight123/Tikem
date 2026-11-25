@@ -3,7 +3,7 @@ import { StyleSheet } from 'react-native';
 import { Eye } from 'lucide-react-native';
 import { useI18n } from '../contexts/I18nContext';
 import { useAuth } from '../contexts/AuthContext';
-import AnnouncementCard from './AnnouncementCard';
+import { NoticeStrip } from './ui/NoticeStrip';
 import { attendanceVisibilityUnset } from '../types/social';
 
 interface Props {
@@ -41,25 +41,26 @@ export default function AttendanceDefaultNotice({ onOpenSettings }: Props) {
     );
   };
 
+  // A one-line strip (owner, TestFlight 2026-11-25: the full announcement
+  // card was a "big ass card" taking half of Home).
   return (
-    <AnnouncementCard
+    <NoticeStrip
       icon={Eye}
-      eyebrow={t('home.attendanceNotice.eyebrow')}
-      title={t('home.attendanceNotice.title')}
-      body={t('home.attendanceNotice.body')}
-      primary={{
-        label: t('home.attendanceNotice.cta'),
+      text={t('home.attendanceNotice.text')}
+      action={{
+        label: t('home.attendanceNotice.settings'),
         onPress: () => {
           markSeen();
           onOpenSettings();
         },
       }}
-      secondary={{ label: t('home.attendanceNotice.gotIt'), onPress: markSeen }}
-      style={styles.card}
+      onDismiss={markSeen}
+      dismissLabel={t('home.attendanceNotice.dismiss')}
+      style={styles.strip}
     />
   );
 }
 
 const styles = StyleSheet.create({
-  card: { marginHorizontal: 16, marginTop: 8, marginBottom: 8 },
+  strip: { marginHorizontal: 16, marginTop: 8, marginBottom: 8 },
 });
