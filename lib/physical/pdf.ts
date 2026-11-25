@@ -227,7 +227,12 @@ function drawTicket(
   doc.setFontSize(7.5)
   doc.setTextColor(INK.secondary)
   for (const line of [ev.dateLine, ev.venueLine].filter(Boolean)) {
-    const lines = fit(doc, line, textW, 2)
+    // A long date ("samedi 26 septembre 2026 · 11:45 PM") breaks at its " · ",
+    // date then time, instead of leaving the dot dangling at a line end.
+    const lines =
+      line.includes(' · ') && doc.getTextWidth(line) > textW
+        ? line.split(' · ').flatMap((part) => fit(doc, part, textW, 1)).slice(0, 2)
+        : fit(doc, line, textW, 2)
     doc.text(lines, left, dy, { lineHeightFactor: 1.2 })
     dy += lines.length * 9 + 2
   }
