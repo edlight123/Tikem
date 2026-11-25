@@ -13,6 +13,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ChevronDown, Plus, Trash2 } from 'lucide-react'
 import { draftProblem, emptyAddOnDraft, parseOptionList, type AddOnDraft } from '@/lib/addons/editor'
+import { formatMoney } from '@/lib/money'
 import { ADD_ON_PRESETS, type AddOnPresetKey } from '@/lib/addons/presets'
 
 export interface AddOnsEditorTier {
@@ -22,7 +23,8 @@ export interface AddOnsEditorTier {
 
 const inputCls =
   'min-h-10 w-full min-w-0 rounded bg-surface px-3 py-2 text-base text-fg [color-scheme:dark] placeholder:text-fg-subtle transition-colors focus:bg-surface-raised focus:outline-none focus:ring-2 focus:ring-brand-400/50 sm:text-sm'
-const labelCls = 'mb-1 block text-caption text-fg-muted'
+// The app's sheet labels: small, uppercase, letter-spaced.
+const labelCls = 'mb-1 block truncate text-caption font-semibold uppercase tracking-[0.07em] text-fg-muted'
 
 export default function AddOnsEditor({
   drafts,
@@ -72,16 +74,16 @@ export default function AddOnsEditor({
             <button
               type="button"
               onClick={() => setOpenId(open ? null : d.id)}
-              className="flex min-h-12 w-full items-center gap-3 px-3 py-2 text-start"
+              className="flex min-h-[3.25rem] w-full items-center gap-3 px-3 py-2 text-start"
               aria-expanded={open}
             >
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-body font-medium text-fg">
+                <span className="block truncate text-body font-semibold text-fg">
                   {d.name.trim() || t('addOns.editor.untitled', { defaultValue: 'New add-on' })}
                 </span>
                 <span className="block truncate text-caption text-fg-subtle">
                   {[
-                    Number(d.price) > 0 ? `${Number(d.price).toLocaleString()} ${currency}` : null,
+                    Number(d.price) > 0 ? formatMoney(Number(d.price), currency) : null,
                     d.quantity
                       ? t('addOns.editor.stockCount', { defaultValue: '{{count}} available', count: Number(d.quantity) })
                       : t('addOns.editor.unlimited', { defaultValue: 'Unlimited' }),
@@ -212,11 +214,11 @@ export default function AddOnsEditor({
                 <div>
                   <span className={labelCls}>{t('addOns.editor.onlyWith', { defaultValue: 'Only with these tickets' })}</span>
                   {savedTiers.length === 0 ? (
-                    <p className="text-caption text-fg-subtle">
+                    <div className="text-caption text-fg-subtle">
                       {t('addOns.editor.onlyWithSaveFirst', {
                         defaultValue: 'Sold with any ticket. Save the event first to limit it to certain tickets.',
                       })}
-                    </p>
+                    </div>
                   ) : (
                     <>
                       <div className="flex flex-wrap gap-2">
@@ -242,9 +244,9 @@ export default function AddOnsEditor({
                         })}
                       </div>
                       {d.tierIds.length === 0 && (
-                        <p className="mt-1 text-caption text-fg-subtle">
+                        <div className="mt-1 text-caption text-fg-subtle">
                           {t('addOns.editor.anyTicket', { defaultValue: 'None selected: sold with any ticket.' })}
-                        </p>
+                        </div>
                       )}
                     </>
                   )}

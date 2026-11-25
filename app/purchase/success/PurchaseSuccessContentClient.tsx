@@ -1,6 +1,7 @@
 'use client'
 
 import StoreBadges from '@/components/ui/StoreBadges'
+import { formatMoneyFromCents } from '@/lib/money'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useTranslation } from 'react-i18next'
@@ -52,18 +53,8 @@ export default function PurchaseSuccessContentClient(props: Props) {
     if (props.amountPaid === null || !Number.isFinite(props.amountPaid)) return null
     const currency = props.amountCurrency || 'USD'
 
-    try {
-      return new Intl.NumberFormat(locale, {
-        style: 'currency',
-        currency,
-        maximumFractionDigits: 2,
-        minimumFractionDigits: 2,
-      }).format(props.amountPaid)
-    } catch {
-      // Fallback if currency code is unsupported
-      const prefix = props.amountCurrency ? `${props.amountCurrency} ` : '$'
-      return `${prefix}${props.amountPaid.toFixed(2)}`
-    }
+    // Shared formatter: whole gourdes drop ".00" (owner, 2026-11-25).
+    return formatMoneyFromCents(Math.round(props.amountPaid * 100), currency, locale)
   })()
 
   // An unknown value reads as a quiet middle dot, not as punctuation.

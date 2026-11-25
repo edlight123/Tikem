@@ -79,9 +79,9 @@ export default function AddOnsHandover({
     <div className="fixed inset-x-0 bottom-0 z-[60] bg-surface-raised-solid px-4 pb-[max(16px,env(safe-area-inset-bottom))] pt-3 text-fg">
       <div className="mx-auto max-w-md">
         <div className="flex items-center justify-between gap-3">
-          <p className="text-eyebrow font-bold uppercase tracking-[0.12em] text-fg-muted">
+          <div className="text-eyebrow font-bold uppercase tracking-[0.12em] text-fg-muted">
             {t('addOns.door.title', { defaultValue: 'Add-ons to hand over' })}
-          </p>
+          </div>
           {onClose && (
             <button
               type="button"
@@ -128,7 +128,7 @@ export default function AddOnsHandover({
             </li>
           ))}
         </ul>
-        {error && <p className="mt-1 text-caption text-danger-soft">{error}</p>}
+        {error && <div className="mt-1 text-caption text-danger-soft">{error}</div>}
       </div>
     </div>
   )

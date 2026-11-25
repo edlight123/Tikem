@@ -74,7 +74,13 @@
       "decrease": "Mwens {{name}}",
       "increase": "Plis {{name}}",
       "limit": "Jiska {{count}} pa kòmand",
-      "option": "Gwosè"
+      "option": "Gwosè",
+      "chooseTickets": "Chwazi tikè",
+      "ticketsOne": "1 tikè",
+      "ticketsOther": "{{count}} tikè",
+      "itemsOne": "+ 1 ekstra",
+      "itemsOther": "+ {{count}} ekstra",
+      "left": "Rete {{count}}"
     },
     "errors": {
       "soldOut": "Youn nan ekstra ou yo fèk fini. Retire l oswa diminye kantite a, epi eseye ankò.",
@@ -106,7 +112,7 @@
       "title": "Lavant ekstra",
       "none": "Poko gen ekstra ki vann.",
       "soldPicked": "{{sold}} vann · {{picked}} bay",
-      "totals": "{{sold}} vann an tout, {{picked}} bay"
+      "total": "Total"
     }
   }
 }

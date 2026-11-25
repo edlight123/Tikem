@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { isDemoMode } from '@/lib/demo'
 import { normalizeCountryCode } from '@/lib/payment-provider'
 import EventbriteStyleTicketSelector from '@/components/EventbriteStyleTicketSelector'
+import { formatMoney } from '@/lib/money'
 import { addOnErrorMessage, addOnsRequestBody, type SelectedAddOn } from '@/components/AddOnsPicker'
 import { allSelectionsFree, computeSelectionTotal, MAX_FREE_TICKETS_PER_PERSON } from '@/lib/ticketPricing'
 import { priceCart } from '@/lib/checkout/buyer-pricing'
@@ -514,7 +515,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, payAtDoor = f
     [cartLines, country, currency, feeIncidence, promoTerms, selectedAddOns]
   )
   const showFeeLine = orderPricing.feeOnTop && orderPricing.buyerFee > 0
-  const formatAmount = (amount: number) => `${amount.toLocaleString()} ${currency}`
+  const formatAmount = (amount: number) => formatMoney(amount, currency)
   /**
    * True once the buyer has actually chosen what they are buying. Before that
    * `ticketPrice` is only the event's "from" headline, so no total may be quoted
@@ -1524,9 +1525,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, payAtDoor = f
                       <span className="text-fg-muted">
                         {tier.quantity}x {tier.tierName || t('ticket.ticket')}
                       </span>
-                      <span className="font-medium text-fg">
-                        {(tier.price * tier.quantity).toLocaleString()} {currency}
-                      </span>
+                      <span className="font-medium text-fg">{formatMoney(tier.price * tier.quantity, currency)}</span>
                     </div>
                   ))}
                   {selectedAddOns.map((a) => (
@@ -1535,9 +1534,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, payAtDoor = f
                         {a.quantity}x {a.name}
                         {a.option ? ` (${a.option})` : ''}
                       </span>
-                      <span className="font-medium text-fg">
-                        {(a.unitPrice * a.quantity).toLocaleString()} {currency}
-                      </span>
+                      <span className="font-medium text-fg">{formatMoney(a.unitPrice * a.quantity, currency)}</span>
                     </div>
                   ))}
                   {orderPricing.discount > 0 && (

@@ -10,13 +10,17 @@
  */
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Minus, Plus } from 'lucide-react'
+import QtyStepper from '@/components/QtyStepper'
+import { formatMoney } from '@/lib/money'
 import {
   addOnAvailability,
   addOnOrderLimit,
   addOnRemaining,
   type EventAddOn,
 } from '@/lib/addons/addOns'
+
+/** Stock at or under this shows "N left", like the app's tiers. */
+const LOW_STOCK = 10
 
 export interface SelectedAddOn {
   id: string
@@ -109,133 +113,101 @@ export default function AddOnsPicker({
     onChange({ ...quantities, [key]: next })
   }
 
-  const stepBtn =
-    'flex h-10 w-10 items-center justify-center rounded bg-surface-raised transition-colors hover:bg-surface-high disabled:cursor-not-allowed disabled:opacity-30'
-
   return (
-    <section aria-labelledby="add-ons-title" className="space-y-2">
-      <div className="flex items-baseline justify-between gap-3">
-        <h4 id="add-ons-title" className="text-body font-semibold text-fg">
+    <section aria-labelledby="add-ons-title">
+      {/* The app's section label: small, uppercase, a quiet note on the right. */}
+      <div className="mb-1 flex items-baseline justify-between gap-3">
+        <div id="add-ons-title" className="text-caption font-bold uppercase tracking-[0.07em] text-fg-muted">
           {t('addOns.buyer.title', { defaultValue: 'Add-ons' })}
-        </h4>
-        <span className="text-caption text-fg-subtle">
+        </div>
+        <span className="truncate text-caption text-fg-subtle">
           {t('addOns.buyer.subtitle', { defaultValue: 'Picked up at the event' })}
         </span>
       </div>
-      {visible.map((a) => {
-        const soldOut = addOnAvailability(a, { cartTierIds, soldMap }) === 'sold_out'
-        const options: Array<string | null> = a.options && a.options.length > 0 ? a.options : [null]
-        const limit = addOnOrderLimit(a)
-        const atLimit = totalFor(a) >= Math.min(limit, addOnRemaining(a, soldMap) ?? Infinity)
-        const chosen = totalFor(a) > 0
-        const current: string | null = options[0] === null ? null : optionFor[a.id] || (options[0] as string)
-        return (
-          <div
-            key={a.id}
-            className={`rounded px-3 py-2.5 ${chosen ? 'bg-surface-raised' : 'bg-surface-low'} ${soldOut ? 'opacity-50' : ''}`}
-          >
-            <div className="flex items-center gap-3">
+      <ul>
+        {visible.map((a, index) => {
+          const soldOut = addOnAvailability(a, { cartTierIds, soldMap }) === 'sold_out'
+          const options: Array<string | null> = a.options && a.options.length > 0 ? a.options : [null]
+          const limit = addOnOrderLimit(a)
+          const remaining = addOnRemaining(a, soldMap)
+          const atLimit = totalFor(a) >= Math.min(limit, remaining ?? Infinity)
+          const current: string | null = options[0] === null ? null : optionFor[a.id] || (options[0] as string)
+          const picked = (options.filter(Boolean) as string[])
+            .map((o) => ({ o, q: quantities[addOnKey(a.id, o)] || 0 }))
+            .filter((x) => x.q > 0)
+            .map((x) => `${x.o} × ${x.q}`)
+            .join(', ')
+          const note = soldOut
+            ? t('addOns.buyer.soldOut', { defaultValue: 'Sold out' })
+            : remaining !== null && remaining <= LOW_STOCK
+              ? t('addOns.buyer.left', { defaultValue: '{{count}} left', count: remaining })
+              : null
+          return (
+            <li
+              key={a.id}
+              className={`flex items-center gap-3 py-2.5 ${index < visible.length - 1 ? 'border-b border-line' : ''} ${
+                soldOut ? 'opacity-70' : ''
+              }`}
+            >
               <div className="min-w-0 flex-1">
-                <p className="truncate text-body font-medium text-fg">{a.name}</p>
-                <p className="truncate text-caption text-fg-subtle">
-                  <span className="font-medium text-brand-400">
-                    {a.price.toLocaleString(undefined, { maximumFractionDigits: 2 })} {currency}
-                  </span>
-                  {a.description ? ` · ${a.description}` : ''}
-                </p>
-                {soldOut && (
-                  <p className="mt-0.5 inline-flex items-center gap-1.5 text-caption text-danger">
-                    <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-current" />
-                    {t('addOns.buyer.soldOut', { defaultValue: 'Sold out' })}
-                  </p>
+                <div className="flex items-baseline gap-2.5">
+                  <span className="min-w-0 flex-1 truncate text-body font-semibold text-fg">{a.name}</span>
+                  <span className="shrink-0 text-body font-bold tabular-nums text-fg">{formatMoney(a.price, currency)}</span>
+                </div>
+                {(note || a.description) && (
+                  <div className="mt-0.5 truncate text-eyebrow text-fg-muted">
+                    {note ? <span className={soldOut ? 'text-danger' : ''}>{note}</span> : null}
+                    {note && a.description ? ' · ' : ''}
+                    {a.description}
+                  </div>
+                )}
+                {/* Sizes: the app's chips (4px corner, white when chosen); the one
+                    stepper counts the chosen size. */}
+                {!soldOut && current !== null && (
+                  <div
+                    className="mt-2 flex flex-wrap gap-1.5"
+                    role="radiogroup"
+                    aria-label={t('addOns.buyer.option', { defaultValue: 'Size' })}
+                  >
+                    {(options as string[]).map((option) => {
+                      const on = option === current
+                      return (
+                        <button
+                          key={option}
+                          type="button"
+                          role="radio"
+                          aria-checked={on}
+                          onClick={() => setOptionFor((prev) => ({ ...prev, [a.id]: option }))}
+                          className={`h-8 min-w-[2.5rem] rounded px-2.5 text-meta font-semibold transition-colors ${
+                            on ? 'bg-inverse text-on-inverse' : 'bg-surface text-fg hover:bg-surface-raised'
+                          }`}
+                        >
+                          {option}
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+                {picked && <div className="mt-1 text-eyebrow text-fg-muted">{picked}</div>}
+                {!soldOut && atLimit && totalFor(a) > 0 && (
+                  <div className="mt-0.5 text-eyebrow text-fg-subtle">
+                    {t('addOns.buyer.limit', { defaultValue: 'Up to {{count}} per order', count: limit })}
+                  </div>
                 )}
               </div>
-              {!soldOut && (
-                <Stepper
-                  value={quantities[addOnKey(a.id, current)] || 0}
-                  onMinus={() => step(a, current, -1)}
-                  onPlus={() => step(a, current, 1)}
-                  plusDisabled={atLimit}
-                  name={current ? `${a.name} ${current}` : a.name}
-                  className={stepBtn}
-                  t={t}
-                />
-              )}
-            </div>
-            {/* Sizes: one chip row and the one stepper above (it counts the chosen size). */}
-            {!soldOut && current !== null && (
-              <div className="mt-2 flex flex-wrap items-center gap-1.5" role="radiogroup" aria-label={t('addOns.buyer.option', { defaultValue: 'Size' })}>
-                {(options as string[]).map((option) => {
-                  const on = option === current
-                  const q = quantities[addOnKey(a.id, option)] || 0
-                  return (
-                    <button
-                      key={option}
-                      type="button"
-                      role="radio"
-                      aria-checked={on}
-                      onClick={() => setOptionFor((prev) => ({ ...prev, [a.id]: option }))}
-                      className={`h-8 min-w-[2.5rem] rounded px-2.5 text-meta font-medium transition-colors ${
-                        on ? 'bg-inverse text-on-inverse' : 'bg-surface text-fg-soft hover:bg-surface-raised'
-                      }`}
-                    >
-                      {option}
-                      {q > 0 ? <span className={on ? '' : 'text-fg-subtle'}>{` ×${q}`}</span> : null}
-                    </button>
-                  )
-                })}
-              </div>
-            )}
-            {!soldOut && atLimit && chosen && (
-              <p className="mt-1 text-caption text-fg-subtle">
-                {t('addOns.buyer.limit', { defaultValue: 'Up to {{count}} per order', count: limit })}
-              </p>
-            )}
-          </div>
-        )
-      })}
+              <QtyStepper
+                value={quantities[addOnKey(a.id, current)] || 0}
+                hidden={soldOut}
+                onMinus={() => step(a, current, -1)}
+                onPlus={() => step(a, current, 1)}
+                plusDisabled={atLimit}
+                decreaseLabel={t('addOns.buyer.decrease', { defaultValue: 'Fewer {{name}}', name: current ? `${a.name} ${current}` : a.name })}
+                increaseLabel={t('addOns.buyer.increase', { defaultValue: 'More {{name}}', name: current ? `${a.name} ${current}` : a.name })}
+              />
+            </li>
+          )
+        })}
+      </ul>
     </section>
-  )
-}
-
-function Stepper({
-  value,
-  onMinus,
-  onPlus,
-  plusDisabled,
-  name,
-  className,
-  t,
-}: {
-  value: number
-  onMinus: () => void
-  onPlus: () => void
-  plusDisabled: boolean
-  name: string
-  className: string
-  t: (key: string, opts?: any) => string
-}) {
-  return (
-    <div className="flex shrink-0 items-center gap-1.5">
-      <button
-        type="button"
-        onClick={onMinus}
-        disabled={value === 0}
-        aria-label={t('addOns.buyer.decrease', { defaultValue: 'Fewer {{name}}', name })}
-        className={className}
-      >
-        <Minus className="h-4 w-4 text-fg-soft" />
-      </button>
-      <span className="w-7 text-center text-body font-semibold tabular-nums text-fg">{value}</span>
-      <button
-        type="button"
-        onClick={onPlus}
-        disabled={plusDisabled}
-        aria-label={t('addOns.buyer.increase', { defaultValue: 'More {{name}}', name })}
-        className={className}
-      >
-        <Plus className="h-4 w-4 text-fg-soft" />
-      </button>
-    </div>
   )
 }

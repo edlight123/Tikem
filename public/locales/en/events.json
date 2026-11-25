@@ -74,7 +74,13 @@
       "decrease": "Fewer {{name}}",
       "increase": "More {{name}}",
       "limit": "Up to {{count}} per order",
-      "option": "Size"
+      "option": "Size",
+      "chooseTickets": "Choose tickets",
+      "ticketsOne": "1 ticket",
+      "ticketsOther": "{{count}} tickets",
+      "itemsOne": "+ 1 add-on",
+      "itemsOther": "+ {{count}} add-ons",
+      "left": "{{count}} left"
     },
     "errors": {
       "soldOut": "One of your add-ons just sold out. Remove it or lower the quantity and try again.",
@@ -106,7 +112,7 @@
       "title": "Add-on sales",
       "none": "No add-ons sold yet.",
       "soldPicked": "{{sold}} sold · {{picked}} picked up",
-      "totals": "{{sold}} sold in total, {{picked}} picked up"
+      "total": "Total"
     }
   }
 }

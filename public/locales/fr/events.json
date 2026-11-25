@@ -28,16 +28,16 @@
   },
   "addOns": {
     "editor": {
-      "title": "Extras",
+      "title": "Suppléments",
       "info": "Formules bouteille, surclassement VIP, parking, boissons ou merch, achetés avec les billets.",
-      "fixTitle": "Vérifiez vos extras",
-      "fixMsg": "Chaque extra doit avoir un nom et un prix supérieur à 0, et la fin des ventes doit suivre leur début.",
+      "fixTitle": "Vérifiez vos suppléments",
+      "fixMsg": "Chaque supplément doit avoir un nom et un prix supérieur à 0, et la fin des ventes doit suivre leur début.",
       "add": "Autre",
-      "untitled": "Nouvel extra",
+      "untitled": "Nouvel supplément",
       "stockCount": "{{count}} disponibles",
       "unlimited": "Illimité",
       "hiddenBadge": "En pause",
-      "needsName": "Donnez un nom à cet extra.",
+      "needsName": "Donnez un nom à ce supplément.",
       "needsPrice": "Indiquez un prix supérieur à 0.",
       "badWindow": "La fin des ventes doit suivre leur début.",
       "name": "Nom",
@@ -68,45 +68,51 @@
       "merch": "T-shirt"
     },
     "buyer": {
-      "title": "Extras",
+      "title": "Suppléments",
       "subtitle": "À récupérer sur place",
       "soldOut": "Épuisé",
       "decrease": "Moins de {{name}}",
       "increase": "Plus de {{name}}",
       "limit": "{{count}} maximum par commande",
-      "option": "Taille"
+      "option": "Taille",
+      "chooseTickets": "Choisir des billets",
+      "ticketsOne": "1 billet",
+      "ticketsOther": "{{count}} billets",
+      "itemsOne": "+ 1 supplément",
+      "itemsOther": "+ {{count}} suppléments",
+      "left": "Plus que {{count}}"
     },
     "errors": {
-      "soldOut": "L'un de vos extras vient d'être épuisé. Retirez-le ou réduisez la quantité, puis réessayez.",
-      "unavailable": "L'un de vos extras n'est plus en vente. Retirez-le et réessayez.",
-      "needsTier": "L'un de vos extras n'est vendu qu'avec un autre billet.",
-      "limit": "Vous avez choisi plus d'un extra que ce qu'une commande permet.",
-      "option": "Choisissez une taille ou une option pour chaque extra.",
-      "rail": "Les extras se paient par carte ou par MonCash.",
-      "generic": "Impossible d'ajouter vos extras. Veuillez réessayer."
+      "soldOut": "L'un de vos suppléments vient d'être épuisé. Retirez-le ou réduisez la quantité, puis réessayez.",
+      "unavailable": "L'un de vos suppléments n'est plus en vente. Retirez-le et réessayez.",
+      "needsTier": "L'un de vos suppléments n'est vendu qu'avec un autre billet.",
+      "limit": "Vous avez choisi plus d'un supplément que ce qu'une commande permet.",
+      "option": "Choisissez une taille ou une option pour chaque supplément.",
+      "rail": "Les suppléments se paient par carte ou par MonCash.",
+      "generic": "Impossible d'ajouter vos suppléments. Veuillez réessayer."
     },
     "ticket": {
-      "title": "Vos extras",
+      "title": "Vos suppléments",
       "pickedUp": "Récupéré",
       "toCollect": "À récupérer",
       "howToCollect": "Présentez ce billet sur place pour les récupérer.",
-      "onFirstTicket": "Les extras de votre commande sont sur son premier billet."
+      "onFirstTicket": "Les suppléments de votre commande sont sur son premier billet."
     },
     "door": {
-      "title": "Extras à remettre",
+      "title": "Suppléments à remettre",
       "close": "Fermer",
       "pickedUp": "Remis",
       "toHandOver": "À remettre",
       "markPickedUp": "Remettre",
       "undo": "Annuler",
-      "loadFailed": "Impossible de charger les extras de cette commande.",
+      "loadFailed": "Impossible de charger les suppléments de cette commande.",
       "saveFailed": "Impossible d'enregistrer. Réessayez."
     },
     "dashboard": {
-      "title": "Ventes d'extras",
-      "none": "Aucun extra vendu pour l'instant.",
+      "title": "Ventes de suppléments",
+      "none": "Aucun supplément vendu pour l'instant.",
       "soldPicked": "{{sold}} vendus · {{picked}} remis",
-      "totals": "{{sold}} vendus au total, {{picked}} remis"
+      "total": "Total"
     }
   }
 }

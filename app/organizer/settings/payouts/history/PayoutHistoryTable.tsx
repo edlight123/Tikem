@@ -1,6 +1,7 @@
 'use client'
 
 import { ChevronRight, CheckCircle, Clock, XCircle, AlertCircle } from 'lucide-react'
+import { formatMoneyFromCents } from '@/lib/money'
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
 import { StatusChip } from '@/components/ui/kit'
@@ -26,15 +27,8 @@ export interface PayoutHistoryItem {
 export default function PayoutHistoryClient({ payouts }: { payouts: PayoutHistoryItem[] }) {
   const { t } = useTranslation('organizer')
 
-  const formatCurrency = (amount: number) => {
-    const normalized = amount / 100
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'HTG',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }).format(normalized)
-  }
+  // Shared formatter: whole gourdes drop ".00".
+  const formatCurrency = (amount: number) => formatMoneyFromCents(amount, 'HTG')
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {

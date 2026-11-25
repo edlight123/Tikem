@@ -22,9 +22,9 @@ export default function TicketAddOns({
   if (addOns.length === 0) {
     if (!ticket?.add_ons_ticket_id) return null
     return (
-      <p className={`text-caption text-fg-subtle ${className}`}>
+      <div className={`text-caption text-fg-subtle ${className}`}>
         {t('addOns.ticket.onFirstTicket', { defaultValue: "Your order's add-ons are on its first ticket." })}
-      </p>
+      </div>
     )
   }
   return (
@@ -54,9 +54,9 @@ export default function TicketAddOns({
           </li>
         ))}
       </ul>
-      <p className="mt-1 text-caption text-fg-subtle">
+      <div className="mt-1 text-caption text-fg-subtle">
         {t('addOns.ticket.howToCollect', { defaultValue: 'Show this ticket at the event to collect them.' })}
-      </p>
+      </div>
     </section>
   )
 }
