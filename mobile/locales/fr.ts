@@ -1788,6 +1788,7 @@ export default {
     linkInvite: 'Invitation par lien',
     staffInfo: 'Le staff peut scanner les billets et enregistrer les invités à l’entrée. Accordez l’accès aux participants pour qu’il voie aussi la liste.',
     memberPermissionBasic: 'Accès au scan',
+    tikemCrew: 'Équipe Tikèm',
     memberPermissionFull: 'Scan + liste des participants',
     viewAttendeesHelp: 'Le staff peut toujours enregistrer les invités. Activez ceci pour lui montrer aussi la liste des participants.',
     roleOwner: 'Propriétaire',

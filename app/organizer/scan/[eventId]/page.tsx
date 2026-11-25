@@ -67,7 +67,7 @@ export default async function DoorModeScanPage({ params }: { params: Promise<{ e
       const member = memberSnap.data() as any
       // A time-boxed seat (Tikèm door team crew) counts only inside its window.
       isEventStaff = Boolean(member?.permissions?.checkin) && memberSeatIsLive(member, Date.now())
-      canViewAttendees = Boolean(member?.permissions?.viewAttendees)
+      canViewAttendees = Boolean(member?.permissions?.viewAttendees) && member?.source !== 'tikem_door_team'
     }
   }
 

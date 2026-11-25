@@ -26,6 +26,9 @@ type EventInvite = {
 type EventMember = {
   id: string
   role: string
+  /** 'tikem_door_team': Tikèm's own door crew (lib/doorTeam), managed by Tikèm only. */
+  source?: string
+  first_name?: string
   permissions: { checkin?: boolean; viewAttendees?: boolean }
   createdAt: any
 }
@@ -158,6 +161,7 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
     const missingUids = Array.from(
       new Set(
         members
+          .filter((m) => m.source !== 'tikem_door_team')
           .map((m) => m.id)
           .filter((uid) => uid && !memberProfiles[uid])
       )
@@ -375,15 +379,17 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
               </thead>
               <tbody className="divide-y divide-line">
                 {members.map((m) => {
-                  const profile = memberProfiles[m.id]
-                  const displayName = profile?.full_name || profile?.email || m.id
+                  // Tikèm's door crew: first name only, read-only (managed by Tikèm).
+                  const tikemCrew = m.source === 'tikem_door_team'
+                  const profile = tikemCrew ? undefined : memberProfiles[m.id]
+                  const displayName = tikemCrew ? m.first_name || tx('event_staff.tikem_crew') : profile?.full_name || profile?.email || m.id
                   const showEmail = profile?.full_name && profile?.email
 
                   return (
                     <tr key={m.id} className="hover:bg-surface-low">
                       <td className="px-6 py-4">
                         <div className="font-medium text-fg">{displayName}</div>
-                        <div className="text-sm text-fg-muted">{m.role || 'staff'}</div>
+                        <div className="text-sm text-fg-muted">{tikemCrew ? tx('event_staff.tikem_crew') : m.role || 'staff'}</div>
                         {showEmail && (
                           <div className="text-xs text-fg-muted mt-0.5">{profile.email}</div>
                         )}
@@ -391,7 +397,7 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
                       <td className="px-6 py-4 text-sm text-fg-muted">
                         <div className="space-y-2">
                           <div className="text-fg-muted">{tx('event_staff.can_check_in')}</div>
-                          {m.role === 'owner' ? (
+                          {m.role === 'owner' || tikemCrew ? (
                             <div className="text-fg-muted">
                               Can view attendee list: {m.permissions?.viewAttendees ? 'Yes' : 'No'}
                             </div>
@@ -420,6 +426,7 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
                         </div>
                       </td>
                       <td className="px-6 py-4 text-right">
+                        {!tikemCrew && (
                         <button
                           onClick={() =>
                             setPendingConfirm({
@@ -434,6 +441,7 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
                         >
                           {tx('actions.remove')}
                         </button>
+                        )}
                       </td>
                     </tr>
                   )

@@ -20,6 +20,7 @@ jest.mock('@/lib/firebase/admin', () => ({
     return db
   },
   adminAuth: {
+    getUser: async (uid: string) => ({ uid, email: `${uid}@example.com` }),
     getUserByEmail: async (email: string) => {
       const u = authUsers[email]
       if (!u) throw new Error('not found')
@@ -31,7 +32,12 @@ jest.mock('@/lib/firebase/admin', () => ({
 jest.mock('next/server', () => ({ ...jest.requireActual('next/server'), after: (fn: () => unknown) => void fn() }))
 
 const requireAdmin = jest.fn()
-jest.mock('@/lib/auth', () => ({ requireAdmin: () => requireAdmin(), getCurrentUser: jest.fn(async () => null) }))
+jest.mock('@/lib/auth', () => ({
+  requireAdmin: () => requireAdmin(),
+  getCurrentUser: jest.fn(async () => null),
+  requireAuth: jest.fn(async () => ({ user: gateUser, error: gateUser ? null : 'Unauthorized' })),
+}))
+jest.mock('@/lib/notification-triggers', () => ({ sendPushNotification: jest.fn(async () => undefined) }))
 const logAdminAction = jest.fn()
 jest.mock('@/lib/admin/audit-log', () => ({ logAdminAction: (...a: any[]) => logAdminAction(...a) }))
 jest.mock('@/lib/rate-limit', () => ({ consumeRateLimit: jest.fn(async () => ({ limited: false })) }))
@@ -52,6 +58,10 @@ jest.mock('@/lib/organizer/context', () => ({
     return { ok: true, value: { user: gateUser, event: snap.data(), eventId, orgId: snap.data().organizer_id, role: 'owner' } }
   }),
   teamSeatIn: jest.fn(async () => null),
+  teamRoleIn: jest.fn(async () => null),
+  canOnEvent: jest.fn(async () => ({ allowed: true, role: 'owner' })),
+  eventOrgId: (e: any) => String(e?.organizer_id || ''),
+  teamCol: (orgId: string) => (db as any).collection(`organizers/${orgId}/team`),
 }))
 
 // FX, MonCash and Stripe (never called live).
@@ -163,6 +173,13 @@ import {
   verifyMonCashDoorTeamPayment,
 } from '@/lib/doorTeam/payments'
 import { evaluateDoorAccess } from '@/lib/scan/doorRules'
+import { markRefunded } from '@/lib/doorTeam/requests'
+import { checkDoorTeamPayment, creditBackDoorTeamOffset, paymentWindowEnd } from '@/lib/doorTeam/payments'
+import { GET as staffGET } from '@/app/api/organizer/events/[id]/staff/route'
+import { POST as staffPermissions } from '@/app/api/staff/members/permissions/route'
+import { POST as staffRemove } from '@/app/api/staff/members/remove/route'
+import { POST as staffAssign } from '@/app/api/staff/members/assign/route'
+import { POST as staffResolve } from '@/app/api/staff/members/resolve/route'
 import { GET as configGET, PUT as configPUT } from '@/app/api/admin/door-team/config/route'
 import { POST as adminAction } from '@/app/api/admin/door-team/requests/[requestId]/route'
 import { POST as organizerCreate } from '@/app/api/organizer/events/[id]/door-team/route'
@@ -716,6 +733,176 @@ describe('firestore.rules', () => {
     expect(rules).toMatch(/function memberSeatLive\(m\)/)
     expect(rules).toMatch(/m\.get\('access_until', null\) == null \|\| request\.time <= m\.access_until/)
     const fn = rules.slice(rules.indexOf('function canCheckin'), rules.indexOf('function canViewAttendees'))
+    expect(fn).toContain('memberSeatLive(')
+  })
+})
+
+// ── review fixes ─────────────────────────────────────────────────────────────
+
+describe('review fixes', () => {
+  async function paidRequest(reference = 'MC1') {
+    const r = await quoted()
+    await markRequestPaid(r.id, { funds_rail: 'moncash', reference, amount: 10500, currency: 'HTG', price_htg: 10500 })
+    return (await getRequest(r.id))!
+  }
+  const post = (body: unknown) => new Request('http://x', { method: 'POST', body: JSON.stringify(body) }) as any
+
+  it('1. re-checking a cancelled or refunded request never re-flags its own payment', async () => {
+    const r = await quoted()
+    const { orderId } = await startMonCashDoorTeamPayment(r)
+    retrieveMonCashOrderPayment.mockResolvedValue({ success: true, cost: 10500, transactionId: 'MC1' })
+    expect((await verifyMonCashDoorTeamPayment(orderId)).paid).toBe(true)
+    await cancelDoorTeamRequest((await getRequest(r.id))!, 'org1', NOW)
+    expect(await getRequest(r.id)).toMatchObject({ status: 'cancelled', needs_refund: true })
+    await markRefunded(r.id, ADMIN, 're_123')
+    expect((await getRequest(r.id))!.needs_refund).toBe(false)
+    // The MonCash return / webhook replay of the SAME payment: nothing new.
+    expect(await verifyMonCashDoorTeamPayment(orderId)).toMatchObject({ paid: true })
+    expect(await markRequestPaid(r.id, { funds_rail: 'moncash', reference: 'MC1', amount: 10500, currency: 'HTG', price_htg: 10500 })).toMatchObject({ ok: true, alreadyPaid: true })
+    // "Check payment" on a closed request does not ask the gateways at all.
+    retrieveMonCashOrderPayment.mockClear()
+    expect(await checkDoorTeamPayment((await getRequest(r.id))!)).toEqual({ paid: false, reason: 'not_awaiting_payment' })
+    expect(retrieveMonCashOrderPayment).not.toHaveBeenCalled()
+    const after = (await getRequest(r.id))!
+    expect(after.needs_refund).toBe(false)
+    expect(after.late_payments || []).toHaveLength(0)
+    expect(after.refund.status).toBe('refunded')
+  })
+
+  it('2. an expired quote cannot be paid or kept alive', async () => {
+    const r = await quoted()
+    db.store.set(`door_team_requests/${r.id}`, { ...db.store.get(`door_team_requests/${r.id}`), quote_expires_at: new Date(Date.now() - 60_000).toISOString() })
+    for (const method of ['moncash', 'card', 'balance']) {
+      const res = await organizerAction(post({ action: 'pay', method }), { params: Promise.resolve({ id: EVENT, requestId: r.id }) })
+      expect(res.status).toBe(409)
+      expect((await res.json()).code).toBe('quote_expired')
+    }
+    await expect(startMonCashDoorTeamPayment((await getRequest(r.id))!)).rejects.toMatchObject({ code: 'quote_expired' })
+    await expect(startCardDoorTeamPayment((await getRequest(r.id))!, 'https://x')).rejects.toMatchObject({ code: 'quote_expired' })
+    fund('ev9', 2_000_000)
+    expect(await payDoorTeamFromBalance({ request: (await getRequest(r.id))!, user: OWNER })).toMatchObject({ ok: false, code: 'quote_expired' })
+    expect(stripeCreate).not.toHaveBeenCalled()
+    expect(withdrawFromEarnings).not.toHaveBeenCalled()
+    // The payment window never runs past the quote's close.
+    const closes = new Date(NOW + 30 * 60_000).toISOString()
+    expect(paymentWindowEnd(NOW, closes)).toBe(closes)
+    expect(paymentWindowEnd(NOW, new Date(NOW - 1).toISOString())).toBe(new Date(NOW - 1).toISOString())
+  })
+
+  describe('3. crew seats on the organizer staff APIs', () => {
+    async function withCrew() {
+      const r = await paidRequest()
+      await assignCrew(r.id, { uid: 'crew1', firstName: 'Jean' }, ADMIN)
+      db.store.set(`events/${EVENT}/members/staff7`, { uid: 'staff7', role: 'staff', permissions: { checkin: true, viewAttendees: false }, source: 'org_team', createdAt: new Date() })
+      db.store.set('users/crew1', { full_name: 'Jean Baptiste', email: 'jean@private.example', photo_url: 'https://x/p.jpg' })
+      return r
+    }
+    it('listed as first name + Tikèm crew only (no uid, email, photo)', async () => {
+      await withCrew()
+      const res = await staffGET(new Request('http://x') as any, { params: Promise.resolve({ id: EVENT }) })
+      const body = await res.json()
+      const crew = body.members.filter((m: any) => m.tikemCrew)
+      expect(crew).toEqual([
+        { id: 'tikem-crew-1', role: 'tikem_crew', tikemCrew: true, permissions: { checkin: true, viewAttendees: false }, createdAt: null, profile: { email: null, full_name: 'Jean', photo_url: null } },
+      ])
+      const raw = JSON.stringify(body)
+      expect(raw).not.toContain('crew1')
+      expect(raw).not.toContain('jean@private.example')
+      expect(raw).not.toContain('Baptiste')
+      expect(body.members.some((m: any) => m.id === 'staff7')).toBe(true)
+    })
+    it('the organizer cannot change permissions, remove or re-assign a crew seat', async () => {
+      await withCrew()
+      const perm = await staffPermissions(post({ eventId: EVENT, memberId: 'crew1', permissions: { viewAttendees: true } }))
+      expect(perm.status).toBe(403)
+      expect((await perm.json()).code).toBe('tikem_crew_seat')
+      expect(db.store.get(`events/${EVENT}/members/crew1`)!.permissions).toEqual({ checkin: true, viewAttendees: false })
+      expect((await staffRemove(post({ eventId: EVENT, memberId: 'crew1' }))).status).toBe(403)
+      expect(db.store.get(`events/${EVENT}/members/crew1`)).toBeDefined()
+      const { teamRoleIn } = jest.requireMock('@/lib/organizer/context')
+      teamRoleIn.mockResolvedValueOnce('staff')
+      expect((await staffAssign(post({ eventId: EVENT, uid: 'crew1', permissions: { viewAttendees: true } }))).status).toBe(403)
+      expect(db.store.get(`events/${EVENT}/members/crew1`)).toMatchObject({ source: 'tikem_door_team', permissions: { viewAttendees: false } })
+      // Ordinary staff stay editable.
+      expect((await staffPermissions(post({ eventId: EVENT, memberId: 'staff7', permissions: { viewAttendees: true } }))).status).toBe(200)
+    })
+    it('resolve never returns a crew email', async () => {
+      await withCrew()
+      const res = await staffResolve(post({ eventId: EVENT, uids: ['crew1', 'staff7'] }))
+      const body = await res.json()
+      expect(body.profiles.crew1).toEqual({ email: null, full_name: 'Jean' })
+      expect(body.profiles.staff7.email).toBe('staff7@example.com')
+    })
+  })
+
+  it('4. crediting a stray balance debit back does not mark a card-paid request refunded', async () => {
+    const r = await paidRequest('pi_card')
+    db.store.set(`door_team_requests/${r.id}`, { ...db.store.get(`door_team_requests/${r.id}`), payment: { ...r.payment, funds_rail: 'stripe_platform' } })
+    db.store.set(`withdrawal_requests/doorteam_${r.id}`, { method: 'balance_offset', status: 'completed', amount: 1_050_000, eventId: 'ev9', doorTeamRequestId: r.id })
+    db.store.set('event_earnings/ev9', { withdrawnAmount: 1_050_000 })
+    expect(await creditBackDoorTeamOffset(r.id, 'system')).toMatchObject({ ok: true })
+    expect(db.store.get('event_earnings/ev9')).toMatchObject({ withdrawnAmount: 0 })
+    const after = (await getRequest(r.id))!
+    expect(after.refund).toBeUndefined()
+    expect(after.payment.refunded_to_balance_at).toBeUndefined()
+  })
+
+  it('5. the crew size and duplicates are re-checked inside the transaction', async () => {
+    const r = await quoted({ staffCount: 2 })
+    await markRequestPaid(r.id, { funds_rail: 'moncash', reference: 'MC1', amount: 7000, currency: 'HTG', price_htg: 7000 })
+    await assignCrew(r.id, { uid: 'a', firstName: 'A' }, ADMIN)
+    // Another admin's commit lands between this call's pre-check and its transaction.
+    const concurrent = (uid: string) => {
+      const real = db.runTransaction.bind(db)
+      const spy = jest.spyOn(db, 'runTransaction').mockImplementationOnce(async (fn: any) => {
+        const path = `door_team_requests/${r.id}`
+        const cur = db.store.get(path)!
+        db.store.set(path, { ...cur, crew: [...cur.crew, { uid, first_name: uid }], crew_uids: [...cur.crew_uids, uid] })
+        return real(fn)
+      })
+      return spy
+    }
+    concurrent('b')
+    expect(await assignCrew(r.id, { uid: 'c', firstName: 'C' }, ADMIN)).toMatchObject({ ok: false, code: 'crew_full' })
+    expect(db.store.get(`events/${EVENT}/members/c`)).toBeUndefined()
+    const mid = (await getRequest(r.id))!
+    db.store.set(`door_team_requests/${r.id}`, { ...mid, crew: mid.crew.slice(0, 1), crew_uids: mid.crew_uids.slice(0, 1) })
+    concurrent('d')
+    // 'd' was just added concurrently: adding 'd' again is a no-op, not a duplicate.
+    expect((await assignCrew(r.id, { uid: 'd', firstName: 'D' }, ADMIN)).ok).toBe(true)
+    const after = (await getRequest(r.id))!
+    expect(after.crew_uids).toEqual(['a', 'd'])
+    jest.restoreAllMocks()
+  })
+
+  it('6. a paid request never confirmed is closed after the event (flagged for review)', async () => {
+    const r = await paidRequest()
+    await assignCrew(r.id, { uid: 'crew1', firstName: 'Jean' }, ADMIN)
+    const over = Date.parse(r.event_end_at!) + 7 * HOUR
+    const until = Date.parse((await getRequest(r.id))!.access_until)
+    expect(await sweepDoorTeam({ now: Math.max(over, until + 1) })).toMatchObject({ done: 1 })
+    expect(await getRequest(r.id)).toMatchObject({ status: 'done', needs_review: 'paid_never_confirmed' })
+    expect(db.store.get(`events/${EVENT}/members/crew1`)).toBeUndefined()
+  })
+
+  it('7. before expiring, every rail started is asked (a card paid after switching to MonCash)', async () => {
+    const r = await quoted()
+    const card = await startCardDoorTeamPayment(r, 'https://x')
+    await startMonCashDoorTeamPayment((await getRequest(r.id))!)
+    // The card session was paid anyway, before Stripe expired it.
+    Object.assign(sessions.get(card.sessionId), { payment_status: 'paid', amount_total: card.amountUsdCents })
+    retrieveMonCashOrderPayment.mockResolvedValue({ success: false, payment_status: 'pending' })
+    const later = Date.parse((await getRequest(r.id))!.quote_expires_at) + HOUR
+    expect(await sweepDoorTeam({ now: later })).toMatchObject({ paid: 1, expired: 0 })
+    expect((await getRequest(r.id))!.payment).toMatchObject({ funds_rail: 'stripe_platform', status: 'paid' })
+  })
+
+  it('8. crew never get the attendee list (door access and rules)', async () => {
+    const seat = { role: 'staff', permissions: { checkin: true, viewAttendees: true }, source: 'tikem_door_team', access_from: new Date(NOW - HOUR), access_until: new Date(NOW + HOUR) }
+    expect(evaluateDoorAccess({ uid: 'crew1', isAdmin: false, event: { organizer_id: 'org1' }, member: seat, now: NOW })).toMatchObject({ allowed: true, canViewAttendees: false })
+    const rules = readFileSync(join(process.cwd(), 'firestore.rules'), 'utf8')
+    const fn = rules.slice(rules.indexOf('function canViewAttendees'), rules.indexOf('function isTicketOwner'))
+    expect(fn).toContain("get('source', '') != 'tikem_door_team'")
     expect(fn).toContain('memberSeatLive(')
   })
 })

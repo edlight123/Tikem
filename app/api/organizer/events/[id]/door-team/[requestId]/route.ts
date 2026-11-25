@@ -5,10 +5,12 @@ import {
   cancelDoorTeamRequest,
   checkDoorTeamPayment,
   payDoorTeamFromBalance,
+  QuoteClosedError,
   startCardDoorTeamPayment,
   startMonCashDoorTeamPayment,
 } from '@/lib/doorTeam/payments'
 import { CardFxUnavailableError } from '@/lib/platformPay/card'
+import { quoteOpen } from '@/lib/doorTeam/rules'
 
 export const dynamic = 'force-dynamic'
 
@@ -38,6 +40,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     switch (action) {
       case 'pay': {
         if (r.status !== 'quoted') return NextResponse.json({ error: 'This request is not waiting for payment', code: 'not_payable' }, { status: 409 })
+        // A closed quote is never paid at its old price (nor kept alive by a new attempt).
+        if (!quoteOpen(r, Date.now())) {
+          return NextResponse.json({ error: 'This quote has expired. Ask Tikèm for a new one.', code: 'quote_expired' }, { status: 409 })
+        }
         const method = body?.method === 'card' ? 'card' : body?.method === 'balance' ? 'balance' : 'moncash'
         if (method === 'balance') {
           let paid: Awaited<ReturnType<typeof payDoorTeamFromBalance>>
@@ -59,6 +65,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           return NextResponse.json({ redirectUrl: started.redirectUrl })
         } catch (err: any) {
           if (err instanceof CardFxUnavailableError) return NextResponse.json({ error: err.message, code: 'fx_unavailable' }, { status: 503 })
+          if (err instanceof QuoteClosedError) return NextResponse.json({ error: err.message, code: 'quote_expired' }, { status: 409 })
           console.error('[door-team] payment start failed', { requestId, method, message: err?.message })
           return NextResponse.json({ error: 'The payment could not be started. Nothing was charged.', code: 'payment_start_failed' }, { status: 502 })
         }

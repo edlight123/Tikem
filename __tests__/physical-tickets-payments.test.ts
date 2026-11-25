@@ -183,6 +183,31 @@ describe('unpaid batches expire', () => {
     expect(await expireUnpaidBatches()).toEqual({ checked: 1, cancelled: 0, paid: 0 })
     expect((await getBatch(b.id))!.status).toBe('awaiting_payment')
   })
+
+  it('every rail is asked: a card session paid after switching to MonCash marks it paid, never cancelled', async () => {
+    const batch = await newBatch()
+    const card = await startCardBatchPayment(batch, 'https://x')
+    const mc = await startMonCashBatchPayment((await getBatch(batch.id))!)
+    expect((await getBatch(batch.id))!.card_session_ids).toEqual([card.sessionId])
+    Object.assign(sessions.get(card.sessionId), { payment_status: 'paid', amount_total: card.amountUsdCents })
+    retrieveMonCashOrderPayment.mockResolvedValue({ success: false, payment_status: 'pending' })
+    db.store.set(`physical_batches/${batch.id}`, { ...db.store.get(`physical_batches/${batch.id}`)!, payment_expires_at: new Date(0).toISOString() })
+    expect(await expireUnpaidBatches()).toEqual({ checked: 1, cancelled: 0, paid: 1 })
+    expect((await getBatch(batch.id))!.status).toBe('paid')
+    expect(retrieveMonCashOrderPayment).toHaveBeenCalledWith(mc.orderId)
+  })
+
+  it('every MonCash order is asked, not only the latest', async () => {
+    const batch = await newBatch('moncash')
+    const first = await startMonCashBatchPayment(batch)
+    await startMonCashBatchPayment((await getBatch(batch.id))!)
+    retrieveMonCashOrderPayment.mockImplementation(async (orderId: string) =>
+      orderId === first.orderId ? { success: true, cost: 4000, transactionId: 'mcOld' } : { success: false, payment_status: 'pending' }
+    )
+    db.store.set(`physical_batches/${batch.id}`, { ...db.store.get(`physical_batches/${batch.id}`)!, payment_expires_at: new Date(0).toISOString() })
+    expect(await expireUnpaidBatches()).toEqual({ checked: 1, cancelled: 0, paid: 1 })
+    expect((await getBatch(batch.id))!.payment.reference).toBe('mcOld')
+  })
 })
 
 describe('an expired card session never cancels a live batch', () => {

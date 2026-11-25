@@ -134,6 +134,8 @@ export async function startCardBatchPayment(
     'payment.fx_htg_per_usd': htgPerUsd,
     'payment.fx_source': rateSource,
     'payment.session_expires_at': session.expiresAt,
+    // Every session this batch ever opened: the expiry sweep asks them all.
+    card_session_ids: Array.from(new Set([...(Array.isArray(batch.card_session_ids) ? batch.card_session_ids : []), session.sessionId])),
     updated_at: new Date().toISOString(),
   })
   // Never two live sessions for one batch. The NEW id is saved first, so the
@@ -186,6 +188,29 @@ export async function handleCardSessionExpired(session: { id: string; metadata?:
 }
 
 /**
+ * Ask every card session and MonCash order this batch ever opened whether it
+ * was paid. The first hit marks it paid; a second one is flagged needs_refund
+ * by markBatchPaid.
+ */
+export async function batchPaidOnAnyRail(batchId: string, b: Record<string, any>): Promise<boolean> {
+  let paid = false
+  const sessions = new Set<string>(
+    [...(Array.isArray(b.card_session_ids) ? b.card_session_ids : []), b.payment?.stripe_session_id, b.payment?.retired_stripe_session_id]
+      .filter(Boolean)
+      .map(String)
+  )
+  for (const sid of Array.from(sessions)) {
+    if ((await verifyCardBatchPayment(sid, batchId)).paid) paid = true
+  }
+  const orders = await adminDb.collection(PHYSICAL_BATCH_ORDERS).where('batch_id', '==', batchId).get()
+  const orderIds = new Set<string>([...orders.docs.map((d: any) => String(d.id)), ...(b.payment?.order_id ? [String(b.payment.order_id)] : [])])
+  for (const orderId of Array.from(orderIds)) {
+    if ((await verifyMonCashBatchPayment(orderId)).paid) paid = true
+  }
+  return paid
+}
+
+/**
  * The sweep (from /api/cron/inventory-sweep): unpaid batches past their
  * payment window are cancelled and their seats given back. Before cancelling,
  * the gateway is asked once more, so a payment that landed but was never
@@ -212,18 +237,11 @@ export async function expireUnpaidBatches(opts: { now?: number; limit?: number }
         paid++
         continue
       }
-      if (b.payment?.method === 'card' && b.payment?.stripe_session_id) {
-        const r = await verifyCardBatchPayment(String(b.payment.stripe_session_id), doc.id)
-        if (r.paid) {
-          paid++
-          continue
-        }
-      } else if (b.payment?.order_id) {
-        const r = await verifyMonCashBatchPayment(String(b.payment.order_id))
-        if (r.paid) {
-          paid++
-          continue
-        }
+      // Every rail the batch ever started, not only the current one: a card
+      // session paid after switching to MonCash must not be cancelled over.
+      if (await batchPaidOnAnyRail(doc.id, b)) {
+        paid++
+        continue
       }
     } catch (err: any) {
       // Cannot tell whether it was paid: keep the seats held and try next sweep.

@@ -308,6 +308,9 @@ export async function markRequestPaid(id: string, proof: PaidProof): Promise<{ o
         tx.update(ref, { needs_refund: true, late_payments: [...late, record], updated_at: nowIso })
       }
     }
+    // The payment this request already recorded (any status, even after a
+    // cancel or a manual refund): nothing new happened, never a "late" payment.
+    if (r.payment?.reference && String(r.payment.reference) === String(proof.reference)) return 'already'
     if (r.status === 'quoted') {
       if (Number(r.price_htg) !== Number(proof.price_htg)) {
         flagLate()
@@ -331,7 +334,6 @@ export async function markRequestPaid(id: string, proof: PaidProof): Promise<{ o
       })
       return 'ok'
     }
-    if (['paid', 'confirmed', 'done'].includes(r.status) && String(r.payment?.reference || '') === String(proof.reference)) return 'already'
     flagLate()
     return ['paid', 'confirmed', 'done'].includes(r.status) ? 'duplicate' : 'closed'
   })
@@ -395,6 +397,10 @@ export async function assignCrew(id: string, crew: { uid: string; firstName: str
     if (cur.status !== 'paid' && cur.status !== 'confirmed') return { code: 'not_paid' }
     const existing = seat.exists ? seat.data() || {} : null
     if (existing && !isOurSeat(existing, id)) return { code: 'already_member' }
+    // Re-checked here: two admins adding crew at once can neither pass the
+    // requested crew size nor add the same person twice.
+    if ((cur.crew_uids || []).includes(crew.uid)) return { code: 'ok', request: cur }
+    if ((cur.crew || []).length >= Number(cur.staff_count)) return { code: 'crew_full' }
     const nowIso = new Date().toISOString()
     tx.set(seatRef, {
       uid: crew.uid,
@@ -403,6 +409,8 @@ export async function assignCrew(id: string, crew: { uid: string; firstName: str
       permissions: { checkin: true, viewAttendees: false },
       source: DOOR_TEAM_MEMBER_SOURCE,
       door_team_request_id: id,
+      // What the organizer's staff screens show for this seat (no uid/email).
+      first_name: crew.firstName,
       access_from: window.from,
       access_until: window.until,
       createdAt: new Date(),
@@ -422,6 +430,7 @@ export async function assignCrew(id: string, crew: { uid: string; firstName: str
     return { code: 'ok', request: { ...cur, ...next } }
   })
   if (out.code === 'ok') return { ok: true, request: (out as any).request }
+  if (out.code === 'crew_full') return { ok: false, status: 409, code: 'crew_full', error: `This request is for ${r.staff_count} staff` }
   if (out.code === 'already_member') {
     return { ok: false, status: 409, code: 'already_member', error: "That person is already on this event's team; Tikèm will not change their access" }
   }

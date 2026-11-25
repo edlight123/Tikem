@@ -81,7 +81,8 @@ export function evaluateDoorAccess(input: DoorAccessInput): DoorAccessDecision {
     if (!memberSeatIsLive(member, input.now ?? Date.now())) {
       return { allowed: false, status: 403, error: 'Your door access for this event is not active right now' }
     }
-    return { allowed: true, role: 'staff', canViewAttendees: member.permissions?.viewAttendees === true }
+    // Tikèm's door crew never gets the attendee list, whatever the seat says.
+    return { allowed: true, role: 'staff', canViewAttendees: member.permissions?.viewAttendees === true && member.source !== 'tikem_door_team' }
   }
   return { allowed: false, status: 403, error: 'You do not have check-in access for this event' }
 }

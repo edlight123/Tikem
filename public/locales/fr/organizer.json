@@ -1059,6 +1059,7 @@
     "allow_viewing_attendee_details": "Autoriser la consultation des détails des participants",
     "can_check_in": "Peut enregistrer les entrées",
     "can_view_attendee_list": "Peut voir la liste des participants",
+    "tikem_crew": "Équipe Tikèm",
     "event_scoped_access": "Accès limité à l'événement pour l'enregistrement",
     "invite_links_one_time": "Les liens d'invitation sont à usage unique. Créez-en un nouveau en cas de perte.",
     "invite_staff": "Inviter du personnel",

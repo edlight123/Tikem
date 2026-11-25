@@ -120,10 +120,15 @@ service cloud.firestore {
       );
     }
 
+    // Tikèm's door crew (source 'tikem_door_team') never reads the attendee
+    // list, whatever its permissions say; any other time-boxed seat only
+    // inside its window.
     function canViewAttendees(eventId) {
       return isEventOwner(eventId) || (
         isEventMember(eventId) &&
-        get(/databases/$(database)/documents/events/$(eventId)/members/$(request.auth.uid)).data.permissions.viewAttendees == true
+        get(/databases/$(database)/documents/events/$(eventId)/members/$(request.auth.uid)).data.permissions.viewAttendees == true &&
+        get(/databases/$(database)/documents/events/$(eventId)/members/$(request.auth.uid)).data.get('source', '') != 'tikem_door_team' &&
+        memberSeatLive(get(/databases/$(database)/documents/events/$(eventId)/members/$(request.auth.uid)).data)
       );
     }
 

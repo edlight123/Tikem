@@ -3,6 +3,7 @@ import { adminDb } from '@/lib/firebase/admin'
 import { requireEventAccess, teamRoleIn } from '@/lib/organizer/context'
 import { normalizePermissions, serverTimestamp } from '@/app/api/staff/_utils'
 import { sendPushNotification } from '@/lib/notification-triggers'
+import { isTikemCrewSeat } from '@/lib/doorTeam/rules'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -45,6 +46,10 @@ export async function POST(request: NextRequest) {
 
     const memberRef = adminDb.collection('events').doc(eventId).collection('members').doc(uid)
     const existing = await memberRef.get()
+    // A Tikèm door crew seat is never re-scoped by the organizer.
+    if (existing.exists && isTikemCrewSeat(existing.data())) {
+      return NextResponse.json({ error: "Tikèm's door crew is managed by Tikèm", code: 'tikem_crew_seat' }, { status: 403 })
+    }
     if (existing.exists && String(existing.data()?.role || '') === 'owner') {
       return NextResponse.json({ success: true, alreadyAssigned: true })
     }

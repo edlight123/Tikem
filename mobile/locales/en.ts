@@ -2220,6 +2220,7 @@ export default {
     linkInvite: 'Link invite',
     staffInfo: 'Staff can scan tickets and check guests in at the door. Grant attendee access to also let them view the guest list.',
     memberPermissionBasic: 'Check-in access',
+    tikemCrew: 'Tikèm crew',
     memberPermissionFull: 'Check-in + attendee list',
     viewAttendeesHelp: 'Staff can always check guests in. Turn this on to also let them see the attendee list.',
     roleOwner: 'Owner',

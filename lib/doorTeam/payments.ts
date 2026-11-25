@@ -31,7 +31,7 @@ import { checkMonCashOrder, monCashRedirectFor, newMonCashOrderId } from '@/lib/
 import { canUseBalance, debitReleasedBalance, isLiveOffsetRow, reverseOffsetRowInTransaction } from '@/lib/platformPay/balance'
 import type { CurrentUser } from '@/lib/organizer/context'
 import { completeRequest, getRequest, loadDoorTeamConfig, markRequestPaid, requestRef, revokeCrewAccess, type DoorTeamRequest } from './requests'
-import { DOOR_TEAM_ORDERS, PAYMENT_WINDOW_MS, cancelDecision, doorTeamOffsetId, toDate } from './rules'
+import { ACCESS_TAIL_MS, DOOR_TEAM_ORDERS, PAYMENT_WINDOW_MS, cancelDecision, doorTeamOffsetId, isPaidStatus, quoteOpen, toDate } from './rules'
 import { notifyAdmins } from './notify'
 
 export const DOOR_TEAM_CARD_KIND = 'door_team'
@@ -40,15 +40,28 @@ export function requestPageUrl(origin: string, r: { id: string; event_id: string
   return `${origin}/organizer/events/${encodeURIComponent(r.event_id)}/door-team?request=${encodeURIComponent(r.id)}${extra}`
 }
 
-function payable(r: DoorTeamRequest | null): r is DoorTeamRequest {
-  return !!r && r.status === 'quoted' && Number(r.price_htg) > 0
+function payable(r: DoorTeamRequest | null, now = Date.now()): r is DoorTeamRequest {
+  return !!r && quoteOpen(r, now) && Number(r.price_htg) > 0
 }
 
-/** The current attempt's window: 2h, but never past the quote's close (unless the quote already closed). */
+/** Thrown when a payment is started on a quote that has closed: it is never paid at the old price. */
+export class QuoteClosedError extends Error {
+  code = 'quote_expired'
+  constructor() {
+    super('This quote has expired. Ask Tikèm for a new one.')
+  }
+}
+
+function assertPayable(r: DoorTeamRequest): void {
+  if (!payable(r)) throw new QuoteClosedError()
+}
+
+/** The current attempt's window: 2h, never past the quote's close. */
 export function paymentWindowEnd(now: number, quoteExpiresAt: string | null | undefined): string {
   const cap = toDate(quoteExpiresAt)?.getTime()
   const end = now + PAYMENT_WINDOW_MS
-  return new Date(cap && cap > now ? Math.min(end, cap) : end).toISOString()
+  // Never past the quote's close: an expired quote cannot be kept alive by paying.
+  return new Date(cap ? Math.min(end, cap) : end).toISOString()
 }
 
 /** Forget the current card session FIRST (so its expiry cannot match), then expire it. */
@@ -66,6 +79,7 @@ export async function retireDoorTeamCardSession(r: Pick<DoorTeamRequest, 'id' | 
 // ── MonCash ──────────────────────────────────────────────────────────────────
 
 export async function startMonCashDoorTeamPayment(r: DoorTeamRequest): Promise<{ redirectUrl: string; orderId: string }> {
+  assertPayable(r)
   const orderId = newMonCashOrderId()
   await adminDb.collection(DOOR_TEAM_ORDERS).doc(orderId).set({
     request_id: r.id,
@@ -111,6 +125,7 @@ export async function verifyMonCashDoorTeamPayment(orderId: string): Promise<{ p
 // ── card ─────────────────────────────────────────────────────────────────────
 
 export async function startCardDoorTeamPayment(r: DoorTeamRequest, origin: string) {
+  assertPayable(r)
   const price = Number(r.price_htg)
   const { amountUsdCents, htgPerUsd, rateSource } = await cardAmountForHtg(price)
   const previous = String(r.payment?.stripe_session_id || '')
@@ -140,6 +155,8 @@ export async function startCardDoorTeamPayment(r: DoorTeamRequest, origin: strin
     'payment.fx_htg_per_usd': htgPerUsd,
     'payment.fx_source': rateSource,
     'payment.session_expires_at': session.expiresAt,
+    // Every session this request ever opened: the expiry check asks them all.
+    card_session_ids: Array.from(new Set([...(r.card_session_ids || []), session.sessionId])),
     payment_expires_at: paymentWindowEnd(Date.now(), r.quote_expires_at),
     updated_at: new Date().toISOString(),
   })
@@ -220,6 +237,7 @@ export async function payDoorTeamFromBalance(params: { request: DoorTeamRequest;
     }
     return { ok: false, status: 409, code: 'offset_exists', error: 'This request was already charged to the balance' }
   }
+  if (r.status === 'quoted' && !quoteOpen(r, Date.now())) return { ok: false, status: 409, code: 'quote_expired', error: 'This quote has expired. Ask Tikèm for a new one.' }
   if (!payable(r)) return { ok: false, status: 409, code: 'not_payable', error: 'This request is not waiting for payment' }
 
   await retireDoorTeamCardSession(r)
@@ -272,7 +290,10 @@ export async function creditBackDoorTeamOffset(
     const r = snap.exists ? snap.data() || {} : null
     if (cancel && r && !['paid', 'confirmed', 'cancelled'].includes(String(r.status))) return { ok: false, code: 'not_cancellable' }
     const amount = await reverseOffsetRowInTransaction(tx, rowRef, row, by, 'door_team_cancelled')
-    if (r) {
+    // Stamp the request only when the balance WAS its payment (or this is the
+    // cancel itself): a stray debit credited back on a card-paid request must
+    // not make it look refunded.
+    if (r && (cancel || r.payment?.funds_rail === 'balance_offset')) {
       const nowIso = new Date().toISOString()
       tx.update(ref, {
         'payment.refunded_to_balance_at': nowIso,
@@ -336,7 +357,9 @@ async function afterPaid(requestId: string): Promise<void> {
 
 /** Ask the rail of the current attempt whether it was paid. */
 export async function checkDoorTeamPayment(r: DoorTeamRequest, sessionId?: string | null): Promise<{ paid: boolean; reason?: string | null }> {
-  if (['paid', 'confirmed', 'done'].includes(r.status)) return { paid: true }
+  // Only a request still waiting for payment asks the gateways: re-checking a
+  // cancelled or refunded one would re-record its own payment as "late".
+  if (r.status !== 'quoted') return { paid: isPaidStatus(r.status), reason: isPaidStatus(r.status) ? null : 'not_awaiting_payment' }
   if ((await reconcileDoorTeamOffset(r.id)) === 'finished_paid') return { paid: true }
   const sid = String(sessionId || r.payment?.stripe_session_id || '')
   if (r.payment?.method === 'card' && sid) {
@@ -409,10 +432,35 @@ export async function cancelDoorTeamRequest(r: DoorTeamRequest, by: string, now 
 // ── sweep ────────────────────────────────────────────────────────────────────
 
 /**
+ * Before a quote is expired: ask EVERY rail this request ever started, not only
+ * the current one (the organizer may have opened a card session, switched to
+ * MonCash, and paid the card after all). Any hit marks it paid; a second hit is
+ * flagged needs_refund by markRequestPaid.
+ */
+export async function paidOnAnyRail(r: DoorTeamRequest): Promise<boolean> {
+  if ((await reconcileDoorTeamOffset(r.id)) === 'finished_paid') return true
+  let paid = false
+  const sessions = new Set<string>(
+    [...(r.card_session_ids || []), r.payment?.stripe_session_id, r.payment?.retired_stripe_session_id].filter(Boolean).map(String)
+  )
+  for (const sid of Array.from(sessions)) {
+    if ((await verifyCardDoorTeamPayment(sid, r.id)).paid) paid = true
+  }
+  const orders = await adminDb.collection(DOOR_TEAM_ORDERS).where('request_id', '==', r.id).get()
+  const orderIds = new Set<string>([...orders.docs.map((d: any) => String(d.id)), ...(r.payment?.order_id ? [String(r.payment.order_id)] : [])])
+  for (const orderId of Array.from(orderIds)) {
+    if ((await verifyMonCashDoorTeamPayment(orderId)).paid) paid = true
+  }
+  return paid
+}
+
+/**
  * From /api/cron/inventory-sweep:
  *   - quoted requests past their close (the quote's, or a later in-flight
- *     attempt's window): one last gateway check, then expired;
- *   - confirmed requests past the crew's access window: done, door access removed.
+ *     attempt's window): every rail asked once more, then expired;
+ *   - confirmed requests past the crew's access window: done, door access removed;
+ *   - paid requests never confirmed, once the event is over: done too (crew
+ *     access removed) and flagged needs_review so an admin settles them.
  */
 export async function sweepDoorTeam(opts: { now?: number; limit?: number } = {}): Promise<{ expired: number; paid: number; done: number }> {
   const now = opts.now ?? Date.now()
@@ -425,8 +473,7 @@ export async function sweepDoorTeam(opts: { now?: number; limit?: number } = {})
     const closes = Math.max(toDate(r.quote_expires_at)?.getTime() || 0, toDate(r.payment_expires_at)?.getTime() || 0)
     if (!closes || closes >= now) continue
     try {
-      const check = await checkDoorTeamPayment(r)
-      if (check.paid) {
+      if (await paidOnAnyRail(r)) {
         paid++
         continue
       }
@@ -452,10 +499,16 @@ export async function sweepDoorTeam(opts: { now?: number; limit?: number } = {})
       await retireDoorTeamCardSession(r)
     }
   }
-  const confirmed = await adminDb.collection('door_team_requests').where('status', '==', 'confirmed').limit(opts.limit ?? 100).get()
-  for (const doc of confirmed.docs) {
-    const until = toDate(doc.data()?.access_until)?.getTime()
-    if (until && until < now) {
+  for (const status of ['confirmed', 'paid'] as const) {
+    const snap = await adminDb.collection('door_team_requests').where('status', '==', status).limit(opts.limit ?? 100).get()
+    for (const doc of snap.docs) {
+      const d = doc.data() || {}
+      const eventOver = (toDate(d.event_end_at) || toDate(d.event_start_at))?.getTime()
+      const until = toDate(d.access_until)?.getTime() || (eventOver ? eventOver + ACCESS_TAIL_MS : 0)
+      if (!until || until >= now) continue
+      if (status === 'paid') {
+        await requestRef(doc.id).update({ needs_review: 'paid_never_confirmed', updated_at: new Date(now).toISOString() })
+      }
       const m = await completeRequest(doc.id, 'system')
       if (m.ok) done++
     }

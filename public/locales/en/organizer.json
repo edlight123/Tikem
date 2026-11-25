@@ -1059,6 +1059,7 @@
     "allow_viewing_attendee_details": "Allow viewing attendee details",
     "can_check_in": "Can check in",
     "can_view_attendee_list": "Can view attendee list",
+    "tikem_crew": "Tikèm crew",
     "event_scoped_access": "Event-scoped access for check-in",
     "invite_links_one_time": "Invite links are one-time use. Create a new one if lost.",
     "invite_staff": "Invite Staff",

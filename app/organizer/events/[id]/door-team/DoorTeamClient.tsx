@@ -234,6 +234,8 @@ function RequestCard({
   const chosen = method === 'balance' && !balanceShown ? 'moncash' : method
   const standardTotal = Number(r.standard_quote?.totalHtg) || 0
   const paid = r.status === 'paid' || r.status === 'confirmed'
+  // A quote past its close cannot be paid (the server refuses it too).
+  const quoteClosed = !!r.quote_expires_at && Date.parse(r.quote_expires_at) <= Date.now()
   const refundable = eventStart ? Date.parse(eventStart) - Date.now() >= config.refundCutoffHours * 3600_000 : false
 
   const act = async (body: Record<string, unknown>) => {
@@ -305,7 +307,7 @@ function RequestCard({
         </div>
       )}
 
-      {r.status === 'quoted' && (
+      {r.status === 'quoted' && !quoteClosed && (
         <div className="mt-4 space-y-4">
           <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 bg-surface px-3 py-2.5">
             <span className="text-sm text-fg-muted">{r.price_kind === 'negotiated' ? t('door_team.price_agreed') : t('door_team.price_standard')}</span>
@@ -387,7 +389,7 @@ function RequestCard({
       {r.status === 'declined' && r.decline_reason && (
         <p className="mt-3 break-words text-sm text-fg-muted">{t('door_team.declined_reason', { reason: r.decline_reason })}</p>
       )}
-      {r.status === 'expired' && <p className="mt-3 text-sm text-fg-muted">{t('door_team.expired_note')}</p>}
+      {(r.status === 'expired' || (r.status === 'quoted' && quoteClosed)) && <p className="mt-3 text-sm text-fg-muted">{t('door_team.expired_note')}</p>}
       {r.status === 'cancelled' && r.refund && (
         <p className="mt-3 text-sm text-fg-muted">
           {r.refund.status === 'credited'

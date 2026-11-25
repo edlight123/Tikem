@@ -65,7 +65,7 @@ export type DoorTeamPayMethod = 'moncash' | 'card' | 'balance'
 const MOVES: Record<DoorTeamStatus, DoorTeamStatus[]> = {
   requested: ['quoted', 'declined', 'cancelled'],
   quoted: ['paid', 'declined', 'cancelled', 'expired'],
-  paid: ['confirmed', 'cancelled'],
+  paid: ['confirmed', 'cancelled', 'done'],
   confirmed: ['done', 'cancelled'],
   done: [],
   declined: [],
@@ -201,6 +201,33 @@ export function crewAccessWindow(req: { arrival_at: string; hours: number; event
   const shiftEnd = arrival + Number(req.hours || 0) * 3600_000
   const eventEnd = toDate(req.event_end_at)?.getTime() || 0
   return { from: new Date(arrival - ACCESS_LEAD_MS), until: new Date(Math.max(shiftEnd, eventEnd) + ACCESS_TAIL_MS) }
+}
+
+/** Pure: can this quote still be paid at `now`? Closed once quote_expires_at has passed. */
+export function quoteOpen(r: { status?: string; quote_expires_at?: unknown }, now: number): boolean {
+  if (r?.status !== 'quoted') return false
+  const closes = toDate(r.quote_expires_at)
+  return !closes || closes.getTime() > now
+}
+
+/** Pure: a door seat Tikèm granted to its own crew (never editable by the organizer). */
+export function isTikemCrewSeat(member: Record<string, any> | null | undefined): boolean {
+  return !!member && member.source === DOOR_TEAM_MEMBER_SOURCE
+}
+
+/**
+ * What an organizer's staff screens may show for a Tikèm crew seat: the first
+ * name and "Tikèm crew", never the uid, email or photo; door check-in only.
+ */
+export function redactedCrewMember(member: Record<string, any>, index: number) {
+  return {
+    id: `tikem-crew-${index + 1}`,
+    role: 'tikem_crew',
+    tikemCrew: true,
+    permissions: { checkin: true, viewAttendees: false },
+    createdAt: null as string | null,
+    profile: { email: null, full_name: firstNameOf(member?.first_name) || null, photo_url: null },
+  }
 }
 
 /** Pure: is a door seat with this window live at `now`? (No window = a normal staff seat.) */
