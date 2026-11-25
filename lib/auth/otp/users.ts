@@ -9,10 +9,11 @@
 
 import { createUserProfileAdmin } from '@/lib/firestore/user-profile-admin'
 import type { OtpLocale } from './senders'
+import { profileCompletion } from '@/lib/auth/account/completion'
 
 /** The slice of firebase-admin's Auth used here (keeps tests honest). */
 export interface PhoneAuthAdmin {
-  getUserByPhoneNumber(phone: string): Promise<{ uid: string; disabled?: boolean; phoneNumber?: string }>
+  getUserByPhoneNumber(phone: string): Promise<{ uid: string; disabled?: boolean; phoneNumber?: string; email?: string }>
   getUser(uid: string): Promise<{ uid: string; phoneNumber?: string }>
   createUser(props: { phoneNumber: string }): Promise<{ uid: string }>
   updateUser(uid: string, props: { phoneNumber: string }): Promise<unknown>
@@ -23,6 +24,8 @@ export interface ProfileWriter {
   exists(uid: string): Promise<boolean>
   create(uid: string, e164: string, locale: OtpLocale, country: string): Promise<void>
   setPhone(uid: string, e164: string): Promise<void>
+  /** Does this account still need a name or an email before entering the app? */
+  needsProfile?(uid: string, authEmail: string | null): Promise<boolean>
 }
 
 export function adminProfileWriter(db: any): ProfileWriter {
@@ -42,6 +45,16 @@ export function adminProfileWriter(db: any): ProfileWriter {
         { merge: true }
       )
     },
+    async needsProfile(uid, authEmail) {
+      const snap = await db.collection('users').doc(uid).get()
+      const d = snap.exists ? snap.data() || {} : {}
+      const c = profileCompletion({
+        fullName: d.full_name,
+        authEmail,
+        pendingEmail: d.pending_email,
+      })
+      return c.needsName || c.needsEmail
+    },
     async setPhone(uid, e164) {
       await db.collection('users').doc(uid).set(
         { phone: e164, phone_number: e164, phone_verified: true, updated_at: new Date().toISOString() },
@@ -54,7 +67,7 @@ export function adminProfileWriter(db: any): ProfileWriter {
 const isCode = (err: unknown, code: string) => (err as { code?: string })?.code === code
 
 export type SignInResolution =
-  | { ok: true; uid: string; token: string; isNewUser: boolean }
+  | { ok: true; uid: string; token: string; isNewUser: boolean; needsProfile: boolean }
   | { ok: false; code: 'account_disabled' }
 
 /** Find the account for a verified number, or create one, then mint a token. */
@@ -68,11 +81,13 @@ export async function signInVerifiedPhone(params: {
   const { auth, profiles, e164, country, locale } = params
   let uid: string
   let isNewUser = false
+  let authEmail: string | null = null
 
   try {
     const existing = await auth.getUserByPhoneNumber(e164)
     if (existing.disabled) return { ok: false, code: 'account_disabled' }
     uid = existing.uid
+    authEmail = existing.email ?? null
   } catch (err) {
     if (!isCode(err, 'auth/user-not-found')) throw err
     try {
@@ -91,12 +106,18 @@ export async function signInVerifiedPhone(params: {
   }
 
   const token = await auth.createCustomToken(uid)
-  return { ok: true, uid, token, isNewUser }
+  // The app gates on the profile itself; this lets the web send the person
+  // straight to the completion page.
+  const needsProfile =
+    isNewUser || (profiles.needsProfile ? await profiles.needsProfile(uid, authEmail).catch(() => false) : false)
+  return { ok: true, uid, token, isNewUser, needsProfile }
 }
 
 export type LinkResolution =
   | { ok: true; phoneNumber: string }
-  | { ok: false; code: 'phone_in_use' | 'phone_already_set' }
+  | { ok: false; code: 'phone_already_set' }
+  /** ownerUid is set when the number is on another account (the merge flow needs it). */
+  | { ok: false; code: 'phone_in_use'; ownerUid?: string }
 
 /**
  * Add a verified number to the signed-in account. Refuses a number that
@@ -120,7 +141,7 @@ export async function linkVerifiedPhone(params: {
 
   try {
     const owner = await auth.getUserByPhoneNumber(e164)
-    if (owner.uid !== uid) return { ok: false, code: 'phone_in_use' }
+    if (owner.uid !== uid) return { ok: false, code: 'phone_in_use', ownerUid: owner.uid }
   } catch (err) {
     if (!isCode(err, 'auth/user-not-found')) throw err
   }
@@ -128,7 +149,10 @@ export async function linkVerifiedPhone(params: {
   try {
     await auth.updateUser(uid, { phoneNumber: e164 })
   } catch (err) {
-    if (isCode(err, 'auth/phone-number-already-exists')) return { ok: false, code: 'phone_in_use' }
+    if (isCode(err, 'auth/phone-number-already-exists')) {
+      const owner = await auth.getUserByPhoneNumber(e164).catch(() => null)
+      return { ok: false, code: 'phone_in_use', ownerUid: owner?.uid }
+    }
     throw err
   }
   await profiles.setPhone(uid, e164)

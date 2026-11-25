@@ -35,7 +35,11 @@ export function hmac(secret: string, value: string): string {
   return crypto.createHmac('sha256', secret).update(value).digest('hex')
 }
 
-export type OtpPurpose = 'signin' | 'link'
+/**
+ * signin / link: a phone number. email: an email address added to the signed-in
+ * account (lib/auth/account); the same machinery, keyed by the address.
+ */
+export type OtpPurpose = 'signin' | 'link' | 'email'
 
 /**
  * Doc id for one pending code. Bound to the purpose (and, for linking, to the

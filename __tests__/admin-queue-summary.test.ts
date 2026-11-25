@@ -19,6 +19,7 @@ describe('QUEUE_KEYS', () => {
         'withdrawals',
         'communityShares',
         'eventClaims',
+        'accountMerges',
       ].sort()
     )
   })
@@ -59,6 +60,7 @@ describe('railStat', () => {
     const s = empty()
     s.verifications = null
     s.bankVerifications = null
+    s.accountMerges = null
     expect(railStat(s, RAIL_GROUPS[0])).toBeNull()
   })
 

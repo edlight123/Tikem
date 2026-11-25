@@ -27,6 +27,7 @@ export const GUEST_ROUTES = [
 
 export const ACCOUNT_ROUTES = [
   'InviteLink',
+  'VerifyEmail',
   'PaymentWebView',
   'StripeConnectWebView',
   'StripeOnboarding',

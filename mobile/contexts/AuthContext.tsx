@@ -40,6 +40,11 @@ interface UserProfile {
   discoverable?: boolean;
   /** When the "friends can now see your events" notice was seen (once per account). */
   attendance_default_notice_seen_at?: string;
+  first_name?: string;
+  last_name?: string;
+  /** An email typed at onboarding and not verified yet ("Verify later"). */
+  pending_email?: string | null;
+  email_verified?: boolean;
 }
 
 type UserProfilePatch = Partial<Pick<UserProfile, 'full_name' | 'phone_number' | 'default_city' | 'default_country' | 'default_subarea' | 'photo_url' | 'organization_name' | 'organization_logo' | 'attendance_default_notice_seen_at'>>;
@@ -58,6 +63,11 @@ interface AuthContextType {
    * signs in with. Throws PhoneAuthError (code) on a bad code or limit.
    */
   signInWithPhoneCode: (phone: string, country: string, code: string, locale: string) => Promise<void>;
+  /**
+   * Sign in with a server-minted custom token (an account merge hands one
+   * back for the account everything moved to).
+   */
+  signInWithToken: (token: string) => Promise<void>;
   signUp: (email: string, password: string, fullName: string) => Promise<void>;
   signOut: () => Promise<void>;
   /** Which sign-in method re-authentication will use for the current user. */
@@ -551,6 +561,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await signInWithCustomToken(auth, token);
   };
 
+  const signInWithToken = async (token: string) => {
+    const cred = await signInWithCustomToken(auth, token);
+    // The merged account is a different user: load its profile now rather
+    // than wait for the auth-state listener's background refresh.
+    await refreshUserProfile(cred.user.uid);
+  };
+
   const signUp = async (email: string, password: string, fullName: string) => {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     
@@ -643,7 +660,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, userProfile, loading, signIn, signInWithGoogle, signInWithApple, appleAuthAvailable, signInWithPhoneCode, signUp, signOut, reauthMethod, reauthenticate, refreshUserProfile: async () => refreshUserProfile(), updateUserProfile }}>
+    <AuthContext.Provider value={{ user, userProfile, loading, signIn, signInWithGoogle, signInWithApple, appleAuthAvailable, signInWithPhoneCode, signInWithToken, signUp, signOut, reauthMethod, reauthenticate, refreshUserProfile: async () => refreshUserProfile(), updateUserProfile }}>
       {children}
     </AuthContext.Provider>
   );

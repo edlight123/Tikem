@@ -20,6 +20,9 @@ export const QUEUE_KEYS = [
   // Community shares and event claims (lib/community, /admin/community).
   'communityShares',
   'eventClaims',
+  // Two accounts one person wants combined, where the phone side owns an
+  // organization (lib/auth/account/merge.ts): never merged automatically.
+  'accountMerges',
 ] as const
 
 export type QueueKey = (typeof QUEUE_KEYS)[number]
@@ -46,7 +49,7 @@ export const RAIL_GROUPS: RailGroup[] = [
     key: 'verifications',
     label: 'Verifications',
     href: '/admin/trust',
-    sources: ['verifications', 'bankVerifications'],
+    sources: ['verifications', 'bankVerifications', 'accountMerges'],
   },
   {
     key: 'payouts',

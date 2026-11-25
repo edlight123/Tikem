@@ -302,6 +302,19 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Account merges (lib/auth/account): the audit record, the 15-minute
+    // proof sessions and the admin review queue. Server-only (Admin SDK);
+    // a merge must never be startable or forgeable from a client write.
+    match /account_merges/{id} {
+      allow read, write: if false;
+    }
+    match /account_merge_sessions/{id} {
+      allow read, write: if false;
+    }
+    match /account_merge_reviews/{id} {
+      allow read, write: if false;
+    }
+
     // Connections (friendships) - one document per user pair.
     // Participants may read; all writes go through server APIs (Admin SDK),
     // so client writes are disabled.

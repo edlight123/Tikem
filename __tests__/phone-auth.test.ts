@@ -619,7 +619,7 @@ describe('signInVerifiedPhone', () => {
     const auth = fakeAuth()
     const profiles = fakeProfiles()
     const r = await signInVerifiedPhone({ auth, profiles, e164: HT, country: 'HT', locale: 'ht' })
-    expect(r).toEqual({ ok: true, uid: 'new1', token: 'token-for-new1', isNewUser: true })
+    expect(r).toEqual({ ok: true, uid: 'new1', token: 'token-for-new1', isNewUser: true, needsProfile: true })
     expect(profiles.docs.get('new1')).toMatchObject({ phone_number: HT, language: 'ht', role: 'attendee' })
   })
 
@@ -627,7 +627,7 @@ describe('signInVerifiedPhone', () => {
     const auth = fakeAuth([{ uid: 'u1', phoneNumber: HT }])
     const profiles = fakeProfiles(['u1'])
     const r = await signInVerifiedPhone({ auth, profiles, e164: HT, country: 'HT', locale: 'en' })
-    expect(r).toEqual({ ok: true, uid: 'u1', token: 'token-for-u1', isNewUser: false })
+    expect(r).toEqual({ ok: true, uid: 'u1', token: 'token-for-u1', isNewUser: false, needsProfile: false })
     expect(profiles.docs.get('u1')).toEqual({ role: 'attendee' })
   })
 
@@ -677,6 +677,7 @@ describe('linkVerifiedPhone', () => {
     expect(await linkVerifiedPhone({ auth, profiles: fakeProfiles(), uid: 'me', e164: HT })).toEqual({
       ok: false,
       code: 'phone_in_use',
+      ownerUid: 'other',
     })
     expect(auth.users.get('me')!.phoneNumber).toBeUndefined()
   })
