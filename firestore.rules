@@ -411,6 +411,9 @@ service cloud.firestore {
         && request.resource.data.get('inventory_shards_n', null) == null
         // Add-on stock rollup (lib/tickets/inventoryShards.ts): Admin SDK only.
         && request.resource.data.get('add_ons_sold', null) == null
+        // change_notice ("Time changed, was ...") is written only by
+        // lib/events/change-notices.ts (Admin SDK) once holders were told.
+        && request.resource.data.get('change_notice', null) == null
         && addOnsShapeOk(request.resource.data)
         && validPosterAlt(request.resource.data)
         // Import bookkeeping, the Eventbrite ticket link and Eventbrite's
@@ -464,6 +467,9 @@ service cloud.firestore {
           request.resource.data.get('cancelled_at', null) == resource.data.get('cancelled_at', null) &&
           request.resource.data.get('cancelled_by', null) == resource.data.get('cancelled_by', null) &&
           request.resource.data.get('cancelled_by_admin', null) == resource.data.get('cancelled_by_admin', null) &&
+          // change_notice is server-only (lib/events/change-notices.ts): a
+          // client must not plant or erase a "Time changed" notice.
+          request.resource.data.get('change_notice', null) == resource.data.get('change_notice', null) &&
           request.resource.data.get('featured', false) == resource.data.get('featured', false) &&
           request.resource.data.get('is_featured', false) == resource.data.get('is_featured', false) &&
           request.resource.data.get('is_verified', false) == resource.data.get('is_verified', false) &&

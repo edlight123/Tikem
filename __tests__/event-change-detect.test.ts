@@ -55,6 +55,10 @@ describe('material changes', () => {
     expect(eventIsNotifiable({ ...base, is_published: false }, now)).toBe(false)
     expect(eventIsNotifiable({ ...base, is_published: true, status: 'cancelled' }, now)).toBe(false)
     expect(eventIsNotifiable({ ...base, is_published: true }, Date.parse('2099-06-01T00:00:00Z'))).toBe(false)
+    // Rejected or hidden-for-review events are not live: no notice goes out.
+    expect(eventIsNotifiable({ ...base, is_published: true, rejected: true }, now)).toBe(false)
+    expect(eventIsNotifiable({ ...base, is_published: true, hidden_pending_review: true }, now)).toBe(false)
+    expect(eventIsNotifiable({ ...base, is_published: true, rejected: false, hidden_pending_review: false }, now)).toBe(true)
   })
 })
 

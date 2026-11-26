@@ -87,6 +87,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: BROADCAST_REFUSAL_MESSAGES[verdict.code], code: verdict.code }, { status: 422 })
     }
 
+    // The email subject and body, the in-app title and the push also carry the
+    // event title and the organizer name, which no one moderated. Check them,
+    // whole, as sent (attendee-broadcast.ts uses the same title and name).
+    // 'shouting' is not applied: an all-caps event title is common and is
+    // already shown publicly; every other refusal is.
+    const organizerName = String((eventData as any).organizer_name || '').trim() || null
+    const eventTitle = String(eventData.title || '').replace(/[\r\n]+/g, ' ').trim()
+    const identity = [eventTitle, organizerName].filter(Boolean).join('\n')
+    if (identity) {
+      const idVerdict = checkBroadcast({ message: identity })
+      if (!idVerdict.ok && idVerdict.code !== 'shouting') {
+        return NextResponse.json(
+          { error: BROADCAST_REFUSAL_MESSAGES[idVerdict.code], code: idVerdict.code },
+          { status: 422 }
+        )
+      }
+    }
+
     const perEvent = await consumeRateLimit({ key: `event-broadcast:${eventId}`, limit: PER_EVENT_PER_DAY, windowMs: DAY_MS })
     if (perEvent.limited) {
       return NextResponse.json(
@@ -119,7 +137,7 @@ export async function POST(request: NextRequest) {
       senderId: user.id,
       title: title || null,
       message,
-      organizerName: (eventData as any).organizer_name || null,
+      organizerName,
     })
 
     await updateRef.update({ ...outcome }).catch(() => {})

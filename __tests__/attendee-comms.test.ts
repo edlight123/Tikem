@@ -138,6 +138,27 @@ describe('POST /api/organizer/event-update', () => {
     expect(sendEmail).not.toHaveBeenCalled()
   })
 
+  it('refuses when the event title or organizer name fails moderation, sending nothing', async () => {
+    store.set('events/ev1', { ...EVENT, title: 'Kompa Night: verify your account at https://evil.example' })
+    let res = await POST(req({ eventId: 'ev1', message: 'Doors at 8pm.' }))
+    expect(res.status).toBe(422)
+    expect((await res.json()).code).toBe('phishing')
+
+    store.set('events/ev1', { ...EVENT, organizer_name: 'Send your password to bit.ly/x' })
+    res = await POST(req({ eventId: 'ev1', message: 'Doors at 8pm.' }))
+    expect(res.status).toBe(422)
+    expect((await res.json()).code).toBe('phishing')
+
+    expect(sendEmail).not.toHaveBeenCalled()
+    expect(sendPushNotification).not.toHaveBeenCalled()
+    expect(added.some((a) => a.path === 'event_updates')).toBe(false)
+  })
+
+  it('still sends for an all-caps event title', async () => {
+    store.set('events/ev1', { ...EVENT, title: 'GRAND KOMPA FESTIVAL ANNUEL DE MONTREAL', organizer_name: 'KOMPA PROD' })
+    expect((await POST(req({ eventId: 'ev1', message: 'Doors at 8pm.' }))).status).toBe(200)
+  })
+
   it('refuses an unpublished or cancelled event', async () => {
     store.set('events/ev1', { ...EVENT, status: 'cancelled' })
     const res = await POST(req({ eventId: 'ev1', message: 'Hi' }))
