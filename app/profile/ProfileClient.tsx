@@ -144,8 +144,10 @@ export default function ProfileClient({
 
   const isOrganizerRole = showOrganization || isVerifiedOrganizer
   const settingsRows: SettingsRow[] = [
-    { kind: 'panel', id: 'edit', icon: UserPen, label: t('dashboard.edit_profile'), description: t('dashboard.settings.edit_profile_desc') },
+    // Messages first: people open chats far more often than they change a
+    // setting (Tikra tester 2026-11-25; the app's Profile leads with it too).
     { kind: 'panel', id: 'messages', icon: MessageCircle, label: t('dashboard.messages.title'), description: t('dashboard.settings.messages_desc') },
+    { kind: 'panel', id: 'edit', icon: UserPen, label: t('dashboard.edit_profile'), description: t('dashboard.settings.edit_profile_desc') },
     { kind: 'panel', id: 'privacy', icon: Lock, label: t('dashboard.settings.privacy'), description: t('dashboard.settings.privacy_desc') },
     { kind: 'panel', id: 'preferences', icon: SlidersHorizontal, label: t('preferences.title'), description: t('dashboard.settings.preferences_desc') },
     { kind: 'panel', id: 'notifications', icon: Bell, label: t('notifications.title'), description: t('dashboard.settings.notifications_desc') },

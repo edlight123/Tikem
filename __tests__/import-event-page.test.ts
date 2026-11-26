@@ -102,6 +102,10 @@ describe('mapEventbriteEvent', () => {
       ],
       // No start.timezone in this fixture: the draft writer picks the market's zone.
       timezone: null,
+      // Eventbrite's own category, subcategory and format (lib/events/categoryInfer): none here.
+      sourceCategory: null,
+      sourceSubcategory: null,
+      sourceFormat: null,
     })
   })
 

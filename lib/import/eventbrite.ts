@@ -4,6 +4,7 @@
  * ticket_classes and logo) to what lib/import/drafts writes.
  */
 import type { DraftInput } from '@/lib/import/draft-input'
+import { ebCategoryHints } from '@/lib/import/eventbrite-sync'
 
 const clip = (s: unknown, n: number) => String(s ?? '').replace(/\s+/g, ' ').trim().slice(0, n)
 
@@ -43,5 +44,7 @@ export function mapEventbriteEvent(ev: any): DraftInput | null {
     currency: currency || null,
     tiers: tiers.length ? tiers : [{ name: 'Free', price: 0, quantity: 100 }],
     timezone: typeof ev?.start?.timezone === 'string' ? ev.start.timezone : null,
+    // What Eventbrite files it under, for the category the draft starts with.
+    ...ebCategoryHints(ev),
   }
 }

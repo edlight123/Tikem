@@ -113,7 +113,7 @@ export async function listEvents(token: string): Promise<any[] | null> {
   for (const o of (orgs.data.organizations || []).slice(0, 5)) {
     let continuation = ''
     for (let page = 0; page < 4; page++) {
-      const q = `/organizations/${encodeURIComponent(o.id)}/events/?status=live,started,draft&time_filter=current_future&expand=venue,ticket_classes,logo&page_size=50${continuation ? `&continuation=${encodeURIComponent(continuation)}` : ''}`
+      const q = `/organizations/${encodeURIComponent(o.id)}/events/?status=live,started,draft&time_filter=current_future&expand=venue,ticket_classes,logo,category,subcategory,format&page_size=50${continuation ? `&continuation=${encodeURIComponent(continuation)}` : ''}`
       const r = await ebGet(token, q)
       if (!r.data) break
       out.push(...(r.data.events || []))
