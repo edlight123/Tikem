@@ -9,22 +9,37 @@
  *
  * Logos come out as ink (black-only templates) or as they are.
  *
- * Server only. Never fetches an arbitrary URL: an object of our bucket, or
- * the event's own poster on an allow-listed image host.
+ * Server only. Never reads an arbitrary object or URL (security review,
+ * PR #113): the Admin SDK can read EVERY object in the bucket (verification
+ * IDs, payout receipts…), so a link is first resolved to a storage path on
+ * an exact host + our bucket, strictly decoded, and the path must sit under a
+ * public image prefix (resolveImageSource). Anything else that is not a
+ * storage link is fetched over HTTPS from an allow-listed image host only,
+ * with a size cap and a timeout, never through the Admin SDK.
  */
 
 import { adminStorage } from '@/lib/firebase/admin'
-import { storagePathFromUrl } from '@/lib/firebase/downloadUrl'
 import type { PainterImage } from './painter'
 import { PT_PER_UNIT } from './painter'
 import type { BatchDesign, TemplateId } from './registry'
 import { PHOTO_SPECS, logoMode, type PreparedLogo } from './templates'
 
 const MAX_BYTES = 12 * 1024 * 1024
-const POSTER_HOSTS = new Set(['firebasestorage.googleapis.com', 'storage.googleapis.com', 'images.unsplash.com'])
+/** Non-storage poster hosts (the poster / flyer library). Fetched publicly, never via admin. */
+const PUBLIC_IMAGE_HOSTS = new Set(['images.unsplash.com'])
 
 /** Uploads for printed tickets live here (public read, server write: storage.rules event-photos). */
 export const printedUploadPrefix = (eventId: string) => `event-photos/${eventId}/printed/`
+
+/**
+ * The only bucket prefixes a design may read through the Admin SDK:
+ * this event's printed-ticket uploads, and where event posters are stored
+ * (event-images/: the composer's and the importer's uploads, public read;
+ * posters/: template posters drawn by /api/posters/create).
+ */
+export function allowedImagePrefixes(eventId: string): string[] {
+  return [printedUploadPrefix(eventId), 'event-images/', 'posters/']
+}
 
 export function bucketName(): string {
   try {
@@ -34,35 +49,106 @@ export function bucketName(): string {
   }
 }
 
+/** One strict percent-decode of an object name; null on anything odd. */
+function decodeObjectName(raw: string): string | null {
+  let name: string
+  try {
+    name = decodeURIComponent(raw)
+  } catch {
+    return null
+  }
+  // A second layer of encoding, traversal, backslashes, control characters,
+  // absolute or empty segments: refused, never normalised into something else.
+  if (/%[0-9a-f]{2}/i.test(name)) return null
+  if (/[\\\u0000-\u001f\u007f]/.test(name)) return null
+  if (name.startsWith('/') || name.split('/').some((seg) => seg === '' || seg === '.' || seg === '..')) return null
+  return name
+}
+
+/**
+ * The bucket object a storage link points at, or null. Only:
+ *   https://firebasestorage.googleapis.com/v0/b/<our bucket>/o/<object>[?…]
+ *   https://storage.googleapis.com/<our bucket>/<object>
+ */
+export function storageObjectOf(url: string, bucket: string): string | null {
+  if (!url || !bucket) return null
+  let u: URL
+  try {
+    u = new URL(url)
+  } catch {
+    return null
+  }
+  if (u.protocol !== 'https:' || u.port || u.username || u.password) return null
+  if (u.hostname === 'firebasestorage.googleapis.com') {
+    const m = /^\/v0\/b\/([^/]+)\/o\/([^/]+)$/.exec(u.pathname)
+    if (!m || m[1] !== bucket) return null
+    return decodeObjectName(m[2])
+  }
+  if (u.hostname === 'storage.googleapis.com') {
+    const prefix = `/${bucket}/`
+    if (!u.pathname.startsWith(prefix) || u.search) return null
+    return decodeObjectName(u.pathname.slice(prefix.length))
+  }
+  return null
+}
+
+export type ImageSource = { kind: 'storage'; path: string } | { kind: 'public'; url: string } | null
+
+/** Where a design image may be read from for this event, or null (refused). */
+export function resolveImageSource(url: string, eventId: string, bucket = bucketName()): ImageSource {
+  if (!url || !eventId || eventId.includes('/')) return null
+  let u: URL
+  try {
+    u = new URL(url)
+  } catch {
+    return null
+  }
+  if (u.hostname === 'firebasestorage.googleapis.com' || u.hostname === 'storage.googleapis.com') {
+    const path = storageObjectOf(url, bucket)
+    if (!path || !allowedImagePrefixes(eventId).some((p) => path.startsWith(p))) return null
+    return { kind: 'storage', path }
+  }
+  if (u.protocol === 'https:' && !u.port && !u.username && !u.password && PUBLIC_IMAGE_HOSTS.has(u.hostname)) {
+    return { kind: 'public', url: u.toString() }
+  }
+  return null
+}
+
 /** Is `url` a download link of an object under this event's printed-ticket folder? */
 export function isOwnPrintedUpload(url: string, eventId: string, bucket = bucketName()): boolean {
-  if (!url || !bucket || !eventId) return false
-  const path = storagePathFromUrl(url, bucket)
-  return !!path && path.startsWith(printedUploadPrefix(eventId)) && !path.includes('..')
+  if (!url || !eventId || eventId.includes('/')) return false
+  const path = storageObjectOf(url, bucket)
+  return !!path && path.startsWith(printedUploadPrefix(eventId))
 }
 
 const bytesCache = new Map<string, Buffer>()
 
-/** The bytes behind a design image link; null when it cannot be read (the ticket prints without it). */
-export async function loadImageBytes(url: string): Promise<Buffer | null> {
-  if (!url) return null
-  const hit = bytesCache.get(url)
+/**
+ * The bytes behind a design image link of this event; null when it is refused
+ * or cannot be read (the ticket prints without it).
+ */
+export async function loadImageBytes(url: string, eventId: string): Promise<Buffer | null> {
+  const source = resolveImageSource(url, eventId)
+  if (!source) {
+    if (url) console.warn('[physical/design] image source refused', { eventId })
+    return null
+  }
+  const key = source.kind === 'storage' ? `s:${source.path}` : `u:${source.url}`
+  const hit = bytesCache.get(key)
   if (hit) return hit
   let buf: Buffer | null = null
   try {
-    const bucket = bucketName()
-    const path = bucket ? storagePathFromUrl(url, bucket) : null
-    if (path) {
-      const [data] = await adminStorage.bucket().file(path).download()
+    if (source.kind === 'storage') {
+      const [data] = await adminStorage.bucket().file(source.path).download()
       buf = data
     } else {
-      const u = new URL(url)
-      if (u.protocol !== 'https:' || !POSTER_HOSTS.has(u.hostname)) return null
       const ctl = new AbortController()
       const timer = setTimeout(() => ctl.abort(), 8000)
       try {
-        const res = await fetch(u.toString(), { signal: ctl.signal, redirect: 'error' })
+        const res = await fetch(source.url, { signal: ctl.signal, redirect: 'error' })
         if (!res.ok) return null
+        const declared = Number(res.headers.get('content-length') || 0)
+        if (declared > MAX_BYTES) return null
         const ab = await res.arrayBuffer()
         if (ab.byteLength > MAX_BYTES) return null
         buf = Buffer.from(ab)
@@ -76,7 +162,7 @@ export async function loadImageBytes(url: string): Promise<Buffer | null> {
   }
   if (buf && buf.length <= MAX_BYTES) {
     if (bytesCache.size > 24) bytesCache.clear()
-    bytesCache.set(url, buf)
+    bytesCache.set(key, buf)
     return buf
   }
   return null
@@ -232,12 +318,12 @@ export interface DesignAssets {
  * Everything a design draws besides text, for ONE template at `dpi`.
  * Unreadable images are skipped (logged): a broken logo must never stop a print.
  */
-export async function prepareDesignAssets(design: Pick<BatchDesign, 'template' | 'photo_url' | 'logos'>, dpi: number): Promise<DesignAssets> {
-  const photoBuf = design.photo_url && PHOTO_SPECS[design.template] ? await loadImageBytes(design.photo_url) : null
+export async function prepareDesignAssets(design: Pick<BatchDesign, 'template' | 'photo_url' | 'logos'>, dpi: number, eventId: string): Promise<DesignAssets> {
+  const photoBuf = design.photo_url && PHOTO_SPECS[design.template] ? await loadImageBytes(design.photo_url, eventId) : null
   const photo = photoBuf ? await preparePhoto(photoBuf, design.template, dpi, design.photo_url!).catch(() => null) : null
   const logos: PreparedLogo[] = []
   for (const url of design.logos || []) {
-    const buf = await loadImageBytes(url)
+    const buf = await loadImageBytes(url, eventId)
     const l = buf ? await prepareLogo(buf, logoMode(design.template), dpi, url) : null
     if (l) logos.push(l)
   }

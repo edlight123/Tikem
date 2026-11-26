@@ -5,7 +5,7 @@
  */
 
 import { adminDb } from '@/lib/firebase/admin'
-import { isOwnPrintedUpload } from './assets'
+import { isOwnPrintedUpload, resolveImageSource } from './assets'
 import { ticketLang } from './facts'
 import { validateDesignInput, type DesignValidation } from './registry'
 import type { ProofEventInput } from './proof'
@@ -21,16 +21,20 @@ export async function loadOrganizerName(orgId: string | null | undefined): Promi
   }
 }
 
-/** The event's poster, when it has one (the "use event poster" choice). */
-export function eventPosterUrl(event: Record<string, any>): string | null {
+/**
+ * The event's poster, when it has one AND it is a link the printer may read
+ * (a public image prefix of our bucket or an allow-listed image host): a
+ * poster field pointing at a private object is never offered or accepted.
+ */
+export function eventPosterUrl(event: Record<string, any>, eventId: string): string | null {
   const url = String(event?.banner_image || event?.cover_image_url || event?.image_url || '').trim()
-  return /^https:\/\//.test(url) ? url : null
+  return url && resolveImageSource(url, eventId) ? url : null
 }
 
 export function validateEventDesign(raw: unknown, eventId: string, event: Record<string, any>): DesignValidation {
   return validateDesignInput(raw, {
     isOwnUpload: (url) => isOwnPrintedUpload(url, eventId),
-    posterUrl: eventPosterUrl(event),
+    posterUrl: eventPosterUrl(event, eventId),
   })
 }
 
@@ -55,6 +59,7 @@ export async function proofInputFor(params: {
     }
   }
   return {
+    eventId: params.eventId,
     event: params.event,
     tierName: tierName || 'VIP',
     tierPrice,

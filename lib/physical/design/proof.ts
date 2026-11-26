@@ -23,6 +23,8 @@ export const SPECIMEN_QR = 'TIKEM SPECIMEN - NOT A TICKET'
 type ProofDesign = Pick<BatchDesign, 'template' | 'color' | 'photo_url' | 'logos' | 'overrides'>
 
 export interface ProofEventInput {
+  /** Scopes which uploads a design may read (lib/physical/design/assets resolveImageSource). */
+  eventId: string
   event: Record<string, any>
   tierName: string
   tierPrice: number
@@ -100,7 +102,7 @@ export async function renderProofs(params: {
     if (!template) continue
     const color = id === params.design.template ? swatchFor(template, params.design.color).id : template.swatches[0].id
     const design: ProofDesign = { ...params.design, template: id, color }
-    const assets = await prepareDesignAssets(design, params.dpi)
+    const assets = await prepareDesignAssets(design, params.dpi, params.input.eventId)
     const facts = proofFacts(params.input, design)
     const front = drawProofSvg({ design, facts, lang: params.input.lang, assets, serial, side: 'front', idPrefix: `${id}f` })
     const back = params.backs ? drawProofSvg({ design, facts, lang: params.input.lang, assets, serial, side: 'back', idPrefix: `${id}b` }) : undefined
@@ -118,7 +120,7 @@ export async function renderProofPdf(params: {
 }): Promise<Uint8Array> {
   const n = ticketsPerPage(params.paper)
   const serials = specimenSerials(params.input.event, params.input.tierName, n)
-  const assets = await prepareDesignAssets(params.design, 300)
+  const assets = await prepareDesignAssets(params.design, 300, params.input.eventId)
   return renderBatchPdf({
     design: params.design,
     facts: proofFacts(params.input, params.design),

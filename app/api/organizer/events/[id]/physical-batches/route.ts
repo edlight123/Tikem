@@ -53,7 +53,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       .map((d: any) => ({ uid: d.id, ...(d.data() || {}) }))
       .filter((m: any) => m.status === 'active' && ['seller', 'manager', 'admin'].includes(String(m.role)))
       .map((m: any) => ({ uid: String(m.uid || m.id), name: String(m.name || m.email || ''), role: String(m.role) }))
-    return NextResponse.json({ config, batches, sellers, balance, templates: TICKET_TEMPLATES, posterUrl: eventPosterUrl(gate.value.event) })
+    return NextResponse.json({ config, batches, sellers, balance, templates: TICKET_TEMPLATES, posterUrl: eventPosterUrl(gate.value.event, eventId) })
   } catch (err: any) {
     console.error('[physical] list failed', { eventId, message: err?.message })
     return NextResponse.json({ error: 'Could not load printed tickets' }, { status: 500 })

@@ -67,7 +67,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const pdf = await renderBatchPdf({
     design,
     facts: proofFacts(input, design),
-    assets: await prepareDesignAssets(design, 300),
+    assets: await prepareDesignAssets(design, 300, batch.event_id),
     tickets: printable,
     paper,
     lang,

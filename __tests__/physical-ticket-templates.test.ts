@@ -318,3 +318,53 @@ describe('labels', () => {
     expect(TICKET_LABELS.fr.validOnceSold).toBe('Valide une fois vendu')
   })
 })
+
+describe('design images: no private-object read through the Admin SDK (security review, PR #113)', () => {
+  const { resolveImageSource, isOwnPrintedUpload, loadImageBytes } = require('@/lib/physical/design/assets')
+  const fb = (path: string, bucket = BUCKET) => `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodeURIComponent(path)}?alt=media&token=t`
+  const gcs = (path: string, bucket = BUCKET) => `https://storage.googleapis.com/${bucket}/${path}`
+
+  it('reads only this event’s printed uploads and the poster prefixes', () => {
+    expect(resolveImageSource(fb(`event-photos/${EVENT}/printed/p.jpg`), EVENT, BUCKET)).toEqual({ kind: 'storage', path: `event-photos/${EVENT}/printed/p.jpg` })
+    expect(resolveImageSource(fb('event-images/u1_poster.jpg'), EVENT, BUCKET)).toMatchObject({ kind: 'storage' })
+    expect(resolveImageSource(gcs('posters/u1/abc.jpg'), EVENT, BUCKET)).toMatchObject({ kind: 'storage' })
+    expect(resolveImageSource('https://images.unsplash.com/photo-1?w=1200', EVENT, BUCKET)).toMatchObject({ kind: 'public' })
+  })
+
+  it.each([
+    ['another event’s uploads', fb('event-photos/other/printed/p.jpg')],
+    ['another prefix', fb(`event-photos/${EVENT}/gallery/p.jpg`)],
+    ['a verification document', fb('verification/u2/id-front.jpg')],
+    ['a verification document (gcs form)', gcs('verification/u2/id-front.jpg')],
+    ['a payout receipt', fb('payout-receipts/org2/p1/receipt.pdf')],
+    ['traversal', fb(`event-photos/${EVENT}/printed/../../../verification/u2/id.jpg`)],
+    ['traversal (gcs form)', gcs('event-images/../verification/u2/id.jpg')],
+    ['double-encoded traversal', `https://firebasestorage.googleapis.com/v0/b/${BUCKET}/o/${encodeURIComponent(encodeURIComponent('event-images/../verification/u2/id.jpg'))}`],
+    ['encoded slashes in gcs form', `https://storage.googleapis.com/${BUCKET}/event-images%2F..%2Fverification%2Fu2%2Fid.jpg`],
+    ['backslashes', fb('event-images\\..\\verification\\u2\\id.jpg')],
+    ['another bucket', fb('event-images/x.jpg', 'someone-else.appspot.com')],
+    ['a look-alike host', `https://firebasestorage.googleapis.com.evil.example/v0/b/${BUCKET}/o/${encodeURIComponent('event-images/x.jpg')}`],
+    ['plain http', fb('event-images/x.jpg').replace('https:', 'http:')],
+    ['an arbitrary host', 'https://evil.example/x.jpg'],
+    ['an internal address', 'https://169.254.169.254/latest/meta-data'],
+    ['unsplash over http', 'http://images.unsplash.com/photo-1'],
+  ])('refuses %s', async (_label: string, url: string) => {
+    expect(resolveImageSource(url, EVENT, BUCKET)).toBeNull()
+    expect(await loadImageBytes(url, EVENT)).toBeNull()
+  })
+
+  it('a design upload must be in this event’s printed folder', () => {
+    expect(isOwnPrintedUpload(fb(`event-photos/${EVENT}/printed/a.png`), EVENT, BUCKET)).toBe(true)
+    expect(isOwnPrintedUpload(fb(`event-photos/${EVENT}/printed/../../other/printed/a.png`), EVENT, BUCKET)).toBe(false)
+    expect(isOwnPrintedUpload(fb('event-images/a.png'), EVENT, BUCKET)).toBe(false)
+  })
+
+  it('an event "poster" pointing at a private object is refused as a design photo', async () => {
+    const privatePoster = fb('verification/u2/id-front.jpg')
+    db.store.set(`events/${EVENT}`, { ...HT_EVENT, banner_image: privatePoster })
+    const res = await orderPOST(post({ tierId: 'vip', quantity: 100, method: 'moncash', approveProof: true, design: { template: 'coloured_card', photoUrl: privatePoster } }), ctx)
+    expect(res.status).toBe(400)
+    expect((await res.json()).code).toBe('bad_photo')
+    expect(reserveSeats).not.toHaveBeenCalled()
+  })
+})
