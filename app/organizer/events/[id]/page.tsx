@@ -6,13 +6,27 @@ import { normalizeCurrency } from '@/lib/money'
 import { loadTicketDocsForEvent } from '@/lib/tickets/loadTicketsForEvent'
 import { summarizeEventTickets, ticketCountsAsSold } from '@/lib/organizer/salesSummary'
 import { readEventViewStats } from '@/lib/events/views-server'
+import { canOnEvent } from '@/lib/organizer/context'
+import { isDraftEvent, type DraftDeleteBlock } from '@/lib/events/draftDelete'
+import { draftDeleteCheck } from '@/lib/events/draftDeleteServer'
 
 export const revalidate = 0
 
 export default async function EventCommandCenterPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   // Owner, org admin/manager, or platform admin (layout already 404s others).
-  const { event: eventData } = await requireEventPage(id, 'view')
+  const { event: eventData, user } = await requireEventPage(id, 'view')
+
+  // "Delete draft" (lib/events/draftDelete): drafts only, for whoever runs
+  // events in the event's own org. The full check (every kind of sale, order,
+  // hold and money row) runs server-side; a draft that is kept shows why.
+  let draftDelete: { blocked: DraftDeleteBlock | null } | null = null
+  if (isDraftEvent(eventData) && (await canOnEvent(user, eventData, 'manage_events')).allowed) {
+    // A failed check hides the action rather than guess either way.
+    draftDelete = await draftDeleteCheck(id, eventData)
+      .then((blocked) => ({ blocked }))
+      .catch(() => null)
+  }
 
   // Fetch tickets for this event (supports legacy `eventId` field too).
   // Page views (lib/events/views.ts) load alongside; zeros on any failure.
@@ -110,6 +124,7 @@ export default async function EventCommandCenterPage({ params }: { params: Promi
         stats={stats}
         tickets={tickets}
         tiers={tiers}
+        draftDelete={draftDelete}
       />
     </div>
   )

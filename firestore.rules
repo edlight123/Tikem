@@ -538,13 +538,14 @@ service cloud.firestore {
         !(request.resource.data.country != resource.data.country || request.resource.data.currency != resource.data.currency)
         || isCurrencyAllowedForCountry(request.resource.data.country, request.resource.data.currency)
       );
-      // An event that has sold, been cancelled or had its payouts frozen keeps
-      // its record: deleting it and re-creating the same id as a clean draft
-      // would shed the cancellation, the freeze and the sales counter.
-      allow delete: if isSignedIn() && managesOrg(resource.data.organizer_id)
-        && resource.data.get('tickets_sold', 0) == 0
-        && resource.data.get('status', '') != 'cancelled'
-        && resource.data.get('payouts_frozen', false) != true;
+      // No client deletes an event. A draft that never sold is deleted by the
+      // server (POST /api/events/[id]/delete-draft, lib/events/draftDelete*),
+      // which checks every trace of a sale (tickets of any kind, printed
+      // batches, door-team requests, orders in flight, seat holds, money rows)
+      // and removes what the event owns. The counters a rule can see here
+      // (tickets_sold) miss most of those. An event that sold, was cancelled or
+      // frozen keeps its record; a published one has Cancel.
+      allow delete: if false;
 
       // Event members - event-scoped staff/owner roles
       match /members/{memberId} {

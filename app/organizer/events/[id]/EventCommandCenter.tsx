@@ -21,17 +21,21 @@ import {
 import { formatMoneyFromCents, normalizeCurrency } from '@/lib/money'
 import AddOnSalesCard from '@/components/organizer/AddOnSalesCard'
 import { stripRichText } from '@/lib/richText'
+import DeleteDraftButton from '@/components/organizer/DeleteDraftButton'
+import type { DraftDeleteBlock } from '@/lib/events/draftDelete'
 
 interface EventCommandCenterProps {
   event: any
   stats: any
   tickets: any[]
   tiers: any[]
+  /** Drafts only (null otherwise): may it be deleted, or why not (server-checked). */
+  draftDelete?: { blocked: DraftDeleteBlock | null } | null
 }
 
 const TREND_DAYS = 14
 
-export function EventCommandCenter({ event, stats, tickets, tiers }: EventCommandCenterProps) {
+export function EventCommandCenter({ event, stats, tickets, tiers, draftDelete = null }: EventCommandCenterProps) {
   const { t: tx } = useTranslation('organizer')
 
   const currency = normalizeCurrency(event?.currency, stats?.currency || 'HTG')
@@ -286,6 +290,11 @@ export function EventCommandCenter({ event, stats, tickets, tiers }: EventComman
           >
             {tx('command_center.edit_event')}
           </Link>
+
+          {/* A draft that never sold can be deleted (published events have Cancel). */}
+          {draftDelete ? (
+            <DeleteDraftButton eventId={String(event.id)} title={event.title} blocked={draftDelete.blocked} />
+          ) : null}
 
           {event.description && (
             <div className="border-t border-line pt-3">

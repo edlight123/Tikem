@@ -115,11 +115,9 @@ describe('firestore.rules — events (S2)', () => {
     expect(create).toContain("request.resource.data.get('tickets_sold', 0) == 0")
     expect(events).toContain("request.resource.data.get('tickets_sold', 0) == resource.data.get('tickets_sold', 0)")
   })
-  it('an event that sold, was cancelled or frozen cannot be deleted (and re-created clean)', () => {
+  it('no client deletes an event: drafts go through the delete-draft route', () => {
     const del = events.slice(events.indexOf('allow delete'))
-    expect(del).toContain("resource.data.get('tickets_sold', 0) == 0")
-    expect(del).toContain("resource.data.get('status', '') != 'cancelled'")
-    expect(del).toContain("resource.data.get('payouts_frozen', false) != true")
+    expect(del.split('\n')[0]).toBe('allow delete: if false;')
   })
   it('currency and country are fixed once tickets have sold', () => {
     expect(events).toContain("resource.data.get('tickets_sold', 0) == 0 ||")

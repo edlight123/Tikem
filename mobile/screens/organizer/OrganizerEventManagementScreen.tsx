@@ -26,7 +26,11 @@ import {
 import {
   toggleEventPublication,
   cancelEvent,
+  deleteEvent,
+  getDraftDeleteStatus,
 } from '../../lib/api/events';
+import { isDraftEvent, type DraftDeleteBlock } from '../../lib/draftDelete';
+import { AFTER_ALERT_MS } from '../../lib/moderationActions';
 import { useI18n } from '../../contexts/I18nContext';
 import { useActiveOrg } from '../../lib/activeOrg';
 import { shareLink } from '../../lib/share';
@@ -55,6 +59,7 @@ import {
   Send,
   Pause,
   TriangleAlert,
+  Trash2,
   type LucideIcon,
   Sparkles,
   Ticket,
@@ -152,6 +157,10 @@ export default function OrganizerEventManagementScreen() {
   const canManagePrinted = activeOrg.can('manage_events');
   const canSellPrinted = activeOrg.can('sell_physical');
   const [batches, setBatches] = useState<PrintedBatchSummary[] | null>(() => batchesCache.get(eventId) ?? null);
+  // "Delete draft" (lib/draftDelete): drafts only, for whoever runs events.
+  // The server checks every kind of sale; null = not offered (or not known).
+  const [draftDelete, setDraftDelete] = useState<{ blocked: DraftDeleteBlock | null } | null>(null);
+  const [deletingDraft, setDeletingDraft] = useState(false);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -186,6 +195,11 @@ export default function OrganizerEventManagementScreen() {
         setEvent(eventData);
         setTicketData(breakdown);
         setIsPaused(!eventData.is_published);
+        if (isDraftEvent(eventData as any) && activeOrg.can('manage_events')) {
+          getDraftDeleteStatus(eventId).then((st) => setDraftDelete(st ? { blocked: st.code } : null));
+        } else {
+          setDraftDelete(null);
+        }
       }
       if (printedBatches) {
         batchesCache.set(eventId, printedBatches);
@@ -410,6 +424,42 @@ export default function OrganizerEventManagementScreen() {
     );
   };
 
+  // Runs after the confirm alert has finished closing (AFTER_ALERT_MS): an
+  // error alert presented while it fades out is dropped on iOS, and leaving the
+  // screen under a closing modal is the dead-button pattern.
+  const runDeleteDraft = async () => {
+    setDeletingDraft(true);
+    try {
+      await deleteEvent(eventId);
+      navigation.goBack();
+    } catch (error: any) {
+      setDeletingDraft(false);
+      // Localized from the route's code; the raw server message is never shown.
+      const code = typeof error?.code === 'string' ? error.code : '';
+      const reason = code ? t(`draftDelete.reasons.${code}`) : '';
+      showAlert(t('draftDelete.failed'), reason && reason !== `draftDelete.reasons.${code}` ? reason : '');
+      loadEventData();
+    }
+  };
+
+  const handleDeleteDraft = () => {
+    if (deletingDraft || !draftDelete || draftDelete.blocked) return;
+    showAlert(
+      t('draftDelete.confirmTitle'),
+      t('draftDelete.confirmBody').replace('{name}', event?.title || ''),
+      [
+        { text: t('draftDelete.keep'), style: 'cancel' },
+        {
+          text: t('draftDelete.confirm'),
+          style: 'destructive',
+          onPress: () => {
+            setTimeout(runDeleteDraft, AFTER_ALERT_MS);
+          },
+        },
+      ]
+    );
+  };
+
   // Floating hero controls (back / share): small dark translucent rounded squares
   // pinned under the status bar, over the poster backdrop.
   const renderFloatingControls = (withShare: boolean) => (
@@ -507,7 +557,8 @@ export default function OrganizerEventManagementScreen() {
   const showPrinted = canManagePrinted && shownBatches.length > 0;
   const showSellPrinted = canSellPrinted && hasSellableBatch(batches);
 
-  const canCancel = event?.status !== 'cancelled';
+  // A draft that never sold is deleted, not cancelled (lib/draftDelete).
+  const canCancel = event?.status !== 'cancelled' && !(draftDelete && !draftDelete.blocked);
   const offerPublish = canOfferPublish(event as any);
   const ctaBlockH = 56 + 16 + Math.max(insets.bottom, 16);
 
@@ -822,6 +873,18 @@ export default function OrganizerEventManagementScreen() {
                 />
               }
             />
+            {draftDelete ? (
+              <ListRow
+                icon={Trash2}
+                title={t('draftDelete.action')}
+                subtitle={draftDelete.blocked ? t(`draftDelete.reasons.${draftDelete.blocked}`) : undefined}
+                onPress={handleDeleteDraft}
+                disabled={!!draftDelete.blocked || deletingDraft}
+                destructive={!draftDelete.blocked}
+                chevron={false}
+                testID="delete-draft-row"
+              />
+            ) : null}
             {canCancel ? (
               <ListRow
                 icon={TriangleAlert}
