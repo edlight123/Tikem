@@ -19,6 +19,7 @@ import { ReportButton } from '@/components/moderation/ModerationActions'
 import MobileHero from './MobileHero'
 import OrganizerMark from '@/components/OrganizerMark'
 import MobileKeyFacts from './MobileKeyFacts'
+import { eventLanguagesLine } from '@/lib/event-languages'
 import MobileSections from './MobileSections'
 import WhosGoing from '@/components/events/WhosGoing'
 import FriendsGoing from '@/components/events/FriendsGoing'
@@ -152,6 +153,8 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
   // same query, same destination — so a visitor never gets two different places
   // depending on which one they clicked. The existing anchors keep their inline
   // expressions untouched; this only feeds the new tile.
+  // The language(s) it is held in (lib/event-languages): "Kreyòl, English", or ''.
+  const languagesLine = eventLanguagesLine((event as any).languages)
   const googleMapsHref = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.address || `${event.venue_name}, ${event.commune}, ${event.city}`)}`
 
   // Buying no longer requires an account.
@@ -339,6 +342,13 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                     )}
                   </div>
                 )}
+                {/* The language(s) it is held in, only when the organizer said. */}
+                {languagesLine && (
+                  <div className="min-w-0">
+                    <p className="eyebrow mb-1.5 text-eyebrow text-fg-subtle">{t('event_languages.title')}</p>
+                    <p className="text-body text-fg">{languagesLine}</p>
+                  </div>
+                )}
                 <div>
                   <p className="eyebrow mb-1.5 text-eyebrow text-fg-subtle">{t('events.availability')}</p>
                   <p className="flex items-center gap-2 text-body text-fg">
@@ -451,6 +461,7 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
         scarcity={scarcity}
         doorLabel={community ? communityPriceLabel(event, t, numLocale) : doorLabel}
         note={familyNote}
+        languages={languagesLine}
       />
 
       <div className="mx-auto max-w-7xl md:px-6 md:pt-6 lg:px-8">

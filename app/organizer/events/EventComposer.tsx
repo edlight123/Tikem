@@ -128,6 +128,7 @@ import {
   venueDetailsOf,
   type VenueDetails,
 } from '@/lib/events/venue-details'
+import { EVENT_LANGUAGES, cleanEventLanguages, eventLanguageLabel, type EventLanguage } from '@/lib/event-languages'
 import type { FlyerRead } from '@/lib/flyer/parse'
 import { useOrgRole } from '@/components/organizer/OrgRoleProvider'
 import { POSTER_ALT_MAX, cleanPosterAlt } from '@/lib/posterAlt'
@@ -142,6 +143,7 @@ import {
   Globe,
   Image as ImageIcon,
   Info,
+  Languages,
   Lock,
   MapPin,
   MoreVertical,
@@ -702,6 +704,9 @@ export default function EventComposer({
   const patchVenueDetails = (patch: Partial<VenueDetails>) => setVenueDetails((d) => ({ ...d, ...patch }))
   // Folded by default: one quiet row with a count (premium = quiet).
   const [venueDetailsOpen, setVenueDetailsOpen] = useState(false)
+  // The language(s) the event is held in (lib/event-languages). Several may be
+  // picked (Kreyòl + English); empty means "not specified", never guessed.
+  const [eventLanguages, setEventLanguages] = useState<EventLanguage[]>(() => cleanEventLanguages((event as any)?.languages))
   // Saved event defaults, for a NEW event in its starting country only.
   // Computed once: the defaults seed the first render and never re-apply.
   const [seed] = useState<ComposerSeed>(() =>
@@ -1164,6 +1169,7 @@ export default function EventComposer({
     if (d.national_day) setNationalDayOn(true)
     if (parseOccasion(d.occasion)) setOccasion(parseOccasion(d.occasion))
     setVenueDetails(venueDetailsOf(d))
+    setEventLanguages(cleanEventLanguages(d.languages))
     if (d.fee_incidence) setPassFeesToBuyer(d.fee_incidence === 'buyer')
     // `enable_waitlist` is now per tier; the event-level value in an older
     // draft is picked up as each tier's fallback in the tier mapping above.
@@ -1645,6 +1651,8 @@ export default function EventComposer({
         requiresApproval && !(!isRsvp && cleanTiers.some((t) => Number(t.price || 0) > 0)),
       plus_ones_max: plusOnesMax,
       ...venueDetailsFields(venueDetails, isOnline),
+      // The language(s) it is held in, cleaned again here and shape-checked in firestore.rules.
+      languages: cleanEventLanguages(eventLanguages),
       // Family registration (lib/events/family): free events only (not paid,
       // not pay at the door). One person registers up to family_max people.
       family_registration: familyOn && !isDoor && !cleanTiers.some((t) => Number(t.price || 0) > 0),
@@ -3062,6 +3070,33 @@ export default function EventComposer({
                       {t(`categories.${cat}`, { defaultValue: cat })}
                     </button>
                   ))}
+                </div>
+              </div>
+
+              {/* The language(s) it is held in: optional, several allowed. */}
+              <div className="rounded-xl bg-surface-low px-4 py-3.5">
+                <div className="mb-2.5 flex items-center gap-2 text-meta font-medium text-fg-subtle">
+                  <Languages className="h-4 w-4" aria-hidden="true" /> {t('event_languages.title')}
+                  <span className="font-normal">· {t('event_languages.composer_hint')}</span>
+                </div>
+                <div className="flex flex-wrap gap-2" role="group" aria-label={t('event_languages.title')}>
+                  {EVENT_LANGUAGES.map(({ code }) => {
+                    const on = eventLanguages.includes(code)
+                    return (
+                      <button
+                        key={code}
+                        type="button"
+                        lang={code}
+                        aria-pressed={on}
+                        onClick={() =>
+                          setEventLanguages((l) => (on ? l.filter((x) => x !== code) : cleanEventLanguages([...l, code])))
+                        }
+                        className={chipCls(on)}
+                      >
+                        {eventLanguageLabel(code)}
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
             </div>

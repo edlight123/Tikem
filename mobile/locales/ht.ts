@@ -3364,6 +3364,13 @@ export default {
       amenities: "detay kote a",
     },
   },
+  // The language(s) an event is held in (lib/eventLanguages).
+  eventLanguages: {
+    title: "Lang",
+    filter: "Lang",
+    any: "Nenpòt lang",
+    heldIn: "Nan lang",
+  },
   venueDetails: {
     composerTitle: "Detay kote a",
     selectedCount: "{n} chwa",

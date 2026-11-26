@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { cleanEventLanguages } from '@/lib/event-languages'
 import { adminDb } from '@/lib/firebase/admin'
 import { requireAuth } from '@/lib/auth'
 import { createNotification } from '@/lib/notifications/helpers'
@@ -260,6 +261,13 @@ export async function POST(
     if (eventData.poster_alt !== undefined && eventData.poster_alt !== null) {
       const cleaned = cleanPosterAlt(eventData.poster_alt)
       if (cleaned !== eventData.poster_alt) updatePayload.poster_alt = cleaned || null
+    }
+
+    // The event's language(s) (lib/event-languages): the rules check the
+    // shape; publishing is the server's chance to keep only known codes, once.
+    if (eventData && 'languages' in eventData) {
+      const languages = cleanEventLanguages((eventData as any).languages)
+      if (JSON.stringify(languages) !== JSON.stringify((eventData as any).languages)) updatePayload.languages = languages
     }
 
     // Persist a normalized country code when we can determine it.

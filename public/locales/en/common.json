@@ -2637,5 +2637,12 @@
       "arrival_required": "Choose when the crew should arrive.",
       "contact_required": "Add a contact name and phone for the day."
     }
+  },
+  "event_languages": {
+    "title": "Language",
+    "composer_hint": "Optional. One or more.",
+    "filter": "Language",
+    "any": "Any language",
+    "held_in": "Held in"
   }
 }

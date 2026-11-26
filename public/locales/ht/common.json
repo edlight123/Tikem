@@ -2637,5 +2637,12 @@
       "arrival_required": "Chwazi lè ekip la dwe rive.",
       "contact_required": "Mete non ak telefòn yon kontak pou jou a."
     }
+  },
+  "event_languages": {
+    "title": "Lang",
+    "composer_hint": "Si ou vle. Youn oswa plizyè.",
+    "filter": "Lang",
+    "any": "Nenpòt lang",
+    "held_in": "Nan lang"
   }
 }

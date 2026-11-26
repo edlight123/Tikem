@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next'
 import { ChevronDown, X } from 'lucide-react'
 import { VENUE_ACCESSIBILITY, VENUE_FACILITIES, amenityKeysOf, wantedAmenities } from '@/lib/events/venue-details'
 import { EventFilters, DateFilter, EventTypeFilter } from '@/lib/filters/types'
+import { EVENT_LANGUAGES, eventLanguageLabel, parseLanguageParam } from '@/lib/event-languages'
 import { CATEGORIES, getCitiesForCountry, getPriceSliderConfig, formatPriceForCountry, getSubdivisions, getLocationTypeLabel, hasSubdivisions } from '@/lib/filters/config'
 import { buildPriceRangeFilter, countActiveFilters, filtersEqual, parsePriceRange } from '@/lib/filters/utils'
 // The sheet's chips are the SAME chips as the Discover rail: filled, 10px
@@ -337,6 +338,31 @@ export function FiltersModal({
                 </div>
               )
             })}
+
+            {/* Language the event is held in: one at a time, Any by default. */}
+            <div className="space-y-3">
+              <span className="eyebrow block text-eyebrow text-fg-muted">{t('event_languages.filter')}</span>
+              <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={t('event_languages.filter')}>
+                {(['', ...EVENT_LANGUAGES.map((l) => l.code)] as const).map((code) => {
+                  const on = (parseLanguageParam(draftFilters.language) || '') === code
+                  return (
+                    <button
+                      key={code || 'any'}
+                      type="button"
+                      role="radio"
+                      aria-checked={on}
+                      lang={code || undefined}
+                      onClick={() => onDraftChange({ ...draftFilters, language: code || undefined })}
+                      className={`inline-flex min-h-9 items-center rounded px-4 text-meta leading-[18px] font-medium transition-colors ${
+                        on ? 'bg-inverse text-on-inverse' : 'bg-surface text-fg-muted hover:bg-surface-high hover:text-fg'
+                      }`}
+                    >
+                      {code ? eventLanguageLabel(code) : t('event_languages.any')}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
 
             {/* Price Filter — dual-thumb range, currency-aware */}
             <div className="space-y-3">

@@ -9,6 +9,7 @@
 import { eventZone } from '@/lib/home/feed'
 import { isoWithOffset } from '@/lib/home/format'
 import { stripRichText } from '@/lib/richText'
+import { eventInLanguage } from '@/lib/event-languages'
 
 const str = (v: unknown) => (typeof v === 'string' ? v.trim() : '')
 
@@ -75,6 +76,8 @@ export function buildEventJsonLd(event: any, siteUrl: string): Record<string, un
     '@type': 'Event',
     name: str(event.title),
     ...(description ? { description: description.slice(0, 5000) } : {}),
+    // The language(s) it is held in (lib/event-languages), when the organizer said.
+    ...(eventInLanguage(event?.languages) ? { inLanguage: eventInLanguage(event?.languages) } : {}),
     startDate: isoWithOffset(start, zone),
     ...(end && end.getTime() > start.getTime() ? { endDate: isoWithOffset(end, zone) } : {}),
     eventStatus:

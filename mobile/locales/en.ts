@@ -3434,6 +3434,13 @@ export default {
       amenities: "venue details",
     },
   },
+  // The language(s) an event is held in (lib/eventLanguages).
+  eventLanguages: {
+    title: "Language",
+    filter: "Language",
+    any: "Any language",
+    heldIn: "Held in",
+  },
   venueDetails: {
     composerTitle: "Venue details",
     selectedCount: "{n} selected",

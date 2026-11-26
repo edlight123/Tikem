@@ -3397,6 +3397,13 @@ export default {
       amenities: "infos pratiques",
     },
   },
+  // The language(s) an event is held in (lib/eventLanguages).
+  eventLanguages: {
+    title: "Langue",
+    filter: "Langue",
+    any: "Toutes les langues",
+    heldIn: "En",
+  },
   venueDetails: {
     composerTitle: "Infos pratiques",
     selectedCount: "{n} choix",
