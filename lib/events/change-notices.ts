@@ -138,7 +138,9 @@ export async function claimDueChanges(now = Date.now()): Promise<Array<{ eventId
         // The organizer typed the venue and the link: the same phishing and
         // link rules as an organizer message (lib/moderation/broadcast) before
         // they go out in our name. A refused change is kept for an admin.
-        if (!changeContentAllowed(current)) {
+        // Both sides are rendered (old → new), so both must pass: a refused
+        // value that became the baseline can never reappear as "before".
+        if (!changeContentAllowed(current, event.title) || !changeContentAllowed(s.baseline, event.title)) {
           tx.set(noticeRef, {
             event_id: eventId,
             before: s.baseline,
@@ -344,7 +346,12 @@ export async function scanEditedEvents(now = Date.now()) {
     const docs = (snap?.docs || []) as any[]
     if (docs.length < SCAN_PAGE) continue
     const lastAt = instantMs(docs[docs.length - 1].data()?.updated_at)
-    if (lastAt != null) nextScan = Math.min(nextScan, lastAt + 2 * 60 * 1000)
+    const firstAt = instantMs(docs[0].data()?.updated_at)
+    if (lastAt == null) continue
+    // A full page all at one instant would re-read itself forever: step past it.
+    const resumeAt = firstAt === lastAt ? lastAt + 1 : lastAt
+    if (firstAt === lastAt) console.warn('[event-change] a full scan page shares one updated_at; skipping past', lastAt)
+    nextScan = Math.min(nextScan, resumeAt + 2 * 60 * 1000)
   }
   const seen = new Map<string, any>()
   for (const s of [asString, asTimestamp]) for (const d of ((s as any)?.docs || []) as any[]) seen.set(d.id, d.data())

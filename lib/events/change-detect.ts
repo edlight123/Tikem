@@ -16,7 +16,7 @@
  * cannot hold a notice back forever). Old -> new is measured from the last
  * notified baseline, so an edit reverted before the notice goes sends nothing.
  */
-import { checkBroadcast } from '@/lib/moderation/broadcast'
+import { BROADCAST_MAX_TITLE, checkBroadcast } from '@/lib/moderation/broadcast'
 import { eventInstantIso } from '@/lib/email-templates/reminder'
 
 export const CHANGE_DEBOUNCE_MS = 10 * 60 * 1000
@@ -160,8 +160,11 @@ export function changeNoticeStamp(before: MaterialSnapshot, after: MaterialSnaps
 }
 
 /** The venue and link text an organizer typed, through the organizer-message rules. */
-export function changeContentAllowed(after: MaterialSnapshot): boolean {
+export function changeContentAllowed(after: MaterialSnapshot, eventTitle?: string | null): boolean {
   const place = [after.venue, after.address, after.commune, after.city].filter(Boolean).join(', ')
   const message = `The event details were updated. ${place}${after.link ? ` Online: ${after.link}` : ''}`
-  return checkBroadcast({ message }).ok
+  // The title goes out in the notice too; check it (cut to the title limit, so
+  // a long but honest title is not refused for length alone).
+  const title = String(eventTitle || '').replace(/\s+/g, ' ').trim().slice(0, BROADCAST_MAX_TITLE)
+  return checkBroadcast({ title, message }).ok
 }

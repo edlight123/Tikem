@@ -179,4 +179,10 @@ describe('change notice content (organizer-typed venue and link)', () => {
     expect(changeContentAllowed({ ...base, link: 'http://evil.example/login' })).toBe(false)
     expect(changeContentAllowed({ ...base, link: 'https://bit.ly/abc' })).toBe(false)
   })
+
+  it('checks the event title that goes out with it', () => {
+    expect(changeContentAllowed(base, 'Kompa Night')).toBe(true)
+    expect(changeContentAllowed(base, 'Verify your account: enter your password')).toBe(false)
+    expect(changeContentAllowed(base, 'A very long but honest title '.repeat(10))).toBe(true)
+  })
 })
