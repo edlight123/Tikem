@@ -137,5 +137,29 @@
       "has_holds": "Gen yon moun k ap achte. Eseye ankò talè.",
       "has_money": "Pa ka efase: gen peman ki anrejistre."
     }
+  },
+  "cancelEvent": {
+    "button": "Anile evènman an",
+    "title": "Anile {{event}}?",
+    "body": "Ou pa ka defèt yon anilasyon. Men sa k ap pase:",
+    "point1": "Tout tikè yo anile. Tikè ki te peye yo ap ranbouse sou menm mwayen peman achtè a te itilize a.",
+    "point2": "Tout moun ki gen yon tikè oswa yon rezèvasyon ap resevwa yon imèl ak yon notifikasyon.",
+    "point3": "Kòb evènman an ap rete bloke pou peye ranbousman yo.",
+    "reasonLabel": "Rezon (si ou vle, moun ki gen tikè yo ap wè l)",
+    "reasonPlaceholder": "Pa egzanp: sal la fèmen pou reparasyon.",
+    "typeToConfirm": "Ekri {{word}} pou konfime",
+    "confirmWord": "ANILE",
+    "keep": "Kenbe evènman an",
+    "confirm": "Anile epi ranbouse",
+    "working": "N ap anile…",
+    "failed": "Nou pa t kapab anile evènman an. Tanpri eseye ankò.",
+    "doneTitle": "Evènman an anile",
+    "doneBody": "{{refunded}} ranbouse kounye a, {{manual}} ranbousman Tikèm ap trete, {{notified}} moun avèti.",
+    "errors": {
+      "cancel_after_withdrawal": "Yo deja retire kòb pou evènman sa a, se sipò Tikèm sèlman ki ka anile l. Tanpri kontakte sipò a.",
+      "cancel_after_event_end": "Evènman sa a deja fini, se sipò Tikèm sèlman ki ka anile l. Tanpri kontakte sipò a.",
+      "cancel_balance_unavailable": "Nou pa ka verifye peman evènman sa a kounye a. Eseye ankò, oswa kontakte sipò a.",
+      "cancel_ledger_stamp_failed": "Evènman an anile, men nou pa t kapab anrejistre sa. Tanpri anile l ankò."
+    }
   }
 }

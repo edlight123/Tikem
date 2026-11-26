@@ -919,6 +919,13 @@ export default {
     eventsCount: 'evènman',
   },
   tickets: {
+    changeNotice: {
+      when: 'Dat ak lè chanje',
+      where: 'Kote a chanje',
+      link: 'Lyen an chanje',
+      was: 'anvan: {value}',
+      online: 'Sou entènèt',
+    },
     cancelRsvp: {
       action: 'Anile rezèvasyon an',
       title: 'Anile rezèvasyon ou a?',

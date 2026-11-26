@@ -94,7 +94,14 @@ export default function SendEventUpdateScreen() {
               );
             } catch (error: any) {
               console.error('Error sending update:', error);
-              showAlert(t('common.error'), t('organizerSendUpdate.errors.sendFailed'));
+              // The server refuses with a code (moderation, daily limit, a past
+              // event): say why, in the organizer's language.
+              const code = typeof error?.code === 'string' ? error.code : '';
+              const known = ['update_limit', 'sender_limit', 'event_not_live', 'too_long', 'too_many_links', 'insecure_link', 'shortened_link', 'phishing', 'shouting'];
+              showAlert(
+                t('common.error'),
+                known.includes(code) ? t(`organizerSendUpdate.refused.${code}`) : t('organizerSendUpdate.errors.sendFailed')
+              );
             } finally {
               setSending(false);
             }
