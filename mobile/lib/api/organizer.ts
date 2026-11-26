@@ -338,6 +338,7 @@ export async function getTodayEvents(
           // Unsold printed seats sit inside tickets_sold: people only.
           ticketsSold: soldForPeople(event),
           capacity: event.total_tickets || 0,
+          city: (event as any).city || null,
         };
         try {
           // Get checked-in count from tickets collection.

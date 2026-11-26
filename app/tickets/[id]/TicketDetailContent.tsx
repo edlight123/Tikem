@@ -3,6 +3,9 @@
 import { usePosterAlt } from '@/lib/usePosterAlt'
 import { useTranslation } from 'react-i18next'
 import { format } from 'date-fns'
+// Event times print at the venue's wall clock (its zone), not the viewer's.
+import { wallClock } from '@/lib/home/format'
+import { eventZone } from '@/lib/home/feed'
 import { ArrowLeft, Calendar, MapPin, User, Clock, Sparkles, CheckCircle2 } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -190,10 +193,10 @@ export default function TicketDetailContent({ ticket, event, user, pendingTransf
                       {t('detail.date')}
                     </p>
                     <p className="label-mono text-fg text-meta">
-                      {format(new Date(event.start_datetime || event.date), 'MMM d, yyyy')}
+                      {format(wallClock(event.start_datetime || event.date, eventZone(event)), 'MMM d, yyyy')}
                     </p>
                     <p className="label-mono text-meta text-fg-muted">
-                      {format(new Date(event.start_datetime || event.date), 'h:mm a')}
+                      {format(wallClock(event.start_datetime || event.date, eventZone(event)), 'h:mm a')}
                     </p>
                   </div>
                 </div>

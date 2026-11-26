@@ -8,6 +8,7 @@ import CategoryChart from '@/components/charts/CategoryChart'
 import { MetricCard, SectionHeader, OrgEmptyState } from '@/components/organizer/ui'
 import { TranslatedPageHeader } from '@/components/organizer/ui/TranslatedPageHeader'
 import { formatMoneyFromCents } from '@/lib/money'
+import { eventZone } from '@/lib/home/feed'
 
 /**
  * The analytics dashboard, split out of page.tsx so it can be a CLIENT
@@ -151,6 +152,8 @@ export default function AnalyticsView({
                     </Link>
                     <p className="font-mono tabular-nums text-xs text-fg-subtle mt-0.5">
                       {new Date(event.start_datetime).toLocaleDateString('en-US', {
+                        // The venue's calendar day, not the viewer's.
+                        timeZone: eventZone(event),
                         month: 'long',
                         day: 'numeric',
                         year: 'numeric',

@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import { Calendar, MapPin, Globe, Edit, Share2, Eye } from 'lucide-react'
 import { format, formatDistanceToNow } from 'date-fns'
+import { wallClock } from '@/lib/home/format'
+import { eventZone } from '@/lib/home/feed'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
@@ -86,7 +88,8 @@ export function EventHeader({ event }: EventHeaderProps) {
       setIsPublishing(false)
     }
   }
-  const startDate = new Date(event.start_datetime)
+  // The venue's wall clock (the event's zone), for display only.
+  const startDate = wallClock(event.start_datetime, eventZone(event))
   const updatedDate = new Date(event.updated_at)
 
   // NOT sticky. It was `sticky top-0 z-30` while OrganizerTopNav is

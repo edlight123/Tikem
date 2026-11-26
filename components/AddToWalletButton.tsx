@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react'
 import { Wallet, Download, Smartphone } from 'lucide-react'
 import { format } from 'date-fns'
+import { wallClock } from '@/lib/home/format'
+import { eventZone } from '@/lib/home/feed'
 import { escapeHtml } from '@/lib/html'
 import { useToast } from '@/components/ui/Toast'
 
@@ -303,12 +305,12 @@ export default function AddToWalletButton({ ticket, event, qrElementId = 'ticket
               
               <div class="detail-row">
                 <div class="detail-label">Date:</div>
-                <div class="detail-value">${event.start_datetime ? format(new Date(event.start_datetime), 'EEEE, MMMM d, yyyy') : 'TBA'}</div>
+                <div class="detail-value">${event.start_datetime ? format(wallClock(event.start_datetime, eventZone(event)), 'EEEE, MMMM d, yyyy') : 'TBA'}</div>
               </div>
               
               <div class="detail-row">
                 <div class="detail-label">Time:</div>
-                <div class="detail-value">${event.start_datetime && event.end_datetime ? `${format(new Date(event.start_datetime), 'h:mm a')} - ${format(new Date(event.end_datetime), 'h:mm a')}` : 'TBA'}</div>
+                <div class="detail-value">${event.start_datetime && event.end_datetime ? `${format(wallClock(event.start_datetime, eventZone(event)), 'h:mm a')} - ${format(wallClock(event.end_datetime, eventZone(event)), 'h:mm a')}` : 'TBA'}</div>
               </div>
               
               <div class="detail-row">
