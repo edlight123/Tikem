@@ -125,7 +125,7 @@ import { allowedPlusOnes, plusOnesSetting } from '../../lib/attendRequests';
 import { MAX_FREE_TICKETS_PER_PERSON } from '../../lib/ticketPricing';
 import { composerModeOf, isRsvpEvent, resolveEventTimezone, rsvpCapacityFrom, tierDescriptionFrom, tierEditorPrice, type ComposerMode } from '../../lib/composerFields';
 import { Skeleton } from '../../components/Skeleton';
-import { isValidZone, toZonedParts } from '../../lib/zonedTime';
+import { fromWallClockCarrier, isValidZone, toWallClockCarrier, toZonedParts } from '../../lib/zonedTime';
 import { hhmmTo12 } from '../../lib/eventClock';
 import { zoneForPlace } from '../../lib/composerFields';
 
@@ -1440,10 +1440,23 @@ export default function CreateEventFlowRefactored() {
   // ── Per-tier sale window ──────────────────────────────────────────────────
   // Format an ISO datetime for the inline row: date as YYYY-MM-DD, time as
   // h:mm AM/PM (mirrors the schedule rows' local-time display).
+  // The event's zone, by the same rule the save uses: ticket windows are shown
+  // and picked as the VENUE's wall clock, whatever zone the phone is in
+  // (lib/zonedTime carriers: a Date whose local fields are that wall clock).
+  const draftZone = resolveEventTimezone({
+    stored: storedPlaceRef.current?.timezone,
+    storedCountry: storedPlaceRef.current?.country,
+    storedCity: storedPlaceRef.current?.city,
+    country: eventDraft.country || 'HT',
+    city: eventDraft.is_online ? '' : eventDraft.city,
+  });
+  const toVenueClock = (at: Date): Date => (isValidZone(draftZone) ? toWallClockCarrier(at, draftZone) : at);
+  const fromVenueClock = (carrier: Date): Date => (isValidZone(draftZone) ? fromWallClockCarrier(carrier, draftZone) : carrier);
   const formatSaleDate = (iso?: string): string => {
     if (!iso) return '';
-    const d = new Date(iso);
-    if (isNaN(d.getTime())) return '';
+    const raw = new Date(iso);
+    if (isNaN(raw.getTime())) return '';
+    const d = toVenueClock(raw);
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
@@ -1451,8 +1464,9 @@ export default function CreateEventFlowRefactored() {
   };
   const formatSaleTime = (iso?: string): string => {
     if (!iso) return '';
-    const d = new Date(iso);
-    if (isNaN(d.getTime())) return '';
+    const raw = new Date(iso);
+    if (isNaN(raw.getTime())) return '';
+    const d = toVenueClock(raw);
     const hours = d.getHours();
     const minutes = String(d.getMinutes()).padStart(2, '0');
     const ampm = hours >= 12 ? 'PM' : 'AM';
@@ -1494,7 +1508,7 @@ export default function CreateEventFlowRefactored() {
     const tier = eventDraft.ticket_tiers[salePicker.tierIndex];
     const iso = tier?.[salePickerKey(salePicker.field)] as string | undefined;
     const d = iso ? new Date(iso) : new Date();
-    return isNaN(d.getTime()) ? new Date() : d;
+    return toVenueClock(isNaN(d.getTime()) ? new Date() : d);
   };
   // On pick, compose the new ISO datetime (patch only the changed component) and
   // write it back to the tier.
@@ -1504,14 +1518,15 @@ export default function CreateEventFlowRefactored() {
     const { tierIndex, field, mode } = salePicker;
     const key = salePickerKey(field);
     const existing = eventDraft.ticket_tiers[tierIndex]?.[key] as string | undefined;
-    const base = existing ? new Date(existing) : new Date();
-    if (isNaN(base.getTime())) base.setTime(Date.now());
+    const stored = existing ? new Date(existing) : new Date();
+    // Edited on the venue's wall clock, stored as the instant in its zone.
+    const base = toVenueClock(isNaN(stored.getTime()) ? new Date() : stored);
     if (mode === 'date') {
       base.setFullYear(selected.getFullYear(), selected.getMonth(), selected.getDate());
     } else {
       base.setHours(selected.getHours(), selected.getMinutes(), 0, 0);
     }
-    patchTier(tierIndex, { [key]: base.toISOString() });
+    patchTier(tierIndex, { [key]: fromVenueClock(base).toISOString() });
   };
 
   // ── Date/time helpers (ported verbatim from Step3ScheduleRefactored) ──
@@ -3433,6 +3448,7 @@ export default function CreateEventFlowRefactored() {
                         onChange={(add_ons) => updateDraft({ add_ons })}
                         tiers={eventDraft.ticket_tiers.map((tier) => ({ id: tier.id, key: (tier as any).key, name: tier.name }))}
                         currency={eventDraft.currency || 'HTG'}
+                        zone={draftZone}
                       />
                     </View>
                   )}

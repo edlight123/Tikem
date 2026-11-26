@@ -33,7 +33,7 @@ import { backendJson } from './backend';
 import type { DraftDeleteBlock } from '../draftDelete';
 import { guestlistVisibilityFrom, showGuestlistFor, type GuestlistVisibility } from '../guestlistVisibility';
 import type { LineupRecord } from '../lineup';
-import { fromZonedParts, isValidZone } from '../zonedTime';
+import { fromWallClockCarrier, fromZonedParts, isValidZone, toWallClockCarrier } from '../zonedTime';
 import {
   planTierSync,
   matchSiblingTierIds,
@@ -237,9 +237,13 @@ const MAX_RECURRENCE_COUNT = 52;
 function shiftDateByRecurrence(
   base: Date,
   cadence: 'daily' | 'weekly' | 'monthly',
-  i: number
+  i: number,
+  zone?: string
 ): Date {
-  const d = new Date(base.getTime());
+  // Stepped on the VENUE's calendar (a wall-clock carrier in its zone), so a
+  // weekly 7:00 PM stays 7:00 PM local across a daylight-saving change.
+  const zoned = !!zone && isValidZone(zone);
+  const d = zoned ? toWallClockCarrier(base, zone as string) : new Date(base.getTime());
   if (cadence === 'daily') {
     d.setDate(d.getDate() + i);
   } else if (cadence === 'weekly') {
@@ -252,7 +256,7 @@ function shiftDateByRecurrence(
     const lastDayOfMonth = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
     d.setDate(Math.min(day, lastDayOfMonth));
   }
-  return d;
+  return zoned ? fromWallClockCarrier(d, zone as string) : d;
 }
 
 export interface SaveEventOptions {
@@ -685,9 +689,9 @@ export async function createEvent(
         // Until-date mode. End-of-day so an occurrence ON the end date counts.
         const untilTime = new Date(`${endDateStr}T23:59:59`).getTime();
         for (let i = 0; i < MAX_RECURRENCE_COUNT; i++) {
-          const start = shiftDateByRecurrence(baseStartDatetime, cadence, i);
+          const start = shiftDateByRecurrence(baseStartDatetime, cadence, i, eventData.timezone);
           if (Number.isFinite(untilTime) && start.getTime() > untilTime) break;
-          occurrences.push({ start, end: shiftDateByRecurrence(baseEndDatetime, cadence, i) });
+          occurrences.push({ start, end: shiftDateByRecurrence(baseEndDatetime, cadence, i, eventData.timezone) });
         }
         // Guard against an end date before the base date: always keep occ 0.
         if (occurrences.length === 0) {
@@ -699,8 +703,8 @@ export async function createEvent(
         const count = Math.max(1, Math.min(MAX_RECURRENCE_COUNT, requestedCount));
         for (let i = 0; i < count; i++) {
           occurrences.push({
-            start: shiftDateByRecurrence(baseStartDatetime, cadence, i),
-            end: shiftDateByRecurrence(baseEndDatetime, cadence, i),
+            start: shiftDateByRecurrence(baseStartDatetime, cadence, i, eventData.timezone),
+            end: shiftDateByRecurrence(baseEndDatetime, cadence, i, eventData.timezone),
           });
         }
       }
