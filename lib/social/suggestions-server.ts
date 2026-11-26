@@ -364,6 +364,16 @@ export interface FriendActivityEvent {
   venue_name: string | null
   city: string | null
   banner_image_url: string | null
+  /** What the standard event card needs to show a price and a date. */
+  end_datetime: string | null
+  category: string
+  country: string
+  timezone?: string
+  ticket_price: number | null
+  currency: string | null
+  is_rsvp?: boolean
+  has_paid_tiers?: boolean
+  fee_incidence?: string | null
   friendCount: number
   /** Up to three friends, public display fields only. */
   friends: PublicUserSummary[]
@@ -391,6 +401,18 @@ export async function getFriendActivity(viewerId: string, now = Date.now()): Pro
       venue_name: e.venue_name ? String(e.venue_name) : null,
       city: e.city ? String(e.city) : null,
       banner_image_url: e.banner_image_url ? String(e.banner_image_url) : null,
+      end_datetime: (() => {
+        const end = toMillis(e.end_datetime)
+        return end != null ? new Date(end).toISOString() : null
+      })(),
+      category: String(e.category || ''),
+      country: String(e.country || ''),
+      ...(e.timezone ? { timezone: String(e.timezone) } : {}),
+      ticket_price: typeof e.ticket_price === 'number' ? e.ticket_price : null,
+      currency: e.currency ? String(e.currency) : null,
+      is_rsvp: e.is_rsvp === true,
+      has_paid_tiers: e.has_paid_tiers === true,
+      fee_incidence: e.fee_incidence ? String(e.fee_incidence) : null,
       friendCount: i.friendIds.length,
       friends: i.friendIds
         .slice(0, 3)

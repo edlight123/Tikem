@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { isUnlisted } from '../../lib/eventVisibility';
 import { useTabTaps } from '../../hooks/useTabTaps';
 import {
   View,
@@ -410,6 +411,9 @@ export default function OrganizerEventsScreen() {
                       ) : (
                         <StatusChip status={getChipStatus(displayStatus)} label={statusLabel} />
                       )}
+                      {isUnlisted(event as any) && (
+                        <StatusChip status="neutral" label={t('eventVisibility.unlisted')} />
+                      )}
                     </View>
                     <Text style={styles.eventTitle} numberOfLines={2}>
                       {event.title}
@@ -540,6 +544,8 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   statusRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 6,
     marginBottom: 8,
   },
   eventTitle: {

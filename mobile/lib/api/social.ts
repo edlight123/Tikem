@@ -208,3 +208,18 @@ export async function fetchFriendsGoing(eventId: string): Promise<FriendsGoingRe
     return off;
   }
 }
+
+/**
+ * Upcoming events the viewer's friends are going to (Home rail). Every privacy
+ * rule is on the server (lib/social/friend-activity.ts): friends who chose to
+ * share only, publicly listed events only. Empty when off or signed out.
+ */
+export async function fetchFriendActivity(): Promise<any[]> {
+  try {
+    const res = await backendFetch('/api/social/friend-activity', { method: 'GET' });
+    const data = await readJson(res);
+    return res.ok && data?.enabled === true && Array.isArray(data?.events) ? data.events.slice(0, 12) : [];
+  } catch {
+    return [];
+  }
+}

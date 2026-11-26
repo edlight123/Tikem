@@ -816,6 +816,13 @@
       "see_events": "Gade evènman yo",
       "see": "Gade",
       "dismiss": "Kache banyè sa a"
+    },
+    "friends_going": {
+      "title": "zanmi w prale",
+      "one": "{{name}} prale",
+      "two": "{{a}} ak {{b}} prale",
+      "many": "{{a}}, {{b}} ak {{count}} lòt prale",
+      "count": "{{count}} zanmi prale"
     }
   },
   "resources": {
@@ -1316,6 +1323,11 @@
     "imageGallery": "Galri imaj",
     "pageSettings": "Paramèt paj la",
     "showOnExplore": "Montre nan Dekouvri",
+    "visibility": "Vizibilite",
+    "visibilityPublic": "Piblik",
+    "visibilityUnlisted": "Pa nan lis",
+    "visibilityPublicHint": "Parèt sou Akèy, Dekouvri, Rechèch ak paj ou.",
+    "visibilityUnlistedHint": "Se sèlman moun ki gen lyen an ki ka jwenn li.",
     "showGoingCount": "Montre konbyen moun ap vini",
     "passwordProtected": "Evènman pwoteje ak modpas",
     "accessCodePlaceholderNew": "Kòd aksè (omwen 6 karaktè)",

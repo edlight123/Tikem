@@ -816,6 +816,13 @@
       "see_events": "See events",
       "see": "See",
       "dismiss": "Hide this banner"
+    },
+    "friends_going": {
+      "title": "friends are going",
+      "one": "{{name}} is going",
+      "two": "{{a}} and {{b}} are going",
+      "many": "{{a}}, {{b}} and {{count}} more are going",
+      "count": "{{count}} friends are going"
     }
   },
   "resources": {
@@ -1316,6 +1323,11 @@
     "imageGallery": "Image Gallery",
     "pageSettings": "Page Settings",
     "showOnExplore": "Show on Discover",
+    "visibility": "Visibility",
+    "visibilityPublic": "Public",
+    "visibilityUnlisted": "Unlisted",
+    "visibilityPublicHint": "Listed on Home, Discover, Search and your page.",
+    "visibilityUnlistedHint": "Only people with the link can find it.",
     "showGoingCount": "Show how many are going",
     "passwordProtected": "Password Protected Event",
     "accessCodePlaceholderNew": "Access code (min 6 characters)",

@@ -9,6 +9,7 @@ import { formatMoneyFromCents, formatPrimaryMoneyFromCentsByCurrency, normalizeC
 import { StatusChip } from '@/components/ui/kit'
 import { getPosterTheme } from '@/lib/posterGradient'
 import { soldForPeople } from '@/lib/physical/rules'
+import { isUnlisted } from '@/lib/events/visibility'
 
 interface EventData {
   id: string
@@ -33,6 +34,8 @@ interface EventData {
   /** Set by the Connect health sweep when this live event can no longer take money. */
   payout_blocked?: boolean
   payout_blocked_reason?: string
+  /** false = unlisted (lib/events/visibility): reachable by link only. */
+  show_on_explore?: boolean
 }
 
 interface OrganizerEventCardProps {
@@ -121,6 +124,7 @@ export default function OrganizerEventCard({ event, showNeedsAttention = true }:
             {event.is_published ? t('event_card_detail.published') : t('event_card_detail.draft')}
           </StatusChip>
           {isSoldOut && <StatusChip tone="danger">{t('event_card_detail.sold_out')}</StatusChip>}
+          {isUnlisted(event) && <StatusChip tone="neutral">{t('event_card_detail.unlisted')}</StatusChip>}
           {/* A live event whose payout account can no longer accept a charge. The
               buyer would reach checkout and fail, so this outranks every other
               signal on the row — shown before "needs attention", never hidden

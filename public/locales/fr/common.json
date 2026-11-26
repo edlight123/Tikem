@@ -816,6 +816,13 @@
       "see_events": "Voir les événements",
       "see": "Voir",
       "dismiss": "Masquer cette bannière"
+    },
+    "friends_going": {
+      "title": "vos amis y vont",
+      "one": "{{name}} y va",
+      "two": "{{a}} et {{b}} y vont",
+      "many": "{{a}}, {{b}} et {{count}} autres y vont",
+      "count": "{{count}} amis y vont"
     }
   },
   "resources": {
@@ -1316,6 +1323,11 @@
     "imageGallery": "Galerie d’images",
     "pageSettings": "Paramètres de la page",
     "showOnExplore": "Afficher dans Découvrir",
+    "visibility": "Visibilité",
+    "visibilityPublic": "Public",
+    "visibilityUnlisted": "Non répertorié",
+    "visibilityPublicHint": "Visible sur l'accueil, Découvrir, la recherche et votre page.",
+    "visibilityUnlistedHint": "Seules les personnes ayant le lien peuvent le trouver.",
     "showGoingCount": "Afficher le nombre de participants",
     "passwordProtected": "Événement protégé par mot de passe",
     "accessCodePlaceholderNew": "Code d’accès (6 caractères minimum)",

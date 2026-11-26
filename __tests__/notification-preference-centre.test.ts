@@ -82,8 +82,8 @@ describe('follower new-event push', () => {
     const base = { is_published: true, status: 'published' }
     expect(isSociallyVisibleEvent(base)).toBe(true)
     expect(isSociallyVisibleEvent({ ...base, is_password_protected: true })).toBe(false)
-    expect(isSociallyVisibleEvent({ ...base, visibility: 'unlisted' })).toBe(false)
-    expect(isSociallyVisibleEvent({ ...base, unlisted: true })).toBe(false)
+    // Unlisted is the event's show_on_explore = false (lib/events/visibility).
+    expect(isSociallyVisibleEvent({ ...base, show_on_explore: false })).toBe(false)
     expect(isSociallyVisibleEvent({ ...base, is_published: false })).toBe(false)
     expect(isSociallyVisibleEvent({ ...base, status: 'cancelled' })).toBe(false)
     expect(isSociallyVisibleEvent({ ...base, rejected: true })).toBe(false)

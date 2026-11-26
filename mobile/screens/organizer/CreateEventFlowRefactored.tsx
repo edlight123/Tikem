@@ -42,6 +42,8 @@ import { useImageCrop } from '../../components/ImageCropModal';
 import { POSTER_ASPECT } from '../../lib/imageCrop';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import DateTimeField from '../../components/organizer/DateTimeField';
+import { defaultEndFor, endNotAfterStart, nextEndOnStartChange } from '../../lib/dateTimeDefaults';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -473,6 +475,12 @@ const inline = StyleSheet.create({
  * late, and a date picked east of UTC (local midnight is the previous day in
  * UTC) saved a day early. The draft's times are local, so its dates must be too.
  */
+/** "7:00 PM": the time format the draft stores. */
+function to12h(d: Date): string {
+  const h = d.getHours();
+  return `${h % 12 || 12}:${String(d.getMinutes()).padStart(2, '0')} ${h >= 12 ? 'PM' : 'AM'}`;
+}
+
 function toLocalDateString(d: Date): string {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -1497,9 +1505,9 @@ export default function CreateEventFlowRefactored() {
     }
   }, [eventDraft.start_date]);
 
-  // When a start time is set, push the end time to +1 hour (and keep end date valid).
-  // In edit mode the first start we see is the saved one being loaded; keep the
-  // saved end time instead of overwriting it.
+  // When a start is set and the end is missing or not after it, the end
+  // becomes start + 2 hours (lib/dateTimeDefaults). In edit mode the first
+  // start we see is the saved one being loaded; keep the saved end.
   const skipEndSyncRef = useRef(isEditMode);
   useEffect(() => {
     if (eventDraft.start_date && eventDraft.start_time) {
@@ -1507,14 +1515,14 @@ export default function CreateEventFlowRefactored() {
         skipEndSyncRef.current = false;
         return;
       }
-      const oneHourLater = addOneHour(eventDraft.start_time);
-      const shouldUpdateEndDate = !eventDraft.end_date || eventDraft.end_date < eventDraft.start_date;
-      updateDraft({
-        end_date: shouldUpdateEndDate ? eventDraft.start_date : eventDraft.end_date,
-        end_time: oneHourLater,
-      });
+      const s = combineDateAndTime(eventDraft.start_date, eventDraft.start_time);
+      const e = eventDraft.end_date && eventDraft.end_time ? combineDateAndTime(eventDraft.end_date, eventDraft.end_time) : null;
+      if (e && e.getTime() > s.getTime()) return;
+      const def = defaultEndFor(s);
+      updateDraft({ end_date: toLocalDateString(def), end_time: to12h(def) });
     }
   }, [eventDraft.start_date, eventDraft.start_time]);
+
 
   const validateSchedule = (): boolean => {
     if (!eventDraft.start_date || !eventDraft.start_time || !eventDraft.end_date || !eventDraft.end_time) {
@@ -1563,6 +1571,29 @@ export default function CreateEventFlowRefactored() {
     const date = new Date(dateStr + 'T00:00:00');
     date.setHours(hours, minutes);
     return date;
+  };
+
+  // The start and end as Dates for the pickers (null until both parts are set).
+  const startValue =
+    eventDraft.start_date && eventDraft.start_time ? combineDateAndTime(eventDraft.start_date, eventDraft.start_time) : null;
+  const endValue =
+    eventDraft.end_date && eventDraft.end_time ? combineDateAndTime(eventDraft.end_date, eventDraft.end_time) : null;
+  // A new start moves the end with it: start + 2h, or the same length as before.
+  const changeStart = (d: Date | null) => {
+    if (!d) return;
+    const e = nextEndOnStartChange(startValue, d, endValue);
+    updateDraft({
+      start_date: toLocalDateString(d),
+      start_time: to12h(d),
+      end_date: toLocalDateString(e),
+      end_time: to12h(e),
+    });
+    if (errors.start || errors.end) setErrors(({ start: _s, end: _e, ...rest }) => rest);
+  };
+  const changeEnd = (d: Date | null) => {
+    if (!d) return;
+    updateDraft({ end_date: toLocalDateString(d), end_time: to12h(d) });
+    if (errors.end) setErrors(({ end: _e, ...rest }) => rest);
   };
 
   const getDateValue = (dateStr: string): Date => {
@@ -1678,6 +1709,16 @@ export default function CreateEventFlowRefactored() {
     if (!eventDraft.is_online && !eventDraft.venue_name.trim()) errs.venue_name = t('organizerCreateEventFlow.validation.venue');
     if (!eventDraft.start_date || !eventDraft.start_time) errs.start = t('organizerCreateEventFlow.validation.startDate');
     if (!eventDraft.end_date || !eventDraft.end_time) errs.end = t('organizerCreateEventFlow.validation.endDate');
+    else if (
+      eventDraft.start_date &&
+      eventDraft.start_time &&
+      endNotAfterStart(
+        combineDateAndTime(eventDraft.start_date, eventDraft.start_time),
+        combineDateAndTime(eventDraft.end_date, eventDraft.end_time)
+      )
+    ) {
+      errs.end = t('organizerCreateEvent.schedule.errors.endAfterStart');
+    }
 
     if (eventDraft.is_rsvp) {
       const cap = parseInt(eventDraft.capacity || '0', 10);
@@ -2518,26 +2559,27 @@ export default function CreateEventFlowRefactored() {
                 maxLength={100}
               />
 
-              <InlineDateTimeRow
-                colors={colors}
-                label={t('organizerCreateEventFlow.canvas.start') + ' *'}
-                dateText={eventDraft.start_date}
-                timeText={eventDraft.start_time}
-                timePlaceholder={t('organizerCreateEvent.schedule.selectTime')}
-                datePlaceholder={t('organizerCreateEvent.schedule.selectDate')}
-                onPressDate={() => { closeAllPickers(); Keyboard.dismiss(); setShowStartDate(true); }}
-                onPressTime={() => { closeAllPickers(); Keyboard.dismiss(); setShowStartTime(true); }}
+              {/* Start and end: one native date-and-time sheet each
+                  (components/organizer/DateTimeField). The end follows the start. */}
+              <DateTimeField
+                label={t('organizerCreateEventFlow.canvas.start')}
+                title={t('dateTimeField.startTitle')}
+                required
+                value={startValue}
+                onChange={changeStart}
+                placeholder={t('organizerCreateEvent.schedule.selectDate')}
                 error={!!errors.start}
               />
-              <InlineDateTimeRow
-                colors={colors}
-                label={t('organizerCreateEventFlow.canvas.end') + ' *'}
-                dateText={eventDraft.end_date}
-                timeText={eventDraft.end_time}
-                timePlaceholder={t('organizerCreateEvent.schedule.selectTime')}
-                datePlaceholder={t('organizerCreateEvent.schedule.selectDate')}
-                onPressDate={() => { closeAllPickers(); Keyboard.dismiss(); setShowEndDate(true); }}
-                onPressTime={() => { closeAllPickers(); Keyboard.dismiss(); setShowEndTime(true); }}
+              <DateTimeField
+                label={t('organizerCreateEventFlow.canvas.end')}
+                title={t('dateTimeField.endTitle')}
+                required
+                value={endValue}
+                onChange={changeEnd}
+                minimumDate={startValue || undefined}
+                initialValue={startValue ? defaultEndFor(startValue) : undefined}
+                placeholder={t('organizerCreateEvent.schedule.selectDate')}
+                helper={!endValue ? t('dateTimeField.endHelper') : undefined}
                 error={!!errors.end}
               />
               {scheduleErrorKey && (
@@ -3484,18 +3526,32 @@ export default function CreateEventFlowRefactored() {
                     </View>
                   )}
 
-                  {/* Visibility — Show on Explore */}
-                  <View style={styles.settingRow}>
-                    <View style={styles.settingTextCol}>
-                      <Text style={styles.settingLabel}>{t('organizerCreateEventFlow.canvas.visibility')}</Text>
+                  {/* Visibility (lib/eventVisibility), stored as show_on_explore:
+                      Public, or Unlisted = link only (off Home and its rails,
+                      Discover, Search, categories and the public profile). */}
+                  <View style={[styles.settingRow, { flexDirection: 'column', alignItems: 'stretch' }]}>
+                    <Text style={styles.settingLabel}>{t('eventVisibility.label')}</Text>
+                    <View accessibilityRole="radiogroup" style={[styles.chipScroll, styles.chipWrap]}>
+                      {(['public', 'unlisted'] as const).map((v) => {
+                        const selected = (v === 'unlisted') === !eventDraft.show_on_explore;
+                        return (
+                          <TouchableOpacity
+                            key={v}
+                            style={[styles.chip, selected && styles.chipActive]}
+                            onPress={() => updateDraft({ show_on_explore: v === 'public' })}
+                            accessibilityRole="radio"
+                            accessibilityState={{ selected }}
+                          >
+                            <Text style={[styles.chipText, selected && styles.chipTextActive]}>
+                              {t(v === 'public' ? 'eventVisibility.public' : 'eventVisibility.unlisted')}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
                     </View>
-                    <Switch
-                      value={eventDraft.show_on_explore}
-                      onValueChange={(v) => updateDraft({ show_on_explore: v })}
-                      trackColor={{ false: colors.border, true: colors.primary }}
-                      thumbColor={colors.white}
-                      ios_backgroundColor={colors.border}
-                    />
+                    <Text style={styles.settingHint}>
+                      {t(eventDraft.show_on_explore ? 'eventVisibility.publicHint' : 'eventVisibility.unlistedHint')}
+                    </Text>
                   </View>
 
                   {/* Promo video link */}
@@ -3762,55 +3818,6 @@ export default function CreateEventFlowRefactored() {
       </SafeAreaView>
 
       {/* iOS date/time picker modals (Android uses inline native dialogs below) */}
-      {renderPickerModal(
-        showStartDate,
-        t('organizerCreateEvent.schedule.modalStartDate'),
-        getDateValue(eventDraft.start_date),
-        'date',
-        handleStartDateChange,
-        () => setShowStartDate(false),
-        undefined
-      )}
-      {renderPickerModal(
-        showEndDate,
-        t('organizerCreateEvent.schedule.modalEndDate'),
-        getDateValue(eventDraft.end_date),
-        'date',
-        handleEndDateChange,
-        () => setShowEndDate(false),
-        eventDraft.start_date ? getDateValue(eventDraft.start_date) : undefined
-      )}
-      {renderPickerModal(
-        showStartTime,
-        t('organizerCreateEvent.schedule.modalStartTime'),
-        getTimeValue(eventDraft.start_time),
-        'time',
-        handleStartTimeChange,
-        () => setShowStartTime(false)
-      )}
-      {renderPickerModal(
-        showEndTime,
-        t('organizerCreateEvent.schedule.modalEndTime'),
-        getTimeValue(eventDraft.end_time),
-        'time',
-        handleEndTimeChange,
-        () => setShowEndTime(false)
-      )}
-
-      {/* Android inline pickers (auto-dismiss native dialogs) */}
-      {Platform.OS === 'android' && showStartDate && (
-        <DateTimePicker value={getDateValue(eventDraft.start_date)} mode="date" display="default" onChange={handleStartDateChange} />
-      )}
-      {Platform.OS === 'android' && showStartTime && (
-        <DateTimePicker value={getTimeValue(eventDraft.start_time)} mode="time" is24Hour={false} display="default" onChange={handleStartTimeChange} />
-      )}
-      {Platform.OS === 'android' && showEndDate && (
-        <DateTimePicker value={getDateValue(eventDraft.end_date)} mode="date" display="default" onChange={handleEndDateChange} minimumDate={eventDraft.start_date ? getDateValue(eventDraft.start_date) : undefined} />
-      )}
-      {Platform.OS === 'android' && showEndTime && (
-        <DateTimePicker value={getTimeValue(eventDraft.end_time)} mode="time" is24Hour={false} display="default" onChange={handleEndTimeChange} />
-      )}
-
       {/* Shared per-tier sale/validity-window picker (iOS modal). One modal serves
           every tier — salePicker holds which tier/bound/mode is being edited. */}
       {renderPickerModal(

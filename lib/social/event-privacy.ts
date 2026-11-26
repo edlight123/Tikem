@@ -9,18 +9,16 @@
  */
 import { isPubliclyListed } from '@/lib/home/new-on-tikem'
 import { guestlistVisibilityFrom } from '@/lib/guestlistVisibility'
+import { isUnlisted } from '@/lib/events/visibility'
 
 /**
- * TODO(unlisted): an explicit "Unlisted" event field is arriving in a separate
- * PR. Until then every shape that could mean it is read defensively here, so
- * whichever name lands is already honoured; tighten to the real field after.
+ * Shared by link on purpose: password-protected, or Unlisted
+ * (lib/events/visibility: show_on_explore false).
  */
 export function isUnlistedOrPrivate(e: Record<string, any> | null | undefined): boolean {
   if (!e) return true
   if (e.is_password_protected === true) return true
-  if (e.unlisted === true || e.is_unlisted === true || e.is_private === true) return true
-  const v = String(e.visibility || e.listing || '').toLowerCase()
-  return v === 'unlisted' || v === 'private' || v === 'link' || v === 'hidden'
+  return isUnlisted(e)
 }
 
 /** Publicly listed AND not shared-by-link-only. */

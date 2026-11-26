@@ -16,6 +16,7 @@ import StartingSoon from '@/components/home/StartingSoon'
 import ElsewhereRail from '@/components/home/ElsewhereRail'
 import OrganizerBand from '@/components/home/OrganizerBand'
 import NewOnTikem from '@/components/home/NewOnTikem'
+import FriendsGoingRail from '@/components/home/FriendsGoingRail'
 import OccasionRow, { type HomeOccasionRow } from '@/components/home/OccasionRow'
 import type { HomeEvent, HomeWorld, WeekDay } from '@/lib/home/feed'
 
@@ -83,6 +84,7 @@ export default function HomePageContent({
         {countryEmpty && elsewhereRail}
         <OccasionRow row={occasionRow} />
         <NewOnTikem events={newOnTikem} />
+        <FriendsGoingRail />
         <ThisWeek days={week} scopeQs={scopeQs} />
         <WorldsIndex worlds={worlds} scopeQs={scopeQs} />
         <StartingSoon events={soon} now={now} zone={zone} />

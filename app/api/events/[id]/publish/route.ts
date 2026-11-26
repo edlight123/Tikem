@@ -1,3 +1,4 @@
+import { isPubliclyListed } from '@/lib/events/visibility'
 import { NextRequest, NextResponse } from 'next/server'
 import { cleanEventLanguages } from '@/lib/event-languages'
 import { adminDb } from '@/lib/firebase/admin'
@@ -288,8 +289,9 @@ export async function POST(
 
     await adminDb.collection('events').doc(id).update(updatePayload)
 
-    // If publishing for the first time, notify followers
-    if (is_published && !eventData.is_published) {
+    // If publishing for the first time, notify followers. Not for an unlisted
+    // event (lib/events/visibility): it is shared by link only.
+    if (is_published && !eventData.is_published && isPubliclyListed(eventData)) {
       try {
         // Get organizer followers from Firestore
         const followersSnapshot = await adminDb

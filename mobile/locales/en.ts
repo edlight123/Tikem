@@ -4845,4 +4845,11 @@ export default {
     goingTwo: "{a} and {b} are going",
     goingMany: "{a}, {b} and {count} more are going",
   },
+  eventVisibility: {
+    label: "Visibility",
+    public: "Public",
+    publicHint: "Listed on Home, Discover, Search and your page.",
+    unlisted: "Unlisted",
+    unlistedHint: "Only people with the link can find it.",
+  },
 } as const;

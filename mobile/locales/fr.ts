@@ -4864,4 +4864,11 @@ export default {
     goingTwo: "{a} et {b} y vont",
     goingMany: "{a}, {b} et {count} autres y vont",
   },
+  eventVisibility: {
+    label: "Visibilité",
+    public: "Public",
+    publicHint: "Visible sur l'accueil, Découvrir, la recherche et votre page.",
+    unlisted: "Non répertorié",
+    unlistedHint: "Seules les personnes ayant le lien peuvent le trouver.",
+  },
 } as const;
