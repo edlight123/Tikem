@@ -38,6 +38,8 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import FlyerLibrarySheet, { SelectedFlyer } from '../../components/FlyerLibrarySheet';
+import { useImageCrop } from '../../components/ImageCropModal';
+import { POSTER_ASPECT } from '../../lib/imageCrop';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -1029,19 +1031,25 @@ export default function CreateEventFlowRefactored() {
   const [showFlyerLibrary, setShowFlyerLibrary] = useState(false);
   const [showPosterTemplates, setShowPosterTemplates] = useState(false);
 
+  const cropImage = useImageCrop();
   const pickImage = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        // Keep the whole flyer: iOS's built-in crop editor only ever crops to a
-        // square (the `aspect` prop is Android-only), which chopped posters. No
-        // editing → the full poster is uploaded and the card sizes to its ratio.
+        // Not the OS editor: iOS's only ever crops to a square (the `aspect`
+        // prop is Android-only), which chopped posters. Our own 4:5 framing
+        // step follows instead (pinch, drag, zoom; components/ImageCropModal).
         allowsEditing: false,
         quality: 0.8,
       });
 
-      if (!result.canceled) {
-        updateDraft({ banner_image_url: result.assets[0].uri, poster_template: null });
+      if (!result.canceled && result.assets?.[0]) {
+        // Cancel keeps the flyer that was there. Library and template posters
+        // never come through here, so they are not cropped.
+        const framed = await cropImage(result.assets[0], POSTER_ASPECT);
+        if (!framed) return;
+        if (!framed.cropped) showAlert(t('imageCrop.titlePoster'), t('imageCrop.failed'));
+        updateDraft({ banner_image_url: framed.uri, poster_template: null });
       }
     } catch (e) {
       console.error('Error picking flyer:', e);

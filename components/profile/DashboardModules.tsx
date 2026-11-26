@@ -23,6 +23,8 @@ import { DiscoverEventCard } from '@/components/discover/DiscoverEventCard'
 import { EmptyState } from '@/components/ui/kit'
 import { NoticeStrip } from '@/components/ui/NoticeStrip'
 import { useToast } from '@/components/ui/Toast'
+import { useImageFramer } from '@/components/ImageCropDialog'
+import { SQUARE_ASPECT } from '@/lib/imageCrop'
 import { ProfileSection, Panel, PanelRows } from './ui'
 
 /**
@@ -49,10 +51,7 @@ export function OrganizationCard({ name, logo }: { name: string; logo: string })
   const [logoUrl, setLogoUrl] = useState(logo)
   const [uploading, setUploading] = useState(false)
 
-  const onPicked = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    e.target.value = ''
-    if (!file) return
+  const uploadLogoFile = async (file: File) => {
     if (!file.type.startsWith('image/')) {
       showToast({ type: 'error', title: t('header.photo_invalid') })
       return
@@ -78,6 +77,9 @@ export function OrganizationCard({ name, logo }: { name: string; logo: string })
     }
   }
 
+  // Framed 1:1 (pinch, drag, zoom) before it goes up.
+  const logoFramer = useImageFramer(SQUARE_ASPECT, uploadLogoFile)
+
   const actionLabel = logoUrl ? t('dashboard.organization.change_logo') : t('dashboard.organization.add_logo')
 
   return (
@@ -101,9 +103,10 @@ export function OrganizationCard({ name, logo }: { name: string; logo: string })
           ref={inputRef}
           type="file"
           accept="image/jpeg,image/png,image/webp,image/gif"
-          onChange={onPicked}
+          onChange={logoFramer.onInputChange}
           className="hidden"
         />
+        {logoFramer.dialog}
         <Link
           href="/organizer/settings/organization"
           className="min-w-0 flex-1 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"

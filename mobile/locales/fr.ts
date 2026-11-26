@@ -4707,6 +4707,16 @@ export default {
       voided: "Billet imprimé annulé",
     },
   },
+  // Framing step after picking a flyer (4:5) or a logo / photo (1:1).
+  imageCrop: {
+    titlePoster: "Cadrez votre affiche",
+    titleSquare: "Cadrez votre image",
+    hint: "Pincez pour zoomer · glissez pour déplacer · touchez deux fois pour réinitialiser",
+    reset: "Réinitialiser",
+    cancel: "Annuler",
+    done: "Terminé",
+    failed: "Cette image n'a pas pu être cadrée ici, elle a donc été ajoutée telle quelle.",
+  },
   printedBundle: {
     title: "Billets imprimés",
     online: "{n} en ligne",

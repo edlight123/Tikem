@@ -1951,7 +1951,20 @@
     "formats": "PNG oswa JPG · jiska 5MB",
     "errType": "Tanpri chwazi yon fichye imaj",
     "errSize": "Imaj la dwe mwens pase 5MB",
-    "uploading": "Y ap chaje…"
+    "uploading": "Y ap chaje…",
+    "crop": {
+      "titlePoster": "Ajiste afich ou",
+      "titleSquare": "Ajiste imaj ou",
+      "hint": "Glise pou deplase · woule, pense oswa itilize ba a pou zoume",
+      "frameLabel": "Zòn pou koupe. Flèch yo deplase imaj la; plis ak mwens zoume.",
+      "zoom": "Zoum",
+      "zoomIn": "Zoume",
+      "zoomOut": "Dezoume",
+      "reset": "Rekòmanse",
+      "cancel": "Anile",
+      "done": "Fini",
+      "preparing": "N ap prepare…"
+    }
   },
   "phone": {
     "country": "Kòd peyi",

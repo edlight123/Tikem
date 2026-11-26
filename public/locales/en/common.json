@@ -1951,7 +1951,20 @@
     "formats": "PNG or JPG · up to 5MB",
     "errType": "Please select an image file",
     "errSize": "Image must be less than 5MB",
-    "uploading": "Uploading…"
+    "uploading": "Uploading…",
+    "crop": {
+      "titlePoster": "Frame your flyer",
+      "titleSquare": "Frame your image",
+      "hint": "Drag to move · scroll, pinch or use the slider to zoom",
+      "frameLabel": "Crop area. Arrow keys move the image; plus and minus zoom.",
+      "zoom": "Zoom",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out",
+      "reset": "Reset",
+      "cancel": "Cancel",
+      "done": "Done",
+      "preparing": "Preparing…"
+    }
   },
   "phone": {
     "country": "Country code",

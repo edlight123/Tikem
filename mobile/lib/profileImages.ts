@@ -21,8 +21,15 @@ export class ProfileImageError extends Error {
   }
 }
 
-/** Ask for permission and open the camera or library. Null when cancelled. */
-export async function pickProfileImage(source: ImageSource): Promise<ImagePicker.ImagePickerAsset | null> {
+/**
+ * Ask for permission and open the camera or library. Null when cancelled.
+ * `osEditor: false` skips the OS square editor, for callers that frame the
+ * photo themselves (useImageChooser's pinch / drag / zoom step).
+ */
+export async function pickProfileImage(
+  source: ImageSource,
+  { osEditor = true }: { osEditor?: boolean } = {},
+): Promise<ImagePicker.ImagePickerAsset | null> {
   const perm =
     source === 'camera'
       ? await ImagePicker.requestCameraPermissionsAsync()
@@ -34,7 +41,7 @@ export async function pickProfileImage(source: ImageSource): Promise<ImagePicker
   }
   const options: ImagePicker.ImagePickerOptions = {
     mediaTypes: ImagePicker.MediaTypeOptions.Images,
-    allowsEditing: true,
+    allowsEditing: osEditor,
     aspect: [1, 1],
     quality: 0.85,
   };

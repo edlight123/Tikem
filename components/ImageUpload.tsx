@@ -4,6 +4,8 @@ import { useState, useRef, useEffect } from 'react'
 import Image from 'next/image'
 import { useTranslation } from 'react-i18next'
 import FlyerLibraryPicker from '@/components/organizer/FlyerLibraryPicker'
+import { useImageFramer } from '@/components/ImageCropDialog'
+import { POSTER_ASPECT, SQUARE_ASPECT } from '@/lib/imageCrop'
 
 /**
  * BUNDLE: the storage shim is fetched at the point of use, not imported at
@@ -67,9 +69,24 @@ export default function ImageUpload({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentImage])
 
-  async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+  // Flyers are framed 4:5 and logos 1:1 before upload (pinch, drag, zoom;
+  // components/ImageCropDialog). The plain variant keeps its own shape. Library
+  // and template posters never pass through here, so they are not cropped.
+  const cropAspect = variant === 'flyer' ? POSTER_ASPECT : variant === 'square' ? SQUARE_ASPECT : null
+  const framer = useImageFramer(cropAspect ?? POSTER_ASPECT, (file) => uploadFile(file))
+
+  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    if (cropAspect != null) {
+      framer.onInputChange(e)
+      return
+    }
     const file = e.target.files?.[0]
-    if (!file) return
+    // Picking the same file again must fire onChange again.
+    e.target.value = ''
+    if (file) void uploadFile(file)
+  }
+
+  async function uploadFile(file: File) {
 
     // Validate file type
     // Only the types storage.rules accepts (an SVG/AVIF/BMP was refused
@@ -299,6 +316,8 @@ export default function ImageUpload({
             )}
           </div>
         )}
+
+        {framer.dialog}
 
         {libraryOpen && (
           <FlyerLibraryPicker
