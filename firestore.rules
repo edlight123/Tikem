@@ -435,6 +435,8 @@ service cloud.firestore {
         && request.resource.data.get('claimed_at', null) == null
         && request.resource.data.get('claimed_by', null) == null
         && request.resource.data.get('community_free', null) == null
+        // When it first went public (lib/events/publishedAt): the server's.
+        && request.resource.data.get('published_at', null) == null
         // Approval lists are for FREE events only (docs/specs/approval-lists-and-plus-ones.md).
         && !(request.resource.data.get('requires_approval', false) == true
              && request.resource.data.get('has_paid_tiers', false) == true)
@@ -495,6 +497,7 @@ service cloud.firestore {
           // add_ons_sold is the add-on stock rollup of the shards: Admin SDK only.
           request.resource.data.get('add_ons_sold', null) == resource.data.get('add_ons_sold', null) &&
           addOnsShapeOk(request.resource.data) &&
+          request.resource.data.get('published_at', null) == resource.data.get('published_at', null) &&
           validPosterAlt(request.resource.data) &&
           // Import fields (lib/import) are the server's. The one client change
           // allowed: marking a synced Eventbrite copy as edited here

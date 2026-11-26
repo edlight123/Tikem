@@ -20,6 +20,7 @@ import { MIN_PAID_PRICE_ERROR_CODE, publishPriceBelowMinimum } from '@/lib/min-p
 import { readOrgBrandAdmin } from '@/lib/firestore/org-brand-server'
 import { isPaidEvent, sellsTicketsElsewhere } from '@/lib/events/paid-event'
 import { cleanPosterAlt } from '@/lib/posterAlt'
+import { firstPublishStamp } from '@/lib/events/publishedAt'
 
 const TIER_LIMIT = 25
 
@@ -246,6 +247,8 @@ export async function POST(
       is_published,
       status: nextStatus,
       updated_at: new Date(),
+      // The first time it goes public (lib/events/publishedAt): Home's "Recently added".
+      ...(is_published ? firstPublishStamp(eventData) : {}),
       ...(clearPayoutBlock
         ? {
             payout_blocked: false,

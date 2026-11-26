@@ -29,19 +29,26 @@ function plain(id: string, data: Record<string, any>): Record<string, any> {
 const readNewDocs = unstable_cache(
   async (sinceIso: string): Promise<Array<Record<string, any>>> => {
     const since = new Date(sinceIso)
-    const read = (bound: Date | string) =>
+    // published_at (ISO, stamped on first publish: lib/events/publishedAt)
+    // catches an old draft published today; created_at covers events from
+    // before that stamp, read once per stored type (Timestamp / ISO string).
+    const read = (field: 'published_at' | 'created_at', bound: Date | string) =>
       adminDb
         .collection('events')
         .where('is_published', '==', true)
-        .where('created_at', '>=', bound)
-        .orderBy('created_at', 'desc')
+        .where(field, '>=', bound)
+        .orderBy(field, 'desc')
         .limit(READ_MAX)
         .get()
         .catch((err: any) => {
           console.warn('[new-on-tikem] read failed', err?.message)
           return null
         })
-    const snaps = await Promise.all([read(since), read(since.toISOString())])
+    const snaps = await Promise.all([
+      read('published_at', since.toISOString()),
+      read('created_at', since),
+      read('created_at', since.toISOString()),
+    ])
     const seen = new Set<string>()
     const out: Array<Record<string, any>> = []
     for (const s of snaps) {
