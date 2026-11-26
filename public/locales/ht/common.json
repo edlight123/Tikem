@@ -2696,5 +2696,25 @@
     "filter": "Lang",
     "any": "Nenpòt lang",
     "held_in": "Nan lang"
+  },
+  "pushCopy": {
+    "newEvent": {
+      "title": "Nouvo nan {{organizer}}",
+      "fallbackBody": "Yon nouvo evènman disponib.",
+      "someone": "Yon òganizatè ou swiv"
+    },
+    "friendRequest": {
+      "requestTitle": "Nouvo demann zanmi",
+      "requestBody": "{{name}} vle konekte avè w sou Tikèm.",
+      "acceptedTitle": "Nou se zanmi kounye a",
+      "acceptedBody": "{{name}} aksepte demann zanmi w lan.",
+      "someone": "Yon moun"
+    }
+  },
+  "friendActivity": {
+    "title": "Zanmi w prale",
+    "goingOne": "{{name}} prale",
+    "goingTwo": "{{a}} ak {{b}} prale",
+    "goingMany": "{{a}}, {{b}} ak {{count}} lòt prale"
   }
 }

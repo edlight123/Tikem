@@ -58,6 +58,10 @@ type UserPrefKey =
   | 'notify_filling_fast'
   | 'notify_national_day'
   | 'notify_friend_invites'
+  // An organizer you follow published an event (server: organizer_follow).
+  | 'notify_followed_organizers'
+  // Saved-event nudges + "how was it?" (NOT ticket reminders, always on).
+  | 'notify_reminders'
   | 'notify_organizer_milestones'
   | 'notify_organizer_nudges'
   | 'notify_organizer_season';
@@ -99,6 +103,8 @@ export default function NotificationSettingsScreen({ navigation, route }: any) {
     notify_filling_fast: true,
     notify_national_day: true,
     notify_friend_invites: true,
+    notify_followed_organizers: true,
+    notify_reminders: true,
     notify_organizer_milestones: true,
     notify_organizer_nudges: true,
     notify_organizer_season: true,
@@ -145,6 +151,9 @@ export default function NotificationSettingsScreen({ navigation, route }: any) {
             notify_filling_fast: data.notify_filling_fast ?? true,
             notify_national_day: data.notify_national_day ?? true,
             notify_friend_invites: data.notify_friend_invites ?? true,
+            notify_followed_organizers: data.notify_followed_organizers ?? true,
+            // The old web card's nested `notify.reminders` still counts (server readUserNotifyPref).
+            notify_reminders: data.notify_reminders ?? data.notify?.reminders ?? true,
             notify_organizer_milestones: data.notify_organizer_milestones ?? true,
             notify_organizer_nudges: data.notify_organizer_nudges ?? true,
             notify_organizer_season: readNotifyPref(data, 'notify_organizer_season'),
@@ -320,7 +329,7 @@ export default function NotificationSettingsScreen({ navigation, route }: any) {
           <SectionHeader
             title={t('notificationSettings.fromTikem.section')} />
           {loading ? (
-            <Skeleton width="100%" height={204} radius={radius.lg} style={{ marginTop: spacing.md }} />
+            <Skeleton width="100%" height={340} radius={radius.lg} style={{ marginTop: spacing.md }} />
           ) : (
             <View style={styles.card}>
               <PrefRow
@@ -334,6 +343,18 @@ export default function NotificationSettingsScreen({ navigation, route }: any) {
                 title={t('notificationSettings.fromTikem.weekend')}
                 value={userPrefs.notify_weekend_digest}
                 onChange={(v) => toggleUserPref('notify_weekend_digest', v)}
+              />
+              <PrefRow
+                divided
+                title={t('notificationSettings.fromTikem.followedOrganizers')}
+                value={userPrefs.notify_followed_organizers}
+                onChange={(v) => toggleUserPref('notify_followed_organizers', v)}
+              />
+              <PrefRow
+                divided
+                title={t('notificationSettings.fromTikem.savedEvents')}
+                value={userPrefs.notify_reminders}
+                onChange={(v) => toggleUserPref('notify_reminders', v)}
               />
               <PrefRow
                 divided

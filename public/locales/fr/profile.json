@@ -69,7 +69,14 @@
     "filling_fast_desc": "Quand un événement que vous avez enregistré est presque complet",
     "national_day": "Fêtes haïtiennes",
     "national_day_desc": "Un petit mot le matin d'une fête nationale",
-    "note": "Les notifications importantes de compte et de sécurité seront toujours envoyées indépendamment de ces paramètres."
+    "note": "Les notifications importantes de compte et de sécurité seront toujours envoyées indépendamment de ces paramètres.",
+    "saved_events": "Événements enregistrés",
+    "saved_events_desc": "Avant un événement que vous avez enregistré, et « c’était comment ? » le lendemain",
+    "friends": "Amis",
+    "friends_desc": "Demandes d’ami et invitations de vos amis",
+    "followed_organizers": "Organisateurs suivis",
+    "followed_organizers_desc": "Quand un organisateur que vous suivez publie un événement",
+    "always_on": "Billets, rappels de vos billets, changements, annulations, remboursements et codes de connexion vous parviennent toujours."
   },
   "account": {
     "title": "Compte",

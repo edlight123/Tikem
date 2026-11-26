@@ -54,12 +54,16 @@ export function NotificationsCard({ profile, onUpdate }: NotificationsCardProps)
     }
   }
 
+  // Discretionary only: tickets, reminders for tickets you hold, event changes,
+  // cancellations, refunds and sign-in codes are transactional and always
+  // sent (lib/notifications/policy.ts), so they are a line, not switches.
   const rows: { key: UserNotifyField; title: string; description: string }[] = [
-    { key: 'notify_reminders', title: t('notifications.event_reminders'), description: t('notifications.event_reminders_desc') },
-    { key: 'notify_event_updates', title: t('notifications.event_updates'), description: t('notifications.event_updates_desc') },
     { key: 'notify_discovery', title: t('notifications.discovery'), description: t('notifications.discovery_desc') },
     { key: 'notify_weekend_digest', title: t('notifications.weekend_digest'), description: t('notifications.weekend_digest_desc') },
+    { key: 'notify_followed_organizers', title: t('notifications.followed_organizers'), description: t('notifications.followed_organizers_desc') },
+    { key: 'notify_reminders', title: t('notifications.saved_events'), description: t('notifications.saved_events_desc') },
     { key: 'notify_filling_fast', title: t('notifications.filling_fast'), description: t('notifications.filling_fast_desc') },
+    { key: 'notify_friend_invites', title: t('notifications.friends'), description: t('notifications.friends_desc') },
     { key: 'notify_national_day', title: t('notifications.national_day'), description: t('notifications.national_day_desc') },
   ]
 
@@ -80,7 +84,7 @@ export function NotificationsCard({ profile, onUpdate }: NotificationsCardProps)
         </PanelRows>
       </Panel>
 
-      <p className="mt-3 !text-caption !leading-relaxed text-fg-faint">{t('notifications.note')}</p>
+      <p className="mt-3 !text-caption !leading-relaxed text-fg-faint">{t('notifications.always_on')}</p>
     </ProfileSection>
   )
 }

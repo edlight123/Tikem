@@ -4056,6 +4056,8 @@ export default {
       fillingFastBody: 'When an event you follow is close to selling out.',
       nationalDay: 'Haitian holidays',
       nationalDayBody: 'A short note on the morning of a national day.',
+      followedOrganizers: "Organizers you follow",
+      savedEvents: "Saved events",
       friendInvites: "Friend invites",
       friendInvitesBody: "When a friend invites you to an event, or joins Tikèm from your invite.",
     },
@@ -4835,5 +4837,12 @@ export default {
       has_holds: "Someone is checking out. Try again shortly.",
       has_money: "Can’t delete: payments are on record.",
     },
+  },
+  // @section friendActivity
+  friendActivity: {
+    title: "Friends are going",
+    goingOne: "{name} is going",
+    goingTwo: "{a} and {b} are going",
+    goingMany: "{a}, {b} and {count} more are going",
   },
 } as const;

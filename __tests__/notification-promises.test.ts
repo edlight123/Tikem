@@ -179,7 +179,6 @@ describe('#8 profile notification switches', () => {
     await updateUserProfileAdmin('u1', {
       notifyPrefs: {
         notify_reminders: false,
-        notify_event_updates: true,
         notify_discovery: false,
         notify_filling_fast: false,
         notify_national_day: true,
@@ -189,7 +188,10 @@ describe('#8 profile notification switches', () => {
     expect(doc.notify_reminders).toBe(false)
     expect(doc.notify_discovery).toBe(false)
     expect(doc.notify_filling_fast).toBe(false)
-    expect(isCategoryEnabled(doc, 'reminder')).toBe(false)
+    // notify_reminders now governs saved-event nudges; a ticket reminder is
+    // transactional and always goes.
+    expect(isCategoryEnabled(doc, 'saved_event')).toBe(false)
+    expect(isCategoryEnabled(doc, 'reminder')).toBe(true)
     expect(isCategoryEnabled(doc, 'discovery')).toBe(false)
     expect(isCategoryEnabled(doc, 'filling_fast')).toBe(false)
     expect(isCategoryEnabled(doc, 'event_change')).toBe(true)
@@ -201,11 +203,13 @@ describe('#8 profile notification switches', () => {
 
   it('honours the old nested switches when no top-level field exists, but never maps promos', () => {
     const legacy = { notify: { reminders: false, updates: false, promos: false } }
-    expect(isCategoryEnabled(legacy, 'reminder')).toBe(false)
-    expect(isCategoryEnabled(legacy, 'event_change')).toBe(false)
+    expect(isCategoryEnabled(legacy, 'saved_event')).toBe(false)
+    // Transactional: the old switches can no longer silence these.
+    expect(isCategoryEnabled(legacy, 'reminder')).toBe(true)
+    expect(isCategoryEnabled(legacy, 'event_change')).toBe(true)
     expect(isCategoryEnabled(legacy, 'discovery')).toBe(true)
     // Top-level wins over nested.
-    expect(isCategoryEnabled({ ...legacy, notify_reminders: true }, 'reminder')).toBe(true)
+    expect(isCategoryEnabled({ ...legacy, notify_reminders: true }, 'saved_event')).toBe(true)
     expect(readUserNotifyPrefs(legacy).notify_filling_fast).toBe(true)
   })
 

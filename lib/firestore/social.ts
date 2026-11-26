@@ -138,69 +138,9 @@ export async function getEventSocialAttendance(
   return { totalGoing, viewerIsGoing, friendsGoing, publicGoing }
 }
 
-/**
- * Count how many of the viewer's friends are going to each of the given events
- * (respecting each friend's attendance visibility). Powers the "friends going"
- * badge on event cards. Returns a map of eventId -> distinct friend count.
- *
- * Efficient: one friend lookup + a bounded set of ticket queries keyed by
- * friend id, bucketed by event. Cost is independent of how many events are
- * requested, so a whole discover feed resolves in a couple of round-trips.
- */
-export async function getFriendsGoingCounts(
-  viewerId: string | null,
-  eventIds: string[]
-): Promise<Record<string, number>> {
-  const wanted = new Set(eventIds.filter(Boolean))
-  if (!viewerId || wanted.size === 0) return {}
-
-  const friendIds = await getAcceptedFriendIds(viewerId)
-  if (friendIds.length === 0) return {}
-
-  // Keep only friends whose attendance is visible to friends (or everyone).
-  const friendDocs = await fetchUserDocs(friendIds)
-  const visibleFriendIds = friendIds.filter((id) => {
-    const v = attendanceVisibilityOf(friendDocs.get(id))
-    return v === 'friends' || v === 'everyone'
-  })
-  if (visibleFriendIds.length === 0) return {}
-
-  // eventId -> set of friend ids going (a friend with multiple tickets counts once).
-  const goingByEvent = new Map<string, Set<string>>()
-
-  const chunks: string[][] = []
-  for (let i = 0; i < visibleFriendIds.length; i += 30) {
-    chunks.push(visibleFriendIds.slice(i, i + 30))
-  }
-
-  // Tickets store the holder as either `attendee_id` or (legacy) `user_id`.
-  const queries: Promise<any>[] = []
-  for (const chunk of chunks) {
-    queries.push(adminDb.collection('tickets').where('attendee_id', 'in', chunk).get())
-    queries.push(adminDb.collection('tickets').where('user_id', 'in', chunk).get())
-  }
-
-  const snaps = await Promise.all(queries)
-  snaps.forEach((snap: any) => {
-    snap.docs.forEach((doc: any) => {
-      const data = doc.data() || {}
-      const status = String(data.status || 'valid').toLowerCase()
-      if (!GOING_STATUSES.has(status)) return
-      const eventId = data.event_id
-      if (!eventId || !wanted.has(eventId)) return
-      const friendId = data.attendee_id || data.user_id
-      if (!friendId) return
-      if (!goingByEvent.has(eventId)) goingByEvent.set(eventId, new Set())
-      goingByEvent.get(eventId)!.add(friendId)
-    })
-  })
-
-  const counts: Record<string, number> = {}
-  goingByEvent.forEach((set, eventId) => {
-    counts[eventId] = set.size
-  })
-  return counts
-}
+// Card "friends going" counts moved to getFriendsGoingCountsFor
+// (lib/social/suggestions-server.ts), which applies the stricter
+// friend-activity privacy rules (lib/social/friend-activity.ts).
 
 /** Stable: people with a photo first, otherwise the original order. */
 function photoFirst(list: PublicUserSummary[]): PublicUserSummary[] {

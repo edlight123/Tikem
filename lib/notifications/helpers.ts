@@ -66,19 +66,15 @@ export async function notifyTicketPurchase(
   // bell entries with different wording. It also had to invent a ticketId,
   // passing eventId in its place. Pushing directly removes both problems.
   try {
-    const { sendPushNotification, getNotificationPreferences } = await import(
-      '@/lib/notification-triggers'
+    // Transactional (policy.ts purchase): no switch silences a ticket.
+    const { sendPushNotification } = await import('@/lib/notification-triggers')
+    await sendPushNotification(
+      userId,
+      'Ticket Purchased! 🎫',
+      `Your ticket${ticketCount > 1 ? 's' : ''} for "${eventTitle}" ${ticketCount > 1 ? 'are' : 'is'} ready`,
+      `/tickets/event/${eventId}`,
+      { type: 'ticket_purchased', eventId, ticketCount }
     )
-    const prefs = await getNotificationPreferences(userId)
-    if (prefs.notifyTicketPurchase) {
-      await sendPushNotification(
-        userId,
-        'Ticket Purchased! 🎫',
-        `Your ticket${ticketCount > 1 ? 's' : ''} for "${eventTitle}" ${ticketCount > 1 ? 'are' : 'is'} ready`,
-        `/tickets/event/${eventId}`,
-        { type: 'ticket_purchased', eventId, ticketCount }
-      )
-    }
   } catch (error) {
     console.error('Failed to send push notification:', error)
   }

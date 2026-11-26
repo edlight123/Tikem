@@ -1,4 +1,4 @@
-import { getNotificationPreferences, sendPushNotification } from '@/lib/notification-triggers'
+import { sendPushNotification } from '@/lib/notification-triggers'
 import { createNotification } from '@/lib/notifications/helpers'
 import type { NotificationType } from '@/types/database'
 import { getEventReminderWhatsApp } from '@/lib/whatsapp'
@@ -42,8 +42,7 @@ export function customReminderType(minutesBefore: number): NotificationType {
  *
  * One bell entry plus one push, the same shape as helpers.notifyTicketPurchase
  * (createNotification + sendPushNotification directly), never a trigger wrapper
- * that writes a second bell entry. Respects the attendee's reminders switch;
- * reminders are TRANSACTIONAL (lib/notifications/policy), so no quiet hours or
+ * that writes a second bell entry. Reminders are TRANSACTIONAL (lib/notifications/policy), so no quiet hours or
  * caps. One attendee's failure never stops the rest.
  */
 export async function sendConfiguredEventReminder(opts: {
@@ -60,8 +59,6 @@ export async function sendConfiguredEventReminder(opts: {
 
   await Promise.allSettled(
     attendeeIds.map(async (userId) => {
-      const prefs = await getNotificationPreferences(userId)
-      if (!prefs.notifyReminders) return
       await createNotification(userId, type, title, body, url, { eventId })
       await sendPushNotification(userId, title, body, url, {
         type,

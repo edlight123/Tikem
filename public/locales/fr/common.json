@@ -2696,5 +2696,25 @@
     "filter": "Langue",
     "any": "Toutes les langues",
     "held_in": "En"
+  },
+  "pushCopy": {
+    "newEvent": {
+      "title": "Nouveau chez {{organizer}}",
+      "fallbackBody": "Un nouvel événement est en ligne.",
+      "someone": "Un organisateur que vous suivez"
+    },
+    "friendRequest": {
+      "requestTitle": "Nouvelle demande d’ami",
+      "requestBody": "{{name}} veut se connecter avec vous sur Tikèm.",
+      "acceptedTitle": "Vous êtes maintenant amis",
+      "acceptedBody": "{{name}} a accepté votre demande d’ami.",
+      "someone": "Quelqu’un"
+    }
+  },
+  "friendActivity": {
+    "title": "Vos amis y vont",
+    "goingOne": "{{name}} y va",
+    "goingTwo": "{{a}} et {{b}} y vont",
+    "goingMany": "{{a}}, {{b}} et {{count}} autres y vont"
   }
 }

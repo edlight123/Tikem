@@ -27,6 +27,12 @@ import {
   selectFriendsGoing,
   toMillis,
 } from './suggestions'
+import {
+  type ActivityTicket,
+  countFriendsGoing,
+  selectFriendActivity,
+  sharesActivityWithFriends,
+} from './friend-activity'
 
 const MAX_FRIENDS_SCANNED = 50
 const MAX_FRIEND_CONNECTIONS = 300
@@ -291,4 +297,122 @@ export async function getFriendsGoing(
     .filter((s): s is PublicUserSummary & { username?: string } => Boolean(s))
     .map(({ uid, displayName, photoURL, isVerified }) => ({ uid, displayName, photoURL, isVerified }))
   return { count: picked.count, friends }
+}
+
+// ---------------------------------------------------------------------------
+// Friend activity (lib/social/friend-activity.ts holds every privacy rule).
+
+const MAX_ACTIVITY_FRIENDS = 300
+
+interface ActivityGraph {
+  friendIds: string[]
+  users: Map<string, Record<string, any> | null>
+  blocked: Set<string>
+  blockedOrganizers: Set<string>
+  tickets: ActivityTicket[]
+}
+
+/**
+ * The viewer's friends who share their activity, their tickets (reduced to
+ * the four fields the selection needs), and the blocks either way. Tickets
+ * are only read for friends who opted in and are not blocked.
+ */
+async function loadActivityGraph(viewerId: string): Promise<ActivityGraph | null> {
+  const friendIds = (await getAcceptedFriendIds(viewerId)).slice(0, MAX_ACTIVITY_FRIENDS)
+  if (friendIds.length === 0) return null
+  const userDocs = await getAllDocs(friendIds.map((id) => adminDb.collection('users').doc(id)))
+  const users = new Map<string, Record<string, any> | null>()
+  userDocs.forEach((d: any) => users.set(d.id, d.exists ? d.data() || {} : null))
+  const sharing = friendIds.filter((id) => sharesActivityWithFriends(users.get(id) ?? null))
+  if (sharing.length === 0) return null
+
+  const [viewerBlocked, blockedMe] = await Promise.all([
+    getBlockedOrganizerIds(viewerId),
+    blockedViewer(viewerId, sharing),
+  ])
+  const blocked = new Set<string>([...Array.from(viewerBlocked), ...Array.from(blockedMe)])
+  const readable = sharing.filter((id) => !blocked.has(id))
+  if (readable.length === 0) return null
+
+  const queries: Promise<any>[] = []
+  for (const part of chunk(readable, 30)) {
+    queries.push(adminDb.collection('tickets').where('attendee_id', 'in', part).get())
+    queries.push(adminDb.collection('tickets').where('user_id', 'in', part).get())
+  }
+  const tickets: ActivityTicket[] = []
+  ;(await Promise.all(queries)).forEach((snap: any) =>
+    snap.docs.forEach((doc: any) => {
+      const d = doc.data() || {}
+      // Only what the selection needs: never tier, price, order or QR data.
+      tickets.push({ event_id: d.event_id, attendee_id: d.attendee_id, user_id: d.user_id, status: d.status })
+    })
+  )
+  return { friendIds: readable, users, blocked, blockedOrganizers: viewerBlocked, tickets }
+}
+
+async function loadEvents(ids: string[]): Promise<Map<string, Record<string, any> | null>> {
+  const out = new Map<string, Record<string, any> | null>()
+  const docs = await getAllDocs(ids.map((id) => adminDb.collection('events').doc(id)))
+  docs.forEach((d: any) => out.set(d.id, d.exists ? { id: d.id, ...(d.data() || {}) } : null))
+  return out
+}
+
+export interface FriendActivityEvent {
+  id: string
+  title: string
+  start_datetime: string | null
+  venue_name: string | null
+  city: string | null
+  banner_image_url: string | null
+  friendCount: number
+  /** Up to three friends, public display fields only. */
+  friends: PublicUserSummary[]
+}
+
+/** Upcoming events the viewer's friends are going to, most friends first. */
+export async function getFriendActivity(viewerId: string, now = Date.now()): Promise<FriendActivityEvent[]> {
+  const graph = await loadActivityGraph(viewerId)
+  if (!graph) return []
+  const eventIds = Array.from(
+    new Set(graph.tickets.map((t) => (typeof t.event_id === 'string' ? t.event_id : '')).filter(Boolean))
+  ).slice(0, 300)
+  const events = await loadEvents(eventIds)
+  const items = selectFriendActivity({ viewerId, ...graph, events, now })
+  if (items.length === 0) return []
+  const named = Array.from(new Set(items.flatMap((i) => i.friendIds.slice(0, 3))))
+  const summaries = await loadPublicSummaries(named)
+  return items.map((i) => {
+    const e = events.get(i.eventId) || {}
+    const start = toMillis(e.start_datetime) ?? toMillis(e.date)
+    return {
+      id: i.eventId,
+      title: String(e.title || ''),
+      start_datetime: start != null ? new Date(start).toISOString() : null,
+      venue_name: e.venue_name ? String(e.venue_name) : null,
+      city: e.city ? String(e.city) : null,
+      banner_image_url: e.banner_image_url ? String(e.banner_image_url) : null,
+      friendCount: i.friendIds.length,
+      friends: i.friendIds
+        .slice(0, 3)
+        .map((id) => summaries.get(id))
+        .filter((s): s is PublicUserSummary & { username?: string } => Boolean(s))
+        .map(({ uid, displayName, photoURL, isVerified }) => ({ uid, displayName, photoURL, isVerified })),
+    }
+  })
+}
+
+/** Card badges: visible friends going to each of `eventIds` (same rules as the rail). */
+export async function getFriendsGoingCountsFor(
+  viewerId: string,
+  eventIds: string[],
+  now = Date.now()
+): Promise<Record<string, number>> {
+  const want = new Set(eventIds.filter((id) => typeof id === 'string' && id && !id.includes('/')))
+  if (want.size === 0) return {}
+  const graph = await loadActivityGraph(viewerId)
+  if (!graph) return {}
+  const tickets = graph.tickets.filter((t) => typeof t.event_id === 'string' && want.has(t.event_id))
+  if (tickets.length === 0) return {}
+  const events = await loadEvents(Array.from(new Set(tickets.map((t) => String(t.event_id)))))
+  return countFriendsGoing({ viewerId, ...graph, tickets, events, now })
 }

@@ -57,11 +57,12 @@ describe('discovery default by market', () => {
     const prefs = readUserNotifyPrefs({ last_seen_country: 'CA' })
     expect(prefs).toEqual({
       notify_reminders: true,
-      notify_event_updates: true,
       notify_discovery: false,
       notify_filling_fast: true,
       notify_national_day: true,
       notify_weekend_digest: false,
+      notify_friend_invites: true,
+      notify_followed_organizers: true,
     })
     expect(isCategoryEnabled({ last_seen_country: 'FR' }, 'filling_fast')).toBe(true)
     expect(isCategoryEnabled({ last_seen_country: 'FR' }, 'reminder')).toBe(true)
