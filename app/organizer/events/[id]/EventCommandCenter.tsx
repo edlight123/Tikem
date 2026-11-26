@@ -22,6 +22,7 @@ import { formatMoneyFromCents, normalizeCurrency } from '@/lib/money'
 import AddOnSalesCard from '@/components/organizer/AddOnSalesCard'
 import { stripRichText } from '@/lib/richText'
 import DeleteDraftButton from '@/components/organizer/DeleteDraftButton'
+import { CancelEventButton } from '@/components/organizer/event-detail/CancelEventButton'
 import type { DraftDeleteBlock } from '@/lib/events/draftDelete'
 
 interface EventCommandCenterProps {
@@ -31,11 +32,13 @@ interface EventCommandCenterProps {
   tiers: any[]
   /** Drafts only (null otherwise): may it be deleted, or why not (server-checked). */
   draftDelete?: { blocked: DraftDeleteBlock | null } | null
+  /** A published event not yet cancelled, for someone who runs events in its org (server-checked). */
+  canCancel?: boolean
 }
 
 const TREND_DAYS = 14
 
-export function EventCommandCenter({ event, stats, tickets, tiers, draftDelete = null }: EventCommandCenterProps) {
+export function EventCommandCenter({ event, stats, tickets, tiers, draftDelete = null, canCancel = false }: EventCommandCenterProps) {
   const { t: tx } = useTranslation('organizer')
 
   const currency = normalizeCurrency(event?.currency, stats?.currency || 'HTG')
@@ -295,6 +298,7 @@ export function EventCommandCenter({ event, stats, tickets, tiers, draftDelete =
           {draftDelete ? (
             <DeleteDraftButton eventId={String(event.id)} title={event.title} blocked={draftDelete.blocked} />
           ) : null}
+          {canCancel ? <CancelEventButton eventId={String(event.id)} eventTitle={event.title} /> : null}
 
           {event.description && (
             <div className="border-t border-line pt-3">

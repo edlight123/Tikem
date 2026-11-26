@@ -21,6 +21,7 @@ import { useI18n } from '../contexts/I18nContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { ArrowLeft } from 'lucide-react-native';
 import TicketPassCard from '../components/TicketPassCard';
+import ChangeNoticeLines from '../components/tickets/ChangeNoticeLines';
 import QRCodeModal from '../components/QRCodeModal';
 import TransferTicketModal from '../components/TransferTicketModal';
 import { TicketPassSkeleton } from '../components/Skeleton';
@@ -299,6 +300,7 @@ export default function EventTicketsScreen({ route, navigation }: any) {
           onViewEvent={handleViewEvent}
           onTransferPress={() => handleTransferPress(item)}
         />
+        <ChangeNoticeLines event={event} />
         {canCancelRsvp ? (
           <TouchableOpacity
             style={styles.cancelRsvp}

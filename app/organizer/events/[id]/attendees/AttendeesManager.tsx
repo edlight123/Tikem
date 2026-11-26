@@ -615,7 +615,8 @@ function AttendeeActions({ ticket, eventId }: { ticket: Ticket; eventId: string 
 
 /**
  * "Email attendees": a message sent by Tikèm to every live ticket holder, one
- * email each (POST /api/email/send-event-update). It used to open a mailto:
+ * email each, plus in-app and push for account holders (POST
+ * /api/organizer/event-update, the same route as the app). It used to open a mailto:
  * with every buyer in To:, which showed each buyer everyone else's address and
  * broke on long lists.
  */
@@ -631,6 +632,7 @@ function EmailAttendeesSheet({
   recipients: number
 }) {
   const { t: tx } = useTranslation('organizer')
+  const { t: tc } = useTranslation('comms')
   const { showToast } = useToast()
   const [message, setMessage] = useState('')
   const [sending, setSending] = useState(false)
@@ -651,14 +653,21 @@ function EmailAttendeesSheet({
     setSending(true)
     setError(null)
     try {
-      const res = await fetch('/api/email/send-event-update', {
+      const res = await fetch('/api/organizer/event-update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ eventId, updateMessage: text, updateType: 'important' }),
+        body: JSON.stringify({ eventId, message: text }),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
-        setError(String(data?.error || tx('event_tools.generic_error')))
+        // Refusals come back with a code (moderation, limits, a past event):
+        // say it in the organizer's language, falling back to the server's words.
+        const code = typeof data?.code === 'string' ? data.code : ''
+        setError(
+          code
+            ? tc(`messageAttendees.errors.${code}`, { defaultValue: String(data?.error || tx('event_tools.generic_error')) })
+            : String(data?.error || tx('event_tools.generic_error'))
+        )
         return
       }
       showToast({
