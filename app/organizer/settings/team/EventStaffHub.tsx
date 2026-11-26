@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { CalendarDays, Users } from 'lucide-react'
+import { eventZone } from '@/lib/home/feed'
 import EventStaffManager from '../../events/[id]/staff/EventStaffManager'
 
 type OrganizerEvent = {
@@ -19,7 +20,7 @@ type OrganizerEvent = {
 
 function formatEventLabel(event: OrganizerEvent) {
   const title = event.title || 'Untitled event'
-  const date = event.start_datetime ? new Date(event.start_datetime).toLocaleString() : ''
+  const date = event.start_datetime ? new Date(event.start_datetime).toLocaleString(undefined, { timeZone: eventZone(event) }) : ''
   const city = event.city ? ` • ${event.city}` : ''
   return `${title}${date ? `, ${date}` : ''}${city}`
 }

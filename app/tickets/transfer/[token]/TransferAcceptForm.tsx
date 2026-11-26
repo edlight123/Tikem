@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
 import { format, isValid } from 'date-fns'
 import { dateLocaleFor } from '@/lib/dateLocale'
+import { wallClock } from '@/lib/home/format'
+import { eventZone } from '@/lib/home/feed'
 import { Clock, Ticket } from 'lucide-react'
 
 interface TransferAcceptFormProps {
@@ -24,6 +26,8 @@ export default function TransferAcceptForm({ transfer, ticket, event, sender, cu
   const [showRejectConfirm, setShowRejectConfirm] = useState(false)
 
   // Guard against missing/invalid event datetimes.
+  // Printed at the venue's wall clock (the event's zone), not the viewer's.
+  const zone = eventZone(event)
   const startDate = event?.start_datetime ? new Date(event.start_datetime) : null
   const endDate = event?.end_datetime ? new Date(event.end_datetime) : null
   const hasValidStart = Boolean(startDate && isValid(startDate))
@@ -129,13 +133,13 @@ export default function TransferAcceptForm({ transfer, ticket, event, sender, cu
                 <div className="min-w-0">
                   <p className="text-meta sm:text-base font-semibold">
                     {hasValidStart
-                      ? format(startDate as Date, 'EEEE, MMMM d, yyyy', { locale: dfLocale })
+                      ? format(wallClock(startDate as Date, zone), 'EEEE, MMMM d, yyyy', { locale: dfLocale })
                       : t('transfer.date_tbc', { defaultValue: 'Date to be confirmed' })}
                   </p>
                   {hasValidStart && (
                     <p className="text-eyebrow sm:text-sm text-fg-muted">
-                      {format(startDate as Date, 'h:mm a', { locale: dfLocale })}
-                      {hasValidEnd ? ` - ${format(endDate as Date, 'h:mm a', { locale: dfLocale })}` : ''}
+                      {format(wallClock(startDate as Date, zone), 'h:mm a', { locale: dfLocale })}
+                      {hasValidEnd ? ` - ${format(wallClock(endDate as Date, zone), 'h:mm a', { locale: dfLocale })}` : ''}
                     </p>
                   )}
                 </div>

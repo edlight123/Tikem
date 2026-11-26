@@ -3,6 +3,8 @@
 import { useTranslation } from 'react-i18next'
 
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isToday } from 'date-fns'
+import { wallClock } from '@/lib/home/format'
+import { eventZone } from '@/lib/home/feed'
 import Link from 'next/link'
 
 interface EventData {
@@ -11,6 +13,11 @@ interface EventData {
   start_datetime: string
   category: string
   is_published: boolean
+  /** The event's place and zone: its times print at the venue's wall clock. */
+  timezone?: string | null
+  country?: string | null
+  city?: string | null
+  province?: string | null
 }
 
 interface CalendarViewProps {
@@ -32,7 +39,7 @@ export default function CalendarView({
 
   // Group events by date
   const eventsByDate = events.reduce((acc, event) => {
-    const dateKey = format(new Date(event.start_datetime), 'yyyy-MM-dd')
+    const dateKey = format(wallClock(event.start_datetime, eventZone(event)), 'yyyy-MM-dd')
     if (!acc[dateKey]) {
       acc[dateKey] = []
     }
@@ -156,7 +163,7 @@ export default function CalendarView({
                     }`}
                     title={event.title}
                   >
-                    {format(new Date(event.start_datetime), 'h:mm a')} - {event.title}
+                    {format(wallClock(event.start_datetime, eventZone(event)), 'h:mm a')} - {event.title}
                   </Link>
                 ))}
                 {dayEvents.length > 3 && (

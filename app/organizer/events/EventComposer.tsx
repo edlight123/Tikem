@@ -133,6 +133,7 @@ import { EVENT_LANGUAGES, cleanEventLanguages, eventLanguageLabel, type EventLan
 import type { FlyerRead } from '@/lib/flyer/parse'
 import { useOrgRole } from '@/components/organizer/OrgRoleProvider'
 import { POSTER_ALT_MAX, cleanPosterAlt } from '@/lib/posterAlt'
+import { isValidZone, isoToZonedInput, toZonedParts, zoneLabel, zonedInputToIso, zonedPartsToIso } from '@/lib/events/zonedTime'
 import {
   Accessibility,
   CalendarDays,
@@ -338,8 +339,22 @@ interface TicketTier {
 
 const pad2 = (n: number) => String(n).padStart(2, '0')
 /** Split an ISO datetime into local 'yyyy-MM-dd' + 'HH:mm' strings for the pickers. */
-function splitISO(iso?: string | null): { date: string; time: string } {
+/** A stored event's zone: its own `timezone`, else derived from its place; '' when unknown. */
+function storedEventZone(e: any): string {
+  if (!e) return ''
+  if (isValidZone(e.timezone)) return e.timezone
+  return timezoneForEvent(e.country, e.is_online ? '' : e.city || '')
+}
+
+/**
+ * Event times are entered and shown as the VENUE's wall clock (the event's
+ * zone, lib/events/zonedTime), never the organizer's device zone: a Montréal
+ * organizer typing 7:00 PM for a Port-au-Prince event means 7:00 PM in
+ * Port-au-Prince. Without a valid zone these fall back to the device.
+ */
+function splitISO(iso?: string | null, zone?: string): { date: string; time: string } {
   if (!iso) return { date: '', time: '' }
+  if (zone && isValidZone(zone)) return toZonedParts(iso, zone) || { date: '', time: '' }
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return { date: '', time: '' }
   return {
@@ -349,16 +364,18 @@ function splitISO(iso?: string | null): { date: string; time: string } {
 }
 
 /** ISO string → value for a `<input type="datetime-local">` (local time), or ''. */
-function isoToLocalInput(iso?: string | null): string {
+function isoToLocalInput(iso?: string | null, zone?: string): string {
   if (!iso) return ''
+  if (zone && isValidZone(zone)) return isoToZonedInput(iso, zone)
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return ''
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`
 }
 
 /** `datetime-local` value → ISO string, or null when empty/invalid. */
-function localInputToISO(local?: string): string | null {
+function localInputToISO(local?: string, zone?: string): string | null {
   if (!local) return null
+  if (zone && isValidZone(zone)) return zonedInputToIso(local, zone)
   const d = new Date(local)
   return Number.isNaN(d.getTime()) ? null : d.toISOString()
 }
@@ -621,8 +638,10 @@ export default function EventComposer({
   const { t: te } = useTranslation('events')
 
   const isEdit = !!event
-  const start0 = splitISO(event?.start_datetime)
-  const end0 = splitISO(event?.end_datetime)
+  // The stored event's own zone: its times read back as the venue's wall clock.
+  const initialZone = storedEventZone(event)
+  const start0 = splitISO(event?.start_datetime, initialZone)
+  const end0 = splitISO(event?.end_datetime, initialZone)
 
   // Core
   const [sellMode, setSellMode] = useState<ComposerMode>(
@@ -763,10 +782,10 @@ export default function EventComposer({
             ...t,
             docId: (t as any).docId || undefined,
             soldQuantity: Math.max(0, Number((t as any).soldQuantity ?? (t as any).sold_quantity ?? 0) || 0),
-            salesStart: isoToLocalInput((t as any).salesStart ?? (t as any).sales_start),
-            salesEnd: isoToLocalInput((t as any).salesEnd ?? (t as any).sales_end),
-            validFrom: isoToLocalInput((t as any).validFrom ?? (t as any).valid_from),
-            validUntil: isoToLocalInput((t as any).validUntil ?? (t as any).valid_until),
+            salesStart: isoToLocalInput((t as any).salesStart ?? (t as any).sales_start, initialZone),
+            salesEnd: isoToLocalInput((t as any).salesEnd ?? (t as any).sales_end, initialZone),
+            validFrom: isoToLocalInput((t as any).validFrom ?? (t as any).valid_from, initialZone),
+            validUntil: isoToLocalInput((t as any).validUntil ?? (t as any).valid_until, initialZone),
             description: String((t as any).description ?? '') || '',
             free: Number(t.price ?? 0) === 0,
             unlimited,
@@ -784,7 +803,7 @@ export default function EventComposer({
   )
 
   // Add-ons (lib/addons/addOns.ts): paid extras sold with tickets, saved on the event.
-  const [addOnDrafts, setAddOnDrafts] = useState<AddOnDraft[]>(() => draftsFromAddOns((event as any)?.add_ons))
+  const [addOnDrafts, setAddOnDrafts] = useState<AddOnDraft[]>(() => draftsFromAddOns((event as any)?.add_ons, initialZone))
 
   /** Which tier's detail panel is expanded (null = all collapsed, the default). */
   const [openTierId, setOpenTierId] = useState<string | null>(null)
@@ -1096,8 +1115,9 @@ export default function EventComposer({
       } catch {}
       return
     }
-    const s0 = splitISO(d.start_datetime)
-    const e0 = splitISO(d.end_datetime)
+    const dz = storedEventZone(d)
+    const s0 = splitISO(d.start_datetime, dz)
+    const e0 = splitISO(d.end_datetime, dz)
     if (d.pay_at_door === true) setSellMode('door')
     else if (isRsvpEvent(d)) setSellMode('rsvp')
     setTitle(d.title || '')
@@ -1139,10 +1159,10 @@ export default function EventComposer({
             name: t.name || '',
             price: tierEditorPrice(t),
             qty: unlimited ? '' : String(t.quantity ?? 100),
-            salesStart: isoToLocalInput(t.sales_start),
-            salesEnd: isoToLocalInput(t.sales_end),
-            validFrom: isoToLocalInput(t.valid_from),
-            validUntil: isoToLocalInput(t.valid_until),
+            salesStart: isoToLocalInput(t.sales_start, initialZone),
+            salesEnd: isoToLocalInput(t.sales_end, initialZone),
+            validFrom: isoToLocalInput(t.valid_from, initialZone),
+            validUntil: isoToLocalInput(t.valid_until, initialZone),
             description: String(t.description ?? '') || '',
             free: Number(tierEditorPrice(t)) === 0,
             unlimited,
@@ -1352,9 +1372,31 @@ export default function EventComposer({
   // A new flyer still uploading: saving now would write the OLD flyer URL.
   const [flyerUploading, setFlyerUploading] = useState(false)
 
+  // The event's zone: by its place (the organizer's saved default zone at the
+  // default place on create; the stored zone while an edited event stays in
+  // the same city, except the blanket Port-au-Prince older app builds stamped
+  // everywhere). The dates live in state as wall-clock strings, so moving the
+  // venue to another zone keeps 7:00 PM at 7:00 PM local to the new venue.
+  const eventTz = (() => {
+    const derived = timezoneForEvent(country, isOnline ? '' : city)
+    if (!isEdit) {
+      const atDefaultPlace =
+        country === seedCountry &&
+        (isOnline || !city.trim() || !defaultCity || city.trim().toLowerCase() === defaultCity.trim().toLowerCase())
+      return seed.timezone && atDefaultPlace && isValidZone(seed.timezone) ? seed.timezone : derived
+    }
+    const stored = typeof event?.timezone === 'string' ? event.timezone : ''
+    const sameCity =
+      city.trim().toLowerCase() === String(event?.city || '').trim().toLowerCase() && !!event?.is_online === isOnline
+    const blanketHaiti = stored === 'America/Port-au-Prince' && country !== 'HT'
+    return stored && isValidZone(stored) && sameCity && !blanketHaiti ? stored : derived
+  })()
+
   // Never throws: a malformed time must not take the whole composer down.
   const composeISO = (d: string, t: string) => {
     if (!d) return null
+    // In the event's zone (the venue's wall clock), not the device's.
+    if (isValidZone(eventTz)) return zonedPartsToIso(d, t || '00:00', eventTz)
     const parsed = new Date(`${d}T${t || '00:00'}`)
     return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString()
   }
@@ -1471,14 +1513,9 @@ export default function EventComposer({
   // the mismatch by keeping the SERVER's text, which left every organizer
   // outside UTC reading "GMT+0" beside their own local times. A wrong timezone
   // on a date field is worse than a console warning.
-  const [tzReady, setTzReady] = useState(false)
-  useEffect(() => setTzReady(true), [])
-  const tzLabel = tzReady
-    ? (() => {
-        const off = -new Date().getTimezoneOffset() / 60
-        return `GMT${off >= 0 ? '+' : ''}${off}`
-      })()
-    : ''
+  // The event's zone, named ("Eastern Time"), beside the date fields: the times
+  // are the venue's wall clock, whatever zone the organizer's device is in.
+  const tzLabel = zoneLabel(eventTz, (i18n?.language || 'en').slice(0, 2))
 
   const ticketsPaid = sellMode === 'tickets' && tiers.some((t) => Number(t.price) > 0)
   // Add-ons are paid items: an event selling them follows every paid gate
@@ -1489,7 +1526,7 @@ export default function EventComposer({
   // (remapAddOnTiers below). The stored shape never changes.
   const savedTierDocIds = tiers.map((tr) => tr.docId).filter(Boolean) as string[]
   const tierIdMap = Object.fromEntries(tiers.filter((tr) => tr.docId).map((tr) => [tr.id, tr.docId as string]))
-  const savedAddOns = addOnsAllowed ? addOnsFromDrafts(addOnDrafts, savedTierDocIds, tierIdMap) : []
+  const savedAddOns = addOnsAllowed ? addOnsFromDrafts(addOnDrafts, savedTierDocIds, tierIdMap, eventTz) : []
   const addOnDraftProblem = addOnsAllowed && addOnDrafts.some((d) => draftProblem(d) !== null)
   const isPaid = ticketsPaid || savedAddOns.length > 0
   // Approval is for free events only: a paid tier switches it off.
@@ -1595,12 +1632,12 @@ export default function EventComposer({
       enable_waitlist: !!t.waitlist,
       // Per-tier sale window as ISO strings (or null). Matches mobile's format so
       // the web purchase routes and selector enforce/display identical bounds.
-      sales_start: localInputToISO(t.salesStart),
-      sales_end: localInputToISO(t.salesEnd),
+      sales_start: localInputToISO(t.salesStart, eventTz),
+      sales_end: localInputToISO(t.salesEnd, eventTz),
       // Per-tier ENTRY (validity) window as ISO strings (or null) — when the
       // ticket admits the holder. Empty = admits anytime. Mobile contract.
-      valid_from: localInputToISO(t.validFrom),
-      valid_until: localInputToISO(t.validUntil),
+      valid_from: localInputToISO(t.validFrom, eventTz),
+      valid_until: localInputToISO(t.validUntil, eventTz),
     }))
     const firstTier = cleanTiers[0] || { name: 'General Admission', price: 0, quantity: 0 }
     const totalQty = cleanTiers.reduce((sum, t) => sum + t.quantity, 0)
@@ -1699,29 +1736,10 @@ export default function EventComposer({
       spotify_url: spotifyUrl.trim() || null,
       accent_color: accentColor,
     }
-    // The zone the event happens in, by city then country — the same rule the
-    // event page already falls back to (lib/home/feed eventZone), now stored so
-    // every reader agrees. Create only: an edit leaves a stored zone (the
-    // mobile composer writes its own) untouched.
-    // The organizer's saved default zone wins while the event is still in its
-    // starting country and default city; anywhere else the city decides.
-    if (!isEdit) {
-      const atDefaultPlace =
-        country === seedCountry &&
-        (isOnline || !city.trim() || !defaultCity || city.trim().toLowerCase() === defaultCity.trim().toLowerCase())
-      data.timezone = seed.timezone && atDefaultPlace ? seed.timezone : timezoneForEvent(country, isOnline ? '' : city)
-    } else {
-      // Edit: the stored zone stands while the event stays in the same city. A
-      // moved event (or one with no zone) is re-derived, and so is the blanket
-      // Port-au-Prince the app used to stamp on every event, wherever it was.
-      const stored = typeof event?.timezone === 'string' ? event.timezone : ''
-      const sameCity =
-        city.trim().toLowerCase() === String(event?.city || '').trim().toLowerCase() &&
-        !!event?.is_online === isOnline
-      const blanketHaiti = stored === 'America/Port-au-Prince' && country !== 'HT'
-      if (!stored || !sameCity || blanketHaiti) {
-        data.timezone = timezoneForEvent(country, isOnline ? '' : city)
-      }
+    // The zone the event happens in (eventTz above): the one its times were
+    // entered in, stored so every reader agrees.
+    if (!isEdit || eventTz !== (typeof event?.timezone === 'string' ? event.timezone : '')) {
+      data.timezone = eventTz
     }
     return { data, cleanTiers, isRsvp }
   }
@@ -1921,7 +1939,7 @@ export default function EventComposer({
       const id = rowDocIds[i] || tr.docId
       if (id) map[tr.id] = id
     })
-    const list = addOnsFromDrafts(addOnDrafts, Object.values(map), map)
+    const list = addOnsFromDrafts(addOnDrafts, Object.values(map), map, eventTz)
     try {
       await (await getShim()).from('events').update({ add_ons: list, add_ons_enabled: list.length > 0 }).eq('id', eventId)
       // Keep the drafts on doc ids, so the next save needs no remap.

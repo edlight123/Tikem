@@ -3461,6 +3461,7 @@ export default {
     empty: 'Nou pa jwenn okenn imaj',
   },
   eventDetail: {
+    yourTime: "{time} lakay ou",
     familyBadge: 'Fanmi yo byenveni, jiska {count} pa enskripsyon',
     // Pwogram + mizik (kache lè evènman an pa genyen yo).
     lineup: {

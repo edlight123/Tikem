@@ -49,6 +49,8 @@ import VenueDetailsList from '@/components/events/VenueDetailsList'
 import { hasVenueDetails, venueDetailsOf } from '@/lib/events/venue-details'
 import RichText from '@/components/RichText'
 import { isHaitiEvent } from '@/lib/datetime/eventClock'
+import { useViewerZone } from '@/lib/hooks/useViewerZone'
+import { viewerZoneDiffers, zoneAbbr } from '@/lib/events/zonedTime'
 
 interface EventDetailsClientProps {
   event: any
@@ -73,6 +75,15 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
   // runtime's zone printed UTC on the server and the reader's zone in the
   // browser, a hydration mismatch (React #418) on every event page.
   const zone = eventZone(event)
+  // Times say which clock, like a flight ("7:00 PM EST"), and a viewer in
+  // another zone also gets "4:00 PM your time" (after mount: the server
+  // doesn't know the viewer's zone). From Tikra 4d942963.
+  const zoneTag = event.start_datetime ? zoneAbbr(zone, numLocale, event.start_datetime) : ''
+  const viewerZone = useViewerZone()
+  const yourTime =
+    event.start_datetime && viewerZone && viewerZoneDiffers(zone, viewerZone, event.start_datetime)
+      ? formatInZone(event.start_datetime, viewerZone, 'h:mm a', { locale: dfLocale })
+      : null
   const startDate = new Date(event.start_datetime)
   const isSoldOut = (event.total_tickets && event.tickets_sold >= event.total_tickets) || false
   // The organizer turned the waitlist on (lib/waitlist.ts emails it when seats free up).
@@ -332,7 +343,13 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                   </p>
                   <p className="text-meta text-fg-muted" suppressHydrationWarning>
                     {formatInZone(event.start_datetime, zone, 'h:mm a', { locale: dfLocale })}
+                    {zoneTag ? ` ${zoneTag}` : ''}
                   </p>
+                  {yourTime && (
+                    <p className="text-meta text-fg-subtle">
+                      {t('events.your_time', { time: yourTime, defaultValue: '{{time}} your time' })}
+                    </p>
+                  )}
                 </div>
                 {(event.venue_name || event.city) && (
                   <div className="min-w-0 max-w-[260px]">
@@ -663,6 +680,7 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                   </p>
                   <p className="text-meta text-fg-muted" suppressHydrationWarning>
                     {formatInZone(event.start_datetime, zone, 'h:mm a', { locale: dfLocale })}
+                    {zoneTag ? ` ${zoneTag}` : ''}
                   </p>
                 </div>
                 {/* Same rule as the mobile accordion: an end equal to the
@@ -677,6 +695,7 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                     </p>
                     <p className="text-meta text-fg-muted" suppressHydrationWarning>
                       {formatInZone(event.end_datetime, zone, 'h:mm a', { locale: dfLocale })}
+                      {zoneTag ? ` ${zoneTag}` : ''}
                     </p>
                   </div>
                 )}

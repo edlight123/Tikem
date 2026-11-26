@@ -45,7 +45,8 @@ import { useI18n } from '../contexts/I18nContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { parseVideoEmbed } from '../lib/videoEmbed';
 import { colors as T, radius, withAlpha, font } from '../theme/tokens';
-import { formatEventTime } from '../lib/dates';
+import { eventTimeZone, formatEventTime } from '../lib/dates';
+import { deviceZone, viewerZoneDiffers, zoneAbbr } from '../lib/zonedTime';
 import { shareLink } from '../lib/share';
 import { isValidDate } from '../lib/dates';
 import WhitePillCTA from '../components/WhitePillCTA';
@@ -940,6 +941,8 @@ export default function EventDetailScreen({ route, navigation }: any) {
 
   // Guarded dates — never hand an Invalid Date to date-fns `format` (it throws).
   const startValid = isValidDate(event.start_datetime) ? event.start_datetime : null;
+  // The event's own zone (stored, else from its place): times print on its clock.
+  const eventZoneId = eventTimeZone(event as any);
   const endValid = isValidDate(event.end_datetime) ? event.end_datetime : null;
   // Price sub-label for the paid CTA. A mixed event reads "Free – 1,500 HTG"
   // rather than "from 0 HTG", which would imply everything is free. When the tier
@@ -1076,7 +1079,17 @@ export default function EventDetailScreen({ route, navigation }: any) {
               {startValid && formatEventTime(startValid, event, 'EEE, MMM d', language)}
               {startValid && ` · ${formatEventTime(startValid, event, 'h:mm a', language)}`}
               {endValid && ` – ${formatEventTime(endValid, event, 'h:mm a', language)}`}
+              {/* Which clock, like a flight: "7:00 PM EST" (Tikra 4d942963). */}
+              {startValid && eventZoneId ? (() => {
+                const z = zoneAbbr(eventZoneId, 'en-US', startValid);
+                return z ? ` ${z}` : '';
+              })() : ''}
             </Text>
+            {startValid && eventZoneId && viewerZoneDiffers(eventZoneId, deviceZone(), startValid) ? (
+              <Text style={styles.yourTimeText}>
+                {t('eventDetail.yourTime', { time: formatEventTime(startValid, { timezone: deviceZone() }, 'h:mm a', language) })}
+              </Text>
+            ) : null}
 
             {/* An online event has no venue to map: say so, and don't offer a
                 Maps hand-off for an empty address. */}
@@ -1928,6 +1941,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     lineHeight: 21,
     marginBottom: 2,
   },
+  yourTimeText: { marginTop: 2, fontSize: 13, color: colors.textSecondary },
   // 10, not 14: two rows of 14 plus a divider spent ~64pt stating a date and a
   // venue, which is the "all this space wasted" a tester marked up twice. Posh
   // gives the same two facts roughly half that.

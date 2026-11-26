@@ -3,6 +3,8 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { format } from 'date-fns'
+import { wallClock } from '@/lib/home/format'
+import { eventZone } from '@/lib/home/feed'
 import { AlertCircle, Calendar, ChevronRight, MapPin } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { formatMoneyFromCents, formatPrimaryMoneyFromCentsByCurrency, normalizeCurrency } from '@/lib/money'
@@ -146,7 +148,7 @@ export default function OrganizerEventCard({ event, showNeedsAttention = true }:
         <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-0.5 text-caption text-fg-subtle">
           <span className="inline-flex items-center gap-1.5 font-mono tabular-nums">
             <Calendar className="h-3.5 w-3.5 shrink-0" />
-            {dateValid ? format(new Date(event.start_datetime), 'MMM d, yyyy · h:mm a') : NO_VALUE}
+            {dateValid ? format(wallClock(event.start_datetime, eventZone(event)), 'MMM d, yyyy · h:mm a') : NO_VALUE}
           </span>
           <span className="inline-flex items-center gap-1.5">
             <MapPin className="h-3.5 w-3.5 shrink-0" />

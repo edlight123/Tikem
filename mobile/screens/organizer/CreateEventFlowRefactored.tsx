@@ -125,6 +125,9 @@ import { allowedPlusOnes, plusOnesSetting } from '../../lib/attendRequests';
 import { MAX_FREE_TICKETS_PER_PERSON } from '../../lib/ticketPricing';
 import { composerModeOf, isRsvpEvent, resolveEventTimezone, rsvpCapacityFrom, tierDescriptionFrom, tierEditorPrice, type ComposerMode } from '../../lib/composerFields';
 import { Skeleton } from '../../components/Skeleton';
+import { isValidZone, toZonedParts } from '../../lib/zonedTime';
+import { hhmmTo12 } from '../../lib/eventClock';
+import { zoneForPlace } from '../../lib/composerFields';
 
 type RouteParams = {
   CreateEvent: undefined;
@@ -705,6 +708,13 @@ export default function CreateEventFlowRefactored() {
         // used to throw on toISOString() and crash edit mode.
         const endDate = event.end_datetime ? new Date(event.end_datetime) : null;
         const hasStart = !isNaN(startDate.getTime());
+        const loadedZone = isValidZone((event as any).timezone)
+          ? (event as any).timezone
+          : zoneForPlace((event as any).country || 'HT', (event as any).is_online ? '' : (event as any).city);
+        const wallClock = (d: Date) => {
+          const p = toZonedParts(d, loadedZone);
+          return p ? { date: p.date, time: hhmmTo12(p.time) } : { date: toLocalDateString(d), time: formatTime(d) };
+        };
         const hasEnd = !!endDate && !isNaN(endDate.getTime());
 
         const formatTime = (date: Date) => {
@@ -797,6 +807,8 @@ export default function CreateEventFlowRefactored() {
         const resolvedDepartment =
           (event as any).department || departmentForCity(storedCity) || '';
 
+        const start0 = hasStart ? wallClock(startDate) : { date: '', time: '' };
+        const end0 = hasEnd ? wallClock(endDate!) : { date: '', time: '' };
         setEventDraft({
           title: event.title || '',
           description: event.description || '',
@@ -812,10 +824,12 @@ export default function CreateEventFlowRefactored() {
           city: storedCity,
           commune: event.commune || '',
           address: event.address || '',
-          start_date: hasStart ? toLocalDateString(startDate) : '',
-          start_time: hasStart ? formatTime(startDate) : '',
-          end_date: hasEnd ? toLocalDateString(endDate!) : '',
-          end_time: hasEnd ? formatTime(endDate!) : '',
+          // The stored times read back as the venue's wall clock, in the
+          // event's own zone, whatever zone the phone is in (lib/zonedTime).
+          start_date: hasStart ? start0.date : '',
+          start_time: hasStart ? start0.time : '',
+          end_date: hasEnd ? end0.date : '',
+          end_time: hasEnd ? end0.time : '',
           // The stored zone; buildEventData keeps it only while the place is unchanged.
           timezone: typeof (event as any).timezone === 'string' ? (event as any).timezone : '',
           ticket_tiers: formattedTicketTiers,

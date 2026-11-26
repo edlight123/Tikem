@@ -3531,6 +3531,7 @@ export default {
     empty: 'No images found',
   },
   eventDetail: {
+    yourTime: "{time} your time",
     familyBadge: 'Families welcome, up to {count} per registration',
     // Lineup rail + song card (hidden entirely when the event has neither).
     lineup: {

@@ -11,7 +11,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useActiveOrg } from '../../lib/activeOrg';
 import { useI18n } from '../../contexts/I18nContext';
-import { useLocaleFormat } from '../../lib/format';
+import { formatEventTime } from '../../lib/dates';
 import { getOrganizerEvents, OrganizerEvent } from '../../lib/api/organizer';
 import { backendJson } from '../../lib/api/backend';
 import { RADIUS, SPACING } from '../../config/brand';
@@ -55,8 +55,7 @@ export default function OrganizerTeamHubScreen() {
   const { orgId, can } = useActiveOrg();
   // The org roster is for the owner and admins; managers see event staffing only.
   const canManageTeam = can('manage_team');
-  const { t } = useI18n();
-  const { formatDate } = useLocaleFormat();
+  const { t, language } = useI18n();
   const insets = useSafeAreaInsets();
   const { height: headerH, onHeight } = useOverlayHeaderInset();
 
@@ -290,7 +289,7 @@ export default function OrganizerTeamHubScreen() {
                 <View style={styles.eventBody}>
                   <Text style={styles.eventTitle} numberOfLines={2}>{event.title}</Text>
                   <Text style={styles.eventMeta} numberOfLines={1}>
-                    {formatDate(event.start_datetime)}
+                    {formatEventTime(event.start_datetime, event as any, 'EEE, MMM d', language)}
                     {count ? (
                       <Text style={staffCounts[event.id] === 0 ? styles.staffNone : styles.staffSome}>
                         {`  ·  ${count.toLowerCase()}`}

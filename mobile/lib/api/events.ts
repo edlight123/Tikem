@@ -33,6 +33,7 @@ import { backendJson } from './backend';
 import type { DraftDeleteBlock } from '../draftDelete';
 import { guestlistVisibilityFrom, showGuestlistFor, type GuestlistVisibility } from '../guestlistVisibility';
 import type { LineupRecord } from '../lineup';
+import { fromZonedParts, isValidZone } from '../zonedTime';
 import {
   planTierSync,
   matchSiblingTierIds,
@@ -642,11 +643,13 @@ export async function createEvent(
     // Parse the base dates/times. Recurring occurrences are shifted from these.
     const baseStartDatetime = parseDateTimeString(
       eventData.start_date,
-      eventData.start_time
+      eventData.start_time,
+      eventData.timezone
     );
     const baseEndDatetime = parseDateTimeString(
       eventData.end_date,
-      eventData.end_time
+      eventData.end_time,
+      eventData.timezone
     );
 
     // Calculate total capacity from ticket tiers
@@ -892,11 +895,13 @@ export async function updateEvent(
     // Parse dates and times into proper datetime
     const startDatetime = parseDateTimeString(
       eventData.start_date,
-      eventData.start_time
+      eventData.start_time,
+      eventData.timezone
     );
     const endDatetime = parseDateTimeString(
       eventData.end_date,
-      eventData.end_time
+      eventData.end_time,
+      eventData.timezone
     );
 
     // Calculate total capacity from ticket tiers
@@ -1122,7 +1127,13 @@ async function uploadEventImage(
 /**
  * Parse date and time strings into a Date object
  */
-function parseDateTimeString(dateStr: string, timeStr: string): Date {
+/**
+ * The draft's date ("YYYY-MM-DD") and time ("7:00 PM") as an instant. They are
+ * the VENUE's wall clock: with the event's zone they are read there, so a
+ * Montréal organizer's 7:00 PM for a Port-au-Prince event is 7:00 PM in
+ * Port-au-Prince (lib/zonedTime). Without a valid zone, the device's.
+ */
+function parseDateTimeString(dateStr: string, timeStr: string, zone?: string): Date {
   // dateStr format: YYYY-MM-DD
   // timeStr format: HH:MM AM/PM
   
@@ -1142,6 +1153,10 @@ function parseDateTimeString(dateStr: string, timeStr: string): Date {
     hours = 0;
   }
 
+  if (zone && isValidZone(zone)) {
+    const zoned = fromZonedParts(dateStr, `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`, zone);
+    if (zoned) return zoned;
+  }
   const date = new Date(`${dateStr}T00:00:00`);
   date.setHours(hours, minutes, 0, 0);
   

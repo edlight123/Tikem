@@ -34,7 +34,7 @@ import { AFTER_ALERT_MS } from '../../lib/moderationActions';
 import { useI18n } from '../../contexts/I18nContext';
 import { useActiveOrg } from '../../lib/activeOrg';
 import { shareLink } from '../../lib/share';
-import { useLocaleFormat } from '../../lib/format';
+import { formatEventTime } from '../../lib/dates';
 import { Image as ExpoImage } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Skeleton } from '../../components/Skeleton';
@@ -133,7 +133,6 @@ export default function OrganizerEventManagementScreen() {
 
   const { t, language } = useI18n();
   const showAlert = useAppAlert();
-  const { formatDate, formatTime } = useLocaleFormat();
 
   // Seed from the nav param (the list already holds the event) or the in-memory
   // cache from a previous open, so the header + known fields paint on mount with
@@ -522,10 +521,10 @@ export default function OrganizerEventManagementScreen() {
     );
   }
 
-  const formattedDate = formatDate(event.start_datetime);
-  const formattedTime = formatTime(event.start_datetime);
+  // Date and time at the venue's wall clock (the event's zone), not the phone's.
+  const formattedWhen = event.start_datetime ? formatEventTime(event.start_datetime, event as any, 'EEE, MMM d · h:mm a', language) : '';
   const venue = event.venue_name || event.location || event.city;
-  const metaLine = [formattedDate, formattedTime, venue].filter(Boolean).join(' · ');
+  const metaLine = [formattedWhen, venue].filter(Boolean).join(' · ');
   const posterUri = event.cover_image_url || event.banner_image_url;
   const posterTheme = resolvePosterTheme(event, event.id || event.title, event.category);
 

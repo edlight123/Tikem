@@ -405,7 +405,8 @@
     "family_child": "Timoun",
     "family_hint": "Chak moun resevwa pwòp tikè pa l nan kont ou.",
     "family_badge": "Fanmi yo byenveni, jiska {{count}} pa enskripsyon",
-    "card_door_price": "{{price}} nan pòt la"
+    "card_door_price": "{{price}} nan pòt la",
+    "your_time": "{{time}} lakay ou"
   },
   "favorites": {
     "title": "Favori mwen",

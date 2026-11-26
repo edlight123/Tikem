@@ -4,6 +4,7 @@
  * typing; normalizeAddOns has the last word on save.
  */
 import { newAddOnId, normalizeAddOns, type EventAddOn } from '@/lib/addons/addOns'
+import { isValidZone, isoToZonedInput, zonedInputToIso } from '@/lib/events/zonedTime'
 
 export interface AddOnDraft {
   id: string
@@ -27,17 +28,19 @@ export interface AddOnDraft {
 
 const pad = (n: number) => String(n).padStart(2, '0')
 
-/** ISO instant → `datetime-local` value in the viewer's zone ('' when absent). */
-export function isoToLocalInputValue(iso: unknown): string {
+/** ISO instant → `datetime-local` value in the event's zone (else the viewer's; '' when absent). */
+export function isoToLocalInputValue(iso: unknown, zone?: string): string {
   if (!iso) return ''
+  if (zone && isValidZone(zone)) return isoToZonedInput(iso, zone)
   const d = new Date(String(iso))
   if (Number.isNaN(d.getTime())) return ''
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
 /** `datetime-local` value → ISO instant (null when empty or invalid). */
-export function localInputValueToIso(value: string): string | null {
+export function localInputValueToIso(value: string, zone?: string): string | null {
   if (!value) return null
+  if (zone && isValidZone(zone)) return zonedInputToIso(value, zone)
   const d = new Date(value)
   return Number.isNaN(d.getTime()) ? null : d.toISOString()
 }
@@ -67,7 +70,7 @@ export function emptyAddOnDraft(): AddOnDraft {
   }
 }
 
-export function draftsFromAddOns(raw: unknown): AddOnDraft[] {
+export function draftsFromAddOns(raw: unknown, zone?: string): AddOnDraft[] {
   // Stored ids are stock keys: keep them as they are.
   const list = Array.isArray(raw) ? raw : []
   return list
@@ -81,8 +84,8 @@ export function draftsFromAddOns(raw: unknown): AddOnDraft[] {
       quantity: Number(a.quantity) > 0 ? String(a.quantity) : '',
       options: Array.isArray(a.options) ? a.options.join(', ') : '',
       maxPerOrder: Number(a.max_per_order) > 0 ? String(a.max_per_order) : '',
-      salesStart: isoToLocalInputValue(a.sales_start),
-      salesEnd: isoToLocalInputValue(a.sales_end),
+      salesStart: isoToLocalInputValue(a.sales_start, zone),
+      salesEnd: isoToLocalInputValue(a.sales_end, zone),
       tierIds: Array.isArray(a.tier_ids) ? a.tier_ids.map(String) : [],
       active: a.is_active !== false,
     }))
@@ -107,7 +110,13 @@ export function draftsAwaitTierIds(drafts: AddOnDraft[], savedIds: string[]): bo
 }
 
 /** The stored add-ons for these drafts. Incomplete drafts (no name or price) are dropped. */
-export function addOnsFromDrafts(drafts: AddOnDraft[], validTierIds?: string[], tierIdMap?: Record<string, string>): EventAddOn[] {
+export function addOnsFromDrafts(
+  drafts: AddOnDraft[],
+  validTierIds?: string[],
+  tierIdMap?: Record<string, string>,
+  /** The event's zone: the windows were entered as its wall clock. */
+  zone?: string
+): EventAddOn[] {
   return normalizeAddOns(
     drafts.map((d) => ({
       id: d.id,
@@ -118,8 +127,8 @@ export function addOnsFromDrafts(drafts: AddOnDraft[], validTierIds?: string[], 
       quantity: d.quantity,
       options: parseOptionList(d.options),
       max_per_order: d.maxPerOrder,
-      sales_start: localInputValueToIso(d.salesStart),
-      sales_end: localInputValueToIso(d.salesEnd),
+      sales_start: localInputValueToIso(d.salesStart, zone),
+      sales_end: localInputValueToIso(d.salesEnd, zone),
       tier_ids: savedTierIds(d.tierIds, validTierIds, tierIdMap),
       is_active: d.active,
     }))
