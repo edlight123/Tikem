@@ -5,6 +5,8 @@ export type AuditAction =
   | 'event.unpublish'
   | 'event.cancel'
   | 'event.delete'
+  /** An organizer (or their team) deleted a draft that never sold. Actor in adminId. */
+  | 'event.draft_delete'
   | 'event.restore'
   | 'event.feature'
   | 'event.unfeature'
@@ -251,6 +253,7 @@ function getActionDescription(action: string, details: any = {}): string {
     'event.cancel': `Cancelled event "${details.eventTitle || 'Untitled'}" and refunded ${details.ticketsAffected ?? 0} ticket(s)`,
     'event.unpublish': `Unpublished event "${details.eventTitle || 'Untitled'}"`,
     'event.delete': `Deleted event "${details.eventTitle || 'Untitled'}"`,
+    'event.draft_delete': `Organizer deleted draft "${details.eventTitle || 'Untitled'}"`,
     'event.restore': `Restored event "${details.eventTitle || 'Untitled'}"`,
     'admin.backfill': `Backfilled ${details?.name || 'data'} (${details?.updated ?? 0} updated)`,
     'admin.search_index.rebuild': `Rebuilt admin search index (${details?.type || 'all'})`,
@@ -299,6 +302,7 @@ function getActionIcon(action: string): string {
     'event.publish': '✅',
     'event.unpublish': '⏸️',
     'event.delete': '🗑️',
+    'event.draft_delete': '🗑️',
     'event.restore': '♻️',
     'admin.backfill': '🧹',
     'admin.search_index.rebuild': '🧭',

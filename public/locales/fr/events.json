@@ -114,5 +114,28 @@
       "soldPicked": "{{sold}} vendus · {{picked}} remis",
       "total": "Total"
     }
+  },
+  "draftDelete": {
+    "action": "Supprimer le brouillon",
+    "confirmTitle": "Supprimer ce brouillon ?",
+    "confirmBody": "« {{name}} » et ses types de billets seront supprimés définitivement. Cette action est irréversible.",
+    "confirm": "Supprimer le brouillon",
+    "keep": "Le garder",
+    "done": "Brouillon supprimé",
+    "failed": "Impossible de supprimer ce brouillon.",
+    "reasons": {
+      "not_found": "Cet événement n’existe plus.",
+      "published": "Seuls les brouillons peuvent être supprimés.",
+      "cancelled": "Un événement annulé garde son historique.",
+      "frozen": "Cet événement est en cours de vérification.",
+      "has_tickets": "Suppression impossible : des billets ont été émis.",
+      "has_add_ons": "Suppression impossible : des extras ont été vendus.",
+      "has_guests": "Suppression impossible : il a des invités ou des demandes.",
+      "has_printed": "Suppression impossible : des billets imprimés existent.",
+      "has_door_team": "Suppression impossible : une équipe d’accueil a été demandée.",
+      "has_orders": "Suppression impossible : il a des commandes.",
+      "has_holds": "Un achat est en cours. Réessayez dans un instant.",
+      "has_money": "Suppression impossible : des paiements sont enregistrés."
+    }
   }
 }

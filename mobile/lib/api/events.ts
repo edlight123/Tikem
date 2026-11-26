@@ -26,6 +26,7 @@ import { hasPaidTier } from '../ticketPricing';
 import { plusOnesSetting } from '../attendRequests';
 import { familyMax } from '../family';
 import { backendJson } from './backend';
+import type { DraftDeleteBlock } from '../draftDelete';
 import { guestlistVisibilityFrom, showGuestlistFor, type GuestlistVisibility } from '../guestlistVisibility';
 import type { LineupRecord } from '../lineup';
 import {
@@ -1194,33 +1195,26 @@ export async function cancelEvent(eventId: string, reason?: string): Promise<Can
 }
 
 /**
- * Delete an event and all related data
+ * Delete a DRAFT that never sold (lib/draftDelete). The server checks every
+ * trace of a sale, removes the event and what it owns, and refuses anything
+ * published (those have Cancel), cancelled, or with tickets, printed batches,
+ * door-team requests, orders, holds or payments; its message is thrown.
+ * Clients may not delete events directly (firestore.rules).
  */
 export async function deleteEvent(eventId: string): Promise<void> {
-  // firestore.rules refuses to delete an event that has sold, been cancelled or
-  // had payouts frozen. Check first, so the tiers below are not deleted out from
-  // under an event whose own delete is then refused.
-  const existing = await getDoc(doc(db, 'events', eventId));
-  const data: any = existing.exists() ? existing.data() : null;
-  if (data && (Number(data.tickets_sold || 0) > 0 || data.status === 'cancelled' || data.payouts_frozen === true)) {
-    throw new Error('This event has sales or was cancelled, so it cannot be deleted. Cancel it instead.');
-  }
-  try {
-    // Delete ticket_tiers
-    const tiersQuery = query(
-      collection(db, 'ticket_tiers'),
-      where('event_id', '==', eventId)
-    );
-    const tiersSnapshot = await getDocs(tiersQuery);
-    const deleteTierPromises = tiersSnapshot.docs.map(doc => deleteDoc(doc.ref));
-    await Promise.all(deleteTierPromises);
+  await backendJson(`/api/events/${encodeURIComponent(eventId)}/delete-draft`, { method: 'POST' });
+}
 
-    // Delete the event document
-    await deleteDoc(doc(db, 'events', eventId));
-    
-    console.log('Event deleted successfully');
-  } catch (error) {
-    console.error('Error deleting event:', error);
-    throw new Error('Failed to delete event');
+/** May this draft be deleted, and if not, why (server-checked). Null when unknown. */
+export async function getDraftDeleteStatus(
+  eventId: string
+): Promise<{ deletable: boolean; code: DraftDeleteBlock | null } | null> {
+  try {
+    const res = await backendJson<{ deletable?: boolean; code?: DraftDeleteBlock | null }>(
+      `/api/events/${encodeURIComponent(eventId)}/delete-draft`
+    );
+    return { deletable: res?.deletable === true, code: res?.code ?? null };
+  } catch {
+    return null;
   }
 }
