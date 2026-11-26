@@ -156,6 +156,8 @@ export async function claimDueChanges(now = Date.now()): Promise<Array<{ eventId
           event_id: eventId,
           before: s.baseline,
           after: current,
+          // The title as checked above; delivery sends this, never a later edit.
+          title: String(event.title || ''),
           kinds: stamp.kinds,
           status: 'sending',
           delivered: 0,
@@ -241,7 +243,11 @@ export async function deliverOpenNotices(budget = MAX_DELIVERIES_PER_RUN): Promi
     const noticeRef = noticeDoc.ref
     try {
       const eventSnap = await adminDb.collection('events').doc(eventId).get()
-      const event = eventSnap.exists ? ({ ...(eventSnap.data() as any), id: eventId } as Record<string, any> & { id: string }) : null
+      // The title checked at claim time (stored on the notice), not whatever the
+      // event is called now: an edit after the check never reaches holders.
+      const event = eventSnap.exists
+        ? ({ ...(eventSnap.data() as any), id: eventId, title: String(notice.title ?? '') } as Record<string, any> & { id: string })
+        : null
       // Cancelled or unpublished since: the cancel flow tells holders itself.
       if (!event || !eventIsNotifiable(event)) {
         await noticeRef.update({ status: 'skipped', finished_at: new Date().toISOString() })
