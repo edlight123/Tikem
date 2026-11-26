@@ -127,10 +127,15 @@ export function noticeDue(state: ChangeState, now: number): boolean {
   return quiet || waitedLong
 }
 
-/** Does this event's change matter to anyone? Published, not cancelled, not over. */
+/**
+ * Does this event's change matter to anyone? Live (published, not rejected,
+ * not hidden for review, not cancelled; the same test as the organizer
+ * message route) and not over.
+ */
 export function eventIsNotifiable(event: Record<string, any> | null | undefined, now = Date.now()): boolean {
   if (!event) return false
   if (event.is_published !== true) return false
+  if (event.rejected === true || event.hidden_pending_review === true) return false
   if (String(event.status || '').toLowerCase() === 'cancelled') return false
   const snap = materialSnapshot(event)
   const endsAt = Date.parse(snap.end || snap.start || '')

@@ -115,6 +115,12 @@ describe('firestore.rules — events (S2)', () => {
     expect(create).toContain("request.resource.data.get('tickets_sold', 0) == 0")
     expect(events).toContain("request.resource.data.get('tickets_sold', 0) == resource.data.get('tickets_sold', 0)")
   })
+  it('change_notice is server-only: absent on create, never changed by a client', () => {
+    const create = events.slice(events.indexOf('allow create'), events.indexOf('allow update'))
+    expect(create).toContain("request.resource.data.get('change_notice', null) == null")
+    const update = events.slice(events.indexOf('allow update'), events.indexOf('allow delete'))
+    expect(update).toContain("request.resource.data.get('change_notice', null) == resource.data.get('change_notice', null)")
+  })
   it('no client deletes an event: drafts go through the delete-draft route', () => {
     const del = events.slice(events.indexOf('allow delete'))
     expect(del.split('\n')[0]).toBe('allow delete: if false;')
