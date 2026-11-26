@@ -56,7 +56,11 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const { user, error } = await requireDevTools()
+    // An admin with dev tools, or a server job holding CRON_SECRET (like the
+    // other backfills: backfill-published-at, backfill-categories).
+    const cron = process.env.CRON_SECRET
+    const viaCron = !!cron && request.headers.get('authorization') === `Bearer ${cron}`
+    const { user, error } = viaCron ? { user: { id: 'cron', email: 'cron' } as any, error: null } : await requireDevTools()
     if (error || !user) {
       return adminError(error || 'Unauthorized', error === 'Not authenticated' ? 401 : 403)
     }
