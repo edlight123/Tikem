@@ -1,5 +1,6 @@
 import { venueDetailsFields, venueDetailsOf } from '../venueDetails';
 import { isPubliclyListed } from '../eventVisibility';
+import { hasDraftTierIds, remapAddOnTierIds, stripDraftTierIds } from '../addOnDraft';
 import { cleanEventLanguages } from '../eventLanguages';
 import { parseOccasion } from '../occasions';
 import { eventAddOns, type EventAddOn } from '../addOns';
@@ -95,6 +96,8 @@ export interface CreateEventData {
      * sold count and every ticket's `tier_id` survive the save.
      */
     id?: string;
+    /** Local key of a tier not saved yet, for add-ons limited to it (lib/addOnDraft). Never written. */
+    key?: string;
     /** Already sold against `id`. Read-only: never written back. */
     sold_quantity?: number;
     name: string;
@@ -523,7 +526,9 @@ function webParityFields(eventData: CreateEventData) {
     // Add-ons ride on the event doc; firestore.rules require add_ons_enabled with them.
     ...(eventData.add_ons !== undefined
       ? (() => {
-          const addOns = eventAddOns({ add_ons: eventData.add_ons });
+          // A ticket not saved yet can't be referenced: its key is swapped for
+          // the doc id once the tiers exist (lib/addOnDraft).
+          const addOns = eventAddOns({ add_ons: stripDraftTierIds(eventData.add_ons || []) });
           return { add_ons: addOns, add_ons_enabled: addOns.length > 0 };
         })()
       : {}),
@@ -796,7 +801,17 @@ export async function createEvent(
         addDoc(collection(db, 'ticket_tiers'), buildTierCollectionDoc(docRef.id, tier, index))
       );
 
-      await Promise.all(tierPromises);
+      const tierRefs = await Promise.all(tierPromises);
+
+      // Add-ons limited to tickets that were new: point them at the new docs.
+      if (hasDraftTierIds(eventData.add_ons)) {
+        const map: Record<string, string> = {};
+        eventData.ticket_tiers.forEach((tier, i) => {
+          if (tier.key && tierRefs[i]) map[tier.key] = tierRefs[i].id;
+        });
+        const addOns = eventAddOns({ add_ons: remapAddOnTierIds(eventData.add_ons || [], map) });
+        await updateDoc(docRef, { add_ons: addOns, add_ons_enabled: addOns.length > 0 });
+      }
 
       // Password gate — if protected AND a non-empty code was provided, hash it
       // and write the private/access doc for THIS occurrence. Recurring series
@@ -901,6 +916,15 @@ export async function updateEvent(
       eventId,
       eventData.ticket_tiers
     );
+    // Add-ons limited to a ticket added in this edit: point them at its new doc.
+    if (hasDraftTierIds(eventData.add_ons)) {
+      const map: Record<string, string> = {};
+      eventData.ticket_tiers.forEach((tier, i) => {
+        const id = (embeddedTiers[i] as any)?.id;
+        if (tier.key && id) map[tier.key] = id;
+      });
+      eventData = { ...eventData, add_ons: remapAddOnTierIds(eventData.add_ons || [], map) };
+    }
 
     // Prepare update data
     const updateData = {

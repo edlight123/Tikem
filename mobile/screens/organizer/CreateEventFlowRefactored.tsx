@@ -44,6 +44,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import DateTimeField from '../../components/organizer/DateTimeField';
 import { defaultEndFor, endNotAfterStart, nextEndOnStartChange } from '../../lib/dateTimeDefaults';
+import { newDraftTierKey } from '../../lib/addOnDraft';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -174,6 +175,9 @@ export interface EventDraft {
     // updates that doc in place, so its sold count and every ticket's tier_id
     // survive. Absent for a tier added in this session (or a duplicate).
     id?: string;
+    // Local key of a tier not saved yet, so an add-on can be limited to it
+    // before the event is saved (lib/addOnDraft). Never written.
+    key?: string;
     // Already sold against `id` — the floor for `quantity`. Read-only.
     sold_quantity?: number;
     name: string;
@@ -1376,7 +1380,7 @@ export default function CreateEventFlowRefactored() {
       ticket_tiers: [
         ...eventDraft.ticket_tiers.slice(0, at),
         // A copy is a NEW tier: no doc id, nothing sold.
-        { ...source, id: undefined, sold_quantity: 0 },
+        { ...source, id: undefined, key: undefined, sold_quantity: 0 },
         ...eventDraft.ticket_tiers.slice(at),
       ],
     });
@@ -1504,6 +1508,17 @@ export default function CreateEventFlowRefactored() {
       updateDraft({ end_date: eventDraft.start_date });
     }
   }, [eventDraft.start_date]);
+
+  // Every unsaved ticket row gets a local key, so an add-on can be limited to
+  // it before the first save (lib/addOnDraft; swapped for its doc id on save).
+  useEffect(() => {
+    if (eventDraft.ticket_tiers.some((tier) => !tier.id && !tier.key)) {
+      setEventDraft((prev) => ({
+        ...prev,
+        ticket_tiers: prev.ticket_tiers.map((tier) => (tier.id || tier.key ? tier : { ...tier, key: newDraftTierKey() })),
+      }));
+    }
+  }, [eventDraft.ticket_tiers]);
 
   // When a start is set and the end is missing or not after it, the end
   // becomes start + 2 hours (lib/dateTimeDefaults). In edit mode the first
@@ -3357,7 +3372,7 @@ export default function CreateEventFlowRefactored() {
                       <AddOnsEditor
                         value={eventDraft.add_ons}
                         onChange={(add_ons) => updateDraft({ add_ons })}
-                        tiers={eventDraft.ticket_tiers.map((tier) => ({ id: tier.id, name: tier.name }))}
+                        tiers={eventDraft.ticket_tiers.map((tier) => ({ id: tier.id, key: (tier as any).key, name: tier.name }))}
                         currency={eventDraft.currency || 'HTG'}
                       />
                     </View>

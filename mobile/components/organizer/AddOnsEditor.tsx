@@ -1,36 +1,36 @@
 /**
- * AddOnsEditor: the create/edit flow's "Add-ons" section. Paid extras sold
- * with tickets: a bottle or table package, a VIP upgrade, parking, drinks, a
- * T-shirt in sizes.
+ * AddOnsEditor — the create/edit flow's "Add-ons" section: extras sold with
+ * tickets (a meal, a T-shirt in sizes, parking, a book, raffle entries).
  *
- * Compact rows; tapping one opens a FormSheet that edits a COPY, so closing
- * discards. Quick starts prefill the common Haiti add-ons. The parent owns the
- * list and saves it on the event as `add_ons` (+ `add_ons_enabled`),
- * normalized by lib/addOns.
- *
- * Quiet by design (owner, 2026-11-18): compact rows, 40pt controls, one 4px
- * corner, a fill and never a hairline, dot + label for state. Sale-window
- * times read 12-hour AM/PM, like the tiers' sale window above it.
+ * Compact cards; tapping one opens a FormSheet that edits a COPY, so closing
+ * discards and Done saves. The parent owns the list and saves it on the event
+ * as `add_ons` (+ `add_ons_enabled`), normalized by lib/addOns. The stored
+ * shape is unchanged: sales_start / sales_end are ISO instants (null = open),
+ * tier_ids are ticket_tiers doc ids. A ticket not saved yet is referenced by
+ * its local key and swapped for its doc id on save (lib/addOnDraft).
+ * A photo uploads the moment it is picked, so the saved add-on carries an
+ * https URL.
  */
 import React, { useState } from 'react';
-import { Platform, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import { ChevronRight, Plus } from 'lucide-react-native';
+import { ActivityIndicator, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
+import { Check, ChevronRight, ImagePlus, Plus, ShoppingBag, X } from 'lucide-react-native';
+import { useTheme } from '../../contexts/ThemeContext';
 import { useI18n } from '../../contexts/I18nContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { formatCurrency } from '../../lib/currency';
-import {
-  ADD_ON_PRESETS,
-  newAddOnId,
-  normalizeAddOns,
-  parseOptionList,
-  type AddOnPresetKey,
-  type EventAddOn,
-} from '../../lib/addOns';
+import { uploadLineupPhoto } from '../../lib/api/events';
+import { MAX_ADD_ON_OPTIONS, newAddOnId, normalizeAddOns, type EventAddOn } from '../../lib/addOns';
+import { addOnProblem } from '../../lib/addOnDraft';
 import FormSheet, { SheetInput, SheetLabel } from './FormSheet';
+import DateTimeField from './DateTimeField';
 import WhitePillCTA from '../WhitePillCTA';
-import { colors as T, radius } from '../../theme/tokens';
+import { radius } from '../../theme/tokens';
 
 const K = 'addOns.editor';
+const S = 'addOnSheet';
+const OPTION_MAX = 30;
 
 interface Draft {
   id: string;
@@ -39,9 +39,9 @@ interface Draft {
   description: string;
   image_url: string;
   quantity: string;
-  options: string;
+  options: string[];
   max_per_order: string;
-  /** ISO instants; '' = open. */
+  /** ISO instants, '' = open. */
   sales_start: string;
   sales_end: string;
   tier_ids: string[];
@@ -56,23 +56,13 @@ function toDraft(a: EventAddOn): Draft {
     description: a.description || '',
     image_url: a.image_url || '',
     quantity: a.quantity ? String(a.quantity) : '',
-    options: (a.options || []).join(', '),
+    options: [...(a.options || [])],
     max_per_order: a.max_per_order ? String(a.max_per_order) : '',
     sales_start: a.sales_start || '',
     sales_end: a.sales_end || '',
     tier_ids: a.tier_ids || [],
     is_active: a.is_active !== false,
   };
-}
-
-type Problem = 'name' | 'price' | 'window' | null;
-
-function problemOf(d: Draft): Problem {
-  if (!d.name.trim()) return 'name';
-  const price = Number(d.price.replace(',', '.'));
-  if (!Number.isFinite(price) || price <= 0) return 'price';
-  if (d.sales_start && d.sales_end && new Date(d.sales_end).getTime() <= new Date(d.sales_start).getTime()) return 'window';
-  return null;
 }
 
 function fromDraft(d: Draft): EventAddOn | null {
@@ -84,7 +74,7 @@ function fromDraft(d: Draft): EventAddOn | null {
       description: d.description,
       image_url: d.image_url,
       quantity: d.quantity.trim() ? Number(d.quantity) : null,
-      options: parseOptionList(d.options),
+      options: d.options,
       max_per_order: d.max_per_order.trim() ? Number(d.max_per_order) : null,
       sales_start: d.sales_start || null,
       sales_end: d.sales_end || null,
@@ -92,26 +82,16 @@ function fromDraft(d: Draft): EventAddOn | null {
       is_active: d.is_active,
     },
   ]);
-  return clean ? { ...clean, id: d.id } : null;
-}
-
-/** "Mar 1" / "1 mars", the organizer's language. */
-function dateText(iso: string, locale: string): string {
-  const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
-}
-
-/** "8:00 PM" — 12-hour, like the tiers' sale window (Haiti reads AM/PM). */
-function timeText(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '';
-  const h = d.getHours();
-  return `${h % 12 || 12}:${String(d.getMinutes()).padStart(2, '0')} ${h >= 12 ? 'PM' : 'AM'}`;
+  // normalizeAddOns keeps tier ids as given (local keys included); the save
+  // path swaps those for doc ids (lib/api/events).
+  return clean ? { ...clean, id: d.id, tier_ids: d.tier_ids } : null;
 }
 
 export interface AddOnsEditorTier {
-  /** The saved tier doc id (a tier not saved yet cannot be a restriction). */
+  /** The saved tier doc id. */
   id?: string;
+  /** The local key of a tier not saved yet. */
+  key?: string;
   name: string;
 }
 
@@ -122,31 +102,41 @@ interface Props {
   currency: string;
 }
 
-type PickField = 'sales_start' | 'sales_end';
+const isoOrNull = (d: Date | null) => (d ? d.toISOString() : '');
+const dateOrNull = (iso: string) => {
+  const t = iso ? Date.parse(iso) : NaN;
+  return Number.isFinite(t) ? new Date(t) : null;
+};
 
 export default function AddOnsEditor({ value, onChange, tiers, currency }: Props) {
-  const { t, language } = useI18n();
-  const locale = language === 'fr' ? 'fr-FR' : language === 'ht' ? 'fr-HT' : 'en-US';
+  const { colors } = useTheme();
+  const { t } = useI18n();
+  const { user } = useAuth();
+  const styles = getStyles(colors);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [isNew, setIsNew] = useState(false);
   const [showProblem, setShowProblem] = useState(false);
-  const [pick, setPick] = useState<{ field: PickField; mode: 'date' | 'time' } | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState(false);
+  const [optionText, setOptionText] = useState('');
 
-  const savedTiers = tiers.filter((tr): tr is { id: string; name: string } => Boolean(tr.id));
+  const refTiers = tiers
+    .map((tr) => ({ ref: tr.id || tr.key || '', refs: [tr.id, tr.key].filter(Boolean) as string[], name: tr.name }))
+    .filter((tr) => tr.ref);
   const patch = (p: Partial<Draft>) => setDraft((d) => (d ? { ...d, ...p } : d));
 
-  const openNew = (preset?: AddOnPresetKey) => {
+  const openNew = () => {
     setIsNew(true);
     setShowProblem(false);
-    setPick(null);
+    setOptionText('');
     setDraft({
       id: newAddOnId(),
-      name: preset ? t(`addOns.presets.${preset}`) : '',
+      name: '',
       price: '',
       description: '',
       image_url: '',
       quantity: '',
-      options: preset ? ADD_ON_PRESETS[preset].options.join(', ') : '',
+      options: [],
       max_per_order: '',
       sales_start: '',
       sales_end: '',
@@ -158,13 +148,13 @@ export default function AddOnsEditor({ value, onChange, tiers, currency }: Props
   const openEdit = (a: EventAddOn) => {
     setIsNew(false);
     setShowProblem(false);
-    setPick(null);
+    setOptionText('');
     setDraft(toDraft(a));
   };
 
   const save = () => {
     if (!draft) return;
-    if (problemOf(draft)) {
+    if (addOnProblem(draft)) {
       setShowProblem(true);
       return;
     }
@@ -180,28 +170,36 @@ export default function AddOnsEditor({ value, onChange, tiers, currency }: Props
     setDraft(null);
   };
 
-  /** Open the picker; an empty bound starts at today 8:00 PM so "Done" keeps a real value. */
-  const openPick = (field: PickField, mode: 'date' | 'time') => {
-    if (draft && !draft[field]) {
-      const seed = new Date();
-      seed.setHours(20, 0, 0, 0);
-      patch({ [field]: seed.toISOString() } as Partial<Draft>);
+  const addOption = () => {
+    if (!draft) return;
+    const next = optionText.replace(/,/g, ' ').trim().slice(0, OPTION_MAX);
+    if (!next || draft.options.length >= MAX_ADD_ON_OPTIONS) return;
+    if (!draft.options.some((o) => o.toLowerCase() === next.toLowerCase())) patch({ options: [...draft.options, next] });
+    setOptionText('');
+  };
+
+  const pickPhoto = async () => {
+    if (uploading || !draft) return;
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (result.canceled || !result.assets?.[0]?.uri || !user?.uid) return;
+    setUploadError(false);
+    setUploading(true);
+    try {
+      const url = await uploadLineupPhoto(user.uid, result.assets[0].uri);
+      patch({ image_url: url });
+    } catch {
+      setUploadError(true);
+    } finally {
+      setUploading(false);
     }
-    setPick({ field, mode });
   };
 
-  const onPicked = (_e: any, selected?: Date) => {
-    if (Platform.OS === 'android') setPick(null);
-    if (!selected || !pick || !draft) return;
-    const existing = draft[pick.field];
-    const base = existing ? new Date(existing) : new Date();
-    if (Number.isNaN(base.getTime())) base.setTime(Date.now());
-    if (pick.mode === 'date') base.setFullYear(selected.getFullYear(), selected.getMonth(), selected.getDate());
-    else base.setHours(selected.getHours(), selected.getMinutes(), 0, 0);
-    patch({ [pick.field]: base.toISOString() } as Partial<Draft>);
-  };
-
-  const problem = draft && showProblem ? problemOf(draft) : null;
+  const problem = draft && showProblem ? addOnProblem(draft) : null;
   const problemText =
     problem === 'name'
       ? t(`${K}.needsName`)
@@ -210,90 +208,65 @@ export default function AddOnsEditor({ value, onChange, tiers, currency }: Props
         : problem === 'window'
           ? t(`${K}.badWindow`)
           : null;
-
-  const windowRow = (field: PickField, label: string) => {
-    const iso = draft?.[field] || '';
-    return (
-      <View style={styles.windowRow}>
-        <Text style={styles.windowLabel}>{label}</Text>
-        <TouchableOpacity
-          style={styles.windowCell}
-          onPress={() => openPick(field, 'date')}
-          accessibilityRole="button"
-          accessibilityLabel={`${label}, ${t(`${K}.date`)}`}
-        >
-          <Text style={iso ? styles.windowValue : styles.windowPlaceholder}>{iso ? dateText(iso, locale) : t(`${K}.date`)}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.windowCell}
-          onPress={() => openPick(field, 'time')}
-          accessibilityRole="button"
-          accessibilityLabel={`${label}, ${t(`${K}.time`)}`}
-        >
-          <Text style={iso ? styles.windowValue : styles.windowPlaceholder}>{iso ? timeText(iso) : t(`${K}.time`)}</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  };
+  const salesStart = draft ? dateOrNull(draft.sales_start) : null;
+  const salesEnd = draft ? dateOrNull(draft.sales_end) : null;
 
   return (
     <View>
-      <Text style={styles.title}>{t(`${K}.title`)}</Text>
+      <View style={styles.headerRow}>
+        <ShoppingBag size={16} color={colors.textSecondary} />
+        <Text style={styles.title}>{t(`${K}.title`)}</Text>
+      </View>
+      <Text style={styles.info}>{t(`${K}.info`)}</Text>
 
       {value.map((a) => {
         const meta = [
           formatCurrency(a.price, currency),
           a.quantity ? t(`${K}.stockCount`, { count: a.quantity }) : t(`${K}.unlimited`),
           a.options && a.options.length ? a.options.join(' · ') : null,
+          a.is_active === false ? t(`${K}.hiddenBadge`) : null,
         ]
           .filter(Boolean)
-          .join(' · ');
+          .join('  ·  ');
         return (
           <TouchableOpacity
             key={a.id}
-            style={styles.row}
+            style={styles.card}
             onPress={() => openEdit(a)}
             accessibilityRole="button"
             accessibilityLabel={a.name}
           >
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={styles.rowName} numberOfLines={1}>
+            {a.image_url ? (
+              <Image source={{ uri: a.image_url }} style={styles.thumb} contentFit="cover" />
+            ) : (
+              <View style={[styles.thumb, styles.thumbEmpty]}>
+                <ShoppingBag size={16} color={colors.textTertiary} />
+              </View>
+            )}
+            <View style={{ flex: 1 }}>
+              <Text style={styles.cardName} numberOfLines={1}>
                 {a.name}
               </Text>
-              <Text style={styles.rowMeta} numberOfLines={1}>
+              <Text style={styles.cardMeta} numberOfLines={1}>
                 {meta}
               </Text>
             </View>
-            {a.is_active === false && (
-              <View style={styles.state}>
-                <View style={[styles.dot, { backgroundColor: T.textTertiary }]} />
-                <Text style={styles.stateText}>{t(`${K}.hiddenBadge`)}</Text>
-              </View>
-            )}
-            <ChevronRight size={18} color={T.textTertiary} />
+            <ChevronRight size={18} color={colors.textTertiary} />
           </TouchableOpacity>
         );
       })}
 
-      {/* Quick starts for what Haitian organizers sell most; each prefills a sheet. */}
-      <View style={styles.presets}>
-        {(Object.keys(ADD_ON_PRESETS) as AddOnPresetKey[]).map((key) => (
-          <TouchableOpacity key={key} style={styles.preset} onPress={() => openNew(key)} accessibilityRole="button">
-            <Plus size={14} color={T.textTertiary} />
-            <Text style={styles.presetText}>{t(`addOns.presets.${key}`)}</Text>
-          </TouchableOpacity>
-        ))}
-        <TouchableOpacity style={styles.preset} onPress={() => openNew()} accessibilityRole="button">
-          <Plus size={14} color={T.textTertiary} />
-          <Text style={styles.presetText}>{t(`${K}.add`)}</Text>
-        </TouchableOpacity>
-      </View>
+      <TouchableOpacity style={styles.addRow} onPress={openNew} accessibilityRole="button">
+        <Plus size={18} color={colors.text} />
+        <Text style={styles.addText}>{t(`${K}.add`)}</Text>
+      </TouchableOpacity>
 
       <FormSheet
         visible={draft !== null}
         title={isNew ? t(`${K}.newTitle`) : t(`${K}.editTitle`)}
         onClose={() => setDraft(null)}
-        closeLabel={t('common.close')}
+        closeLabel={t('a11y.close')}
+        busy={uploading}
         footer={
           <View style={{ gap: 12 }}>
             {problemText ? <Text style={styles.problem}>{problemText}</Text> : null}
@@ -308,131 +281,171 @@ export default function AddOnsEditor({ value, onChange, tiers, currency }: Props
       >
         {draft && (
           <View style={{ gap: 4 }}>
-            <View style={styles.twoCol}>
-              <View style={{ flex: 2 }}>
-                <SheetLabel>{t(`${K}.name`)}</SheetLabel>
-                <SheetInput
-                  value={draft.name}
-                  onChangeText={(name) => patch({ name })}
-                  placeholder={t(`${K}.namePlaceholder`)}
-                  maxLength={60}
-                />
-              </View>
-              <View style={{ flex: 1 }}>
-                <SheetLabel>{t(`${K}.price`, { currency })}</SheetLabel>
-                <SheetInput value={draft.price} onChangeText={(price) => patch({ price })} keyboardType="decimal-pad" placeholder="0" />
-              </View>
-            </View>
+            {/* Photo, then name and price, each with its own label. */}
+            <TouchableOpacity style={styles.photoWell} onPress={pickPhoto} accessibilityRole="button" accessibilityLabel={t(`${K}.photo`)}>
+              {uploading ? (
+                <ActivityIndicator color={colors.text} />
+              ) : draft.image_url ? (
+                <Image source={{ uri: draft.image_url }} style={styles.photo} contentFit="cover" />
+              ) : (
+                <>
+                  <ImagePlus size={20} color={colors.textSecondary} />
+                  <Text style={styles.photoText}>{t(`${S}.addPhoto`)}</Text>
+                </>
+              )}
+            </TouchableOpacity>
+            {uploadError && <Text style={styles.problem}>{t(`${K}.photoFailed`)}</Text>}
+
+            <SheetLabel>{t(`${K}.name`)}</SheetLabel>
+            <SheetInput
+              value={draft.name}
+              onChangeText={(name) => patch({ name })}
+              placeholder={t(`${K}.namePlaceholder`)}
+              maxLength={60}
+            />
+
+            <SheetLabel>{t(`${K}.price`, { currency })}</SheetLabel>
+            <SheetInput
+              value={draft.price}
+              onChangeText={(price) => patch({ price: price.replace(/[^0-9.,]/g, '') })}
+              keyboardType="decimal-pad"
+              placeholder="0.00"
+            />
 
             <SheetLabel>{t(`${K}.description`)}</SheetLabel>
             <SheetInput
               value={draft.description}
               onChangeText={(description) => patch({ description })}
-              placeholder={t(`${K}.descriptionPlaceholder`)}
+              placeholder={t(`${S}.descriptionPlaceholder`)}
+              multiline
               maxLength={240}
+              style={{ minHeight: 64, textAlignVertical: 'top' }}
             />
 
+            {/* Options as chips with an add field. */}
             <SheetLabel>{t(`${K}.options`)}</SheetLabel>
-            <SheetInput value={draft.options} onChangeText={(options) => patch({ options })} placeholder={t(`${K}.optionsPlaceholder`)} />
-            <Text style={styles.hint}>{t(`${K}.optionsHint`)}</Text>
+            {draft.options.length > 0 && (
+              <View style={styles.chips}>
+                {draft.options.map((o) => (
+                  <View key={o} style={styles.optionChip}>
+                    <Text style={styles.optionChipText}>{o}</Text>
+                    <TouchableOpacity
+                      onPress={() => patch({ options: draft.options.filter((x) => x !== o) })}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      accessibilityRole="button"
+                      accessibilityLabel={t(`${S}.removeOption`, { name: o })}
+                    >
+                      <X size={14} color={colors.textSecondary} />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            )}
+            {draft.options.length < MAX_ADD_ON_OPTIONS && (
+              <View style={styles.optionRow}>
+                <View style={{ flex: 1 }}>
+                  <SheetInput
+                    value={optionText}
+                    onChangeText={setOptionText}
+                    placeholder={t(`${S}.optionPlaceholder`)}
+                    maxLength={OPTION_MAX}
+                    returnKeyType="done"
+                    onSubmitEditing={addOption}
+                    blurOnSubmit={false}
+                  />
+                </View>
+                <TouchableOpacity
+                  style={[styles.optionAdd, !optionText.trim() && { opacity: 0.4 }]}
+                  onPress={addOption}
+                  disabled={!optionText.trim()}
+                  accessibilityRole="button"
+                >
+                  <Plus size={16} color={colors.text} />
+                  <Text style={styles.optionAddText}>{t(`${S}.optionAdd`)}</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+            <Text style={styles.hint}>{t(`${S}.optionsHint`)}</Text>
 
             <View style={styles.twoCol}>
               <View style={{ flex: 1 }}>
                 <SheetLabel>{t(`${K}.quantity`)}</SheetLabel>
-                <SheetInput
-                  value={draft.quantity}
-                  onChangeText={(quantity) => patch({ quantity: quantity.replace(/[^0-9]/g, '') })}
-                  keyboardType="number-pad"
-                  placeholder={t(`${K}.unlimited`)}
-                />
+                <SheetInput value={draft.quantity} onChangeText={(quantity) => patch({ quantity: quantity.replace(/[^0-9]/g, '') })} keyboardType="number-pad" placeholder={t(`${K}.unlimited`)} />
               </View>
               <View style={{ flex: 1 }}>
                 <SheetLabel>{t(`${K}.maxPerOrder`)}</SheetLabel>
-                <SheetInput
-                  value={draft.max_per_order}
-                  onChangeText={(m) => patch({ max_per_order: m.replace(/[^0-9]/g, '') })}
-                  keyboardType="number-pad"
-                  placeholder="10"
-                />
+                <SheetInput value={draft.max_per_order} onChangeText={(m) => patch({ max_per_order: m.replace(/[^0-9]/g, '') })} keyboardType="number-pad" placeholder="10" />
               </View>
             </View>
 
-            <SheetLabel>{t(`${K}.salesWindow`)}</SheetLabel>
-            {windowRow('sales_start', t(`${K}.from`))}
-            {windowRow('sales_end', t(`${K}.until`))}
-            {(draft.sales_start || draft.sales_end) && (
-              <TouchableOpacity
-                onPress={() => {
-                  setPick(null);
-                  patch({ sales_start: '', sales_end: '' });
-                }}
-                style={styles.clearLink}
-                accessibilityRole="button"
-              >
-                <Text style={styles.clearText}>{t(`${K}.clearWindow`)}</Text>
-              </TouchableOpacity>
-            )}
-            {pick && Platform.OS === 'ios' && (
-              <View style={styles.pickerWell}>
-                <DateTimePicker
-                  value={draft[pick.field] ? new Date(draft[pick.field]) : new Date()}
-                  mode={pick.mode}
-                  display="spinner"
-                  themeVariant="dark"
-                  // 12-hour times, the way the tiers' sale window reads.
-                  locale={pick.mode === 'time' ? 'en_US' : undefined}
-                  onChange={onPicked}
-                />
-                <TouchableOpacity onPress={() => setPick(null)} style={styles.pickerDoneRow} accessibilityRole="button">
-                  <Text style={styles.pickerDone}>{t(`${K}.pickerDone`)}</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-            {pick && Platform.OS === 'android' && (
-              <DateTimePicker
-                value={draft[pick.field] ? new Date(draft[pick.field]) : new Date()}
-                mode={pick.mode}
-                is24Hour={false}
-                display="default"
-                onChange={onPicked}
-              />
-            )}
+            {/* Sales window: the same picker as the event's own dates. */}
+            <SheetLabel>{t(`${K}.salesStart`)}</SheetLabel>
+            <DateTimeField
+              variant="filled"
+              label={t(`${S}.from`)}
+              title={t(`${K}.salesStart`)}
+              value={salesStart}
+              onChange={(d) => patch({ sales_start: isoOrNull(d) })}
+              clearable
+              placeholder={t(`${S}.now`)}
+              helper={t(`${S}.salesStartHint`)}
+            />
+            <SheetLabel>{t(`${K}.salesEnd`)}</SheetLabel>
+            <DateTimeField
+              variant="filled"
+              label={t(`${S}.until`)}
+              title={t(`${K}.salesEnd`)}
+              value={salesEnd}
+              onChange={(d) => patch({ sales_end: isoOrNull(d) })}
+              minimumDate={salesStart || undefined}
+              clearable
+              placeholder={t(`${S}.eventStarts`)}
+              helper={t(`${S}.salesEndHint`)}
+              error={showProblem && problem === 'window' ? t(`${K}.badWindow`) : undefined}
+            />
 
+            {/* Ticket restriction: one checkbox per ticket, saved or not. */}
             <SheetLabel>{t(`${K}.onlyWith`)}</SheetLabel>
-            {savedTiers.length === 0 ? (
-              <Text style={styles.hint}>{t(`${K}.onlyWithSaveFirst`)}</Text>
+            {refTiers.length === 0 ? (
+              <Text style={styles.hint}>{t(`${S}.noTickets`)}</Text>
             ) : (
-              <>
-                <View style={styles.chips}>
-                  {savedTiers.map((tr) => {
-                    const on = draft.tier_ids.includes(tr.id);
-                    return (
-                      <TouchableOpacity
-                        key={tr.id}
-                        style={[styles.chip, on && styles.chipOn]}
-                        onPress={() =>
-                          patch({ tier_ids: on ? draft.tier_ids.filter((x) => x !== tr.id) : [...draft.tier_ids, tr.id] })
-                        }
-                        accessibilityRole="checkbox"
-                        accessibilityState={{ checked: on }}
-                      >
-                        <Text style={[styles.chipText, on && styles.chipTextOn]}>{tr.name || t(`${K}.ticket`)}</Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-                {draft.tier_ids.length === 0 && <Text style={styles.hint}>{t(`${K}.anyTicket`)}</Text>}
-              </>
+              <View style={styles.checkList}>
+                {refTiers.map((tr) => {
+                  const on = draft.tier_ids.some((x) => tr.refs.includes(x));
+                  return (
+                    <TouchableOpacity
+                      key={tr.ref}
+                      style={styles.checkRow}
+                      onPress={() =>
+                        patch({
+                          tier_ids: on ? draft.tier_ids.filter((x) => !tr.refs.includes(x)) : [...draft.tier_ids, tr.ref],
+                        })
+                      }
+                      accessibilityRole="checkbox"
+                      accessibilityState={{ checked: on }}
+                    >
+                      <View style={[styles.checkbox, on && styles.checkboxOn]}>
+                        {on ? <Check size={14} color="#FFFFFF" strokeWidth={3} /> : null}
+                      </View>
+                      <Text style={styles.checkText} numberOfLines={1}>
+                        {tr.name.trim() || t(`${K}.ticket`)}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+                <Text style={styles.hint}>{t(`${K}.anyTicket`)}</Text>
+              </View>
             )}
 
             <View style={styles.switchRow}>
-              <Text style={styles.switchLabel}>{t(`${K}.onSale`)}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.switchLabel}>{t(`${K}.onSale`)}</Text>
+                <Text style={styles.hint}>{t(`${S}.onSaleHint`)}</Text>
+              </View>
               <Switch
                 value={draft.is_active}
                 onValueChange={(is_active) => patch({ is_active })}
-                trackColor={{ false: T.border, true: T.teal }}
-                thumbColor={T.white}
-                ios_backgroundColor={T.border}
+                trackColor={{ true: colors.primary, false: colors.border }}
               />
             </View>
           </View>
@@ -442,62 +455,81 @@ export default function AddOnsEditor({ value, onChange, tiers, currency }: Props
   );
 }
 
-const styles = StyleSheet.create({
-  title: { fontSize: 15, fontWeight: '700', color: T.textPrimary, marginBottom: 8 },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    minHeight: 52,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: radius.sm,
-    backgroundColor: T.surface,
-    marginBottom: 6,
-  },
-  rowName: { fontSize: 15, fontWeight: '600', color: T.textPrimary },
-  rowMeta: { marginTop: 2, fontSize: 12, color: T.textSecondary },
-  state: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  dot: { width: 6, height: 6, borderRadius: 3 },
-  stateText: { fontSize: 12, color: T.textTertiary },
-  presets: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
-  preset: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    height: 40,
-    paddingHorizontal: 12,
-    borderRadius: radius.sm,
-    backgroundColor: T.surface,
-  },
-  presetText: { fontSize: 13, fontWeight: '600', color: T.textPrimary },
-  hint: { fontSize: 12, color: T.textTertiary, marginTop: 2, marginBottom: 6 },
-  twoCol: { flexDirection: 'row', gap: 10 },
-  windowRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
-  windowLabel: { width: 56, fontSize: 13, color: T.textSecondary },
-  windowCell: {
-    flex: 1,
-    height: 40,
-    justifyContent: 'center',
-    paddingHorizontal: 12,
-    borderRadius: radius.sm,
-    backgroundColor: T.surfaceRaised,
-  },
-  windowValue: { fontSize: 15, color: T.textPrimary },
-  windowPlaceholder: { fontSize: 15, color: T.textTertiary },
-  pickerWell: { borderRadius: radius.sm, backgroundColor: T.surfaceRaised, marginTop: 4, marginBottom: 6 },
-  pickerDoneRow: { alignSelf: 'flex-end', height: 40, justifyContent: 'center', paddingHorizontal: 16 },
-  pickerDone: { fontSize: 15, fontWeight: '700', color: T.textPrimary },
-  clearLink: { alignSelf: 'flex-start', paddingVertical: 8 },
-  clearText: { fontSize: 13, color: T.textSecondary },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
-  chip: { height: 40, justifyContent: 'center', paddingHorizontal: 12, borderRadius: radius.sm, backgroundColor: T.surfaceRaised },
-  chipOn: { backgroundColor: T.white },
-  chipText: { fontSize: 13, color: T.textPrimary },
-  chipTextOn: { color: T.onWhite, fontWeight: '600' },
-  switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 12 },
-  switchLabel: { fontSize: 15, color: T.textPrimary },
-  problem: { fontSize: 13, color: T.red },
-  removeLink: { alignItems: 'center', paddingVertical: 8 },
-  removeText: { fontSize: 15, color: T.red, fontWeight: '600' },
-});
+const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
+  StyleSheet.create({
+    headerRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
+    title: { fontSize: 15, fontWeight: '700', color: colors.text },
+    info: { fontSize: 13, color: colors.textSecondary, marginBottom: 10 },
+    card: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      paddingVertical: 10,
+      paddingHorizontal: 12,
+      borderRadius: radius.md,
+      backgroundColor: colors.surface,
+      marginBottom: 8,
+    },
+    thumb: { width: 36, height: 36, borderRadius: radius.sm },
+    thumbEmpty: { backgroundColor: colors.surfaceRaised ?? colors.surface, alignItems: 'center', justifyContent: 'center' },
+    cardName: { fontSize: 15, fontWeight: '600', color: colors.text },
+    cardMeta: { marginTop: 2, fontSize: 12, color: colors.textSecondary },
+    addRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10 },
+    addText: { fontSize: 15, fontWeight: '600', color: colors.text },
+    photoWell: {
+      flexDirection: 'row',
+      gap: 8,
+      height: 72,
+      borderRadius: radius.md,
+      backgroundColor: colors.surfaceRaised ?? colors.background,
+      alignItems: 'center',
+      justifyContent: 'center',
+      overflow: 'hidden',
+      marginBottom: 8,
+    },
+    photo: { width: '100%', height: 72 },
+    photoText: { fontSize: 15, color: colors.textSecondary, fontWeight: '600' },
+    hint: { fontSize: 12, color: colors.textTertiary, marginTop: 2, marginBottom: 6 },
+    twoCol: { flexDirection: 'row', gap: 10 },
+    chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 },
+    optionChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingLeft: 12,
+      paddingRight: 8,
+      paddingVertical: 6,
+      borderRadius: radius.chip,
+      backgroundColor: colors.surfaceRaised ?? colors.background,
+    },
+    optionChipText: { fontSize: 13, fontWeight: '600', color: colors.text },
+    optionRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+    optionAdd: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      height: 48,
+      paddingHorizontal: 14,
+      borderRadius: radius.md,
+      backgroundColor: colors.surfaceRaised ?? colors.background,
+    },
+    optionAddText: { fontSize: 15, fontWeight: '600', color: colors.text },
+    checkList: { gap: 2 },
+    checkRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 9 },
+    checkbox: {
+      width: 22,
+      height: 22,
+      borderRadius: radius.sm,
+      borderWidth: 1.5,
+      borderColor: colors.textTertiary,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    checkboxOn: { backgroundColor: colors.primary, borderColor: colors.primary },
+    checkText: { flex: 1, fontSize: 15, color: colors.text },
+    switchRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 12 },
+    switchLabel: { fontSize: 15, color: colors.text, fontWeight: '600' },
+    problem: { fontSize: 13, color: colors.error },
+    removeLink: { alignItems: 'center', paddingVertical: 4 },
+    removeText: { fontSize: 15, color: colors.error, fontWeight: '600' },
+  });

@@ -1976,7 +1976,9 @@
       "cancel": "Anile",
       "done": "Fini",
       "preparing": "N ap prepare…"
-    }
+    },
+    "addPhoto": "Ajoute yon foto",
+    "changePhoto": "Chanje foto a"
   },
   "phone": {
     "country": "Kòd peyi",

@@ -1976,7 +1976,9 @@
       "cancel": "Annuler",
       "done": "Terminé",
       "preparing": "Préparation…"
-    }
+    },
+    "addPhoto": "Ajouter une photo",
+    "changePhoto": "Changer la photo"
   },
   "phone": {
     "country": "Indicatif pays",

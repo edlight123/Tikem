@@ -1976,7 +1976,9 @@
       "cancel": "Cancel",
       "done": "Done",
       "preparing": "Preparing…"
-    }
+    },
+    "addPhoto": "Add a photo",
+    "changePhoto": "Change photo"
   },
   "phone": {
     "country": "Country code",
