@@ -72,6 +72,12 @@ export interface EventFilters {
    * keys: facilities and accessibility). `?amenities=parking,step_free`.
    */
   amenities?: string[]
+
+  /**
+   * The language the event is held in (lib/event-languages code), one at a
+   * time; absent = any language. `?language=ht`.
+   */
+  language?: string
   
   // Sort
   sortBy: SortOption

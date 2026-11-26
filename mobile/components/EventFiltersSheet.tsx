@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { X } from 'lucide-react-native';
 import { VENUE_ACCESSIBILITY, VENUE_FACILITIES, amenityKeysOf, wantedAmenities } from '../lib/venueDetails';
+import { EVENT_LANGUAGES, eventLanguageLabel, parseLanguageParam } from '../lib/eventLanguages';
 import { useFilters } from '../contexts/FiltersContext';
 import { useI18n } from '../contexts/I18nContext';
 import { getCategoryLabel } from '../lib/categories';
@@ -344,6 +345,30 @@ export default function EventFiltersSheet() {
               </View>
             );
           })}
+
+          {/* Language the event is held in: one at a time, Any by default. */}
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>{t('eventLanguages.filter').toUpperCase()}</Text>
+            <View style={styles.chipsRow}>
+              {(['', ...EVENT_LANGUAGES.map((l) => l.code)] as const).map((code) => {
+                const on = (parseLanguageParam(draftFilters.language) || '') === code;
+                return (
+                  <TouchableOpacity
+                    key={code || 'any'}
+                    style={[styles.chip, on && styles.chipActive]}
+                    onPress={() => setDraftFilters({ ...draftFilters, language: code || undefined })}
+                    hitSlop={CHIP_HIT_SLOP}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: on }}
+                  >
+                    <Text style={[styles.chipText, on && styles.chipTextActive]}>
+                      {code ? eventLanguageLabel(code) : t('eventLanguages.any')}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
 
           {/* Price Filter — the custom min–max range is the standard control.
               "Any" and "Free" remain as quick shortcuts. */}

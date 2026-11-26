@@ -27,6 +27,7 @@ import {
   PlayCircle,
   MoreHorizontal,
   Globe,
+  Languages,
   CalendarPlus,
   Lock,
   X,
@@ -71,6 +72,7 @@ import { useVenueDistance } from '../hooks/useVenueDistance';
 import WhosGoing from '../components/WhosGoing';
 import SectionHeader from '../components/SectionHeader';
 import VenueDetailsLines from '../components/VenueDetailsLines';
+import { eventLanguagesLine } from '../lib/eventLanguages';
 import { guestlistVisibilityFrom } from '../lib/guestlistVisibility';
 import ContactOrganizerModal from '../components/ContactOrganizerModal';
 import { getEventPreview, primeEventPreview } from '../lib/eventPreviewCache';
@@ -1101,6 +1103,20 @@ export default function EventDetailScreen({ route, navigation }: any) {
                 </Text>
                 <ExternalLink size={13} color={colors.textTertiary} />
               </TouchableOpacity>
+            )}
+
+            {/* The language(s) it is held in, only when the organizer said. */}
+            {!!eventLanguagesLine((event as any).languages) && (
+              <View
+                style={styles.venueLine}
+                accessible
+                accessibilityLabel={`${t('eventLanguages.heldIn')} ${eventLanguagesLine((event as any).languages)}`}
+              >
+                <Languages size={14} color={colors.textSecondary} />
+                <Text style={styles.venueText} numberOfLines={1}>
+                  {eventLanguagesLine((event as any).languages)}
+                </Text>
+              </View>
             )}
           </View>
 

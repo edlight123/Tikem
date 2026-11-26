@@ -5,6 +5,7 @@
 import { EventFilters, DEFAULT_FILTERS, DateFilter, PriceFilter } from './types'
 import { PRICE_FILTERS } from './config'
 import { amenityKeysOf, wantedAmenities } from '@/lib/events/venue-details'
+import { parseLanguageParam } from '@/lib/event-languages'
 
 /** The legacy discrete price values, which URLs in the wild still carry. */
 const LEGACY_PRICE_VALUES = ['any', 'free', '<=500', '>500'] as const
@@ -192,6 +193,9 @@ export function countActiveFilters(filters: EventFilters): number {
 
   // One per chosen venue fact (and the older Step-free switch).
   count += wantedAmenities(filters).length
+
+  // The event's language.
+  if (parseLanguageParam(filters.language)) count++
   
   return count
 }
@@ -243,6 +247,10 @@ export function serializeFilters(filters: EventFilters): URLSearchParams {
   // Venue facts, the older Step-free switch folded in.
   const amenities = wantedAmenities(filters)
   if (amenities.length) params.set('amenities', amenities.join(','))
+
+  // The language it is held in.
+  const language = parseLanguageParam(filters.language)
+  if (language) params.set('language', language)
   
   // Sort
   if (filters.sortBy !== 'relevance') {
@@ -279,6 +287,7 @@ export function parseFiltersFromURL(searchParams?: SearchParamsLike | null): Eve
       ])
       return amenities.length ? { amenities } : {}
     })(),
+    ...(parseLanguageParam(params.get('language')) ? { language: parseLanguageParam(params.get('language')) } : {}),
     sortBy: params.get('sort') || DEFAULT_FILTERS.sortBy,
   } as EventFilters
 }
@@ -296,6 +305,7 @@ export function filtersEqual(a: EventFilters, b: EventFilters): boolean {
     a.price === b.price &&
     a.eventType === b.eventType &&
     wantedAmenities(a).join(',') === wantedAmenities(b).join(',') &&
+    parseLanguageParam(a.language) === parseLanguageParam(b.language) &&
     a.sortBy === b.sortBy
   )
 }

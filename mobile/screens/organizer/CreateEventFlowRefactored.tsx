@@ -62,6 +62,7 @@ import { flyerDraftPatch, type FlyerRead } from '../../lib/flyerFill';
 import { isDeviceOnlyImageUri } from '../../lib/localImageUri';
 import { nationalDayForEventDate, nationalDayName } from '../../lib/nationalDays';
 import { OCCASION_KEYS, ideaById, ideaDate, ideaText, occasionByKey, occasionName, parseOccasion, suggestOccasion } from '../../lib/occasions';
+import { EVENT_LANGUAGES, cleanEventLanguages, eventLanguageLabel } from '../../lib/eventLanguages';
 import OccasionIcon from '../../components/OccasionIcon';
 import { getEventById } from '../../lib/api/organizer';
 import { db } from '../../config/firebase';
@@ -235,6 +236,9 @@ export interface EventDraft {
 
   // The occasion it belongs to (lib/occasions key), '' = none.
   occasion: string;
+
+  // The language(s) it is held in (lib/eventLanguages codes), [] = not said.
+  languages: string[];
 
   // Poster-theme override. '' = Auto (deterministic pick from seed/category);
   // a valid PosterThemeKey pins the poster gradient for this event everywhere.
@@ -613,6 +617,7 @@ export default function CreateEventFlowRefactored() {
     show_going_count: false,
     national_day: '',
     occasion: '',
+    languages: [],
     theme_key: '',
     recurrence: 'none',
     recurrence_count: 4,
@@ -805,6 +810,7 @@ export default function CreateEventFlowRefactored() {
           show_going_count: (event as any).show_going_count === true,
           national_day: typeof (event as any).national_day === 'string' ? (event as any).national_day : '',
           occasion: parseOccasion((event as any).occasion) || '',
+          languages: cleanEventLanguages((event as any).languages),
           // Poster-theme override; default '' (Auto) when the field is absent.
           theme_key: (event as any).theme_key || '',
           // Recurrence is create-only; editing never regenerates a series. The
@@ -1792,6 +1798,8 @@ export default function CreateEventFlowRefactored() {
         draft.national_day && eligibleNationalDay?.eventTag === draft.national_day ? draft.national_day : null,
       // Allow-listed (lib/occasions); firestore.rules refuses anything else.
       occasion: parseOccasion(draft.occasion),
+      // Known codes only; firestore.rules refuses anything else.
+      languages: cleanEventLanguages(draft.languages),
       ...(draft.is_online
         ? { venue_name: '', address: '', city: '', commune: '', department: '' }
         : {}),
@@ -2884,6 +2892,33 @@ export default function CreateEventFlowRefactored() {
                   </View>
                 );
               })()}
+
+              {/* The language(s) it is held in: optional, several allowed. */}
+              <View style={styles.chipBlock}>
+                <Text style={styles.chipLabel}>{t('eventLanguages.title')}</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipScroll}>
+                  {EVENT_LANGUAGES.map(({ code }) => {
+                    const on = eventDraft.languages.includes(code);
+                    return (
+                      <TouchableOpacity
+                        key={code}
+                        style={[styles.chip, on && styles.chipActive]}
+                        onPress={() =>
+                          updateDraft({
+                            languages: on
+                              ? eventDraft.languages.filter((c) => c !== code)
+                              : cleanEventLanguages([...eventDraft.languages, code]),
+                          })
+                        }
+                        accessibilityRole="button"
+                        accessibilityState={{ selected: on }}
+                      >
+                        <Text style={[styles.chipText, on && styles.chipTextActive]}>{eventLanguageLabel(code)}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              </View>
             </View>
 
             {/* Additional Details */}

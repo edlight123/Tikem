@@ -46,6 +46,9 @@ export interface EventFilters {
 
   /** Venue facts the event must have, ALL of them (lib/venueDetails keys). */
   amenities?: string[]
+
+  /** The language the event is held in (lib/eventLanguages code); absent = any. */
+  language?: string
   
   // Sort
   sortBy: SortOption

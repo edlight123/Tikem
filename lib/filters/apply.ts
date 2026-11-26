@@ -3,6 +3,7 @@
  */
 
 import { hasAllAmenities, wantedAmenities } from '@/lib/events/venue-details'
+import { matchesEventLanguage } from '@/lib/event-languages'
 import { EventFilters } from './types'
 import { getDateRange, getPriceRange, parsePriceRange } from './utils'
 import { normalizeEventCategory, getCityMatchGroup } from './config'
@@ -143,6 +144,12 @@ export function filterEvents(events: Event[], filters: EventFilters): Event[] {
   const amenities = wantedAmenities(filters)
   if (amenities.length) {
     filtered = filtered.filter((event) => hasAllAmenities(event, amenities))
+  }
+
+  // Language: only events the organizer said are held in it. Events that
+  // say nothing are left out while a language is chosen (Any is the default).
+  if (filters.language) {
+    filtered = filtered.filter((event) => matchesEventLanguage(event, filters.language))
   }
 
   // Event type filter: the composers (web + mobile) save `is_online`.

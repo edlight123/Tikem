@@ -4,6 +4,7 @@
 
 import { EventFilters, PriceFilter } from '../types/filters';
 import { hasAllAmenities, wantedAmenities } from '../lib/venueDetails';
+import { matchesEventLanguage, parseLanguageParam } from '../lib/eventLanguages';
 import { isBudgetFriendlyTicketPrice, isOverBudgetTicketPrice } from '../lib/pricing';
 import { findMetro, isEventInMetro, normalizePlace } from '../data/metros';
 import { 
@@ -179,6 +180,11 @@ export function applyFilters(events: any[], filters: EventFilters): any[] {
     filtered = filtered.filter((event) => hasAllAmenities(event, amenities));
   }
 
+  // Language: only events the organizer said are held in it (Any by default).
+  if (parseLanguageParam(filters.language)) {
+    filtered = filtered.filter((event) => matchesEventLanguage(event, filters.language));
+  }
+
   // Sort
   if (filters.sortBy === 'date') {
     filtered.sort((a, b) => 
@@ -206,6 +212,7 @@ export function countActiveFilters(filters: EventFilters): number {
   if (filters.price !== 'any') count++;
   if (filters.eventType !== 'all') count++;
   count += wantedAmenities(filters).length;
+  if (parseLanguageParam(filters.language)) count++;
   
   return count;
 }

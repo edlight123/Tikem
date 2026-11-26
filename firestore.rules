@@ -51,6 +51,19 @@ service cloud.firestore {
         && (dress == null || (dress is string && dress.size() <= 60));
     }
 
+    // Event language(s) (lib/event-languages.ts): optional, and when present
+    // a list of the known codes, each once (Kreyòl, French, English, Spanish;
+    // several allowed). .get() so a doc without it (every event before this)
+    // passes untouched.
+    function validEventLanguages(d) {
+      let langs = d.get('languages', []);
+      return langs == null
+        || (langs is list
+          && langs.size() <= 4
+          && langs.hasOnly(['ht', 'fr', 'en', 'es'])
+          && langs.toSet().size() == langs.size());
+    }
+
     // Occasion (lib/occasions.ts): optional, and when present one of the
     // known keys (the list is checked against OCCASION_KEYS by
     // __tests__/occasions.test.ts). .get() so older docs pass untouched.
@@ -406,6 +419,7 @@ service cloud.firestore {
              && request.resource.data.get('has_paid_tiers', false) == true)
         && validVenueDetails(request.resource.data)
         && validOccasion(request.resource.data)
+        && validEventLanguages(request.resource.data)
         && isCurrencyAllowedForCountry(request.resource.data.country, request.resource.data.currency);
 
       allow update: if isSignedIn() && (
@@ -422,6 +436,7 @@ service cloud.firestore {
             request.resource.data.get('has_paid_tiers', false) == true) &&
           validVenueDetails(request.resource.data) &&
           validOccasion(request.resource.data) &&
+          validEventLanguages(request.resource.data) &&
           // H3: moderation fields are client-immutable so a rejected/reported
           // organizer can't re-surface their event. Admin SDK still writes them
           // (it bypasses rules). .get() defaults keep legacy docs that predate

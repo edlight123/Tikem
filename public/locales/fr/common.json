@@ -2634,5 +2634,12 @@
       "arrival_required": "Choisissez l'heure d'arrivée de l'équipe.",
       "contact_required": "Ajoutez un nom et un téléphone de contact pour le jour J."
     }
+  },
+  "event_languages": {
+    "title": "Langue",
+    "composer_hint": "Facultatif. Une ou plusieurs.",
+    "filter": "Langue",
+    "any": "Toutes les langues",
+    "held_in": "En"
   }
 }

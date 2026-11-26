@@ -1,4 +1,5 @@
 import { venueDetailsFields, venueDetailsOf } from '../venueDetails';
+import { cleanEventLanguages } from '../eventLanguages';
 import { parseOccasion } from '../occasions';
 import { eventAddOns, type EventAddOn } from '../addOns';
 import { cleanPosterAlt } from '../posterAlt';
@@ -210,6 +211,8 @@ export interface CreateEventData {
   venue_setting?: string | null;
   age_policy?: string | null;
   dress_code?: string | null;
+  /** The language(s) it is held in (lib/eventLanguages codes); [] = not said. */
+  languages?: string[];
   /** Family registration (lib/family): free events only. */
   family_registration?: boolean;
   family_max?: number;
@@ -512,6 +515,9 @@ function webParityFields(eventData: CreateEventData) {
     eventData.dress_code !== undefined
       ? venueDetailsFields(venueDetailsOf(eventData), !!eventData.is_online)
       : {}),
+    // The language(s) it is held in, cleaned to the codes firestore.rules
+    // accepts; only when the caller set them.
+    ...(eventData.languages !== undefined ? { languages: cleanEventLanguages(eventData.languages) } : {}),
     // Add-ons ride on the event doc; firestore.rules require add_ons_enabled with them.
     ...(eventData.add_ons !== undefined
       ? (() => {

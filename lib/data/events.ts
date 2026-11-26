@@ -6,6 +6,7 @@
  */
 
 import { parseOccasion } from '@/lib/occasions'
+import { cleanEventLanguages } from '@/lib/event-languages'
 import { cache } from 'react'
 import { adminDb } from '@/lib/firebase/admin'
 import { normalizeCountryCode } from '@/lib/payment-provider'
@@ -308,6 +309,9 @@ async function getEventByIdUncached(eventId: string): Promise<Event | null> {
         // The occasion (lib/occasions): the event page links to its page and the
         // composer reads it back on edit. Unknown values are dropped.
         occasion: parseOccasion(data?.occasion) ?? undefined,
+        // The language(s) it is held in (lib/event-languages): the event page's
+        // quiet line and its JSON-LD inLanguage read it.
+        languages: cleanEventLanguages(data?.languages).length ? cleanEventLanguages(data?.languages) : undefined,
         tags: data?.tags && Array.isArray(data.tags) ? data.tags.filter((tag: any) => typeof tag === 'string') : undefined,
         created_at: data?.created_at?.toDate?.()?.toISOString() || data?.created_at,
         updated_at: data?.updated_at?.toDate?.()?.toISOString() || data?.updated_at,
@@ -476,6 +480,8 @@ const readPublishedEvents = unstable_cache(
         national_day: typeof data.national_day === 'string' ? data.national_day : undefined,
         // The occasion (lib/occasions): occasion pages and Home's occasion row list by it.
         occasion: parseOccasion(data.occasion) ?? undefined,
+        // The language(s) it is held in: Discover's language filter reads it.
+        languages: cleanEventLanguages(data.languages).length ? cleanEventLanguages(data.languages) : undefined,
         // A seeded sample listing: browsable, never the homepage hero.
         is_template: isTemplateEvent(data),
         created_at: data.created_at?.toDate?.()?.toISOString() || data.created_at,

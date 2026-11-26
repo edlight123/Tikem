@@ -51,6 +51,8 @@ interface MobileKeyFactsProps {
   doorLabel?: string
   /** A quiet extra line under the price (family registration). */
   note?: string
+  /** The language(s) it is held in ("Kreyòl, English"), '' when not said. */
+  languages?: string
 }
 
 export default function MobileKeyFacts({
@@ -72,6 +74,7 @@ export default function MobileKeyFacts({
   scarcity,
   doorLabel,
   note,
+  languages = '',
 }: MobileKeyFactsProps) {
   const { t, i18n } = useTranslation('common')
   const dfLocale = dateLocaleFor(i18n.language)
@@ -112,6 +115,13 @@ export default function MobileKeyFacts({
       </p>
 
       {place && <p className="mt-0.5 text-body text-fg-muted">{place}</p>}
+
+      {languages && (
+        <p className="mt-0.5 text-body text-fg-muted">
+          <span className="sr-only">{t('event_languages.held_in', { defaultValue: 'Held in' })} </span>
+          {languages}
+        </p>
+      )}
 
       {/* A free event's button already says so; "Free" here was a repeat. */}
       {(!isFree || doorLabel) && (
