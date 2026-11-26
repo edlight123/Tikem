@@ -60,6 +60,7 @@ export default function Footer() {
 
   return (
     <footer
+      data-site-chrome
       aria-label={t('footer.landmark', { defaultValue: 'Site footer' })}
       className="bg-canvas"
     >

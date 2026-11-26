@@ -11,6 +11,7 @@ import { FeeConfigProvider } from '@/components/FeeConfigProvider'
 import SmoothScroll from '@/components/SmoothScroll'
 import { getPlatformFeeSettings } from '@/lib/checkout/fee-config-server'
 import { cookies, headers } from 'next/headers'
+import { EMBED_MODE_SCRIPT } from '@/lib/embed-mode'
 
 // Resolve the reader's language on the server: the i18nextLng cookie (written
 // by the client detector on every language change) wins; a first-time visitor
@@ -146,7 +147,8 @@ export default async function RootLayout({
   const lng = await resolveLanguage()
 
   return (
-    <html lang={lng} className={`${jakarta.variable} ${instrumentSerif.variable}`}>
+    // suppressHydrationWarning: lib/embed-mode marks <html> with data-in-app before React loads.
+    <html lang={lng} className={`${jakarta.variable} ${instrumentSerif.variable}`} suppressHydrationWarning>
       <head>
         {/* DNS Prefetch for faster external resource loading */}
         <link rel="dns-prefetch" href="https://firebasestorage.googleapis.com" />
@@ -155,6 +157,9 @@ export default async function RootLayout({
         {/* Preconnect for critical resources */}
         <link rel="preconnect" href="https://firebasestorage.googleapis.com" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://api.stripe.com" crossOrigin="anonymous" />
+        {/* Inside the Tikèm app the site's own bars are hidden (lib/embed-mode):
+            the app frames the page itself. Inline and first, so they never flash. */}
+        <script dangerouslySetInnerHTML={{ __html: EMBED_MODE_SCRIPT }} />
       </head>
       {/*
         A COLUMN THAT FILLS THE VIEWPORT. The footer is rendered after every

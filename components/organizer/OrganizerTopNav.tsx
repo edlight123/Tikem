@@ -66,7 +66,8 @@ export function OrganizerTopNav({
   const settingsActive = pathname?.startsWith('/organizer/settings')
 
   return (
-    <div className="sticky top-0 z-40 border-b border-line bg-canvas/90 backdrop-blur-xl">
+    // data-site-chrome: hidden inside the app (app/globals.css), which frames the page itself.
+    <div data-site-chrome className="sticky top-0 z-40 border-b border-line bg-canvas/90 backdrop-blur-xl">
       {/* Phones: brand + icons on the first row, the tabs on their own full-width
           row underneath, so Marketing / Orders / Team are never pushed off
           screen behind the icons. sm and up: one row, as before. */}
