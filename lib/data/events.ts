@@ -5,6 +5,7 @@
  * Separates client-side and server-side operations.
  */
 
+import { isUnlisted } from '@/lib/events/visibility'
 import { parseOccasion } from '@/lib/occasions'
 import { cleanEventLanguages } from '@/lib/event-languages'
 import { venueDetailsForReader } from '@/lib/events/venue-details'
@@ -266,6 +267,8 @@ async function getEventByIdUncached(eventId: string): Promise<Event | null> {
         tickets_sold: data?.tickets_sold || 0,
         tickets_available: data?.tickets_available,
         is_published: data?.is_published,
+        // Visibility (lib/events/visibility): false = unlisted, the page is noindex.
+        show_on_explore: data?.show_on_explore === false ? false : undefined,
         // The buy flow must know to prompt for the access code BEFORE checkout —
         // the server routes enforce it either way, but without this flag the UI
         // never asks and buyers dead-end on access_code_required.
@@ -412,6 +415,8 @@ const readPublishedEvents = unstable_cache(
     for (const snap of [...windows, snapshot]) {
       for (const d of snap?.docs || []) {
         if (seen.has(d.id)) continue
+        // Unlisted (lib/events/visibility): link only, never in a public feed.
+        if (isUnlisted(d.data())) continue
         seen.add(d.id)
         docs.push(d)
       }

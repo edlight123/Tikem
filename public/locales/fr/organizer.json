@@ -212,6 +212,7 @@
     "import_events": "Importer des événements"
   },
   "event_card_detail": {
+    "unlisted": "Non répertorié",
     "sold_out": "ÉPUISÉ",
     "payout_blocked": "Paiements bloqués",
     "needs_attention": "Nécessite une attention",

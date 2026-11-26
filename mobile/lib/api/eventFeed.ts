@@ -1,5 +1,6 @@
 import { collection, getDocs, limit, orderBy, query, where } from 'firebase/firestore';
 import { db } from '../../config/firebase';
+import { isUnlisted } from '../eventVisibility';
 
 /**
  * The ONE published-events fetch behind every public browsing surface
@@ -252,6 +253,8 @@ export function mergeUpcomingEvents(
       if (seen.has(docSnap.id)) continue;
       seen.add(docSnap.id);
       const data = docSnap.data() || {};
+      // Unlisted events are link-only (lib/eventVisibility): never in a public feed.
+      if (isUnlisted(data)) continue;
       const start = toDate(data.start_datetime);
       if (!start || start.getTime() < sinceMs) continue;
       events.push({

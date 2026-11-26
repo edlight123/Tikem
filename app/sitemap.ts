@@ -1,3 +1,4 @@
+import { isPubliclyListed } from '@/lib/events/visibility'
 import type { MetadataRoute } from 'next'
 import { adminDb } from '@/lib/firebase/admin'
 import { CULTURAL_CATEGORIES } from '@/lib/categories'
@@ -70,7 +71,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     eventRoutes = snap.docs
       // Rejected events are published:true in some legacy docs — never list them.
-      .filter((d: any) => d.get('rejected') !== true && d.get('show_on_explore') !== false)
+      .filter((d: any) => d.get('rejected') !== true && isPubliclyListed({ show_on_explore: d.get('show_on_explore') }))
       .map((d: any) => ({
         url: `${siteUrl}/events/${d.id}`,
         lastModified: toDate(d.get('updated_at')) || toDate(d.get('created_at')) || now,
