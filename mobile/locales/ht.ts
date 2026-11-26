@@ -815,6 +815,7 @@ export default {
     freeTitle: 'Gratis e bon mache',
     freeSubtitle: 'Bèl sware ki pa koute chè',
     newTitle: 'Fèk Anonse',
+    newOnTikemTitle: 'Nouvo sou Tikèm',
     newSubtitle: 'Evènman yo fèk ajoute',
     viewAllEvents: 'Gade tout evènman yo',
     emptyTitle: 'Pa gen evènman disponib',

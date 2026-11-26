@@ -799,6 +799,9 @@
       "CA": "Canada",
       "FR": "France"
     },
+    "new_on": {
+      "title": "Nouveau sur Tikèm"
+    },
     "elsewhere": {
       "back_home": "retour au pays",
       "back_home_desc": "Bientôt en Haïti",
