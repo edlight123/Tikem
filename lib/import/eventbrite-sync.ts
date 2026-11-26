@@ -25,6 +25,7 @@ import { timezoneForEvent } from '@/lib/events/composer-country'
 import { isPublicHttpsUrl } from '@/lib/import/url'
 import { resolveImportMarket, type ImportFlag } from '@/lib/import/market'
 import { firstPublishStamp } from '@/lib/events/publishedAt'
+import { importCategoryFields } from '@/lib/events/categoryInfer'
 
 export const EB_SOURCE = 'eventbrite'
 
@@ -170,6 +171,24 @@ export type EbPlan =
   | { kind: 'write'; id: string; data: Record<string, any>; published: boolean; unpublished: boolean; past: boolean; created: boolean; flags: ImportFlag[] }
 
 /** The write (merge) a sync makes for one Eventbrite event, or why it makes none. */
+/**
+ * What Eventbrite files an event under: its category, subcategory and format
+ * (names when expanded, else the ids every event carries), for the category a
+ * Tikèm copy starts with (lib/events/categoryInfer). From Tikra b3b32279.
+ */
+export function ebCategoryHints(ev: any): { sourceCategory: string | null; sourceSubcategory: string | null; sourceFormat: string | null } {
+  const pick = (named: any, id: any) => {
+    const n = typeof named?.name === 'string' ? named.name : typeof named?.short_name === 'string' ? named.short_name : ''
+    const v = String(n || id || '').trim().slice(0, 80)
+    return v || null
+  }
+  return {
+    sourceCategory: pick(ev?.category, ev?.category_id),
+    sourceSubcategory: pick(ev?.subcategory, ev?.subcategory_id),
+    sourceFormat: pick(ev?.format, ev?.format_id),
+  }
+}
+
 export function planEventbriteDoc(input: EbPlanInput): EbPlan {
   const { ev, prev, orgId, orgName, now } = input
   const fields = mapEventbriteToEventFields(ev, input.fallbackCountry)
@@ -249,7 +268,9 @@ export function planEventbriteDoc(input: EbPlanInput): EbPlan {
     // The moderation defaults the admin Events tabs filter on: a doc missing
     // one of these is invisible there (lib/admin/event-moderation).
     data.organizer_id = orgId
-    data.category = 'Other'
+    // Inferred from Eventbrite's own category, format and the text (never a
+    // blanket 'Other', which kept imports out of the home category rails).
+    Object.assign(data, importCategoryFields(null, { title: fields.title, description: fields.description, ...ebCategoryHints(ev) }))
     data.show_on_explore = true
     data.rejected = false
     data.reports_count = 0

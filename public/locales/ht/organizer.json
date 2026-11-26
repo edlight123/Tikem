@@ -232,7 +232,15 @@
     "duplicate": "Douplike",
     "delete": "Efase",
     "share": "Pataje",
-    "preview": "Apèsi"
+    "preview": "Apèsi",
+    "to_fix": "Pou ranje: {{items}}",
+    "to_fix_items": {
+      "category": "kategori",
+      "image": "foto",
+      "description": "deskripsyon",
+      "date": "dat",
+      "location": "kote"
+    }
   },
   "scan": {
     "title": "Skane tikè",

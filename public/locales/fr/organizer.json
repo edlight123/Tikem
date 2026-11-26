@@ -232,7 +232,15 @@
     "duplicate": "Dupliquer",
     "delete": "Supprimer",
     "share": "Partager",
-    "preview": "Aperçu"
+    "preview": "Aperçu",
+    "to_fix": "À compléter : {{items}}",
+    "to_fix_items": {
+      "category": "catégorie",
+      "image": "photo",
+      "description": "description",
+      "date": "date",
+      "location": "lieu"
+    }
   },
   "scan": {
     "title": "Scanner les billets",

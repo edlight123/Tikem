@@ -21,6 +21,10 @@ export interface DraftInput {
   tiers: Array<{ name: string; price: number; quantity: number }>
   /** The IANA zone the source gives (Eventbrite start.timezone), when it gives one. */
   timezone?: string | null
+  /** The source's own category, subcategory and format, when it gives them (lib/events/categoryInfer). */
+  sourceCategory?: string | null
+  sourceSubcategory?: string | null
+  sourceFormat?: string | null
 }
 
 /**

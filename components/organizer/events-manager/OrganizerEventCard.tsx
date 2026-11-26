@@ -12,6 +12,15 @@ import { StatusChip } from '@/components/ui/kit'
 import { getPosterTheme } from '@/lib/posterGradient'
 import { soldForPeople } from '@/lib/physical/rules'
 import { isUnlisted } from '@/lib/events/visibility'
+import { eventNeedsAttention, type AttentionItem } from '@/lib/events/needsAttention'
+
+const ATTENTION_FALLBACK: Record<AttentionItem, string> = {
+  category: 'category',
+  image: 'photo',
+  description: 'description',
+  date: 'date',
+  location: 'location',
+}
 
 interface EventData {
   id: string
@@ -85,7 +94,13 @@ export default function OrganizerEventCard({ event, showNeedsAttention = true }:
   const missingCover = !event.banner_image_url
   const missingTickets = Array.isArray(event.ticket_tiers) ? event.ticket_tiers.length === 0 : false
   const noSales = ticketsSold === 0 && event.is_published
-  const needsAttention = showNeedsAttention && (missingCover || missingTickets || noSales)
+  // An imported event that still misses what a listing needs (a category, a
+  // photo, a date, a place, a description): named under the title (Tikra b3b32279).
+  const toFix = eventNeedsAttention(event as Record<string, any>)
+  const toFixText = toFix
+    .map((item) => t(`event_card_detail.to_fix_items.${item}`, { defaultValue: ATTENTION_FALLBACK[item] }))
+    .join(', ')
+  const needsAttention = showNeedsAttention && (toFix.length > 0 || missingCover || missingTickets || noSales)
 
   const hasImage = Boolean(event.banner_image_url)
   const theme = getPosterTheme(event.id || event.title, event.category)
@@ -144,6 +159,11 @@ export default function OrganizerEventCard({ event, showNeedsAttention = true }:
         </div>
 
         <h3 className="truncate font-display text-body italic text-fg">{event.title}</h3>
+        {toFix.length > 0 && (
+          <p className="mt-0.5 truncate text-caption text-warning-soft">
+            {t('event_card_detail.to_fix', { items: toFixText, defaultValue: 'To fix: {{items}}' })}
+          </p>
+        )}
 
         <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-0.5 text-caption text-fg-subtle">
           <span className="inline-flex items-center gap-1.5 font-mono tabular-nums">

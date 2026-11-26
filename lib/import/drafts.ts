@@ -21,6 +21,7 @@ import { resolveImportMarket, type ImportFlag } from '@/lib/import/market'
 import { defaultPassFeesToBuyer, pickDefaultComposerCountry, timezoneForEvent } from '@/lib/events/composer-country'
 import { getDeclaredMarkets } from '@/lib/firestore/organizer-markets'
 import { validZone, type DraftInput } from '@/lib/import/draft-input'
+import { importCategoryFields } from '@/lib/events/categoryInfer'
 
 /** The draft id for one organizer's copy of one source event. */
 export function importDraftId(orgId: string, key: string): string {
@@ -103,13 +104,23 @@ export async function writeDraft(
   const total = tiers.reduce((s, t) => s + t.quantity, 0)
   const city = d.online ? '' : d.city
 
+  const catFields = importCategoryFields(prev, {
+    title: d.title,
+    description: d.description,
+    sourceCategory: d.sourceCategory,
+    sourceSubcategory: d.sourceSubcategory,
+    sourceFormat: d.sourceFormat,
+  })
   const data: Record<string, any> = {
     organizer_id: ctx.orgId,
     organizer_name: ctx.orgName || prev?.organizer_name || '',
     title: d.title,
     description: d.description,
     summary: prev?.summary || '',
-    category: prev?.category || 'Other',
+    // Inferred from the source while there is no pick yet (lib/events/categoryInfer);
+    // an organizer's own pick is kept.
+    category: (catFields as any).category || prev?.category || 'Other',
+    ...('category_auto' in catFields ? { category_auto: (catFields as any).category_auto } : {}),
     venue_name: d.online ? '' : d.venue,
     address: d.online ? '' : d.address,
     city,

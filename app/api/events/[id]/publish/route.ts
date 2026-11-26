@@ -21,6 +21,7 @@ import { readOrgBrandAdmin } from '@/lib/firestore/org-brand-server'
 import { isPaidEvent, sellsTicketsElsewhere } from '@/lib/events/paid-event'
 import { cleanPosterAlt } from '@/lib/posterAlt'
 import { firstPublishStamp } from '@/lib/events/publishedAt'
+import { inferEventCategory } from '@/lib/events/categoryInfer'
 
 const TIER_LIMIT = 25
 
@@ -249,6 +250,12 @@ export async function POST(
       updated_at: new Date(),
       // The first time it goes public (lib/events/publishedAt): Home's "Recently added".
       ...(is_published ? firstPublishStamp(eventData) : {}),
+      // An event goes public with a category: an old one (or an import) with
+      // none gets one guessed from its text (lib/events/categoryInfer), so it
+      // shows in the home category rails. An organizer's pick is never touched.
+      ...(is_published && !String(eventData.category || '').trim()
+        ? { category: inferEventCategory({ title: eventData.title, description: eventData.description }).category, category_auto: true }
+        : {}),
       ...(clearPayoutBlock
         ? {
             payout_blocked: false,

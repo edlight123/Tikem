@@ -27,7 +27,7 @@ const MAX_ORGS = 5
 const MAX_PAGES = 4
 const MAX_IMAGES = 20
 const MAX_STATS = 40
-const EXPAND = 'expand=venue,ticket_classes,logo&page_size=50'
+const EXPAND = 'expand=venue,ticket_classes,logo,category,subcategory,format&page_size=50'
 
 class RateLimited extends Error {}
 

@@ -232,7 +232,15 @@
     "duplicate": "Duplicate",
     "delete": "Delete",
     "share": "Share",
-    "preview": "Preview"
+    "preview": "Preview",
+    "to_fix": "To fix: {{items}}",
+    "to_fix_items": {
+      "category": "category",
+      "image": "photo",
+      "description": "description",
+      "date": "date",
+      "location": "location"
+    }
   },
   "scan": {
     "title": "Scan Tickets",
