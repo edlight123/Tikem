@@ -136,7 +136,12 @@
     "tickets_count_other": "{{count}} Tickets",
     "tickets_count_plural": "{{count}} Tickets",
     "pay_at_door": "Pay {{amount}} at the door",
-    "paid_at_door": "Paid at the door"
+    "paid_at_door": "Paid at the door",
+    "changed_when": "Date and time changed",
+    "changed_where": "Place changed",
+    "changed_link": "Online link changed",
+    "changed_was": "was {{value}}",
+    "changed_online": "Online"
   },
   "purchase_success": {
     "title": "Purchase Successful!",

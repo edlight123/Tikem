@@ -1321,6 +1321,13 @@ export default {
     eventsCount: 'events',
   },
   tickets: {
+    changeNotice: {
+      when: 'Date and time changed',
+      where: 'Place changed',
+      link: 'Online link changed',
+      was: 'was {value}',
+      online: 'Online',
+    },
     cancelRsvp: {
       action: 'Cancel RSVP',
       title: 'Cancel your RSVP?',

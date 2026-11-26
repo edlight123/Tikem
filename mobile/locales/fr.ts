@@ -950,6 +950,13 @@ export default {
     eventsCount: 'événements',
   },
   tickets: {
+    changeNotice: {
+      when: 'Date et heure modifiées',
+      where: 'Lieu modifié',
+      link: 'Lien en ligne modifié',
+      was: 'avant : {value}',
+      online: 'En ligne',
+    },
     cancelRsvp: {
       action: 'Annuler ma réservation',
       title: 'Annuler votre réservation ?',

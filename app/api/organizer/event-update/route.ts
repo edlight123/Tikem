@@ -2,23 +2,43 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase/admin'
 import { requireAuth } from '@/lib/auth'
 import { canOnEvent } from '@/lib/organizer/context'
+import { consumeRateLimit } from '@/lib/rate-limit'
+import { checkBroadcast, type BroadcastRefusal } from '@/lib/moderation/broadcast'
+import { broadcastToAttendees } from '@/lib/events/attendee-broadcast'
 import { reminderClaimKey, reminderFireAt, resolveEventReminders } from '@/lib/notifications/event-reminder-settings'
-import { createNotification } from '@/lib/notifications/helpers'
-import { sendPushNotification } from '@/lib/notification-triggers'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
+/** Messages one event may send per rolling day, and one sender across all events. */
+const PER_EVENT_PER_DAY = 3
+const PER_SENDER_PER_DAY = 10
+const DAY_MS = 24 * 60 * 60 * 1000
+
+const BROADCAST_REFUSAL_MESSAGES: Record<BroadcastRefusal, string> = {
+  empty: 'Write a message first.',
+  too_long: 'Keep the title under 120 characters and the message under 2,000.',
+  too_many_links: 'Use at most 3 links, with a few words saying what they are.',
+  insecure_link: 'Links must start with https://.',
+  shortened_link: 'Use the full link, not a shortened one.',
+  phishing: 'Tikra never sends messages that ask for passwords or payments outside Tikra. Remove that part and try again.',
+  shouting: 'Please write in normal case rather than all capitals.',
+}
+
 /**
- * Send an event update to ticket holders.
+ * POST: an organizer's message to everyone holding a ticket or RSVP. The ONE
+ * route for it, from the web dashboard (Attendees, "Message attendees") and the
+ * app (SendEventUpdateScreen). The fan-out (email to everyone including guests,
+ * in-app + push to account holders, each in their language and honouring their
+ * "Messages from organizers" switch) is lib/events/attendee-broadcast.ts.
  *
- * Replaces the old client-side flow (SendEventUpdateScreen wrote the
- * event_updates doc AND fanned notifications into every attendee's feed
- * directly with the Firebase client SDK). Doing that client-side required the
- * notifications rule to allow cross-user writes — a spam/phishing hole (audit
- * M4). This route does the same work server-side (Admin SDK) after verifying
- * the caller may run the event (its org's owner, admin or manager), so the notifications create rule can be locked to
- * the feed owner.
+ * Body: { eventId, message, title? }. The web's older shape
+ * { eventId, updateMessage } is accepted too.
+ *
+ * Guards, in order: signed in; may run the event (owner, admin or manager);
+ * the event is live; moderation (lib/moderation/broadcast.ts); 3 messages per
+ * event and 10 per sender per day. Every message is kept in event_updates
+ * (the Sent list, and the record for review).
  */
 export async function POST(request: NextRequest) {
   try {
@@ -30,13 +50,16 @@ export async function POST(request: NextRequest) {
     const body = await request.json().catch(() => ({}))
     const eventId = typeof body?.eventId === 'string' ? body.eventId.trim() : ''
     const title = typeof body?.title === 'string' ? body.title.trim() : ''
-    const message = typeof body?.message === 'string' ? body.message.trim() : ''
+    const rawMessage =
+      (typeof body?.message === 'string' && body.message) ||
+      (typeof body?.updateMessage === 'string' && body.updateMessage) ||
+      ''
+    const message = String(rawMessage).trim()
 
-    if (!eventId || !title || !message) {
-      return NextResponse.json({ error: 'eventId, title and message are required' }, { status: 400 })
+    if (!eventId || eventId.includes('/') || !message) {
+      return NextResponse.json({ error: 'Write a message first.', code: 'empty' }, { status: 400 })
     }
 
-    // Verify the caller may run this event.
     const eventDoc = await adminDb.collection('events').doc(eventId).get()
     if (!eventDoc.exists) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 })
@@ -46,55 +69,69 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    // Write the event update (recipients is filled in once the fan-out is done,
-    // for the Sent list on the organizer's Messages page).
+    const status = String(eventData.status || '').toLowerCase()
+    const live =
+      eventData.is_published === true &&
+      status !== 'cancelled' &&
+      eventData.hidden_pending_review !== true &&
+      eventData.rejected !== true
+    if (!live) {
+      return NextResponse.json(
+        { error: 'Only a live event can message its attendees.', code: 'event_not_live' },
+        { status: 409 }
+      )
+    }
+
+    const verdict = checkBroadcast({ title, message })
+    if (!verdict.ok) {
+      return NextResponse.json({ error: BROADCAST_REFUSAL_MESSAGES[verdict.code], code: verdict.code }, { status: 422 })
+    }
+
+    const perEvent = await consumeRateLimit({ key: `event-broadcast:${eventId}`, limit: PER_EVENT_PER_DAY, windowMs: DAY_MS })
+    if (perEvent.limited) {
+      return NextResponse.json(
+        { error: 'This event has sent its messages for today. Try again tomorrow.', code: 'update_limit' },
+        { status: 429 }
+      )
+    }
+    const perSender = await consumeRateLimit({
+      key: `event-broadcast-sender:${user.id}`,
+      limit: PER_SENDER_PER_DAY,
+      windowMs: DAY_MS,
+    })
+    if (perSender.limited) {
+      return NextResponse.json(
+        { error: 'You have sent the most messages allowed today. Try again tomorrow.', code: 'sender_limit' },
+        { status: 429 }
+      )
+    }
+
     const updateRef = await adminDb.collection('event_updates').add({
       event_id: eventId,
-      title,
+      title: title || null,
       message,
       created_at: new Date(),
       created_by: user.id,
     })
 
-    // Collect distinct attendees with a live ticket for this event.
-    const ticketsSnapshot = await adminDb
-      .collection('tickets')
-      .where('event_id', '==', eventId)
-      .where('status', 'in', ['active', 'valid', 'checked_in', 'confirmed'])
-      .get()
-
-    const attendeeIds = new Set<string>()
-    ticketsSnapshot.docs.forEach((d: any) => {
-      const aid = d.data()?.attendee_id || d.data()?.user_id
-      if (aid && aid !== user.id) attendeeIds.add(aid)
+    const outcome = await broadcastToAttendees({
+      event: { ...(eventData as any), id: eventId },
+      senderId: user.id,
+      title: title || null,
+      message,
+      organizerName: (eventData as any).organizer_name || null,
     })
 
-    const eventTitle = eventData.title || 'your event'
-    const actionUrl = `/events/${eventId}`
+    await updateRef.update({ ...outcome }).catch(() => {})
 
-    // Fan out in-app + push notifications. A single attendee's failure must not
-    // abort the whole send, so failures are swallowed per-recipient.
-    const results = await Promise.allSettled(
-      Array.from(attendeeIds).map(async (attendeeId) => {
-        await createNotification(
-          attendeeId,
-          'event_updated',
-          `Update: ${eventTitle}`,
-          title,
-          actionUrl,
-          { eventId }
-        )
-        await sendPushNotification(attendeeId, `📣 ${eventTitle}`, title, actionUrl, {
-          type: 'event_update',
-          eventId,
-        }).catch(() => {})
-      })
-    )
-
-    const notified = results.filter((r) => r.status === 'fulfilled').length
-    await updateRef.update({ recipients: notified }).catch(() => {})
-
-    return NextResponse.json({ success: true, notified })
+    return NextResponse.json({
+      success: true,
+      ...outcome,
+      // The app reads `notified`; the web's sheet reads sent / failed.
+      notified: outcome.recipients,
+      sent: outcome.emailed,
+      failed: outcome.emailFailed,
+    })
   } catch (err) {
     console.error('Error sending event update:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

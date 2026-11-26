@@ -28,6 +28,15 @@ export default async function EventCommandCenterPage({ params }: { params: Promi
       .catch(() => null)
   }
 
+  // "Cancel event": a published (or once-published) event that isn't cancelled
+  // yet, for whoever runs events in its own org. The route
+  // (POST /api/events/[id]/cancel) re-checks everything and has the last word.
+  const canCancel =
+    !draftDelete &&
+    !isDraftEvent(eventData) &&
+    String((eventData as any)?.status || '').toLowerCase() !== 'cancelled' &&
+    (await canOnEvent(user, eventData, 'manage_events')).allowed
+
   // Fetch tickets for this event (supports legacy `eventId` field too).
   // Page views (lib/events/views.ts) load alongside; zeros on any failure.
   const [ticketDocs, views] = await Promise.all([loadTicketDocsForEvent(id), readEventViewStats(id, eventData)])
@@ -125,6 +134,7 @@ export default async function EventCommandCenterPage({ params }: { params: Promi
         tickets={tickets}
         tiers={tiers}
         draftDelete={draftDelete}
+        canCancel={canCancel}
       />
     </div>
   )

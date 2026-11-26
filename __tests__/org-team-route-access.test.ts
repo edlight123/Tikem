@@ -93,6 +93,10 @@ jest.mock('@/lib/auth', () => ({
 const createNotification = jest.fn(async () => undefined)
 jest.mock('@/lib/notifications/helpers', () => ({ createNotification: (...a: any[]) => (createNotification as any)(...a) }))
 jest.mock('@/lib/notification-triggers', () => ({ sendPushNotification: async () => undefined }))
+// The fan-out and the limiter have their own tests; here only who may send.
+const broadcastToAttendees = jest.fn(async (_p: any) => ({ recipients: 1, emailed: 1, emailFailed: 0, pushed: 1, inApp: 1, optedOut: 0 }))
+jest.mock('@/lib/events/attendee-broadcast', () => ({ broadcastToAttendees: (p: any) => broadcastToAttendees(p) }))
+jest.mock('@/lib/rate-limit', () => ({ consumeRateLimit: async () => ({ limited: false }) }))
 
 import { POST as eventUpdatePOST } from '@/app/api/organizer/event-update/route'
 import { GET as payoutHistoryGET } from '@/app/api/organizer/payout-history/route'
@@ -108,7 +112,7 @@ const PLATFORM_ADMIN = { id: 'staff1', role: 'admin', full_name: 'Tikem Staff' }
 
 function seed() {
   store.clear()
-  store.set('events/ev1', { title: 'Kompa Night', organizer_id: 'owner1' })
+  store.set('events/ev1', { title: 'Kompa Night', organizer_id: 'owner1', is_published: true })
   store.set('organizers/owner1/team/mgr1', { uid: 'mgr1', role: 'manager', status: 'active' })
   store.set('users/mgr1/org_memberships/owner1', { org_id: 'owner1', role: 'manager', org_name: 'Kompa Nights' })
   store.set('organizers/owner1/team/adm1', { uid: 'adm1', role: 'admin', status: 'active' })
@@ -139,7 +143,7 @@ describe('per-event routes', () => {
     const update = Array.from(store.entries()).find(([k]) => k.startsWith('event_updates/'))![1]
     // The actor stays the member who did it.
     expect(update.created_by).toBe('mgr1')
-    expect(createNotification).toHaveBeenCalledWith('buyer1', 'event_updated', expect.any(String), 'Doors at 8', '/events/ev1', { eventId: 'ev1' })
+    expect(broadcastToAttendees).toHaveBeenCalledWith(expect.objectContaining({ senderId: 'mgr1', event: expect.objectContaining({ id: 'ev1' }) }))
   })
 
   it('the owner path is unchanged', async () => {
@@ -149,9 +153,10 @@ describe('per-event routes', () => {
 
   it('a non-member gets 403', async () => {
     currentUser = STRANGER
+    broadcastToAttendees.mockClear()
     const res = await eventUpdatePOST(eventUpdateReq())
     expect(res.status).toBe(403)
-    expect(createNotification).not.toHaveBeenCalled()
+    expect(broadcastToAttendees).not.toHaveBeenCalled()
   })
 
   it('an org staff member gets 403 (door access is per event only)', async () => {

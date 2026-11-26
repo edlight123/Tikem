@@ -137,5 +137,29 @@
       "has_holds": "Un achat est en cours. Réessayez dans un instant.",
       "has_money": "Suppression impossible : des paiements sont enregistrés."
     }
+  },
+  "cancelEvent": {
+    "button": "Annuler l'événement",
+    "title": "Annuler {{event}} ?",
+    "body": "L'annulation est définitive. Voici ce qui se passe :",
+    "point1": "Tous les billets sont annulés. Les billets payants sont remboursés sur le moyen de paiement initial de l'acheteur.",
+    "point2": "Toutes les personnes ayant un billet ou une réservation reçoivent un e-mail et une notification.",
+    "point3": "Les revenus de l'événement sont retenus pour payer les remboursements.",
+    "reasonLabel": "Motif (facultatif, visible par les détenteurs de billets)",
+    "reasonPlaceholder": "Par exemple : la salle est fermée pour travaux.",
+    "typeToConfirm": "Tapez {{word}} pour confirmer",
+    "confirmWord": "ANNULER",
+    "keep": "Garder l'événement",
+    "confirm": "Annuler et rembourser",
+    "working": "Annulation…",
+    "failed": "L'événement n'a pas pu être annulé. Veuillez réessayer.",
+    "doneTitle": "Événement annulé",
+    "doneBody": "{{refunded}} remboursés maintenant, {{manual}} remboursements traités par Tikèm, {{notified}} personnes prévenues.",
+    "errors": {
+      "cancel_after_withdrawal": "De l'argent a déjà été retiré pour cet événement : seul le support Tikèm peut l'annuler. Veuillez contacter le support.",
+      "cancel_after_event_end": "Cet événement est déjà terminé : seul le support Tikèm peut l'annuler. Veuillez contacter le support.",
+      "cancel_balance_unavailable": "Impossible de vérifier les paiements de cet événement pour le moment. Réessayez, ou contactez le support.",
+      "cancel_ledger_stamp_failed": "L'événement est annulé, mais son enregistrement a échoué. Veuillez relancer l'annulation."
+    }
   }
 }

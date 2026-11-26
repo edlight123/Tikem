@@ -136,7 +136,12 @@
     "tickets_count_other": "{{count}} Billets",
     "tickets_count_plural": "{{count}} Billets",
     "pay_at_door": "Payez {{amount}} à l’entrée",
-    "paid_at_door": "Payé à l’entrée"
+    "paid_at_door": "Payé à l’entrée",
+    "changed_when": "Date et heure modifiées",
+    "changed_where": "Lieu modifié",
+    "changed_link": "Lien en ligne modifié",
+    "changed_was": "avant : {{value}}",
+    "changed_online": "En ligne"
   },
   "purchase_success": {
     "title": "Achat réussi !",
