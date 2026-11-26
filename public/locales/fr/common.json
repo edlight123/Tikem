@@ -816,6 +816,13 @@
       "see_events": "Voir les événements",
       "see": "Voir",
       "dismiss": "Masquer cette bannière"
+    },
+    "friends_going": {
+      "title": "vos amis y vont",
+      "one": "{{name}} y va",
+      "two": "{{a}} et {{b}} y vont",
+      "many": "{{a}}, {{b}} et {{count}} autres y vont",
+      "count": "{{count}} amis y vont"
     }
   },
   "resources": {
@@ -2701,6 +2708,26 @@
     "filter": "Langue",
     "any": "Toutes les langues",
     "held_in": "En"
+  },
+  "pushCopy": {
+    "newEvent": {
+      "title": "Nouveau chez {{organizer}}",
+      "fallbackBody": "Un nouvel événement est en ligne.",
+      "someone": "Un organisateur que vous suivez"
+    },
+    "friendRequest": {
+      "requestTitle": "Nouvelle demande d’ami",
+      "requestBody": "{{name}} veut se connecter avec vous sur Tikèm.",
+      "acceptedTitle": "Vous êtes maintenant amis",
+      "acceptedBody": "{{name}} a accepté votre demande d’ami.",
+      "someone": "Quelqu’un"
+    }
+  },
+  "friendActivity": {
+    "title": "Vos amis y vont",
+    "goingOne": "{{name}} y va",
+    "goingTwo": "{{a}} et {{b}} y vont",
+    "goingMany": "{{a}}, {{b}} et {{count}} autres y vont"
   },
   "afterEvent": {
     "howWasIt": "C'était comment ?",

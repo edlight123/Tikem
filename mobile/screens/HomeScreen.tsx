@@ -16,6 +16,9 @@ import { useTabBarSpace } from '../hooks/useTabBarSpace';
 import { filterExploreEvents } from '../lib/api/events';
 import { fetchNewOnTikemEvents, fetchPublishedEventsForCountryWithMeta } from '../lib/api/eventFeed';
 import { selectNewOnTikem } from '../lib/newOnTikem';
+import { fetchFriendActivity } from '../lib/api/social';
+import { useSocialFlags } from '../lib/socialFlags';
+import { useAuth } from '../contexts/AuthContext';
 import { persistFeedCache, restoreFeedCache } from '../lib/feedCache';
 import { filterBlockedEvents, useBlockedOrganizers } from '../lib/blockedOrganizers';
 import { useI18n } from '../contexts/I18nContext';
@@ -73,6 +76,24 @@ export default function HomeScreen({ navigation }: any) {
   const [forYouEvents, setForYouEvents] = useState<any[]>([]);
   // "new on Tikèm": events added in the last two weeks, newest first (lib/newOnTikem).
   const [newOnTikem, setNewOnTikem] = useState<any[]>([]);
+  // "friends are going": signed in and the friend_suggestions switch on only;
+  // the server applies every privacy rule (lib/social/friend-activity).
+  const { user } = useAuth();
+  const socialFlags = useSocialFlags();
+  const [friendActivity, setFriendActivity] = useState<any[]>([]);
+  useEffect(() => {
+    if (!user || !socialFlags.friendSuggestions) {
+      setFriendActivity([]);
+      return;
+    }
+    let cancelled = false;
+    fetchFriendActivity().then((list) => {
+      if (!cancelled) setFriendActivity(filterBlockedEvents(list, blockedOrganizers));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.uid, socialFlags.friendSuggestions, blockedOrganizers]);
   const [categoryRails, setCategoryRails] = useState<{ category: string; events: any[] }[]>([]);
   // Top events from OTHER metros in the same country/region — its own rail,
   // below everything local, never mixed into the feed above.
@@ -574,6 +595,16 @@ export default function HomeScreen({ navigation }: any) {
                 <EventRail
                   title={t('home.newOnTikemTitle')}
                   events={newOnTikem}
+                  onEventPress={(eventId) => navigation.navigate('EventDetail', { eventId })}
+                />
+              </View>
+            )}
+
+            {friendActivity.length > 0 && (
+              <View style={styles.section}>
+                <EventRail
+                  title={t('friendActivity.title')}
+                  events={friendActivity}
                   onEventPress={(eventId) => navigation.navigate('EventDetail', { eventId })}
                 />
               </View>

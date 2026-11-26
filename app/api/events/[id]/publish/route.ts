@@ -3,8 +3,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { cleanEventLanguages } from '@/lib/event-languages'
 import { adminDb } from '@/lib/firebase/admin'
 import { requireAuth } from '@/lib/auth'
-import { createNotification } from '@/lib/notifications/helpers'
-import { sendPushNotification } from '@/lib/notification-triggers'
+import { sendDiscretionary } from '@/lib/notifications/campaigns'
+import { followerNewEventCopy } from '@/lib/notifications/follower-new-event'
+import { isSociallyVisibleEvent } from '@/lib/social/event-privacy'
 import { resolveEventCountry } from '@/lib/event-country'
 import { normalizeCountryCode } from '@/lib/payment-provider'
 import { checkPaidPublishGate } from '@/lib/events/publish-gate'
@@ -322,35 +323,29 @@ export async function POST(
           : []
         const followerIds = allFollowerIds.filter((_fid, i) => !blockSnaps[i]?.exists)
 
-        if (followerIds.length > 0) {
-          // Notify each follower
-          const notifications = followerIds.map(async (followerId: string) => {
-            // Create in-app notification
-            await createNotification(
-              followerId,
-              'event_updated',
-              `New Event: ${eventData.title}`,
-              `${organizerName || eventData.organizer_name || 'An organizer you follow'} just published a new event!`,
-              `/events/${id}`,
-              { eventId: id, organizerId }
-            )
+        // A password-protected or unlisted event is shared by link on purpose:
+        // never announce it to followers (lib/social/event-privacy).
+        if (followerIds.length > 0 && isSociallyVisibleEvent({ ...eventData, ...updatePayload })) {
+          // Each follower through the discretionary gate (sendDiscretionary:
+          // their "Organizers you follow" switch, quiet hours, once per event),
+          // in their own language. This push used to bypass all three.
+          const who = organizerName || eventData.organizer_name || ''
+          const notifications = followerIds.map((followerId: string) =>
+            sendDiscretionary({
+              userId: followerId,
+              category: 'organizer_follow',
+              capKey: `new_event:${id}`,
+              type: 'event_updated',
+              title: '',
+              body: '',
+              copy: (u) => followerNewEventCopy(u?.language, who, eventData.title || ''),
+              url: `/events/${id}`,
+              data: { eventId: id, organizerId, kind: 'new_event' },
+            })
+          )
 
-            // Send push notification
-            await sendPushNotification(
-              followerId,
-              `📅 New Event from ${organizerName || eventData.organizer_name || 'Organizer'}`,
-              eventData.title,
-              `/events/${id}`,
-              {
-                type: 'new_event',
-                eventId: id,
-                organizerId,
-              }
-            )
-          })
-
-          await Promise.all(notifications)
-          console.log(`Notified ${followerIds.length} followers about new event: ${eventData.title}`)
+          const sent = (await Promise.all(notifications)).filter(Boolean).length
+          console.log(`Notified ${sent}/${followerIds.length} followers about new event ${id}`)
         }
       } catch (notifyError) {
         console.error('Error notifying followers:', notifyError)

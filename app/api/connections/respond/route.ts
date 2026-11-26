@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
 import { respondToConnectionRequest } from '@/lib/firestore/connections'
 import { createNotification } from '@/lib/notifications/helpers'
+import { pushFriendRequest } from '@/lib/social/friend-push'
 
 export const runtime = 'nodejs'
 
@@ -36,6 +37,7 @@ export async function POST(request: Request) {
           '/connections',
           { actorId: user.id }
         )
+        await pushFriendRequest(targetUserId, { id: user.id, name: actorName }, 'accepted')
       } catch (e) {
         console.warn('[connections/respond] notification failed', e)
       }

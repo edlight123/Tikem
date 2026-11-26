@@ -816,6 +816,13 @@
       "see_events": "See events",
       "see": "See",
       "dismiss": "Hide this banner"
+    },
+    "friends_going": {
+      "title": "friends are going",
+      "one": "{{name}} is going",
+      "two": "{{a}} and {{b}} are going",
+      "many": "{{a}}, {{b}} and {{count}} more are going",
+      "count": "{{count}} friends are going"
     }
   },
   "resources": {
@@ -2701,6 +2708,26 @@
     "filter": "Language",
     "any": "Any language",
     "held_in": "Held in"
+  },
+  "pushCopy": {
+    "newEvent": {
+      "title": "New from {{organizer}}",
+      "fallbackBody": "A new event is up.",
+      "someone": "An organizer you follow"
+    },
+    "friendRequest": {
+      "requestTitle": "New friend request",
+      "requestBody": "{{name}} wants to connect with you on Tikèm.",
+      "acceptedTitle": "You are now friends",
+      "acceptedBody": "{{name}} accepted your friend request.",
+      "someone": "Someone"
+    }
+  },
+  "friendActivity": {
+    "title": "Friends are going",
+    "goingOne": "{{name}} is going",
+    "goingTwo": "{{a}} and {{b}} are going",
+    "goingMany": "{{a}}, {{b}} and {{count}} more are going"
   },
   "afterEvent": {
     "howWasIt": "How was it?",

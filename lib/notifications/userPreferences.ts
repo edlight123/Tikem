@@ -19,13 +19,37 @@
  * it says nothing about what the person wanted.
  */
 
+/**
+ * The attendee's DISCRETIONARY switches (the preference centre on the web
+ * profile and in the app's notification settings). Tickets, reminders for an
+ * event you hold a ticket to, event changes and cancellations, refunds and
+ * sign-in codes are transactional and have no switch (policy.ts).
+ *
+ *   notify_reminders           saved-event nudges + "how was it?" (not ticket reminders)
+ *   notify_discovery           events near you
+ *   notify_weekend_digest      Thursday: this weekend in your city
+ *   notify_filling_fast        a saved event is nearly sold out
+ *   notify_national_day        a note on a Haitian holiday
+ *   notify_friend_invites      friend requests and invites from friends
+ *   notify_followed_organizers an organizer you follow published an event
+ *   notify_organizer_messages  updates an organizer sends to ticket holders
+ *                              (email + push only; the in-app copy always lands,
+ *                              and date/venue/cancellation notices are
+ *                              event_change, transactional)
+ *
+ * Email: there is no discretionary email today (every email Tikèm sends is
+ * transactional or organizer-facing). Any new marketing / digest email MUST
+ * check isCategoryEnabled (policy.ts) for the same switch before sending.
+ */
 export const USER_NOTIFY_FIELDS = [
   'notify_reminders',
-  'notify_event_updates',
   'notify_discovery',
   'notify_filling_fast',
   'notify_national_day',
   'notify_weekend_digest',
+  'notify_friend_invites',
+  'notify_followed_organizers',
+  'notify_organizer_messages',
 ] as const
 
 export type UserNotifyField = (typeof USER_NOTIFY_FIELDS)[number]

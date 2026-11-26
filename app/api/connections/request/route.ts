@@ -4,6 +4,7 @@ import { adminDb } from '@/lib/firebase/admin'
 import { sendConnectionRequest } from '@/lib/firestore/connections'
 import { createNotification } from '@/lib/notifications/helpers'
 import { isOrganizerBlocked } from '@/lib/moderation/blocks'
+import { pushFriendRequest } from '@/lib/social/friend-push'
 
 export const runtime = 'nodejs'
 
@@ -57,6 +58,8 @@ export async function POST(request: Request) {
           '/connections',
           { actorId: user.id }
         )
+        // And on their phone, through their Friends switch (lib/social/friend-push).
+        await pushFriendRequest(targetUserId, { id: user.id, name: actorName }, 'request')
       } else if (result.status === 'friends') {
         // Auto-accepted an existing incoming request → tell the other person.
         await createNotification(
@@ -67,6 +70,7 @@ export async function POST(request: Request) {
           '/connections',
           { actorId: user.id }
         )
+        await pushFriendRequest(targetUserId, { id: user.id, name: actorName }, 'accepted')
       }
     } catch (e) {
       console.warn('[connections/request] notification failed', e)

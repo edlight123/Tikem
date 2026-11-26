@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
-import { getFriendsGoingCounts } from '@/lib/firestore/social'
+import { getFriendsGoingCountsFor } from '@/lib/social/suggestions-server'
 
 export const runtime = 'nodejs'
 
@@ -9,8 +9,10 @@ const MAX_EVENTS = 100
 /**
  * Batch "friends going" counts for a set of events, from the viewer's
  * perspective. Powers the social-proof badge on event cards. Anonymous viewers
- * (no friend graph) get an empty map. Privacy is enforced server-side: a friend
- * only counts if their attendance visibility allows it.
+ * (no friend graph) get an empty map. Privacy is enforced server-side by
+ * lib/social/friend-activity.ts: a friend only counts if they EXPRESSLY share
+ * their attendance, their profile is not private, neither blocked the other,
+ * and the event is public, not unlisted/password-protected, with faces shown.
  */
 export async function POST(request: Request) {
   try {
@@ -29,7 +31,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ counts: {} })
     }
 
-    const counts = await getFriendsGoingCounts(user.id, eventIds)
+    const counts = await getFriendsGoingCountsFor(user.id, eventIds)
     return NextResponse.json({ counts })
   } catch (error: any) {
     console.error('Error computing friends-going counts:', error)

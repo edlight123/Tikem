@@ -69,7 +69,16 @@
     "filling_fast_desc": "When an event you saved is close to selling out",
     "national_day": "Haitian holidays",
     "national_day_desc": "A short note on the morning of a national day",
-    "note": "Important account and security notifications will always be sent regardless of these settings."
+    "note": "Important account and security notifications will always be sent regardless of these settings.",
+    "saved_events": "Saved events",
+    "saved_events_desc": "Before an event you saved, and “how was it?” the morning after",
+    "friends": "Friends",
+    "friends_desc": "Friend requests and invites from friends",
+    "followed_organizers": "Organizers you follow",
+    "followed_organizers_desc": "When an organizer you follow posts a new event",
+    "organizer_messages": "Messages from organizers",
+    "organizer_messages_desc": "Updates organizers send about events you have tickets for. Date, venue and cancellation notices always arrive.",
+    "always_on": "Tickets, reminders for your tickets, event changes, cancellations, refunds and sign-in codes always reach you."
   },
   "account": {
     "title": "Account",

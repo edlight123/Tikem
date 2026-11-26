@@ -27,6 +27,9 @@ export const LINKING_CONFIG = {
     // "X joined Tikèm from your invite" push (url /profile/organizer/{uid}).
     OrganizerProfile: 'profile/organizer/:organizerId',
     Notifications: 'notifications',
+    // Friend request / accepted pushes (lib/social/friend-push): url
+    // /connections?initialTab=requests; the query lands in params.initialTab.
+    Connections: 'connections',
     TicketDetail: 'tickets/:ticketId',
     EventDetail: 'events/:eventId',
     // An occasion's page (Kanaval, Fèt Manman…): the same path as the website's

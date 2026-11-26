@@ -15,6 +15,13 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // A users/{uid} notification switch on update: unchanged (including still
+    // absent), or set to a boolean. .get() so a missing field never denies.
+    function notifySwitchOk(f) {
+      return request.resource.data.get(f, null) == resource.data.get(f, null)
+        || request.resource.data.get(f, null) is bool;
+    }
+
     function normalizedCountry(raw) {
       return raw is string ? raw.upper() : '';
     }
@@ -211,7 +218,18 @@ service cloud.firestore {
         && request.resource.data.get('can_create_events', null) == resource.data.get('can_create_events', null)
         && request.resource.data.get('banned_at', null) == resource.data.get('banned_at', null)
         && request.resource.data.get('banned_by', null) == resource.data.get('banned_by', null)
-        && request.resource.data.get('rating', null) == resource.data.get('rating', null);
+        && request.resource.data.get('rating', null) == resource.data.get('rating', null)
+        // Notification switches (preference centre, app + web): a changed
+        // value must be a boolean. Only the owner reaches this rule at all,
+        // so nobody else can write someone's preferences.
+        && notifySwitchOk('notify_reminders')
+        && notifySwitchOk('notify_discovery')
+        && notifySwitchOk('notify_weekend_digest')
+        && notifySwitchOk('notify_filling_fast')
+        && notifySwitchOk('notify_national_day')
+        && notifySwitchOk('notify_friend_invites')
+        && notifySwitchOk('notify_followed_organizers')
+        && notifySwitchOk('notify_organizer_messages');
 
       // Delete: disallow client deletes.
       allow delete: if false;

@@ -4063,6 +4063,10 @@ export default {
       fillingFastBody: 'When an event you follow is close to selling out.',
       nationalDay: 'Haitian holidays',
       nationalDayBody: 'A short note on the morning of a national day.',
+      followedOrganizers: "Organizers you follow",
+      organizerMessages: "Messages from organizers",
+      organizerMessagesBody: "Updates organizers send about events you have tickets for. Date, venue and cancellation notices always arrive.",
+      savedEvents: "Saved events",
       friendInvites: "Friend invites",
       friendInvitesBody: "When a friend invites you to an event, or joins Tikèm from your invite.",
     },
@@ -4843,7 +4847,14 @@ export default {
       has_money: "Can’t delete: payments are on record.",
     },
   },
+  // @section friendActivity
+  friendActivity: {
+    title: "Friends are going",
+    goingOne: "{name} is going",
+    goingTwo: "{a} and {b} are going",
+    goingMany: "{a}, {b} and {count} more are going",
   // @section afterEvent
+  },
   afterEvent: {
     howWasIt: "How was it?",
     howWasItBody: "One tap. Only the organizer sees it.",

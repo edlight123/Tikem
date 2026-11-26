@@ -69,7 +69,16 @@
     "filling_fast_desc": "Lè yon evènman ou anrejistre prèske fin vann",
     "national_day": "Fèt ayisyen yo",
     "national_day_desc": "Yon ti mo nan maten yon jou fèt nasyonal",
-    "note": "Notifikasyon enpòtan sou kont ak sekirite ou yo ap toujou voye kèlkeswa paramèt sa yo."
+    "note": "Notifikasyon enpòtan sou kont ak sekirite ou yo ap toujou voye kèlkeswa paramèt sa yo.",
+    "saved_events": "Evènman ou anrejistre",
+    "saved_events_desc": "Anvan yon evènman ou anrejistre, ak « kijan l te ye ? » nan demen maten",
+    "friends": "Zanmi",
+    "friends_desc": "Demann zanmi ak envitasyon zanmi w yo",
+    "followed_organizers": "Òganizatè ou swiv",
+    "followed_organizers_desc": "Lè yon òganizatè ou swiv mete yon nouvo evènman",
+    "organizer_messages": "Mesaj òganizatè yo",
+    "organizer_messages_desc": "Nouvèl òganizatè yo voye sou evènman ou gen tikè pou yo. Chanjman dat, kote ak anilasyon toujou rive.",
+    "always_on": "Tikè, rapèl pou tikè w, chanjman, anilasyon, ranbousman ak kòd koneksyon ap toujou rive jwenn ou."
   },
   "account": {
     "title": "Kont",

@@ -76,9 +76,8 @@ export async function notifyTicketPurchase(
   ticketId: string,
   eventId: string
 ): Promise<void> {
-  // Check user preferences
-  const prefs = await getNotificationPreferences(userId)
-  
+  // Transactional (lib/notifications/policy.ts): no preference switch can
+  // silence a ticket confirmation.
   // Always create in-app notification via server-side helper
   const { createNotification } = await import('./notifications/helpers')
   await createNotification(
@@ -93,20 +92,17 @@ export async function notifyTicketPurchase(
     { eventId, ticketId }
   )
 
-  // Send push notification if enabled
-  if (prefs.notifyTicketPurchase) {
-    await sendPushNotification(
-      userId,
-      'Ticket Purchased! 🎫',
-      `Your ticket for "${eventTitle}" is ready`,
-      `/tickets/event/${eventId}`,
-      {
-        type: 'ticket_purchased',
-        ticketId,
-        eventId
-      }
-    )
-  }
+  await sendPushNotification(
+    userId,
+    'Ticket Purchased! 🎫',
+    `Your ticket for "${eventTitle}" is ready`,
+    `/tickets/event/${eventId}`,
+    {
+      type: 'ticket_purchased',
+      ticketId,
+      eventId
+    }
+  )
 }
 
 /**
@@ -120,9 +116,9 @@ export async function notifyEventUpdate(
 ): Promise<void> {
   const { createNotification } = await import('./notifications/helpers')
   
+  // Transactional: a change to an event the person holds a ticket to always
+  // reaches them (policy.ts event_change has no switch).
   const notifications = attendeeIds.map(async (userId) => {
-    const prefs = await getNotificationPreferences(userId)
-    
     // Create in-app notification
     await createNotification(
       userId,
@@ -133,19 +129,16 @@ export async function notifyEventUpdate(
       { eventId }
     )
 
-    // Send push notification if enabled
-    if (prefs.notifyEventUpdates) {
-      await sendPushNotification(
-        userId,
-        `Event Update: ${eventTitle}`,
-        updateMessage,
-        `/events/${eventId}`,
-        {
-          type: 'event_updated',
-          eventId
-        }
-      )
-    }
+    await sendPushNotification(
+      userId,
+      `Event Update: ${eventTitle}`,
+      updateMessage,
+      `/events/${eventId}`,
+      {
+        type: 'event_updated',
+        eventId
+      }
+    )
   })
 
   await Promise.all(notifications)
@@ -181,13 +174,9 @@ export async function sendEventReminder(
 
   const { createNotification } = await import('./notifications/helpers')
   
+  // Transactional: the person holds a ticket, so the reminder always goes
+  // (policy.ts reminder has no switch; the app lists it as always on).
   const notifications = attendeeIds.map(async (userId) => {
-    const prefs = await getNotificationPreferences(userId)
-    
-    if (!prefs.notifyReminders) {
-      return // Skip if user has disabled reminders
-    }
-
     // Create in-app notification
     await createNotification(
       userId,
