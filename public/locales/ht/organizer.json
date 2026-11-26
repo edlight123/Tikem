@@ -212,6 +212,7 @@
     "import_events": "Enpòte evènman"
   },
   "event_card_detail": {
+    "unlisted": "Pa nan lis",
     "sold_out": "VANN FINI",
     "payout_blocked": "Pa ka pran peman",
     "needs_attention": "Bezwen atansyon",

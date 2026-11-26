@@ -292,3 +292,22 @@ describe('firestore.rules validates venue details', () => {
     expect(events.match(/validVenueDetails\(request\.resource\.data\)/g)).toHaveLength(2)
   })
 })
+
+describe('venueDetailsForReader (lib/data/events whitelist)', () => {
+  it('passes only what the event says, undefined otherwise', () => {
+    expect(
+      web.venueDetailsForReader({ amenities: ['bar', 'junk', 'parking'], venue_setting: 'outdoor', age_policy: '21+', dress_code: '  All white ' })
+    ).toEqual({ amenities: ['parking', 'bar'], venue_setting: 'outdoor', age_policy: '21+', dress_code: 'All white' })
+    expect(web.venueDetailsForReader({})).toEqual({
+      amenities: undefined,
+      venue_setting: undefined,
+      age_policy: undefined,
+      dress_code: undefined,
+    })
+  })
+
+  it('is spread into both explicit event readers', () => {
+    const src = readFileSync(join(__dirname, '..', 'lib', 'data', 'events.ts'), 'utf8')
+    expect(src.match(/\.\.\.venueDetailsForReader\(data\)/g)).toHaveLength(2)
+  })
+})

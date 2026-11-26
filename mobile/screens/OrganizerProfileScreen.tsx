@@ -1,4 +1,5 @@
 import { collapseSeries } from '../lib/eventSeries';
+import { isPubliclyListed } from '../lib/eventVisibility';
 import React, { useState, useEffect } from 'react';
 import { defaultAvatar } from '../lib/defaultAvatar';
 import OrgMark from '../components/OrgMark';
@@ -287,6 +288,8 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
 
       eventsSnapshot.docs.forEach(doc => {
         const data = doc.data();
+        // Unlisted events are link-only (lib/eventVisibility): not on the public profile.
+        if (!isPubliclyListed(data)) return;
         const eventData = {
           id: doc.id,
           ...data,

@@ -195,6 +195,7 @@ export default function OrganizerDashboardClient({
                     currency: event.currency || undefined,
                     revenueByCurrencyCents,
                     category: event.category || undefined,
+                    show_on_explore: event.show_on_explore === false ? false : undefined,
                   }}
                 />
               )

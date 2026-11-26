@@ -97,6 +97,23 @@ export function venueDetailsOf(e: unknown): VenueDetails {
 }
 
 /**
+ * The venue details as an explicit-whitelist reader passes them on
+ * (lib/data/events): only what the event actually says, each field left
+ * undefined when empty so the object stays slim. Without this the web event
+ * page's "good to know" and Discover's venue filters never saw a single
+ * answer, while the app (which reads Firestore directly) showed them.
+ */
+export function venueDetailsForReader(e: unknown): Partial<VenueDetails> {
+  const d = venueDetailsOf(e)
+  return {
+    amenities: d.amenities.length ? d.amenities : undefined,
+    venue_setting: d.venue_setting ?? undefined,
+    age_policy: d.age_policy ?? undefined,
+    dress_code: d.dress_code ?? undefined,
+  }
+}
+
+/**
  * The fields a composer writes. An online event has no venue, so it writes
  * the empty set (an event moved online drops what its old venue offered);
  * the age policy and dress code still apply to who may join.
