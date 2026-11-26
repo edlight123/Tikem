@@ -1405,6 +1405,8 @@
       "savedTitle": "Changes saved",
       "demoMode": "Demo mode.",
       "updatedMsg": "Your event has been updated.",
+      "flyerUploadingTitle": "Your flyer is still uploading",
+      "flyerUploadingMsg": "Save again in a moment, once it is in.",
       "seriesUpdatedOne": "Your event and 1 other in the series were updated.",
       "seriesUpdatedMany": "Your event and {{n}} others in the series were updated.",
       "draftTitle": "Draft created",

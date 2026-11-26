@@ -2771,6 +2771,8 @@ export default {
       body: "Nou pa t kapab konfime kont peman ou an. Sove l kòm bouyon epi pibliye l lè ou gen koneksyon ankò.",
     },
     saveFailedUpdate: 'Pa t kapab mete evènman an ajou. Tanpri eseye ankò.',
+    posterUploadFailed: "Nouvo flyer ou a pa t monte, kidonk anyen pa t anrejistre. Verifye koneksyon ou epi eseye ankò.",
+    saveTimedOut: "Anrejistreman an pran twòp tan. Verifye koneksyon ou epi eseye ankò.",
     entry: {
       doorTitle: 'Peye nan pòt la',
       kicker: 'NOUVO EVÈNMAN',

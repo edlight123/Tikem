@@ -1425,7 +1425,9 @@
       "errUpdateTitle": "Impossible de mettre à jour",
       "priceMsgToggle": "Saisissez un prix, ou activez « Faire de ce billet un billet gratuit ». Un prix vide ne veut pas dire gratuit.",
       "minPriceTitle": "Augmentez le prix du billet",
-      "minPriceMsg": "Un billet payant doit coûter au moins {{amount}} {{currency}}. Fixez un prix plus élevé, ou rendez le billet gratuit."
+      "minPriceMsg": "Un billet payant doit coûter au moins {{amount}} {{currency}}. Fixez un prix plus élevé, ou rendez le billet gratuit.",
+      "flyerUploadingTitle": "Le flyer se téléverse encore",
+      "flyerUploadingMsg": "Enregistrez à nouveau dans un instant, une fois qu’il est en ligne."
     },
     "spotifySearchPlaceholder": "Rechercher une chanson sur Spotify",
     "spotifyResultsLabel": "Résultats de chansons",

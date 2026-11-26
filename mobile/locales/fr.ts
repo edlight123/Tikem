@@ -2803,6 +2803,8 @@ export default {
       body: "Nous n'avons pas pu confirmer votre compte de versement. Enregistrez un brouillon et publiez une fois reconnecté.",
     },
     saveFailedUpdate: "Échec de la mise à jour de l'événement. Veuillez réessayer.",
+    posterUploadFailed: "Votre nouveau flyer ne s’est pas téléversé, rien n’a été enregistré. Vérifiez votre connexion et réessayez.",
+    saveTimedOut: "L’enregistrement prend trop de temps. Vérifiez votre connexion et réessayez.",
     entry: {
       kicker: 'NOUVEL ÉVÉNEMENT',
       title: 'Lançons votre prochain événement',

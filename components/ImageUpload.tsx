@@ -43,6 +43,8 @@ interface ImageUploadProps {
   library?: boolean
   /** A small thumbnail and one button (an add-on's photo), not the full dropzone. */
   compact?: boolean
+  /** Told when an upload starts and ends, so a form can hold its Save until the new URL is in. */
+  onUploadingChange?: (uploading: boolean) => void
 }
 
 export default function ImageUpload({
@@ -54,6 +56,7 @@ export default function ImageUpload({
   onMakePoster,
   library = true,
   compact = false,
+  onUploadingChange,
 }: ImageUploadProps) {
   const [uploading, setUploading] = useState(false)
   const [preview, setPreview] = useState<string | null>(currentImage || null)
@@ -107,7 +110,7 @@ export default function ImageUpload({
 
     setError(null)
     setUploading(true)
-
+    onUploadingChange?.(true)
     try {
       // Create preview
       const reader = new FileReader()
@@ -194,6 +197,7 @@ export default function ImageUpload({
       setPreview(currentImage || null)
     } finally {
       setUploading(false)
+      onUploadingChange?.(false)
     }
   }
 

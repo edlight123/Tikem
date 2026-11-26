@@ -1,4 +1,5 @@
-import { AppState, type AppStateStatus } from 'react-native';
+import { useEffect } from 'react';
+import { AppState, Platform, type AppStateStatus } from 'react-native';
 import * as Updates from 'expo-updates';
 
 /**
@@ -15,6 +16,12 @@ import * as Updates from 'expo-updates';
  *   anyway and the download carries on.
  * - Back from the background: check again, download quietly, and reload the
  *   next time the app goes to the background, never under someone's thumb.
+ *   iOS only. On Android a reload while the activity is stopped leaves
+ *   nothing drawn over the root view (a solid green screen on return), so
+ *   there a downloaded update runs at the next cold start (expo-updates does
+ *   that natively).
+ * - The launch reload behind the splash also requires the app to be on screen
+ *   (AppState 'active'), so a start in the background never reloads.
  *
  * Off in development and in Expo Go (Updates.isEnabled is false there), and
  * after an emergency launch (the runtime fell back to the embedded bundle
@@ -28,6 +35,24 @@ const enabled = !__DEV__ && Updates.isEnabled && !Updates.isEmergencyLaunch;
 
 let pendingReload = false;
 let busy = false;
+/** Screens holding unsaved work (the event editor): no reload while any holds. */
+let holds = 0;
+
+/** Hold background reloads until the returned release is called. */
+export function holdUpdateReload(): () => void {
+  holds += 1;
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    holds = Math.max(0, holds - 1);
+  };
+}
+
+/** Hold background reloads while the calling screen is mounted. */
+export function useHoldUpdateReload(): void {
+  useEffect(() => holdUpdateReload(), []);
+}
 
 const timeout = (ms: number) => new Promise<'timeout'>((resolve) => setTimeout(() => resolve('timeout'), ms));
 
@@ -46,7 +71,7 @@ async function launchCheck(): Promise<void> {
   try {
     const download = fetchNewUpdate(CHECK_TIMEOUT_MS);
     const ready = await Promise.race([download, timeout(LAUNCH_BUDGET_MS)]);
-    if (ready === true && Date.now() - started < LAUNCH_BUDGET_MS) {
+    if (ready === true && Date.now() - started < LAUNCH_BUDGET_MS && AppState.currentState === 'active') {
       await Updates.reloadAsync();
       return;
     }
@@ -68,7 +93,8 @@ if (enabled) {
   AppState.addEventListener('change', (next) => {
     const prev = lastState;
     lastState = next;
-    if (next === 'background' && pendingReload) {
+    // Android: never reload from the background (see above).
+    if (next === 'background' && pendingReload && holds === 0 && Platform.OS !== 'android') {
       pendingReload = false;
       Updates.reloadAsync().catch(() => {});
       return;

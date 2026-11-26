@@ -1425,7 +1425,9 @@
       "errUpdateTitle": "Nou pa t ka mete ajou",
       "priceMsgToggle": "Mete yon pri, oswa limen « Fè tikè sa a gratis ». Yon pri vid pa vle di gratis.",
       "minPriceTitle": "Monte pri tikè a",
-      "minPriceMsg": "Yon tikè ki peye dwe koute omwen {{amount}} {{currency}}. Mete yon pri ki pi wo, oswa fè tikè a gratis."
+      "minPriceMsg": "Yon tikè ki peye dwe koute omwen {{amount}} {{currency}}. Mete yon pri ki pi wo, oswa fè tikè a gratis.",
+      "flyerUploadingTitle": "Flyer a ap monte toujou",
+      "flyerUploadingMsg": "Anrejistre ankò nan yon ti moman, lè l fin monte."
     },
     "spotifySearchPlaceholder": "Chèche yon chante sou Spotify",
     "spotifyResultsLabel": "Rezilta chante yo",

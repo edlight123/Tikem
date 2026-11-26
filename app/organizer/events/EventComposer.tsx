@@ -1349,6 +1349,8 @@ export default function EventComposer({
 
   const [attempted, setAttempted] = useState(false)
   const [saving, setSaving] = useState(false)
+  // A new flyer still uploading: saving now would write the OLD flyer URL.
+  const [flyerUploading, setFlyerUploading] = useState(false)
 
   // Never throws: a malformed time must not take the whole composer down.
   const composeISO = (d: string, t: string) => {
@@ -1931,6 +1933,15 @@ export default function EventComposer({
   }
 
   const handleSave = async () => {
+    if (flyerUploading) {
+      showToast({
+        type: 'info',
+        title: t('composer.toasts.flyerUploadingTitle', { defaultValue: 'Your flyer is still uploading' }),
+        message: t('composer.toasts.flyerUploadingMsg', { defaultValue: 'Save again in a moment, once it is in.' }),
+        duration: 4000,
+      })
+      return
+    }
     setAttempted(true)
     if (title.trim().length < 3 || !startDate) {
       showToast({
@@ -4074,6 +4085,7 @@ export default function EventComposer({
                 setPosterSpec(null)
               }}
               endpoint={guest ? '/api/guest-upload' : undefined}
+              onUploadingChange={setFlyerUploading}
               onMakePoster={() => setPosterOpen(true)}
             />
             {posterOpen && (

@@ -810,6 +810,8 @@ export default {
       body: "We couldn't confirm your payout account. Save as a draft and publish once you're back online.",
     },
     saveFailedUpdate: 'Failed to update event. Please try again.',
+    posterUploadFailed: "Your new flyer didn’t upload, so nothing was saved. Check your connection and try again.",
+    saveTimedOut: "Saving is taking too long. Check your connection and try again.",
     entry: {
       kicker: 'NEW EVENT',
       title: "Let's launch your next event",

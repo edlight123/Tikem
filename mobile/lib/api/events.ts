@@ -24,6 +24,7 @@ import {
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import * as Crypto from 'expo-crypto';
 import { isDeviceOnlyImageUri } from '../localImageUri';
+import { resolvePosterForUpdate } from '../eventSave';
 import { profileImageContentType } from '../profileImagePath';
 import { hasPaidTier } from '../ticketPricing';
 import { plusOnesSetting } from '../attendRequests';
@@ -879,14 +880,14 @@ export async function updateEvent(
   options: SaveEventOptions = {}
 ): Promise<void> {
   try {
-    // Upload image to Firebase Storage if it's a new local URI. If it fails the
-    // rest of the edit is still saved and the stored photo is left as it was.
-    let coverImageUrl: string | null | undefined = eventData.banner_image_url;
-    let keepStoredPhoto = false;
-    if (isDeviceOnlyImageUri(eventData.banner_image_url)) {
-      coverImageUrl = await uploadEventImageOrNull(organizerId, eventData.banner_image_url, options);
-      keepStoredPhoto = coverImageUrl === null;
-    }
+    // A new flyer still on the phone is uploaded FIRST, and the save stops if
+    // it can't be: an edit that swallowed the failure wrote the event with no
+    // flyer at all and still said "Success" (Android, 2026-11-25).
+    // A create still saves without it (lib/eventSave, the 2026-11-21 outage
+    // rule is about not losing a NEW event); an edit loses nothing by waiting.
+    const coverImageUrl = await resolvePosterForUpdate(eventData.banner_image_url, (uri) =>
+      uploadEventImage(organizerId, uri)
+    );
 
     // Parse dates and times into proper datetime
     const startDatetime = parseDateTimeString(
@@ -980,12 +981,6 @@ export async function updateEvent(
       // payout gate, and the Firestore rule refuses a client write that does so
       // — it goes through the server route below instead.
     };
-
-    if (keepStoredPhoto) {
-      delete (updateData as any).banner_image_url;
-      delete (updateData as any).cover_image_url;
-      delete (updateData as any).image_url;
-    }
 
     // Update the event document — with the money-defining fields taken from
     // the STORED doc once it has sold (see withStoredMoneyFields).

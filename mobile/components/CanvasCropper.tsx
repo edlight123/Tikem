@@ -114,6 +114,11 @@ export function CanvasCropper({ job, onResult }: { job: CropJob; onResult: (uri:
         javaScriptEnabled
         onMessage={onMessage}
         onError={() => finish(null)}
+        // A big photo can take the WebView's renderer down. Unhandled on
+        // Android that kills the whole app (a restart onto the dashboard);
+        // handled, the original photo is kept instead.
+        onRenderProcessGone={() => finish(null)}
+        onContentProcessDidTerminate={() => finish(null)}
         style={styles.web}
       />
     </View>
