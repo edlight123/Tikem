@@ -763,7 +763,7 @@ export default function OrganizerEventManagementScreen() {
                       <Text style={styles.tierSplit} numberOfLines={2}>{line}</Text>
                       {batchDesignName(b.batch, language) ? (
                         <Text style={styles.batchDesign} numberOfLines={1}>
-                          {t('printedBundle.design', { name: batchDesignName(b.batch, language) })}
+                          {t('printedBundle.design', { name: batchDesignName(b.batch, language) ?? '' })}
                         </Text>
                       ) : null}
                     </View>
