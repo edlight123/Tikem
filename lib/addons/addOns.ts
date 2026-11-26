@@ -229,6 +229,35 @@ export function addOnRemaining(addOn: EventAddOn, soldMap: Record<string, unknow
 
 export type AddOnAvailability = 'available' | 'inactive' | 'not_started' | 'ended' | 'sold_out' | 'needs_tier'
 
+/** Hours an event without a stored end is assumed to run. */
+export const ADD_ON_DEFAULT_EVENT_HOURS = 4
+
+/** A stored instant (ISO string, Date, Firestore Timestamp, {seconds}) as a Date, or null. */
+function instantOf(v: any): Date | null {
+  if (v == null || v === '') return null
+  let ms = NaN
+  if (typeof v?.toDate === 'function') ms = v.toDate().getTime()
+  else if (v instanceof Date) ms = v.getTime()
+  else if (typeof v?.seconds === 'number') ms = v.seconds * 1000
+  else if (typeof v?._seconds === 'number') ms = v._seconds * 1000
+  else if (typeof v === 'string' || typeof v === 'number') ms = new Date(v).getTime()
+  return Number.isFinite(ms) ? new Date(ms) : null
+}
+
+/**
+ * When an add-on stops selling: its own sales end, else the event's end (an
+ * unset end means "until the event ends"); an event with no stored end is
+ * assumed to end ADD_ON_DEFAULT_EVENT_HOURS after it starts. Null = no end known.
+ */
+export function addOnSalesEnd(addOn: EventAddOn, event?: { start?: unknown; end?: unknown } | null): Date | null {
+  const own = instantOf(addOn.sales_end)
+  if (own) return own
+  const end = instantOf(event?.end)
+  if (end) return end
+  const start = instantOf(event?.start)
+  return start ? new Date(start.getTime() + ADD_ON_DEFAULT_EVENT_HOURS * 3_600_000) : null
+}
+
 /**
  * Whether a buyer may add this add-on right now, given the tiers in the cart.
  * `cartTierIds` empty with `cartHasTickets` true means a legacy single-price
@@ -236,14 +265,21 @@ export type AddOnAvailability = 'available' | 'inactive' | 'not_started' | 'ende
  */
 export function addOnAvailability(
   addOn: EventAddOn,
-  ctx: { now?: Date; cartTierIds?: string[]; soldMap?: Record<string, unknown> | null }
+  ctx: {
+    now?: Date
+    cartTierIds?: string[]
+    soldMap?: Record<string, unknown> | null
+    /** The event's start and end: an add-on with no sales end stops selling when the event ends. */
+    eventStart?: unknown
+    eventEnd?: unknown
+  }
 ): AddOnAvailability {
   if (addOn.is_active === false) return 'inactive'
   const now = ctx.now || new Date()
   const start = addOn.sales_start ? new Date(addOn.sales_start) : null
-  const end = addOn.sales_end ? new Date(addOn.sales_end) : null
+  const end = addOnSalesEnd(addOn, { start: ctx.eventStart, end: ctx.eventEnd })
   if (start && !Number.isNaN(start.getTime()) && start > now) return 'not_started'
-  if (end && !Number.isNaN(end.getTime()) && end < now) return 'ended'
+  if (end && end < now) return 'ended'
   const remaining = addOnRemaining(addOn, ctx.soldMap)
   if (remaining !== null && remaining <= 0) return 'sold_out'
   const restricted = (addOn.tier_ids || []).filter(Boolean)
@@ -288,7 +324,7 @@ const refuse = (code: AddOnRefusalCode, error: string, addOnId?: string): AddOnL
  * never sold on their own.
  */
 export function resolveAddOnLines(
-  event: { add_ons?: unknown; add_ons_sold?: unknown } | null | undefined,
+  event: { add_ons?: unknown; add_ons_sold?: unknown; start_datetime?: unknown; end_datetime?: unknown } | null | undefined,
   raw: unknown,
   ticketLines: Array<{ tierId?: string | null; quantity: number }>,
   now: Date = new Date()
@@ -341,7 +377,13 @@ export function resolveAddOnLines(
 
   for (const [id, total] of perAddOn) {
     const addOn = byId.get(id)!
-    const availability = addOnAvailability(addOn, { now, cartTierIds, soldMap })
+    const availability = addOnAvailability(addOn, {
+      now,
+      cartTierIds,
+      soldMap,
+      eventStart: event?.start_datetime,
+      eventEnd: event?.end_datetime,
+    })
     if (availability === 'inactive') return refuse('addon_unavailable', `"${addOn.name}" is not available.`, id)
     if (availability === 'not_started') return refuse('addon_not_started', `"${addOn.name}" is not on sale yet.`, id)
     if (availability === 'ended') return refuse('addon_ended', `Sales of "${addOn.name}" have ended.`, id)

@@ -120,6 +120,9 @@ interface TieredTicketSelectorProps {
   /** The event's stored `add_ons` and their sold rollup `add_ons_sold`. */
   addOns?: unknown;
   addOnsSold?: Record<string, unknown> | null;
+  /** The event's start and end: add-ons with no sales end stop selling when it ends. */
+  eventStart?: unknown;
+  eventEnd?: unknown;
 }
 
 interface TierQuantity {
@@ -150,6 +153,8 @@ export default function TieredTicketSelector({
   freeCap = MAX_FREE_TICKETS_PER_PERSON,
   addOns: rawAddOns,
   addOnsSold = null,
+  eventStart = null,
+  eventEnd = null,
 }: TieredTicketSelectorProps) {
   const { colors } = useTheme();
   const styles = getStyles(colors);
@@ -358,7 +363,7 @@ export default function TieredTicketSelector({
   const visibleAddOns = (): Array<{ addOn: EventAddOn; soldOut: boolean }> => {
     const ids = cartTierIds();
     return allAddOns
-      .map((addOn) => ({ addOn, state: addOnAvailability(addOn, { cartTierIds: ids, soldMap: addOnsSold }) }))
+      .map((addOn) => ({ addOn, state: addOnAvailability(addOn, { cartTierIds: ids, soldMap: addOnsSold, eventStart, eventEnd }) }))
       .filter((x) => x.state === 'available' || x.state === 'sold_out')
       .map((x) => ({ addOn: x.addOn, soldOut: x.state === 'sold_out' }));
   };

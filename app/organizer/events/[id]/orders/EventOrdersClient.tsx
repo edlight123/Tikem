@@ -21,6 +21,8 @@ interface Order {
   attendeeName: string
   attendeeEmail: string
   tierName: string
+  /** Add-ons this ticket carries ("T-shirt (M) × 2"). */
+  addOns?: string[]
   amount: string
   status: string
   purchasedAt: string
@@ -46,7 +48,14 @@ const COLUMNS: OrgColumn<Order>[] = [
     key: 'tierName',
     header: 'Tier',
     hideOnMobile: true,
-    render: (o) => <span className="text-fg-muted">{o.tierName}</span>,
+    render: (o) => (
+      <div className="min-w-0">
+        <span className="text-fg-muted">{o.tierName}</span>
+        {o.addOns && o.addOns.length > 0 ? (
+          <p className="truncate text-meta text-fg-subtle">+ {o.addOns.join(', ')}</p>
+        ) : null}
+      </div>
+    ),
   },
   {
     key: 'amount',
@@ -136,7 +145,10 @@ export default function EventOrdersClient({ orders }: { orders: Order[] }) {
               <p className="mt-0.5 truncate text-xs text-fg-muted">{o.attendeeEmail}</p>
               <div className="mt-2 flex items-center gap-3 text-sm">
                 <span className="font-mono font-semibold text-fg tabular-nums">{o.amount}</span>
-                <span className="text-fg-muted">{o.tierName}</span>
+                <span className="truncate text-fg-muted">
+                  {o.tierName}
+                  {o.addOns && o.addOns.length > 0 ? ` + ${o.addOns.join(', ')}` : ''}
+                </span>
                 <span className="ml-auto font-mono tabular-nums text-fg-muted">
                   {isValid(d) ? format(d, 'MMM d') : EMPTY_VALUE}
                 </span>

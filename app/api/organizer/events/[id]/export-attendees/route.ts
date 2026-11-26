@@ -29,9 +29,9 @@ export const maxDuration = 60
  * renderer at ../attendees/pdf; we send the caller there.
  */
 const L = {
-  en: { file: 'Attendees', sheet: 'Attendees', name: 'Name', email: 'Email', ticket: 'Ticket type', status: 'Status', price: 'Price paid', method: 'Payment', purchased: 'Purchased', checkedIn: 'Checked in at', id: 'Ticket ID', tickets: 'Live tickets', in: 'Checked in', other: 'Refunded / cancelled', comp: 'Free' },
-  fr: { file: 'Participants', sheet: 'Participants', name: 'Nom', email: 'E-mail', ticket: 'Type de billet', status: 'Statut', price: 'Prix payé', method: 'Paiement', purchased: 'Acheté le', checkedIn: 'Entré à', id: 'N° de billet', tickets: 'Billets valides', in: 'Entrés', other: 'Remboursés / annulés', comp: 'Gratuit' },
-  ht: { file: 'Patisipan', sheet: 'Patisipan', name: 'Non', email: 'Imèl', ticket: 'Kalite biyè', status: 'Estati', price: 'Pri peye', method: 'Peman', purchased: 'Achte', checkedIn: 'Antre a', id: 'Nimewo biyè', tickets: 'Biyè valab', in: 'Antre', other: 'Ranbouse / anile', comp: 'Gratis' },
+  en: { file: 'Attendees', sheet: 'Attendees', name: 'Name', email: 'Email', ticket: 'Ticket type', status: 'Status', addOns: 'Add-ons', price: 'Price paid', method: 'Payment', purchased: 'Purchased', checkedIn: 'Checked in at', id: 'Ticket ID', tickets: 'Live tickets', in: 'Checked in', other: 'Refunded / cancelled', comp: 'Free' },
+  fr: { file: 'Participants', sheet: 'Participants', name: 'Nom', email: 'E-mail', ticket: 'Type de billet', status: 'Statut', addOns: 'Suppléments', price: 'Prix payé', method: 'Paiement', purchased: 'Acheté le', checkedIn: 'Entré à', id: 'N° de billet', tickets: 'Billets valides', in: 'Entrés', other: 'Remboursés / annulés', comp: 'Gratuit' },
+  ht: { file: 'Patisipan', sheet: 'Patisipan', name: 'Non', email: 'Imèl', ticket: 'Kalite biyè', status: 'Estati', addOns: 'Ekstra', price: 'Pri peye', method: 'Peman', purchased: 'Achte', checkedIn: 'Antre a', id: 'Nimewo biyè', tickets: 'Biyè valab', in: 'Antre', other: 'Ranbouse / anile', comp: 'Gratis' },
 } as const
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -81,6 +81,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
             { key: 'name', header: l.name, width: 24 },
             { key: 'email', header: l.email, width: 28 },
             { key: 'ticket', header: l.ticket, width: 18 },
+            { key: 'addOns', header: l.addOns, width: 22 },
             { key: 'status', header: l.status, kind: 'status', width: 14 },
             { key: 'price', header: l.price, kind: 'money' },
             { key: 'method', header: l.method, width: 12 },
@@ -92,6 +93,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
             name: r.buyer.name,
             email: r.buyer.email,
             ticket: r.tierName,
+            addOns: r.addOns.join(', '),
             status: ticketStatusCell(r.status, r.checkedIn, lang),
             price: { amount: Number(r.pricePaid) || 0, currency: r.currency },
             method: paymentMethodLabel(r.paymentMethod) || (Number(r.pricePaid) > 0 ? '' : l.comp),

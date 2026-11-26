@@ -59,6 +59,8 @@ interface EventbriteStyleTicketSelectorProps {
   feeIncidence?: string | null
   /** Event start, for the "selling fast" pace rule. Omit and it never fires. */
   eventStartsAt?: string | null
+  /** The event's end: add-ons with no sales end stop selling then. */
+  eventEndsAt?: string | null
   /**
    * Let a logged-OUT visitor select and check out as a guest. The contact details
    * (name / email / phone) are collected by the parent right after this, so the
@@ -101,6 +103,7 @@ export default function EventbriteStyleTicketSelector({
   country,
   feeIncidence,
   eventStartsAt,
+  eventEndsAt = null,
   allowGuest = false,
   freeClaimHeld = false,
   freeCap = MAX_FREE_TICKETS_PER_PERSON,
@@ -245,7 +248,12 @@ export default function EventbriteStyleTicketSelector({
       : selectedAddOnsFrom(
           // Only add-ons the CURRENT tiers allow (a tier removed after picking drops its add-ons).
           addOnList.filter(
-            (a) => addOnAvailability(a, { cartTierIds: getSelections().map((s) => s.tierId), soldMap: addOnsSold }) === 'available'
+            (a) => addOnAvailability(a, {
+              cartTierIds: getSelections().map((s) => s.tierId),
+              soldMap: addOnsSold,
+              eventStart: eventStartsAt,
+              eventEnd: eventEndsAt,
+            }) === 'available'
           ),
           addOnQty
         )
@@ -443,6 +451,8 @@ export default function EventbriteStyleTicketSelector({
           quantities={addOnQty}
           onChange={setAddOnQty}
           currency={currency}
+          eventStart={eventStartsAt}
+          eventEnd={eventEndsAt}
         />
       )}
 

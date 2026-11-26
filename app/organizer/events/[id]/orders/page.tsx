@@ -38,6 +38,7 @@ export default async function EventOrdersPage({
       attendeeName: row.buyer.name || row.buyer.email || 'Guest',
       attendeeEmail: row.buyer.name ? row.buyer.email : '',
       tierName: row.tierName || 'General Admission',
+      addOns: row.addOns,
       amount: cents > 0 ? formatMoneyFromCents(cents, currency, 'en-US', { currencyDisplay: 'code' }) : 'Free',
       status: String(d.status || 'active'),
       purchasedAt: row.purchasedAt,

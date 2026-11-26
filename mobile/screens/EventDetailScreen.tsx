@@ -1568,6 +1568,8 @@ export default function EventDetailScreen({ route, navigation }: any) {
         freeCap={freeClaimCapFor(event as any)}
         addOns={(event as any)?.add_ons}
         addOnsSold={(event as any)?.add_ons_sold}
+        eventStart={(event as any)?.start_datetime}
+        eventEnd={(event as any)?.end_datetime}
       />
 
       <PurchaseSuccessSheet

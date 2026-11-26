@@ -33,6 +33,7 @@ export interface EventOrder {
   buyer: { name: string; email: string; city: string };
   isGuest: boolean;
   tiers: { name: string; count: number }[];
+  addOns?: string[];
   amounts: MoneyLine[];
   paymentMethod: string;
   status: OrderStatus;
@@ -40,6 +41,7 @@ export interface EventOrder {
   tickets: {
     id: string;
     tierName: string;
+    addOns?: string[];
     pricePaid: number;
     currency: string;
     status: string;
