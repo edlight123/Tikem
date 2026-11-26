@@ -93,18 +93,17 @@ beforeEach(() => {
 })
 
 describe('organizer message fan-out', () => {
-  it('emails guests and account holders, pushes account holders, honours opt-outs', async () => {
+  it('reaches every live holder once: email to all, push and in-app to accounts', async () => {
     const out = await broadcastToAttendees({ event: EVENT, senderId: 'org1', title: 'Doors at 8', message: 'See you there.' })
     expect(out.recipients).toBe(3)
-    expect(out.optedOut).toBe(1)
+    expect(out.optedOut).toBe(0)
     const to = sendEmail.mock.calls.map((c) => c[0].to).sort()
-    expect(to).toEqual(['fr@x.co', 'guest@x.co'])
-    expect(sendPushNotification.mock.calls.map((c) => c[0])).toEqual(['u_fr'])
+    expect(to).toEqual(['fr@x.co', 'guest@x.co', 'off@x.co'])
+    expect(sendPushNotification.mock.calls.map((c) => c[0]).sort()).toEqual(['u_fr', 'u_off'])
     // Language: the French holder's email is French.
     const fr = sendEmail.mock.calls.find((c) => c[0].to === 'fr@x.co')![0]
     expect(fr.subject).toBe("Message de l'organisateur : Kompa Night")
     expect(fr.html).toContain('lang="fr"')
-    // The opted-out holder still finds it in their in-app inbox.
     expect(added.some((a) => a.path === 'users/u_off/notifications')).toBe(true)
   })
 })
