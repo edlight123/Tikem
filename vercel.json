@@ -86,6 +86,10 @@
       "schedule": "5 * * * *"
     },
     {
+      "path": "/api/cron/event-change-notices",
+      "schedule": "*/5 * * * *"
+    },
+    {
       "path": "/api/cron/eventbrite-sync",
       "schedule": "30 6 * * *"
     }

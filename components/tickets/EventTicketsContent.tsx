@@ -25,6 +25,7 @@ import QRCodeDisplay from '@/app/tickets/[id]/QRCodeDisplay'
 import AddToWalletButton from '@/components/AddToWalletButton'
 import { isDemoMode } from '@/lib/demo'
 import { isLiveTicketStatus } from '@/lib/tickets/status'
+import { ChangeNoticeLines } from '@/components/tickets/ChangeNoticeLines'
 import { getPosterTheme } from '@/lib/posterGradient'
 import { EditorialHeader } from '@/components/ui/EditorialHeader'
 import { SectionHeader } from '@/components/ui/EditorialRails'
@@ -218,6 +219,8 @@ export default function EventTicketsContent({ event, tickets }: EventTicketsCont
           </div>
         </div>
       </div>
+
+      <ChangeNoticeLines event={event} />
 
       {/* ── The hero: one inverted white stub per live ticket. */}
       {liveTickets.length > 0 ? (

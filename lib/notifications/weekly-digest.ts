@@ -23,6 +23,7 @@
  * Pure parts (time windows, matching, copy) are exported for tests; the run
  * takes its I/O as deps.
  */
+import { isPubliclyListed } from '@/lib/events/visibility'
 import { isCategoryEnabled, marketTimezone, type NotificationCategory } from './policy'
 import { sameCity } from './audience-city'
 import type { NotificationType } from '@/types/database'
@@ -146,7 +147,7 @@ export function upcomingDigestEvents(rows: Record<string, any>[], now: Date): Di
   const out: DigestEvent[] = []
   for (const e of rows) {
     if (!e || e.is_published !== true) continue
-    if (e.status === 'cancelled' || e.rejected === true || e.hidden_pending_review === true) continue
+    if (!isPubliclyListed(e) || e.status === 'cancelled' || e.rejected === true || e.hidden_pending_review === true) continue
     const start = toDate(e.start_datetime)
     if (!start || start.getTime() <= now.getTime() || start.getTime() > horizon) continue
     const title = String(e.title || '').trim()

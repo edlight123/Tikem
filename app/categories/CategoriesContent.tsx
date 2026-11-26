@@ -1,5 +1,6 @@
 'use client'
 
+import { isListable } from '@/lib/events/visibility'
 import { DiscoverEventCard } from '@/components/discover/DiscoverEventCard'
 import { useEffect, useState } from 'react'
 import PullToRefresh from '@/components/PullToRefresh'
@@ -45,6 +46,8 @@ export default function CategoriesContent({ initialCategory }: CategoriesContent
 
         const now = Date.now()
         const upcoming = (data || [])
+          // Unlisted, rejected or held events never list (lib/events/visibility).
+          .filter((e: any) => isListable(e))
           // Normalize both date shapes to ISO strings so the cards (parseISO)
           // and the filters below see one consistent type.
           .map((e: any) => ({

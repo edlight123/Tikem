@@ -79,7 +79,8 @@ import {
 } from '@/lib/guestlistVisibility'
 import GuestlistVisibilityPicker from '@/components/organizer/GuestlistVisibility'
 import FormattingToolbar, { richTextareaChange, richTextareaKeyDown } from '@/components/organizer/FormattingToolbar'
-import { DatePicker, TimePicker } from '@/components/ui/DateTimePickers'
+import { DateTimeField } from '@/components/ui/DateTimeField'
+import { fromLocalParts, nextEndOnStartChange, toLocalParts } from '@/lib/events/dateTimeDefaults'
 import { normalizeEventCurrencyForCountry, type EventCurrency } from '@/lib/currency-policy'
 import {
   COMPOSER_COUNTRIES,
@@ -163,6 +164,8 @@ import {
   X,
   Youtube,
   ShoppingBag,
+  Eye,
+  EyeOff,
 } from 'lucide-react'
 
 const CATEGORIES = [
@@ -1352,6 +1355,24 @@ export default function EventComposer({
     if (!d) return null
     const parsed = new Date(`${d}T${t || '00:00'}`)
     return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString()
+  }
+
+  // The start moved: the end follows (start + 2h for a new end, the same
+  // length for one already set), and its day never falls before the start's
+  // (lib/events/dateTimeDefaults).
+  const changeStart = (d: string, tm: string) => {
+    const prev = startTime ? fromLocalParts(startDate, startTime) : null
+    setStartDate(d)
+    setStartTime(tm)
+    const next = tm ? fromLocalParts(d, tm) : null
+    if (!next) {
+      if (d && (!endDate || endDate < d)) setEndDate(d)
+      return
+    }
+    const end = endTime ? fromLocalParts(endDate, endTime) : null
+    const e = toLocalParts(nextEndOnStartChange(prev, next, end))
+    setEndDate(e.date)
+    setEndTime(e.time)
   }
 
   // Validation
@@ -2666,36 +2687,36 @@ export default function EventComposer({
                 <span className="text-body font-medium text-fg">
                   {t('composer.start', { defaultValue: 'Start' })} <span className="text-danger-soft" aria-hidden="true">*</span>
                 </span>
-                <div className="flex flex-nowrap items-center gap-2">
-                  <span className="label-mono shrink-0 text-eyebrow uppercase text-fg-muted">{tzLabel}</span>
-                  <DatePicker
-                    value={startDate}
-                    onChange={setStartDate}
-                    invalid={startInvalid}
-                    placeholder={t('composer.pickDate', { defaultValue: 'Pick a date' })}
-                  />
-                  <TimePicker value={startTime} onChange={setStartTime} placeholder={t('composer.time', { defaultValue: 'Time' })} />
-                </div>
+                <DateTimeField
+                  prefix={tzLabel}
+                  date={startDate}
+                  time={startTime}
+                  onChange={changeStart}
+                  invalid={startInvalid}
+                  datePlaceholder={t('composer.pickDate', { defaultValue: 'Pick a date' })}
+                  timePlaceholder={t('composer.time', { defaultValue: 'Time' })}
+                />
               </div>
               <div className="flex flex-col gap-2 border-t border-line px-4 py-3.5 sm:flex-row sm:flex-nowrap sm:items-center sm:justify-between sm:gap-3">
                 <span className="text-body font-medium text-fg">
                   {t('composer.end', { defaultValue: 'End' })} <span className="text-danger-soft" aria-hidden="true">*</span>
                 </span>
-                <div className="flex flex-nowrap items-center gap-2">
-                  <span className="label-mono shrink-0 text-eyebrow uppercase text-fg-muted">{tzLabel}</span>
-                  <DatePicker
-                    value={endDate}
-                    onChange={setEndDate}
-                    min={startDate || undefined}
-                    invalid={endInvalid}
-                    /* The single most useful control on an END field: 25 of
-                       27 production events have no end set at all, and for
-                       most of them the answer is "the same night". */
-                    sameAs={startDate || undefined}
-                    placeholder={t('composer.pickDate', { defaultValue: 'Pick a date' })}
-                  />
-                  <TimePicker value={endTime} onChange={setEndTime} placeholder={t('composer.time', { defaultValue: 'Time' })} />
-                </div>
+                {/* "Same day as the start" is the single most useful control on
+                    an END field: most events end the same night. */}
+                <DateTimeField
+                  prefix={tzLabel}
+                  date={endDate}
+                  time={endTime}
+                  onChange={(d, tm) => {
+                    setEndDate(d)
+                    setEndTime(tm)
+                  }}
+                  min={startDate || undefined}
+                  sameAs={startDate || undefined}
+                  invalid={endInvalid}
+                  datePlaceholder={t('composer.pickDate', { defaultValue: 'Pick a date' })}
+                  timePlaceholder={t('composer.time', { defaultValue: 'Time' })}
+                />
               </div>
             </div>
             {startInvalid && (
@@ -3843,15 +3864,37 @@ export default function EventComposer({
           <div className="mt-8 border-t border-line pt-6">
             <SectionTitle icon={Settings}>{t('composer.pageSettings', { defaultValue: 'Page Settings' })}</SectionTitle>
             <div className="space-y-3">
-              <div className="flex items-center justify-between rounded-xl bg-surface-low px-4 py-3.5">
-                {/* "Discover", not "Explore". The field is `show_on_explore`
-                    and the toggle said Explore, but there is no Explore
-                    surface on the web — it governs /discover, the homepage
-                    rails and the sitemap. The stored key keeps its name; the
-                    label now matches what an organizer can actually go and
-                    look at. */}
-                <span className="text-body text-fg-soft">{t('composer.showOnExplore', { defaultValue: 'Show on Discover' })}</span>
-                <Toggle on={showOnExplore} onChange={setShowOnExplore} label={tx('event_composer.show_on_explore')} />
+              {/* Visibility (lib/events/visibility), stored as `show_on_explore`.
+                  Unlisted (false) keeps the event off Home and its rails,
+                  Discover, Search, categories, the public page, sitemaps and
+                  digests; its link still works and the page is noindex. */}
+              <div className="rounded-xl bg-surface-low px-4 py-3.5">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <span id="event-visibility-label" className="flex items-center gap-2 text-body text-fg-soft">
+                    {showOnExplore ? <Eye className="h-4 w-4 text-fg-subtle" /> : <EyeOff className="h-4 w-4 text-fg-subtle" />}
+                    {t('composer.visibility')}
+                  </span>
+                  <div role="radiogroup" aria-labelledby="event-visibility-label" className="flex gap-2">
+                    {(['public', 'unlisted'] as const).map((v) => {
+                      const on = (v === 'unlisted') === !showOnExplore
+                      return (
+                        <button
+                          key={v}
+                          type="button"
+                          role="radio"
+                          aria-checked={on}
+                          onClick={() => setShowOnExplore(v === 'public')}
+                          className={chipCls(on)}
+                        >
+                          {t(v === 'public' ? 'composer.visibilityPublic' : 'composer.visibilityUnlisted')}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+                <p className="mt-2 text-meta text-fg-subtle">
+                  {t(showOnExplore ? 'composer.visibilityPublicHint' : 'composer.visibilityUnlistedHint')}
+                </p>
               </div>
               <div className="rounded-xl bg-surface-low px-4 py-3.5">
                 <div className="flex items-center justify-between">

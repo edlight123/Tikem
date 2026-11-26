@@ -1321,6 +1321,13 @@ export default {
     eventsCount: 'events',
   },
   tickets: {
+    changeNotice: {
+      when: 'Date and time changed',
+      where: 'Place changed',
+      link: 'Online link changed',
+      was: 'was {value}',
+      online: 'Online',
+    },
     cancelRsvp: {
       action: 'Cancel RSVP',
       title: 'Cancel your RSVP?',
@@ -4860,5 +4867,12 @@ export default {
   receipts: {
     viewReceipt: "View receipt",
     receiptFailed: "We couldn't open your receipt. Please try again.",
+  },
+  eventVisibility: {
+    label: "Visibility",
+    public: "Public",
+    publicHint: "Listed on Home, Discover, Search and your page.",
+    unlisted: "Unlisted",
+    unlistedHint: "Only people with the link can find it.",
   },
 } as const;

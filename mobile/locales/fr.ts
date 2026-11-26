@@ -950,6 +950,13 @@ export default {
     eventsCount: 'événements',
   },
   tickets: {
+    changeNotice: {
+      when: 'Date et heure modifiées',
+      where: 'Lieu modifié',
+      link: 'Lien en ligne modifié',
+      was: 'avant : {value}',
+      online: 'En ligne',
+    },
     cancelRsvp: {
       action: 'Annuler ma réservation',
       title: 'Annuler votre réservation ?',
@@ -4879,5 +4886,12 @@ export default {
   receipts: {
     viewReceipt: "Voir le reçu",
     receiptFailed: "Impossible d'ouvrir votre reçu. Veuillez réessayer.",
+  },
+  eventVisibility: {
+    label: "Visibilité",
+    public: "Public",
+    publicHint: "Visible sur l'accueil, Découvrir, la recherche et votre page.",
+    unlisted: "Non répertorié",
+    unlistedHint: "Seules les personnes ayant le lien peuvent le trouver.",
   },
 } as const;

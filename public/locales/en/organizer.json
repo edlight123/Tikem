@@ -212,6 +212,7 @@
     "import_events": "Import events"
   },
   "event_card_detail": {
+    "unlisted": "Unlisted",
     "sold_out": "SOLD OUT",
     "payout_blocked": "Can't take payments",
     "needs_attention": "Needs Attention",

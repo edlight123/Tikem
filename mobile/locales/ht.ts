@@ -919,6 +919,13 @@ export default {
     eventsCount: 'evènman',
   },
   tickets: {
+    changeNotice: {
+      when: 'Dat ak lè chanje',
+      where: 'Kote a chanje',
+      link: 'Lyen an chanje',
+      was: 'anvan: {value}',
+      online: 'Sou entènèt',
+    },
     cancelRsvp: {
       action: 'Anile rezèvasyon an',
       title: 'Anile rezèvasyon ou a?',
@@ -4846,5 +4853,12 @@ export default {
   receipts: {
     viewReceipt: "Wè resi a",
     receiptFailed: "Nou pa t ka louvri resi ou a. Tanpri eseye ankò.",
+  },
+  eventVisibility: {
+    label: "Vizibilite",
+    public: "Piblik",
+    publicHint: "Parèt sou Akèy, Dekouvri, Rechèch ak paj ou.",
+    unlisted: "Pa nan lis",
+    unlistedHint: "Se sèlman moun ki gen lyen an ki ka jwenn li.",
   },
 } as const;

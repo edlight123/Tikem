@@ -136,7 +136,12 @@
     "tickets_count_other": "{{count}} Tikè",
     "tickets_count_plural": "{{count}} Tikè",
     "pay_at_door": "Peye {{amount}} nan pòt la",
-    "paid_at_door": "Peye nan pòt la deja"
+    "paid_at_door": "Peye nan pòt la deja",
+    "changed_when": "Dat ak lè chanje",
+    "changed_where": "Kote a chanje",
+    "changed_link": "Lyen an chanje",
+    "changed_was": "anvan: {{value}}",
+    "changed_online": "Sou entènèt"
   },
   "purchase_success": {
     "title": "Acha a reyisi!",

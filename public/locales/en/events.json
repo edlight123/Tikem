@@ -137,5 +137,29 @@
       "has_holds": "Someone is checking out. Try again shortly.",
       "has_money": "Can’t delete: payments are on record."
     }
+  },
+  "cancelEvent": {
+    "button": "Cancel event",
+    "title": "Cancel {{event}}?",
+    "body": "Cancelling can't be undone. Here is what happens:",
+    "point1": "Every ticket is cancelled. Paid tickets are refunded to the buyer's original payment method.",
+    "point2": "Everyone with a ticket or RSVP gets an email and a notification.",
+    "point3": "The event's earnings are held to pay for the refunds.",
+    "reasonLabel": "Reason (optional, shown to ticket holders)",
+    "reasonPlaceholder": "For example: the venue closed for repairs.",
+    "typeToConfirm": "Type {{word}} to confirm",
+    "confirmWord": "CANCEL",
+    "keep": "Keep the event",
+    "confirm": "Cancel event and refund",
+    "working": "Cancelling…",
+    "failed": "The event could not be cancelled. Please try again.",
+    "doneTitle": "Event cancelled",
+    "doneBody": "{{refunded}} refunded now, {{manual}} refunds processed by Tikèm, {{notified}} people told.",
+    "errors": {
+      "cancel_after_withdrawal": "Money has already been withdrawn for this event, so only Tikèm support can cancel it. Please contact support.",
+      "cancel_after_event_end": "This event has already ended, so only Tikèm support can cancel it. Please contact support.",
+      "cancel_balance_unavailable": "We could not check this event's payouts right now. Please try again, or contact support.",
+      "cancel_ledger_stamp_failed": "The event was cancelled, but recording it failed. Please try cancelling again."
+    }
   }
 }
