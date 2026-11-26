@@ -81,7 +81,7 @@ beforeEach(() => {
   limited = false
   process.env.UNSUBSCRIBE_SIGNING_SECRET = 'a-test-secret-that-is-long-enough-for-hmac-use'
   store.set('users/u_fr', { language: 'fr', email: 'fr@x.co' })
-  store.set('users/u_off', { language: 'en', notify_event_updates: false })
+  store.set('users/u_off', { language: 'en', notify_organizer_messages: false })
   store.set('events/ev1', EVENT)
   rows = [
     row({ buyerKey: 'u_fr', buyer: { name: 'A', email: 'fr@x.co', city: '' }, pricePaid: 20 }),
@@ -93,13 +93,13 @@ beforeEach(() => {
 })
 
 describe('organizer message fan-out', () => {
-  it('reaches every live holder once: email to all, push and in-app to accounts', async () => {
+  it('reaches every live holder once and honours the organizer-messages switch', async () => {
     const out = await broadcastToAttendees({ event: EVENT, senderId: 'org1', title: 'Doors at 8', message: 'See you there.' })
     expect(out.recipients).toBe(3)
-    expect(out.optedOut).toBe(0)
+    expect(out.optedOut).toBe(1)
     const to = sendEmail.mock.calls.map((c) => c[0].to).sort()
-    expect(to).toEqual(['fr@x.co', 'guest@x.co', 'off@x.co'])
-    expect(sendPushNotification.mock.calls.map((c) => c[0]).sort()).toEqual(['u_fr', 'u_off'])
+    expect(to).toEqual(['fr@x.co', 'guest@x.co'])
+    expect(sendPushNotification.mock.calls.map((c) => c[0])).toEqual(['u_fr'])
     // Language: the French holder's email is French.
     const fr = sendEmail.mock.calls.find((c) => c[0].to === 'fr@x.co')![0]
     expect(fr.subject).toBe("Message de l'organisateur : Kompa Night")

@@ -8,8 +8,9 @@
  * Every live holder (guests, comps and RSVPs included) is reached once:
  *   - email to everyone with an address, in their language;
  *   - in-app and push to account holders.
- * Transactional: it reaches every holder (no preference switch); moderation
- * and the route's daily limits keep it in check.
+ * Each account holder's "Messages from organizers" switch
+ * (notify_organizer_messages) is honoured on email and push; the in-app copy
+ * is always written. Moderation and the route's daily limits apply to all.
  */
 import { adminDb } from '@/lib/firebase/admin'
 import { sendEmail, getEventUpdateEmail } from '@/lib/email'
@@ -64,11 +65,15 @@ export async function broadcastToAttendees(params: {
       const lang = await resolveEmailLang({ userId: person.uid, email: person.email, event: event as any })
       const t = emailText(lang)
       const heading = params.title?.trim() || t('defaultTitle', { event: eventTitle || t('fallbackEvent') })
-      // A message about an event the person holds a ticket for is
-      // transactional (lib/notifications/policy.ts): no switch silences it.
-      // What keeps it in check is the moderation and the per-event and
-      // per-sender daily limits in the route.
-      const allowed = true
+      // Free text from an organizer can be promotional, so it has its own
+      // switch: users.notify_organizer_messages (on unless set to false). Off
+      // means no email and no push; the in-app copy above still lands. (Date,
+      // venue and cancellation notices are separate and always sent.)
+      let allowed = true
+      if (person.uid) {
+        const prof = await adminDb.collection('users').doc(person.uid).get().catch(() => null)
+        allowed = prof?.exists ? (prof.data() as any)?.notify_organizer_messages !== false : true
+      }
 
       if (person.uid) {
         await adminDb.collection('users').doc(person.uid).collection('notifications').add({
