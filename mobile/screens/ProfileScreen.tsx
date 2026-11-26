@@ -87,6 +87,7 @@ import StatusBarBackdrop from '../components/StatusBarBackdrop';
 import MessagesButton from '../components/MessagesButton';
 import { refreshAttendeeUnread, useAttendeeUnread } from '../lib/attendeeUnread';
 import HostSetupSheet from '../components/HostSetupSheet';
+import UnreadBadge from '../components/UnreadBadge';
 
 // Tikèm's own accounts, and the studio that builds it. EdLight Labs is the
 // technology division of EdLight Initiative, not a separate company. The
@@ -558,6 +559,27 @@ export default function ProfileScreen() {
           })}
         </View>
 
+        {/* The person's own activity, right under the stats (Tikra tester
+            2026-11-25: chats were buried at the bottom of Profile). Messages
+            first, with a red unread badge. */}
+        <View style={styles.block}>
+          <ListGroup style={styles.listCard}>
+            {/* The attendee's conversations with organizers (questions sent from
+                an event page and their answers). */}
+            <ListRow
+              icon={Inbox}
+              title={t('attendeeMessages.title')}
+              trailing={unreadMessages > 0 ? <UnreadBadge count={unreadMessages} /> : undefined}
+              chevron
+              onPress={() => navigation.navigate('Messages')}
+            />
+            <ListRow icon={Heart} title={t('tabs.favorites')} onPress={() => navigation.navigate('Favorites')} />
+            <ListRow icon={Users} title={t('profile.friends')} onPress={() => navigation.navigate('Connections')} />
+            {/* Seen a flyer for an event that is not on Tikèm? Share it (lib/community). */}
+            <ListRow icon={Megaphone} title={t('community.share.entry')} onPress={() => navigation.navigate('ShareEvent')} />
+          </ListGroup>
+        </View>
+
         {/* Role switching: only when the account has more than one hat. Sits
             right under the stats so someone with an org switches without
             scrolling past posters and settings (TestFlight: "have the bar
@@ -708,18 +730,6 @@ export default function ProfileScreen() {
             })}
           </View>
           <ListGroup style={styles.listCard}>
-            <ListRow icon={Heart} title={t('tabs.favorites')} onPress={() => navigation.navigate('Favorites')} />
-            <ListRow icon={Users} title={t('profile.friends')} onPress={() => navigation.navigate('Connections')} />
-            {/* The attendee's conversations with organizers (questions sent from
-                an event page and their answers). */}
-            <ListRow
-              icon={Inbox}
-              title={t('attendeeMessages.title')}
-              value={unreadMessages > 0 ? String(unreadMessages) : undefined}
-              onPress={() => navigation.navigate('Messages')}
-            />
-            {/* Seen a flyer for an event that is not on Tikèm? Share it (lib/community). */}
-            <ListRow icon={Megaphone} title={t('community.share.entry')} onPress={() => navigation.navigate('ShareEvent')} />
             {/* Publish-first: anyone can create an event; KYC is deferred to payout. */}
             {isOwnOrganizer || activeOrg.hasTeamAccess ? (
               <ListRow icon={Briefcase} title={t('profile.createEvent')} onPress={() => navigation.navigate('CreateEvent')} />
