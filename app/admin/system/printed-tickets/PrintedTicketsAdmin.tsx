@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { Download, Plus, RotateCcw, Trash2 } from 'lucide-react'
+import { Download, FileCheck, Plus, RotateCcw, Trash2 } from 'lucide-react'
 import {
   ConsoleButton,
   ConsoleInput,
@@ -11,12 +11,17 @@ import {
   type ConsoleTone,
 } from '@/components/admin/console'
 import { validatePhysicalConfig, type PhysicalTicketsConfig } from '@/lib/physical/config'
+import { TICKET_TEMPLATES } from '@/lib/physical/design/registry'
 
 /**
  * The admin face of config/physical_tickets and of the print room.
  *
  * Pricing: one row per volume tier (from-quantity, HTG per ticket), the minimum
- * and maximum batch, and the on/off switch. Validated here with the SAME
+ * and maximum batch, the on/off switch, and an optional surcharge per ticket
+ * for each ticket design (lib/physical/design/registry; default none).
+ *
+ * Print room: each batch shows the design the organizer approved; "Proof" is
+ * a specimen sheet of it (same renderer, sample QRs), "PDF" the real print. Validated here with the SAME
  * function the API uses, so the form refuses exactly what the server would.
  */
 
@@ -37,6 +42,19 @@ interface AdminBatch {
   needsRefund?: boolean
   latePayments?: Array<{ fundsRail: string; amount: number; currency: string; reference: string }>
   refundedToBalanceAt?: string | null
+  design?: {
+    template: string
+    templateName: string
+    tier: string
+    color: string
+    colorHex: string
+    hasPhoto: boolean
+    logos: number
+    overrides?: Record<string, string>
+    approvedAt: string | null
+    legacy: boolean
+  }
+  surchargeHtgPerTicket?: number
 }
 
 const NEXT: Record<string, { to: string; label: string } | undefined> = {
@@ -65,7 +83,13 @@ function tone(status: string): ConsoleTone {
 
 const nf = (n: number) => new Intl.NumberFormat('en-US').format(n)
 
-type Draft = { enabled: boolean; minBatch: string; maxBatch: string; tiers: Array<{ minQty: string; price: string }> }
+type Draft = {
+  enabled: boolean
+  minBatch: string
+  maxBatch: string
+  tiers: Array<{ minQty: string; price: string }>
+  surcharges: Record<string, string>
+}
 
 function toDraft(c: PhysicalTicketsConfig): Draft {
   return {
@@ -73,6 +97,7 @@ function toDraft(c: PhysicalTicketsConfig): Draft {
     minBatch: String(c.minBatch),
     maxBatch: String(c.maxBatch),
     tiers: c.tiers.map((t) => ({ minQty: String(t.minQty), price: String(t.priceHtgPerTicket) })),
+    surcharges: Object.fromEntries(TICKET_TEMPLATES.map((t) => [t.id, String(c.templateSurcharges?.[t.id] ?? 0)])),
   }
 }
 
@@ -82,6 +107,11 @@ function fromDraft(d: Draft) {
     minBatch: Number(d.minBatch),
     maxBatch: Number(d.maxBatch),
     tiers: d.tiers.map((t) => ({ minQty: Number(t.minQty), priceHtgPerTicket: Number(t.price) })),
+    templateSurcharges: Object.fromEntries(
+      Object.entries(d.surcharges)
+        .map(([id, v]) => [id, Number(v || 0)] as const)
+        .filter(([, v]) => !Number.isFinite(v) || v !== 0)
+    ),
   }
 }
 
@@ -94,6 +124,7 @@ export function PrintedTicketsAdmin() {
   const [batches, setBatches] = useState<AdminBatch[] | null>(null)
   const [busyBatch, setBusyBatch] = useState<string | null>(null)
   const [paper, setPaper] = useState<'letter' | 'a4'>('letter')
+  const [backs, setBacks] = useState(false)
 
   const loadAll = useCallback(async () => {
     const [c, b] = await Promise.all([
@@ -240,6 +271,25 @@ export function PrintedTicketsAdmin() {
               </ConsoleButton>
             </div>
 
+            <div>
+              <p className="mb-2 text-meta text-console-mut">Design surcharge: extra HTG per ticket (0 = none)</p>
+              <div className="grid gap-3 sm:grid-cols-3">
+                {TICKET_TEMPLATES.map((tpl) => (
+                  <label key={tpl.id} className="block text-xs text-console-faint">
+                    {tpl.name.en} · {tpl.tier === 'print_shop' ? 'print shop' : 'any printer'}
+                    <ConsoleInput
+                      type="number"
+                      min={0}
+                      step="0.5"
+                      value={draft.surcharges[tpl.id] ?? '0'}
+                      onChange={(e) => setDraft({ ...draft, surcharges: { ...draft.surcharges, [tpl.id]: e.target.value } })}
+                      className="mt-1"
+                    />
+                  </label>
+                ))}
+              </div>
+            </div>
+
             {check && !check.ok && <ConsoleState tone="bad">{check.error}</ConsoleState>}
 
             <div className="flex flex-wrap items-center gap-3">
@@ -263,6 +313,11 @@ export function PrintedTicketsAdmin() {
 
       <div className="mt-7 flex flex-wrap items-baseline justify-between gap-3">
         <ConsoleSection>Print room</ConsoleSection>
+        <div className="flex items-center gap-4">
+        <label className="flex items-center gap-2 text-xs text-console-mut">
+          <input type="checkbox" checked={backs} onChange={(e) => setBacks(e.target.checked)} className="h-4 w-4 accent-console-green" />
+          Duplex backs
+        </label>
         <label className="flex items-center gap-2 text-xs text-console-mut">
           Paper
           <select
@@ -274,6 +329,7 @@ export function PrintedTicketsAdmin() {
             <option value="a4">A4</option>
           </select>
         </label>
+        </div>
       </div>
       {batches === null ? (
         <p className="text-meta text-console-mut">Loading…</p>
@@ -297,6 +353,17 @@ export function PrintedTicketsAdmin() {
                     {b.reprintCount ? ` · reprinted ${b.reprintCount}×` : ''}
                     {b.refundedToBalanceAt ? ' · credited back to balance' : ''}
                   </p>
+                  {b.design && (
+                    <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-console-mut">
+                      <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: b.design.colorHex }} aria-hidden="true" />
+                      {b.design.templateName} · {b.design.color}
+                      {b.design.tier === 'print_shop' ? ' · print shop' : ''}
+                      {b.design.hasPhoto ? ' · photo' : ''}
+                      {b.design.logos ? ` · ${b.design.logos} logo${b.design.logos > 1 ? 's' : ''}` : ''}
+                      {b.surchargeHtgPerTicket ? ` · +${nf(b.surchargeHtgPerTicket)} HTG/ticket` : ''}
+                      {b.design.legacy ? ' · ordered before designs' : b.design.approvedAt ? ` · proof approved ${b.design.approvedAt.slice(0, 10)}` : ' · proof NOT approved'}
+                    </p>
+                  )}
                   {b.needsRefund && (
                     <div className="mt-1">
                       <ConsoleState tone="bad">
@@ -311,9 +378,15 @@ export function PrintedTicketsAdmin() {
                 <ConsoleState tone={tone(b.status)}>{LABEL[b.status] || b.status}</ConsoleState>
                 {/* Phones: equal-width buttons on one row under the status. */}
                 <div className="flex gap-2 sm:flex-wrap [&>*]:flex-1 [&>*]:whitespace-nowrap [&>*]:px-3 sm:[&>*]:flex-none sm:[&>*]:px-4">
+                  <a
+                    href={`/api/admin/physical-tickets/batches/${b.id}/proof?paper=${paper}`}
+                    className="inline-flex items-center justify-center gap-2 rounded bg-console-raise px-4 py-2 text-meta font-semibold text-console-mut transition-colors hover:text-console-text focus:outline-none focus-visible:ring-2 focus-visible:ring-console-mut"
+                  >
+                    <FileCheck className="h-4 w-4" strokeWidth={1.75} /> Proof
+                  </a>
                   {printable && (
                     <a
-                      href={`/api/admin/physical-tickets/batches/${b.id}/pdf?paper=${paper}`}
+                      href={`/api/admin/physical-tickets/batches/${b.id}/pdf?paper=${paper}${backs ? '&backs=1' : ''}`}
                       className="inline-flex items-center justify-center gap-2 rounded bg-console-raise px-4 py-2 text-meta font-semibold text-console-mut transition-colors hover:text-console-text focus:outline-none focus-visible:ring-2 focus-visible:ring-console-mut"
                     >
                       <Download className="h-4 w-4" strokeWidth={1.75} /> PDF

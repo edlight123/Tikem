@@ -10,7 +10,13 @@
  *
  * Pure: no Firebase import, so it is unit-tested directly and the order screen
  * can quote with the same arithmetic the server charges with.
+ *
+ * Templates (lib/physical/design/registry): a template can carry an optional
+ * surcharge per printed ticket (print-shop designs cost more to print). Default
+ * none; set by platform admins next to the volume tiers.
  */
+
+import { TEMPLATE_IDS } from './design/registry'
 
 export interface PhysicalPriceTier {
   /** Smallest batch this price applies to (inclusive). */
@@ -34,6 +40,8 @@ export interface PhysicalTicketsConfig {
    * charged the HTG total converted at the live rate.
    */
   displayPrices?: Record<string, number[]> | null
+  /** Extra HTG per printed ticket, per template id (absent / 0 = none). */
+  templateSurcharges?: Record<string, number> | null
   updated_at?: string | null
   updated_by?: string | null
   updated_by_email?: string | null
@@ -51,6 +59,7 @@ export const DEFAULT_PHYSICAL_CONFIG: PhysicalTicketsConfig = {
     { minQty: 500, priceHtgPerTicket: 30 },
   ],
   displayPrices: null,
+  templateSurcharges: null,
 }
 
 /** Hard ceilings the admin form cannot pass (a typo must not print 10 million tickets). */
@@ -78,7 +87,7 @@ const isNum = (n: unknown): n is number => typeof n === 'number' && Number.isFin
 export function validatePhysicalConfig(raw: unknown): ConfigValidation {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return { ok: false, error: 'Config must be an object' }
   const obj = raw as Record<string, unknown>
-  const allowed = new Set(['enabled', 'minBatch', 'maxBatch', 'tiers', 'displayPrices'])
+  const allowed = new Set(['enabled', 'minBatch', 'maxBatch', 'tiers', 'displayPrices', 'templateSurcharges'])
   const extra = Object.keys(obj).filter((k) => !allowed.has(k))
   if (extra.length) return { ok: false, error: `Unknown field(s): ${extra.join(', ')}` }
 
@@ -131,7 +140,30 @@ export function validatePhysicalConfig(raw: unknown): ConfigValidation {
     if (Object.keys(displayPrices).length === 0) displayPrices = null
   }
 
-  return { ok: true, value: { enabled: obj.enabled, minBatch, maxBatch, tiers, displayPrices } }
+  let templateSurcharges: Record<string, number> | null = null
+  if (obj.templateSurcharges != null) {
+    if (typeof obj.templateSurcharges !== 'object' || Array.isArray(obj.templateSurcharges)) {
+      return { ok: false, error: 'templateSurcharges must be an object', field: 'templateSurcharges' }
+    }
+    templateSurcharges = {}
+    for (const [id, value] of Object.entries(obj.templateSurcharges as Record<string, unknown>)) {
+      if (!TEMPLATE_IDS.includes(id as any)) return { ok: false, error: `Unknown template ${id}`, field: 'templateSurcharges' }
+      if (!isNum(value) || value < 0 || value > PHYSICAL_LIMITS.maxPriceHtg) {
+        return { ok: false, error: `Template surcharge must be from 0 to ${PHYSICAL_LIMITS.maxPriceHtg} HTG per ticket`, field: 'templateSurcharges' }
+      }
+      const rounded = Math.round(value * 100) / 100
+      if (rounded > 0) templateSurcharges[id] = rounded
+    }
+    if (Object.keys(templateSurcharges).length === 0) templateSurcharges = null
+  }
+
+  return { ok: true, value: { enabled: obj.enabled, minBatch, maxBatch, tiers, displayPrices, templateSurcharges } }
+}
+
+/** Extra HTG per printed ticket for a template (0 when none is set). */
+export function templateSurcharge(config: PhysicalTicketsConfig, templateId?: string | null): number {
+  const v = templateId ? Number(config.templateSurcharges?.[templateId]) : 0
+  return Number.isFinite(v) && v > 0 ? v : 0
 }
 
 /**
@@ -147,6 +179,7 @@ export function normalizeStoredConfig(stored: unknown): PhysicalTicketsConfig {
     maxBatch: s.maxBatch ?? DEFAULT_PHYSICAL_CONFIG.maxBatch,
     tiers: s.tiers,
     displayPrices: s.displayPrices ?? null,
+    templateSurcharges: s.templateSurcharges ?? null,
   }
   const v = validatePhysicalConfig(candidate)
   if (!v.ok) return { ...DEFAULT_PHYSICAL_CONFIG, enabled: candidate.enabled }
@@ -169,11 +202,23 @@ export function tierForQuantity(config: PhysicalTicketsConfig, quantity: number)
 }
 
 export type BatchQuote =
-  | { ok: true; quantity: number; unitPriceHtg: number; totalHtg: number; tierIndex: number; display: Record<string, { unit: number; total: number }> }
+  | {
+      ok: true
+      quantity: number
+      /** What one printed ticket costs: the volume tier's price + the template's surcharge. */
+      unitPriceHtg: number
+      /** The volume tier's price alone. */
+      baseUnitPriceHtg: number
+      /** The chosen template's extra per ticket (0 when none). */
+      surchargeHtgPerTicket: number
+      totalHtg: number
+      tierIndex: number
+      display: Record<string, { unit: number; total: number }>
+    }
   | { ok: false; code: 'disabled' | 'below_minimum' | 'above_maximum' | 'invalid_quantity'; minBatch: number; maxBatch: number }
 
-/** What a batch of `quantity` costs under `config`. The server charges exactly this. */
-export function quoteBatch(config: PhysicalTicketsConfig, quantity: number): BatchQuote {
+/** What a batch of `quantity` in `templateId` costs under `config`. The server charges exactly this. */
+export function quoteBatch(config: PhysicalTicketsConfig, quantity: number, templateId?: string | null): BatchQuote {
   const base = { minBatch: config.minBatch, maxBatch: config.maxBatch }
   if (!config.enabled) return { ok: false, code: 'disabled', ...base }
   if (!isInt(quantity) || quantity <= 0) return { ok: false, code: 'invalid_quantity', ...base }
@@ -181,16 +226,21 @@ export function quoteBatch(config: PhysicalTicketsConfig, quantity: number): Bat
   if (quantity > config.maxBatch) return { ok: false, code: 'above_maximum', ...base }
   const hit = tierForQuantity(config, quantity)
   if (!hit) return { ok: false, code: 'below_minimum', ...base }
-  const unit = hit.tier.priceHtgPerTicket
+  const tierPrice = hit.tier.priceHtgPerTicket
+  const surcharge = templateSurcharge(config, templateId)
+  const unit = Math.round((tierPrice + surcharge) * 100) / 100
   const display: Record<string, { unit: number; total: number }> = {}
   for (const [cur, list] of Object.entries(config.displayPrices || {})) {
-    const u = Number(list[hit.index])
+    // The display price scales with the surcharge (same HTG-to-currency ratio as the tier's).
+    const u = Math.round(Number(list[hit.index]) * (unit / tierPrice) * 100) / 100
     if (Number.isFinite(u)) display[cur] = { unit: u, total: Math.round(u * quantity * 100) / 100 }
   }
   return {
     ok: true,
     quantity,
     unitPriceHtg: unit,
+    baseUnitPriceHtg: tierPrice,
+    surchargeHtgPerTicket: surcharge,
     totalHtg: Math.round(unit * quantity * 100) / 100,
     tierIndex: hit.index,
     display,

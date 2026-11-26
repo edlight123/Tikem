@@ -66,6 +66,19 @@ export interface BundledBreakdown {
 
 const UNSOLD_PRINTED = ['printed_unsold', 'voided', 'released'];
 
+/**
+ * The printed design's name in the reader's language ("Carton coloré"), from
+ * the name the server stored on the batch (design.template_name); null for a
+ * batch ordered before the design gallery. Ordering stays on the web.
+ */
+export function batchDesignName(batch: PrintedBatchSummary['batch'] | null | undefined, language: string): string | null {
+  const names = batch?.design?.template_name;
+  if (!names || typeof names !== 'object') return null;
+  const lang = String(language || '').slice(0, 2);
+  const name = names[lang] || names.en || names.fr;
+  return typeof name === 'string' && name.trim() ? name.trim() : null;
+}
+
 /** A printed (physical) ticket doc, whatever its state. */
 export function isPrintedTicket(t: TicketDoc | null | undefined): boolean {
   return !!t && (t.kind === 'physical' || t.source === 'physical' || !!t.physical_batch_id);

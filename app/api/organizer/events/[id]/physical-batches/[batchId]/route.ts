@@ -45,6 +45,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     switch (action) {
       case 'pay': {
         if (batch.status !== 'awaiting_payment') return NextResponse.json({ error: 'This batch is not waiting for payment' }, { status: 409 })
+        // No payment before the organizer approved the proof of what prints.
+        if (!batch.design?.approved_at) {
+          return NextResponse.json({ error: 'Approve the proof before paying. Cancel this batch and order it again.', code: 'proof_not_approved' }, { status: 409 })
+        }
         const method = body?.method === 'card' ? 'card' : body?.method === 'balance' ? 'balance' : 'moncash'
         if (method === 'balance') {
           const paidNow = await payBatchFromBalance({ batch, user })

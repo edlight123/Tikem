@@ -4687,6 +4687,7 @@ export default {
     notSoldYet: "{n} printed, not sold yet",
     batchLine: "{qty} printed · {sold} sold · {in} checked in",
     batchOrdered: "{qty} ordered",
+    design: "Design: {name}",
     batchUnsold: "{n} not sold yet",
     manageOnWeb: "Manage on the web",
     attendeeMarker: "Printed · {serial}",
