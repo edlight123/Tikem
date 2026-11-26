@@ -405,7 +405,8 @@
     "family_child": "Enfant",
     "family_hint": "Chaque personne reçoit son billet dans votre compte.",
     "family_badge": "Familles bienvenues, jusqu’à {{count}} par inscription",
-    "card_door_price": "{{price}} à l’entrée"
+    "card_door_price": "{{price}} à l’entrée",
+    "your_time": "{{time}} chez vous"
   },
   "favorites": {
     "title": "Mes favoris",

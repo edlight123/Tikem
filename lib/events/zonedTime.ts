@@ -211,3 +211,39 @@ export function sameOffset(a: string, b: string, at: number = Date.now()): boole
     return false
   }
 }
+
+/**
+ * The zone's short name at `at`, the way a boarding pass prints it: "PST",
+ * "HNE" (fr-CA), "MEZ" (de). Where the locale has no abbreviation Intl gives
+ * "GMT+1" / "UTC−5", which is kept. '' when the zone can't be read.
+ */
+export function zoneAbbr(zone: string, locale = 'en-US', at: Date | string | number = new Date()): string {
+  const d = new Date(at as any)
+  if (Number.isNaN(d.getTime())) return ''
+  try {
+    return (
+      new Intl.DateTimeFormat(locale, { timeZone: zone, timeZoneName: 'short' })
+        .formatToParts(d)
+        .find((p) => p.type === 'timeZoneName')?.value || ''
+    )
+  } catch {
+    return ''
+  }
+}
+
+/**
+ * Whether a viewer in `viewerZone` reads a different clock from the event's
+ * zone at the event's start (so a "your time" line or a zone tag helps).
+ * False when either zone is missing or unknown.
+ */
+export function viewerZoneDiffers(
+  eventZone: string | null | undefined,
+  viewerZone: string | null | undefined,
+  at: Date | string | number = Date.now(),
+): boolean {
+  if (!eventZone || !viewerZone || eventZone === viewerZone) return false
+  if (!isValidZone(eventZone) || !isValidZone(viewerZone)) return false
+  const t = new Date(at as any).getTime()
+  if (Number.isNaN(t)) return false
+  return !sameOffset(eventZone, viewerZone, t)
+}

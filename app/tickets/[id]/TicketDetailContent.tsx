@@ -6,6 +6,7 @@ import { format } from 'date-fns'
 // Event times print at the venue's wall clock (its zone), not the viewer's.
 import { wallClock } from '@/lib/home/format'
 import { eventZone } from '@/lib/home/feed'
+import { zoneAbbr } from '@/lib/events/zonedTime'
 import { ArrowLeft, Calendar, MapPin, User, Clock, Sparkles, CheckCircle2 } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -197,6 +198,10 @@ export default function TicketDetailContent({ ticket, event, user, pendingTransf
                     </p>
                     <p className="label-mono text-meta text-fg-muted">
                       {format(wallClock(event.start_datetime || event.date, eventZone(event)), 'h:mm a')}
+                      {(() => {
+                        const z = zoneAbbr(eventZone(event), 'en-US', event.start_datetime || event.date)
+                        return z ? ` ${z}` : ''
+                      })()}
                     </p>
                   </div>
                 </div>

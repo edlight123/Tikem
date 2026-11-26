@@ -3494,6 +3494,7 @@ export default {
     empty: 'Aucune image trouvée',
   },
   eventDetail: {
+    yourTime: "{time} chez vous",
     familyBadge: 'Familles bienvenues, jusqu’à {count} par inscription',
     // Affiche + morceau (masqués quand l’événement n’en a pas).
     lineup: {

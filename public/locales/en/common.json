@@ -405,7 +405,8 @@
     "family_child": "Child",
     "family_hint": "Each person gets their own ticket in your account.",
     "family_badge": "Families welcome, up to {{count}} per registration",
-    "card_door_price": "{{price}} at the door"
+    "card_door_price": "{{price}} at the door",
+    "your_time": "{{time}} your time"
   },
   "favorites": {
     "title": "My Favorites",
