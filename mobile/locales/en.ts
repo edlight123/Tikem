@@ -4064,6 +4064,8 @@ export default {
       nationalDay: 'Haitian holidays',
       nationalDayBody: 'A short note on the morning of a national day.',
       followedOrganizers: "Organizers you follow",
+      organizerMessages: "Messages from organizers",
+      organizerMessagesBody: "Updates organizers send about events you have tickets for. Date, venue and cancellation notices always arrive.",
       savedEvents: "Saved events",
       friendInvites: "Friend invites",
       friendInvitesBody: "When a friend invites you to an event, or joins Tikèm from your invite.",

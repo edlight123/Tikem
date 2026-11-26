@@ -61,6 +61,7 @@ export function NotificationsCard({ profile, onUpdate }: NotificationsCardProps)
     { key: 'notify_discovery', title: t('notifications.discovery'), description: t('notifications.discovery_desc') },
     { key: 'notify_weekend_digest', title: t('notifications.weekend_digest'), description: t('notifications.weekend_digest_desc') },
     { key: 'notify_followed_organizers', title: t('notifications.followed_organizers'), description: t('notifications.followed_organizers_desc') },
+    { key: 'notify_organizer_messages', title: t('notifications.organizer_messages'), description: t('notifications.organizer_messages_desc') },
     { key: 'notify_reminders', title: t('notifications.saved_events'), description: t('notifications.saved_events_desc') },
     { key: 'notify_filling_fast', title: t('notifications.filling_fast'), description: t('notifications.filling_fast_desc') },
     { key: 'notify_friend_invites', title: t('notifications.friends'), description: t('notifications.friends_desc') },

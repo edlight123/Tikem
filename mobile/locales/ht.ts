@@ -4051,6 +4051,8 @@ export default {
       nationalDay: 'Fèt ayisyen yo',
       nationalDayBody: 'Yon ti mo nan maten yon jou fèt nasyonal.',
       followedOrganizers: "Òganizatè ou swiv",
+      organizerMessages: "Mesaj òganizatè yo",
+      organizerMessagesBody: "Nouvèl òganizatè yo voye sou evènman ou gen tikè pou yo. Chanjman dat, kote ak anilasyon toujou rive.",
       savedEvents: "Evènman ou anrejistre",
       friendInvites: "Envitasyon zanmi",
       friendInvitesBody: "Lè yon zanmi envite w nan yon evènman, oswa li vin sou Tikèm gras a envitasyon ou.",

@@ -60,6 +60,8 @@ type UserPrefKey =
   | 'notify_friend_invites'
   // An organizer you follow published an event (server: organizer_follow).
   | 'notify_followed_organizers'
+  // An organizer's update to your tickets' events (server: organizer_broadcast).
+  | 'notify_organizer_messages'
   // Saved-event nudges + "how was it?" (NOT ticket reminders, always on).
   | 'notify_reminders'
   | 'notify_organizer_milestones'
@@ -104,6 +106,7 @@ export default function NotificationSettingsScreen({ navigation, route }: any) {
     notify_national_day: true,
     notify_friend_invites: true,
     notify_followed_organizers: true,
+    notify_organizer_messages: true,
     notify_reminders: true,
     notify_organizer_milestones: true,
     notify_organizer_nudges: true,
@@ -152,6 +155,7 @@ export default function NotificationSettingsScreen({ navigation, route }: any) {
             notify_national_day: data.notify_national_day ?? true,
             notify_friend_invites: data.notify_friend_invites ?? true,
             notify_followed_organizers: data.notify_followed_organizers ?? true,
+            notify_organizer_messages: data.notify_organizer_messages ?? true,
             // The old web card's nested `notify.reminders` still counts (server readUserNotifyPref).
             notify_reminders: data.notify_reminders ?? data.notify?.reminders ?? true,
             notify_organizer_milestones: data.notify_organizer_milestones ?? true,
@@ -349,6 +353,12 @@ export default function NotificationSettingsScreen({ navigation, route }: any) {
                 title={t('notificationSettings.fromTikem.followedOrganizers')}
                 value={userPrefs.notify_followed_organizers}
                 onChange={(v) => toggleUserPref('notify_followed_organizers', v)}
+              />
+              <PrefRow
+                divided
+                title={t('notificationSettings.fromTikem.organizerMessages')}
+                value={userPrefs.notify_organizer_messages}
+                onChange={(v) => toggleUserPref('notify_organizer_messages', v)}
               />
               <PrefRow
                 divided

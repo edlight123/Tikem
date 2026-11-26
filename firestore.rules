@@ -228,7 +228,8 @@ service cloud.firestore {
         && notifySwitchOk('notify_filling_fast')
         && notifySwitchOk('notify_national_day')
         && notifySwitchOk('notify_friend_invites')
-        && notifySwitchOk('notify_followed_organizers');
+        && notifySwitchOk('notify_followed_organizers')
+        && notifySwitchOk('notify_organizer_messages');
 
       // Delete: disallow client deletes.
       allow delete: if false;

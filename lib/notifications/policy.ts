@@ -30,6 +30,7 @@ export type NotificationCategory =
   | 'friend_invite' // a connection invited you to an event / joined from your invite (lib/invites)
   | 'friend_request' // someone asked to connect, or accepted your request (lib/social/friend-push)
   | 'organizer_follow' // an organizer you follow published a new event (app/api/events/[id]/publish)
+  | 'organizer_broadcast' // an organizer's message to its ticket holders (lib/events/attendee-broadcast)
   | 'event_feedback' // the morning after: "how was it?" (checked-in attendees only)
   | 'organizer_recap' // the morning after: your event's recap
   | 'weekend_digest' // Thursday evening: this weekend's events in your city (lib/notifications/weekly-digest)
@@ -78,6 +79,11 @@ const PREFERENCE_FIELD: Record<NotificationCategory, string | null> = {
   // News from organizers the person follows: its own switch (on by default:
   // following is the express request, in every market).
   organizer_follow: 'notify_followed_organizers',
+  // An organizer's update to people holding tickets: its own switch, on by
+  // default (buying the ticket is the relationship). Email + push only; the
+  // in-app copy always lands, and a date / venue / cancellation notice is
+  // event_change (transactional), never this.
+  organizer_broadcast: 'notify_organizer_messages',
   // "How was it?" is part of the event's own lifecycle: off with reminders.
   event_feedback: 'notify_reminders',
   organizer_recap: 'notify_organizer_milestones',

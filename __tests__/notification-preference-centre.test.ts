@@ -4,7 +4,7 @@
  * ALWAYS send, whatever a switch says; only discretionary ones obey a switch.
  */
 import { decideSend, isCategoryEnabled, type NotificationCategory } from '@/lib/notifications/policy'
-import { sanitizeUserNotifyPrefs, USER_NOTIFY_FIELDS } from '@/lib/notifications/userPreferences'
+import { readUserNotifyPrefs, sanitizeUserNotifyPrefs, USER_NOTIFY_FIELDS } from '@/lib/notifications/userPreferences'
 import { followerNewEventCopy } from '@/lib/notifications/follower-new-event'
 import { eventShowsAttendees, isSociallyVisibleEvent } from '@/lib/social/event-privacy'
 
@@ -18,6 +18,7 @@ const EVERYTHING_OFF: Record<string, any> = {
   notify_national_day: false,
   notify_friend_invites: false,
   notify_followed_organizers: false,
+  notify_organizer_messages: false,
   notify: { reminders: false, updates: false },
   last_seen_country: 'HT',
 }
@@ -45,6 +46,7 @@ describe('preference centre: discretionary obeys its switch', () => {
     ['friend_invite', 'notify_friend_invites'],
     ['friend_request', 'notify_friend_invites'],
     ['organizer_follow', 'notify_followed_organizers'],
+    ['organizer_broadcast', 'notify_organizer_messages'],
   ]
   it.each(cases)('%s is silenced by %s and on by default', (category, field) => {
     expect(decideSend({ user: { last_seen_country: 'HT', [field]: false }, category, now: NOON })).toEqual({
@@ -62,12 +64,21 @@ describe('preference centre: discretionary obeys its switch', () => {
         'notify_followed_organizers',
         'notify_friend_invites',
         'notify_national_day',
+        'notify_organizer_messages',
         'notify_reminders',
         'notify_weekend_digest',
       ].sort()
     )
     // The transactional switches can't be written from the profile any more.
     expect(sanitizeUserNotifyPrefs({ notify_ticket_purchase: false, notify_event_updates: false })).toEqual({})
+  })
+
+  it('messages from organizers is a switch, on by default, in every market', () => {
+    expect(USER_NOTIFY_FIELDS).toContain('notify_organizer_messages')
+    expect(readUserNotifyPrefs({}).notify_organizer_messages).toBe(true)
+    expect(readUserNotifyPrefs({ last_seen_country: 'FR' }).notify_organizer_messages).toBe(true)
+    expect(readUserNotifyPrefs({ notify_organizer_messages: false }).notify_organizer_messages).toBe(false)
+    expect(sanitizeUserNotifyPrefs({ notify_organizer_messages: false })).toEqual({ notify_organizer_messages: false })
   })
 })
 

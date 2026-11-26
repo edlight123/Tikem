@@ -32,6 +32,10 @@
  *   notify_national_day        a note on a Haitian holiday
  *   notify_friend_invites      friend requests and invites from friends
  *   notify_followed_organizers an organizer you follow published an event
+ *   notify_organizer_messages  updates an organizer sends to ticket holders
+ *                              (email + push only; the in-app copy always lands,
+ *                              and date/venue/cancellation notices are
+ *                              event_change, transactional)
  *
  * Email: there is no discretionary email today (every email Tikèm sends is
  * transactional or organizer-facing). Any new marketing / digest email MUST
@@ -45,6 +49,7 @@ export const USER_NOTIFY_FIELDS = [
   'notify_weekend_digest',
   'notify_friend_invites',
   'notify_followed_organizers',
+  'notify_organizer_messages',
 ] as const
 
 export type UserNotifyField = (typeof USER_NOTIFY_FIELDS)[number]

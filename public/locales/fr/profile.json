@@ -76,6 +76,8 @@
     "friends_desc": "Demandes d’ami et invitations de vos amis",
     "followed_organizers": "Organisateurs suivis",
     "followed_organizers_desc": "Quand un organisateur que vous suivez publie un événement",
+    "organizer_messages": "Messages des organisateurs",
+    "organizer_messages_desc": "Les nouvelles que les organisateurs envoient sur les événements où vous avez un billet. Les changements de date, de lieu et les annulations arrivent toujours.",
     "always_on": "Billets, rappels de vos billets, changements, annulations, remboursements et codes de connexion vous parviennent toujours."
   },
   "account": {
