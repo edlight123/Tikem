@@ -433,7 +433,10 @@ export default function OrganizerEventManagementScreen() {
       navigation.goBack();
     } catch (error: any) {
       setDeletingDraft(false);
-      showAlert(t('draftDelete.failed'), error?.message || '');
+      // Localized from the route's code; the raw server message is never shown.
+      const code = typeof error?.code === 'string' ? error.code : '';
+      const reason = code ? t(`draftDelete.reasons.${code}`) : '';
+      showAlert(t('draftDelete.failed'), reason && reason !== `draftDelete.reasons.${code}` ? reason : '');
       loadEventData();
     }
   };
