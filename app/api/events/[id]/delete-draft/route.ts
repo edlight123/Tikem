@@ -66,7 +66,6 @@ export async function POST(_request: NextRequest, { params }: Ctx) {
         organizerId: orgId,
         actorRole: role,
         removed: result.removed,
-        posters: result.posters,
       },
     })
 

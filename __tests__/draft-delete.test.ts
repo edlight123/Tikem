@@ -170,22 +170,24 @@ describe('POST /api/events/[id]/delete-draft', () => {
     expect(db.store.get('events/other')).toBeDefined()
     expect(db.store.get('ticket_tiers/other-t0')).toBeDefined()
     expect(db.store.get('promo_codes/p-other')).toBeDefined()
-    expect(deletedFiles).toEqual(['event-images/d1.jpg'])
+    // Storage is never touched (see the next test).
+    expect(deletedFiles).toEqual([])
     expect(logAdminAction).toHaveBeenCalledWith(
       expect.objectContaining({ action: 'event.draft_delete', adminId: 'org1', resourceId: 'd1', resourceType: 'event' }),
     )
   })
 
-  it('keeps a poster another event uses, and never touches generated / library posters', async () => {
-    seed({ 'events/copy': { organizer_id: 'org1', is_published: true, banner_image_url: poster('d1.jpg') } })
+  it('never deletes storage files, even a poster URL pointed at another org’s upload', async () => {
+    // An organizer controls banner_image_url, so the URL proves nothing about
+    // whose file it is: deleting it would delete someone else's poster.
+    seed({
+      'events/d1': { ...DRAFT, banner_image_url: poster('org2-flyer.jpg'), image_url: poster('d1.jpg') },
+      'events/theirs': { organizer_id: 'org2', is_published: true, banner_image_url: poster('org2-flyer.jpg') + '&x=1' },
+    })
     expect((await call('d1')).status).toBe(200)
     expect(deletedFiles).toEqual([])
-
-    seed({ 'events/d1': { ...DRAFT, banner_image_url: 'https://firebasestorage.googleapis.com/v0/b/tikem-bkt/o/posters%2Forg1%2Fh.jpg?alt=media' } })
-    expect((await call('d1')).status).toBe(200)
-    seed({ 'events/d1': { ...DRAFT, banner_image_url: '/flyers/kanaval.jpg' } })
-    expect((await call('d1')).status).toBe(200)
-    expect(deletedFiles).toEqual([])
+    const src = fs.readFileSync(path.join(__dirname, '..', 'lib/events/draftDeleteServer.ts'), 'utf8')
+    expect(src).not.toMatch(/adminStorage|\.file\(|storagePathFromUrl/)
   })
 
   const refusals: Array<[string, Record<string, any>, string]> = [

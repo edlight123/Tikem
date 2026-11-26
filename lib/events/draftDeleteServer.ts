@@ -1,5 +1,4 @@
-import { adminDb, adminStorage } from '@/lib/firebase/admin'
-import { storagePathFromUrl } from '@/lib/firebase/downloadUrl'
+import { adminDb } from '@/lib/firebase/admin'
 import { PHYSICAL_BATCHES } from '@/lib/physical/rules'
 import { DOOR_TEAM_REQUESTS } from '@/lib/doorTeam/rules'
 import { WAITLIST_COLLECTION } from '@/lib/waitlist'
@@ -18,8 +17,12 @@ import { draftDeleteBlock, isDraftEvent, type DraftDeleteBlock, type DraftDelete
  *     commissions. Any one of them keeps the event.
  *  2. deleteDraftEvent: remove the event and what it OWNS (tiers, promo codes,
  *     promoter links, tracking links, group discounts, updates, favourites,
- *     dead reservations, view stats, its subcollections) and its uploaded
- *     poster when no other event uses the same file.
+ *     dead reservations, view stats, its subcollections).
+ *
+ * Storage files are NOT deleted. A poster is only a URL on the event doc, and
+ * an organizer can point that URL at any file (another org's upload, a crafted
+ * link that parses to it), so "delete the draft's poster" would let them
+ * delete someone else's file. An orphaned image is small; a lost one is not.
  */
 
 /** Order rows on the Haiti rails that never became anything. */
@@ -125,12 +128,6 @@ export const OWNED_BY_EVENT_ID = [
   'inventory_reservations',
 ] as const
 
-/** Image fields an event may carry its poster in. */
-const POSTER_FIELDS = ['banner_image_url', 'banner_image', 'image_url', 'poster_url', 'cover_image_url'] as const
-
-/** Uploaded event posters live here; generated posters and the flyer library do not. */
-const UPLOADED_POSTER_PREFIX = 'event-images/'
-
 async function deleteWhere(collection: string, field: string, eventId: string): Promise<number> {
   const snap = await adminDb.collection(collection).where(field, '==', eventId).get()
   for (let i = 0; i < snap.docs.length; i += 400) {
@@ -147,42 +144,8 @@ async function recursiveDelete(ref: any): Promise<void> {
   else await ref.delete()
 }
 
-/** Is this poster URL used by any event other than `eventId`? */
-async function posterShared(url: string, eventId: string): Promise<boolean> {
-  for (const field of POSTER_FIELDS) {
-    const snap = await adminDb.collection('events').where(field, '==', url).limit(2).get()
-    if (snap.docs.some((d: any) => String(d.id) !== String(eventId))) return true
-  }
-  return false
-}
-
-/**
- * Delete the event's uploaded poster when nothing else uses it. Never throws:
- * storage is housekeeping, the draft itself is already gone.
- */
-export async function deletePosterIfUnshared(event: Record<string, any>, eventId: string): Promise<string[]> {
-  const removed: string[] = []
-  try {
-    const urls = Array.from(
-      new Set(POSTER_FIELDS.map((f) => event?.[f]).filter((u): u is string => typeof u === 'string' && u.length > 0)),
-    )
-    if (!urls.length) return removed
-    const bucket = adminStorage.bucket()
-    for (const url of urls) {
-      const path = storagePathFromUrl(url, bucket.name)
-      if (!path || !path.startsWith(UPLOADED_POSTER_PREFIX)) continue
-      if (await posterShared(url, eventId)) continue
-      await bucket.file(path).delete({ ignoreNotFound: true })
-      removed.push(path)
-    }
-  } catch (err: any) {
-    console.warn('[delete-draft] poster cleanup skipped:', err?.message || err)
-  }
-  return removed
-}
-
 export type DeleteDraftResult =
-  | { ok: true; removed: Record<string, number>; posters: string[] }
+  | { ok: true; removed: Record<string, number> }
   | { ok: false; code: DraftDeleteBlock }
 
 /**
@@ -201,7 +164,7 @@ export async function deleteDraftEvent(eventId: string): Promise<DeleteDraftResu
     if (blocked) return { ok: false as const, code: blocked }
     if (!isDraftEvent(event)) return { ok: false as const, code: 'published' as const }
     tx.delete(ref)
-    return { ok: true as const, event: event as Record<string, any> }
+    return { ok: true as const }
   })
   if (!outcome.ok) return outcome
 
@@ -214,6 +177,5 @@ export async function deleteDraftEvent(eventId: string): Promise<DeleteDraftResu
   await recursiveDelete(ref)
   await recursiveDelete(adminDb.collection('event_view_stats').doc(id))
 
-  const posters = await deletePosterIfUnshared(outcome.event, id)
-  return { ok: true, removed, posters }
+  return { ok: true, removed }
 }
