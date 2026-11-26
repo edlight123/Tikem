@@ -800,7 +800,10 @@
       "FR": "France"
     },
     "new_on": {
-      "title": "Nouveau sur Tikèm"
+      "title": "Nouveau sur Tikèm",
+      "empty": "Rien de nouveau ici pour le moment.",
+      "discover": "Voir tous les événements",
+      "see_all": "Tout voir"
     },
     "elsewhere": {
       "back_home": "retour au pays",
@@ -1425,7 +1428,9 @@
       "errUpdateTitle": "Impossible de mettre à jour",
       "priceMsgToggle": "Saisissez un prix, ou activez « Faire de ce billet un billet gratuit ». Un prix vide ne veut pas dire gratuit.",
       "minPriceTitle": "Augmentez le prix du billet",
-      "minPriceMsg": "Un billet payant doit coûter au moins {{amount}} {{currency}}. Fixez un prix plus élevé, ou rendez le billet gratuit."
+      "minPriceMsg": "Un billet payant doit coûter au moins {{amount}} {{currency}}. Fixez un prix plus élevé, ou rendez le billet gratuit.",
+      "flyerUploadingTitle": "Le flyer se téléverse encore",
+      "flyerUploadingMsg": "Enregistrez à nouveau dans un instant, une fois qu’il est en ligne."
     },
     "spotifySearchPlaceholder": "Rechercher une chanson sur Spotify",
     "spotifyResultsLabel": "Résultats de chansons",
@@ -1976,7 +1981,9 @@
       "cancel": "Annuler",
       "done": "Terminé",
       "preparing": "Préparation…"
-    }
+    },
+    "addPhoto": "Ajouter une photo",
+    "changePhoto": "Changer la photo"
   },
   "phone": {
     "country": "Indicatif pays",

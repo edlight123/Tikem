@@ -76,6 +76,8 @@ interface BuyTicketButtonProps {
   eventTitle?: string
   /** Event start, for the ticket selector's "selling fast" pace rule. */
   eventStartsAt?: string | null
+  /** The event's end: add-ons with no sales end stop selling then. */
+  eventEndsAt?: string | null
   currency?: string
   country?: string
   /**
@@ -112,7 +114,7 @@ interface BuyTicketButtonProps {
   addOnsSold?: Record<string, unknown> | null
 }
 
-export default function BuyTicketButton({ eventId, userId, isFree, payAtDoor = false, ticketPrice, eventTitle = 'Event', currency = 'HTG', country, feeIncidence = null, eventStartsAt, isPasswordProtected = false, plusOnesAllowed = 0, familyMax = 0, freeTypes = false, heldFreeTickets = 0, maxFreePerPerson = MAX_FREE_TICKETS_PER_PERSON, addOns: eventAddOnsRaw, addOnsSold = null }: BuyTicketButtonProps) {
+export default function BuyTicketButton({ eventId, userId, isFree, payAtDoor = false, ticketPrice, eventTitle = 'Event', currency = 'HTG', country, feeIncidence = null, eventStartsAt, eventEndsAt = null, isPasswordProtected = false, plusOnesAllowed = 0, familyMax = 0, freeTypes = false, heldFreeTickets = 0, maxFreePerPerson = MAX_FREE_TICKETS_PER_PERSON, addOns: eventAddOnsRaw, addOnsSold = null }: BuyTicketButtonProps) {
   const { t } = useTranslation('common')
   const router = useRouter()
   const { showToast } = useToast()
@@ -1457,6 +1459,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, payAtDoor = f
                 country={country}
                 feeIncidence={feeIncidence}
                 eventStartsAt={eventStartsAt}
+                eventEndsAt={eventEndsAt}
                 allowGuest={isGuestCheckout}
                 freeClaimHeld={heldFree > 0}
                 freeCap={freeCap}

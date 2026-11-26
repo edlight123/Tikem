@@ -235,6 +235,7 @@ export default function Navbar({ user, isAdmin = false, flush = false, solid = f
 
   return (
     <nav
+      data-site-chrome
       aria-label={t('nav.primary', { defaultValue: 'Main' })}
       // A fill, no hairline under the bar (fill-not-hairline rule). `flush`
       // is still accepted from older call sites; there is no rule to drop.

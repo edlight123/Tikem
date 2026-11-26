@@ -16,8 +16,24 @@ import BootScreen from './components/BootScreen';
 import PhonePromptHost from './components/PhonePromptHost';
 import { ImageCropProvider } from './components/ImageCropModal';
 import { refreshFeeConfig } from './lib/feeConfigSync';
+import AppErrorBoundary from './components/AppErrorBoundary';
+import { installGlobalErrorLogging } from './lib/errorLog';
 
+installGlobalErrorLogging();
+
+/**
+ * Everything renders inside AppErrorBoundary: a render error must show a
+ * readable screen with a Reload button, never a blank root view.
+ */
 export default function App() {
+  return (
+    <AppErrorBoundary>
+      <AppContent />
+    </AppErrorBoundary>
+  );
+}
+
+function AppContent() {
   const [fontsLoaded, fontError] = useFonts({
     InstrumentSerif_400Regular,
     InstrumentSerif_400Regular_Italic,

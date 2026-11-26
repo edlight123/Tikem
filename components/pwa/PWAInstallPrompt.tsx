@@ -51,6 +51,7 @@ export function PWAInstallPrompt() {
     // surface rather than a hairline box, compact enough to stay one row so
     // it never climbs over the event title on the homepage hero.
     <div
+      data-site-chrome
       className="fixed inset-x-3 z-50 mx-auto max-w-md rounded bg-surface-raised-solid/90 backdrop-blur-xl backdrop-saturate-150 shadow-[0_12px_40px_-8px_rgba(0,0,0,0.7)] py-2.5 pl-2.5 pr-1.5 flex items-center gap-3 animate-in fade-in slide-in-from-bottom-2"
       style={{ bottom: 'calc(max(var(--mobile-nav-h, 0px), env(safe-area-inset-bottom)) + 10px)' }}
       role="region"

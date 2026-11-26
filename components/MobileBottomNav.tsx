@@ -88,7 +88,7 @@ export default function MobileBottomNav({ isLoggedIn, isOrganizer = false, isAdm
   }
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-canvas/90 backdrop-blur-xl border-t border-line z-50 safe-area-inset-bottom will-change-contents" style={{ minHeight: '56px' }}>
+    <nav data-site-chrome className="md:hidden fixed bottom-0 left-0 right-0 bg-canvas/90 backdrop-blur-xl border-t border-line z-50 safe-area-inset-bottom will-change-contents" style={{ minHeight: '56px' }}>
       <div className="flex items-center justify-around px-1 py-1.5">
         {tabs.map((tab) => {
           const Icon = tab.icon

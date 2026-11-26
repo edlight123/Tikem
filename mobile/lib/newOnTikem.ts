@@ -19,7 +19,17 @@ import { isEventOver } from './homeFeeds';
 export const NEW_WINDOW_MS = 14 * 86_400_000;
 export const NEW_MAX = 12;
 /** Fewer than this and the rail hides: two cards read as an empty shelf. */
-export const NEW_MIN = 3;
+export const NEW_MIN = 2;
+
+const DAY_MS = 86_400_000;
+/** The widening steps when the newest window is thin: 14, 30, 60 days, then any age read. */
+export const NEW_WINDOWS_MS: readonly number[] = [14 * DAY_MS, 30 * DAY_MS, 60 * DAY_MS, Infinity];
+/** How far back the reads go (the widest dated step). */
+export const NEW_READ_WINDOW_MS = 60 * DAY_MS;
+/** Widen to the next window while fewer than this many are found. */
+export const NEW_FILL = 8;
+/** The "see all" page's cap. */
+export const NEW_PAGE_MAX = 60;
 
 /** Firestore Timestamp | {seconds} | Date | ISO string | ms → epoch ms (NaN when unknown). */
 export function toMs(v: any): number {
@@ -63,6 +73,7 @@ export interface NewOnTikemOpts {
   country: string;
   /** The active metro, when one is chosen. */
   inArea?: (e: any) => boolean;
+  /** One fixed window; omitted = widen 14 → 30 → 60 days → any while under NEW_FILL. */
   windowMs?: number;
   max?: number;
   /** Below this many the rail is empty (default NEW_MIN). */
@@ -70,8 +81,21 @@ export interface NewOnTikemOpts {
 }
 
 export function selectNewOnTikem<T extends Record<string, any>>(events: readonly T[], opts: NewOnTikemOpts): T[] {
+  const min = opts.min ?? NEW_MIN;
+  // A quiet town still gets a full rail (Tikra 2026-11-25: Victoria showed 2):
+  // the last two weeks first, then 30, 60 days, then any age, while thin.
+  const windows = opts.windowMs ? [opts.windowMs] : NEW_WINDOWS_MS;
+  const fill = Math.min(NEW_FILL, opts.max ?? NEW_MAX);
+  let picked: T[] = [];
+  for (const windowMs of windows) {
+    picked = selectInWindow(events, opts, windowMs);
+    if (picked.length >= fill) break;
+  }
+  return picked.length >= min ? picked : [];
+}
+
+function selectInWindow<T extends Record<string, any>>(events: readonly T[], opts: NewOnTikemOpts, windowMs: number): T[] {
   const { now } = opts;
-  const windowMs = opts.windowMs ?? NEW_WINDOW_MS;
   const country = String(opts.country || '').toUpperCase();
   const seen = new Set<string>();
   const groups = new Map<string, { e: T; added: number; start: number }>();
@@ -98,9 +122,8 @@ export function selectNewOnTikem<T extends Record<string, any>>(events: readonly
         added: Math.max(added, prev.added),
       });
   }
-  const picked = [...groups.values()]
+  return [...groups.values()]
     .sort((a, b) => b.added - a.added || a.start - b.start || String(a.e.id).localeCompare(String(b.e.id)))
     .slice(0, opts.max ?? NEW_MAX)
     .map((p) => p.e);
-  return picked.length >= (opts.min ?? NEW_MIN) ? picked : [];
 }

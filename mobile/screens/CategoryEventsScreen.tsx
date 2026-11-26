@@ -43,6 +43,7 @@ import { useFilters } from '../contexts/FiltersContext';
 import { formatPrice } from '../lib/currency';
 import { safeFormatForLanguage } from '../lib/dates';
 import type { DateFilter } from '../components/DateChips';
+import { NEW_PAGE_MAX, selectNewOnTikem } from '../lib/newOnTikem';
 
 // Fixed column width rather than flex: with an ODD number of events the last
 // card in a flex grid stretches to the full row. Matches FavoritesScreen's
@@ -72,7 +73,7 @@ export default function CategoryEventsScreen({ navigation, route }: any) {
   // original per-category listing. Exactly one of them is set.
   // `nationalDay` lists the events tagged for a national day (the Home
   // banner's "See events"), under the day's art.
-  const { category, feed, city, title, subtitle, world, nationalDay } = route.params || {};
+  const { category, feed, city, title, subtitle, world, nationalDay, recent } = route.params || {};
   const nationalDayDef = nationalDay ? resolveNationalDays().find((d) => d.key === nationalDay) ?? null : null;
 
   // The header floats (OverlayHeader), so the grid reserves its measured height.
@@ -104,7 +105,7 @@ export default function CategoryEventsScreen({ navigation, route }: any) {
 
   useEffect(() => {
     const load = async () => {
-      if (!category && !feed && !world && !nationalDayDef) {
+      if (!category && !feed && !world && !nationalDayDef && !recent) {
         setLoading(false);
         return;
       }
@@ -163,6 +164,14 @@ export default function CategoryEventsScreen({ navigation, route }: any) {
           ? inCountry.filter((e: any) => isEventInMetro(e, activeMetro))
           : inCountry;
 
+        // Home's "new on Tikèm" in full: the same rule (lib/newOnTikem) over
+        // the same place, a longer cap.
+        if (recent) {
+          setEvents(selectNewOnTikem(local, { now: now.getTime(), country, max: NEW_PAGE_MAX, min: 1 }));
+          setElsewhere([]);
+          return;
+        }
+
         // No limit: this IS the "view all" page, so it is the rail's rule
         // without the slice.
         // A world page gathers every category in that world (mizik = Concert +
@@ -187,7 +196,7 @@ export default function CategoryEventsScreen({ navigation, route }: any) {
     };
 
     load();
-  }, [category, feed, world, nationalDay, city, userCountry, countryResolved, activeMetro?.id, blockedOrganizers]);
+  }, [category, feed, world, nationalDay, recent, city, userCountry, countryResolved, activeMetro?.id, blockedOrganizers]);
 
   const { start: dStart, end: dEnd } = getDateRange(dateFilter, pickedDate);
   const visibleEvents = events.filter((e) => {

@@ -84,6 +84,8 @@ export default function AddOnsPicker({
   quantities,
   onChange,
   currency,
+  eventStart = null,
+  eventEnd = null,
 }: {
   addOns: EventAddOn[]
   soldMap?: Record<string, unknown> | null
@@ -91,11 +93,14 @@ export default function AddOnsPicker({
   quantities: Record<string, number>
   onChange: (next: Record<string, number>) => void
   currency: string
+  /** The event's start and end: an add-on with no sales end stops selling when it ends. */
+  eventStart?: string | null
+  eventEnd?: string | null
 }) {
   const { t } = useTranslation('events')
   const [optionFor, setOptionFor] = useState<Record<string, string>>({})
   const visible = addOns.filter((a) => {
-    const v = addOnAvailability(a, { cartTierIds, soldMap })
+    const v = addOnAvailability(a, { cartTierIds, soldMap, eventStart, eventEnd })
     return v === 'available' || v === 'sold_out'
   })
   if (visible.length === 0) return null
@@ -126,7 +131,7 @@ export default function AddOnsPicker({
       </div>
       <ul>
         {visible.map((a, index) => {
-          const soldOut = addOnAvailability(a, { cartTierIds, soldMap }) === 'sold_out'
+          const soldOut = addOnAvailability(a, { cartTierIds, soldMap, eventStart, eventEnd }) === 'sold_out'
           const options: Array<string | null> = a.options && a.options.length > 0 ? a.options : [null]
           const limit = addOnOrderLimit(a)
           const remaining = addOnRemaining(a, soldMap)

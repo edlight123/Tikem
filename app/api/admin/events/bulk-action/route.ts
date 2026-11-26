@@ -3,6 +3,7 @@ import { requireAdmin } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
 import { logAdminAction } from '@/lib/admin/audit-log'
 import { adminError, adminOk } from '@/lib/api/admin-response'
+import { firstPublishStamp } from '@/lib/events/publishedAt'
 
 export async function POST(request: NextRequest) {
   try {
@@ -75,7 +76,8 @@ export async function POST(request: NextRequest) {
             batch.update(eventRef, {
               is_published: true,
               rejected: false,
-              updated_at: new Date()
+              updated_at: new Date(),
+              ...firstPublishStamp(eventData),
             })
             await logAdminAction({
               action: 'event.publish',

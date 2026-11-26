@@ -44,6 +44,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import DateTimeField from '../../components/organizer/DateTimeField';
 import { defaultEndFor, endNotAfterStart, nextEndOnStartChange } from '../../lib/dateTimeDefaults';
+import { newDraftTierKey } from '../../lib/addOnDraft';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -68,6 +69,8 @@ import { nationalDayForEventDate, nationalDayName } from '../../lib/nationalDays
 import { OCCASION_KEYS, ideaById, ideaDate, ideaText, occasionByKey, occasionName, parseOccasion, suggestOccasion } from '../../lib/occasions';
 import { EVENT_LANGUAGES, cleanEventLanguages, eventLanguageLabel } from '../../lib/eventLanguages';
 import OccasionIcon from '../../components/OccasionIcon';
+import { createSingleFlight, saveThenLeave } from '../../lib/eventSave';
+import { useHoldUpdateReload } from '../../lib/otaUpdates';
 import { getEventById } from '../../lib/api/organizer';
 import { db } from '../../config/firebase';
 import { collection, getDocs, query, where } from 'firebase/firestore';
@@ -174,6 +177,9 @@ export interface EventDraft {
     // updates that doc in place, so its sold count and every ticket's tier_id
     // survive. Absent for a tier added in this session (or a duplicate).
     id?: string;
+    // Local key of a tier not saved yet, so an add-on can be limited to it
+    // before the event is saved (lib/addOnDraft). Never written.
+    key?: string;
     // Already sold against `id` — the floor for `quantity`. Read-only.
     sold_quantity?: number;
     name: string;
@@ -506,6 +512,16 @@ export default function CreateEventFlowRefactored() {
   const { t, language } = useI18n();
   const showAlert = useAppAlert();
   const [saving, setSaving] = useState(false);
+  // One save at a time: a second tap while the first was still uploading ran a
+  // second save, and its "Success" Back left the event page for the dashboard.
+  const submitFlight = useRef(createSingleFlight()).current;
+  // Set once the event is saved: the draft autosave stops, so a write queued
+  // just before can't bring back the pre-save form as a "continue?" draft.
+  const savedRef = useRef(false);
+  // A downloaded update must not restart the app under unsaved work (iOS
+  // applies updates when the app goes to the background; Android waits for
+  // the next cold start: lib/otaUpdates).
+  useHoldUpdateReload();
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   // Measured height of the pinned footer, so the canvas's bottom padding clears it
@@ -932,10 +948,11 @@ export default function CreateEventFlowRefactored() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadingEvent, !!eventDraft.title, draftOwner]);
   useEffect(() => {
-    if (!draftReady || !draftOwner) return;
+    if (!draftReady || !draftOwner || savedRef.current) return;
     const json = JSON.stringify(eventDraft);
     if (json === draftBaseline.current) return;
     const id = setTimeout(() => {
+      if (savedRef.current) return;
       AsyncStorage.setItem(
         DRAFT_KEY,
         JSON.stringify({ owner: draftOwner, draft: stripDraftSecrets(eventDraft), updatedAt: Date.now() })
@@ -1376,7 +1393,7 @@ export default function CreateEventFlowRefactored() {
       ticket_tiers: [
         ...eventDraft.ticket_tiers.slice(0, at),
         // A copy is a NEW tier: no doc id, nothing sold.
-        { ...source, id: undefined, sold_quantity: 0 },
+        { ...source, id: undefined, key: undefined, sold_quantity: 0 },
         ...eventDraft.ticket_tiers.slice(at),
       ],
     });
@@ -1504,6 +1521,17 @@ export default function CreateEventFlowRefactored() {
       updateDraft({ end_date: eventDraft.start_date });
     }
   }, [eventDraft.start_date]);
+
+  // Every unsaved ticket row gets a local key, so an add-on can be limited to
+  // it before the first save (lib/addOnDraft; swapped for its doc id on save).
+  useEffect(() => {
+    if (eventDraft.ticket_tiers.some((tier) => !tier.id && !tier.key)) {
+      setEventDraft((prev) => ({
+        ...prev,
+        ticket_tiers: prev.ticket_tiers.map((tier) => (tier.id || tier.key ? tier : { ...tier, key: newDraftTierKey() })),
+      }));
+    }
+  }, [eventDraft.ticket_tiers]);
 
   // When a start is set and the end is missing or not after it, the end
   // becomes start + 2 hours (lib/dateTimeDefaults). In edit mode the first
@@ -1906,7 +1934,28 @@ export default function CreateEventFlowRefactored() {
     };
   };
 
-  const handleSubmit = async (options: SaveEventOptions) => {
+  // The button shows its spinner from the first tap (the poster redraw and the
+  // payout checks below are network round trips too), and further taps are
+  // ignored until this save has finished.
+  const handleSubmit = (options: SaveEventOptions) =>
+    submitFlight.run(async () => {
+      setSaving(true);
+      try {
+        await submitEvent(options);
+      } finally {
+        setSaving(false);
+      }
+    });
+
+  // What the organizer is told when a save fails. They stay on the form.
+  const saveErrorMessage = (error: any): string =>
+    error?.code === 'poster-upload-failed'
+        ? t('organizerCreateEventFlow.posterUploadFailed')
+        : error?.code === 'deadline-exceeded'
+          ? t('organizerCreateEventFlow.saveTimedOut')
+          : error?.message || (isEditMode ? t('organizerCreateEventFlow.saveFailedUpdate') : t('organizerCreateEventFlow.saveFailedCreate'));
+
+  const submitEvent = async (options: SaveEventOptions) => {
     if (!userProfile?.id) {
       showAlert(t('common.error'), t('organizerCreateEventFlow.authRequired'));
       return;
@@ -2010,21 +2059,32 @@ export default function CreateEventFlowRefactored() {
       photoFailed ? `${body}\n\n${t('organizerCreateEventFlow.photoUploadFailed')}` : body;
     try {
       if (isEditMode && eventId) {
-        // Update existing event
+        // Update existing event: the flyer upload and every write finish (or
+        // fail, or time out) BEFORE anything is said; only "Saved" leads away.
         // organizer_id never changes on edit; the id here only names uploads.
-        await updateEvent(eventId, eventOrgId || userProfile.id, eventData, saveOptions);
-        clearSavedDraft();
-        console.log('Event updated with ID:', eventId);
-
-        setConfirmVisible(false);
-        showAlert(
-          t('common.success'),
-          withPhotoNote(t('organizerCreateEventFlow.updateSuccessBody')),
-          [{ text: t('common.ok'), onPress: () => navigation.goBack() }]
-        );
+        await saveThenLeave({
+          save: () => updateEvent(eventId, eventOrgId || userProfile.id, eventData, saveOptions),
+          onSaved: () => {
+            savedRef.current = true;
+            clearSavedDraft();
+            console.log('Event updated with ID:', eventId);
+            setConfirmVisible(false);
+            showAlert(
+              t('common.success'),
+              withPhotoNote(t('organizerCreateEventFlow.updateSuccessBody')),
+              [{ text: t('common.ok'), onPress: () => navigation.goBack() }]
+            );
+          },
+          onFailed: (error) => {
+            console.error('Event update error:', error);
+            setConfirmVisible(false);
+            showAlert(t('common.error'), saveErrorMessage(error));
+          },
+        });
       } else {
         // Create new event
         const newEventId = await createEvent(eventOrgId || userProfile.id, eventData, saveOptions);
+        savedRef.current = true;
         clearSavedDraft();
         console.log('Event created with ID:', newEventId);
 
@@ -2089,7 +2149,7 @@ export default function CreateEventFlowRefactored() {
       setConfirmVisible(false);
       showAlert(
         t('common.error'),
-        error.message || (isEditMode ? t('organizerCreateEventFlow.saveFailedUpdate') : t('organizerCreateEventFlow.saveFailedCreate')),
+        saveErrorMessage(error),
         // Saved as a draft but not published: leave the composer, or a second
         // tap on create would save the event again.
         error?.draftSaved ? [{ text: t('common.ok'), onPress: () => navigation.goBack() }] : undefined
@@ -3357,7 +3417,7 @@ export default function CreateEventFlowRefactored() {
                       <AddOnsEditor
                         value={eventDraft.add_ons}
                         onChange={(add_ons) => updateDraft({ add_ons })}
-                        tiers={eventDraft.ticket_tiers.map((tier) => ({ id: tier.id, name: tier.name }))}
+                        tiers={eventDraft.ticket_tiers.map((tier) => ({ id: tier.id, key: (tier as any).key, name: tier.name }))}
                         currency={eventDraft.currency || 'HTG'}
                       />
                     </View>
@@ -3809,6 +3869,7 @@ export default function CreateEventFlowRefactored() {
                 label={isEditMode ? t('organizerCreateEventFlow.updateEvent') : t('organizerCreateEventFlow.createEvent')}
                 onPress={handleSave}
                 disabled={saving}
+                loading={saving}
                 compact
                 style={styles.footerCta}
               />

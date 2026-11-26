@@ -318,6 +318,8 @@ export function submissionToEvent(
     is_online: false,
     is_published: true,
     status: 'published',
+    // First went public now (lib/events/publishedAt): Home's "new on Tikèm".
+    published_at: new Date().toISOString(),
     show_on_explore: true,
     // Moderation defaults the admin Events tabs filter on.
     rejected: false,

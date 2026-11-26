@@ -429,6 +429,7 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                   country={event.country}
                   feeIncidence={(event as any).fee_incidence ?? (event as any).feeIncidence ?? null}
                   eventStartsAt={event.start_datetime}
+                  eventEndsAt={event.end_datetime || null}
                   isPasswordProtected={!!event.is_password_protected}
                   plusOnesAllowed={eventAllowedPlusOnes(event as any)}
                   heldFreeTickets={heldFreeTickets}
@@ -850,6 +851,7 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                       country={event.country}
                       feeIncidence={(event as any).fee_incidence ?? (event as any).feeIncidence ?? null}
                       eventStartsAt={event.start_datetime}
+                  eventEndsAt={event.end_datetime || null}
                       isPasswordProtected={!!event.is_password_protected}
                       plusOnesAllowed={eventAllowedPlusOnes(event as any)}
                       heldFreeTickets={heldFreeTickets}

@@ -41,6 +41,10 @@ interface ImageUploadProps {
   onMakePoster?: () => void
   /** Flyer only: offer the flyer library (off where the flyer must be the real one, e.g. Share an event). */
   library?: boolean
+  /** A small thumbnail and one button (an add-on's photo), not the full dropzone. */
+  compact?: boolean
+  /** Told when an upload starts and ends, so a form can hold its Save until the new URL is in. */
+  onUploadingChange?: (uploading: boolean) => void
 }
 
 export default function ImageUpload({
@@ -51,6 +55,8 @@ export default function ImageUpload({
   endpoint,
   onMakePoster,
   library = true,
+  compact = false,
+  onUploadingChange,
 }: ImageUploadProps) {
   const [uploading, setUploading] = useState(false)
   const [preview, setPreview] = useState<string | null>(currentImage || null)
@@ -104,7 +110,7 @@ export default function ImageUpload({
 
     setError(null)
     setUploading(true)
-
+    onUploadingChange?.(true)
     try {
       // Create preview
       const reader = new FileReader()
@@ -191,6 +197,7 @@ export default function ImageUpload({
       setPreview(currentImage || null)
     } finally {
       setUploading(false)
+      onUploadingChange?.(false)
     }
   }
 
@@ -231,6 +238,43 @@ export default function ImageUpload({
           backgroundSize: '100% 100%, 28px 28px, 28px 28px',
         }
       : {}
+
+  if (compact) {
+    return (
+      <div className="space-y-2">
+        <div className="flex items-center gap-3">
+          <div className="h-14 w-14 shrink-0 overflow-hidden rounded bg-surface">
+            {preview ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={preview} alt="" className="h-full w-full object-cover" />
+            ) : null}
+          </div>
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="h-10 rounded bg-surface px-4 text-sm font-semibold text-fg-soft hover:bg-surface-high hover:text-fg disabled:opacity-50"
+          >
+            {uploading
+              ? t('upload.uploading', { defaultValue: 'Uploading…' })
+              : preview
+                ? t('upload.changePhoto', { defaultValue: 'Change photo' })
+                : t('upload.addPhoto', { defaultValue: 'Add a photo' })}
+          </button>
+        </div>
+        {framer.dialog}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/heic,image/heif,image/gif"
+          onChange={handleFileSelect}
+          className="hidden"
+          disabled={uploading}
+        />
+        {error && <p className="text-sm text-danger-soft">{error}</p>}
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-3">

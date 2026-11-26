@@ -1,4 +1,5 @@
 import { isLiveTicketStatus } from '@/lib/tickets/status'
+import { addOnLabel, ticketAddOns } from '@/lib/addons/addOns'
 import { planTicketRefund, sumRefundsByCurrency, type RefundPlan } from '@/lib/tickets/refundPlan'
 
 /**
@@ -37,6 +38,8 @@ export interface EventTicketRow {
   refund: RefundPlan
   /** A printed ticket's serial (lib/physical), '' for an online ticket. */
   printedSerial: string
+  /** Add-ons the order bought, on the ticket that carries them: "T-shirt (M) × 2". */
+  addOns: string[]
 }
 
 export interface MoneyLine {
@@ -52,6 +55,8 @@ export interface EventOrder {
   buyer: BuyerInfo
   isGuest: boolean
   tiers: { name: string; count: number }[]
+  /** Add-ons bought with the order ("T-shirt (M) × 2"). */
+  addOns: string[]
   /** Organizer-facing amount (face value, event currency), per currency. */
   amounts: MoneyLine[]
   paymentMethod: string
@@ -60,6 +65,7 @@ export interface EventOrder {
   tickets: {
     id: string
     tierName: string
+    addOns: string[]
     pricePaid: number
     currency: string
     status: string
@@ -182,6 +188,7 @@ export function toTicketRow(
     orderKey,
     refund: planTicketRefund(d),
     printedSerial: isPrintedTicketDoc(d) ? String(d.physical_serial || id) : '',
+    addOns: ticketAddOns(d).map(addOnLabel),
   }
 }
 
@@ -233,6 +240,7 @@ export function groupOrders(rows: EventTicketRow[]): EventOrder[] {
       buyer: first.buyer,
       isGuest: first.isGuest,
       tiers: Array.from(tierCounts.entries()).map(([name, count]) => ({ name, count })),
+      addOns: list.flatMap((r) => r.addOns),
       amounts: Array.from(amounts.entries()).map(([currency, amount]) => ({
         currency,
         amount: Math.round(amount * 100) / 100,
@@ -243,6 +251,7 @@ export function groupOrders(rows: EventTicketRow[]): EventOrder[] {
       tickets: list.map((r) => ({
         id: r.id,
         tierName: r.tierName,
+        addOns: r.addOns,
         pricePaid: r.pricePaid,
         currency: r.currency,
         status: r.status,

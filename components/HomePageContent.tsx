@@ -83,7 +83,7 @@ export default function HomePageContent({
         {/* Nothing listed here: say so first, then show what is. */}
         {countryEmpty && elsewhereRail}
         <OccasionRow row={occasionRow} />
-        <NewOnTikem events={newOnTikem} />
+        <NewOnTikem events={newOnTikem} scopeQs={scopeQs} />
         <FriendsGoingRail />
         <ThisWeek days={week} scopeQs={scopeQs} />
         <WorldsIndex worlds={worlds} scopeQs={scopeQs} />

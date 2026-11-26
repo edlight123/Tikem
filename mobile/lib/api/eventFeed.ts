@@ -183,21 +183,25 @@ export async function fetchPublishedEventsForCountryWithMeta(
  * Dates come back as Dates, like the feed. A failed read is an empty rail.
  */
 export async function fetchNewOnTikemEvents(
-  windowMs: number = 14 * 86_400_000,
-  max: number = 80
+  windowMs: number = 60 * 86_400_000,
+  max: number = 150
 ): Promise<any[]> {
   const since = new Date(Date.now() - windowMs);
-  const read = (bound: Date | string) =>
+  const read = (field: 'published_at' | 'created_at', bound: Date | string) =>
     getDocs(
       query(
         collection(db, 'events'),
         where('is_published', '==', true),
-        where('created_at', '>=', bound),
-        orderBy('created_at', 'desc'),
+        where(field, '>=', bound),
+        orderBy(field, 'desc'),
         limit(max)
       )
     ).catch(() => null);
-  const snaps = await Promise.all([read(since), read(since.toISOString())]);
+  const snaps = await Promise.all([
+    read('published_at', since.toISOString()),
+    read('created_at', since),
+    read('created_at', since.toISOString()),
+  ]);
   const seen = new Set<string>();
   const out: any[] = [];
   for (const s of snaps) {

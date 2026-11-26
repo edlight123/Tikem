@@ -24,6 +24,7 @@ import { publishBlockReason } from '@/lib/events/publishGuard'
 import { timezoneForEvent } from '@/lib/events/composer-country'
 import { isPublicHttpsUrl } from '@/lib/import/url'
 import { resolveImportMarket, type ImportFlag } from '@/lib/import/market'
+import { firstPublishStamp } from '@/lib/events/publishedAt'
 
 export const EB_SOURCE = 'eventbrite'
 
@@ -214,6 +215,8 @@ export function planEventbriteDoc(input: EbPlanInput): EbPlan {
   if (publish) {
     data.is_published = true
     data.status = 'published'
+    // The first time it goes public (lib/events/publishedAt): Home's "Recently added".
+    Object.assign(data, firstPublishStamp(prev, nowIso))
     published = true
   } else if (wasLive) {
     // Take it down: unpublished, never deleted.

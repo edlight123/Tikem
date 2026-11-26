@@ -212,6 +212,18 @@ select:-webkit-autofill {
 .pb-mobile-nav {
   padding-bottom: var(--mobile-nav-h);
 }
+/* Pages opened inside the Tikèm app (lib/embed-mode sets data-in-app from the
+   "TikemApp" user agent or an ?embed=1 link): the app frames them, so the
+   site's menu, organizer bar, bottom bar, footer and install prompt go. */
+html[data-in-app] [data-site-chrome] {
+  display: none !important;
+}
+html[data-in-app] body,
+html[data-in-app] .chrome-56 {
+  --mobile-nav-h: 0px;
+  /* No site bar above the page, so nothing sticky pins below one. */
+  --chrome-h: 0px;
+}
 
 /* iOS focus zoom, prevented at the cause rather than by disabling zoom.
    Safari on iOS zooms the whole page when a focused field's font-size is under

@@ -1,9 +1,9 @@
 import { unstable_cache } from 'next/cache'
 import { adminDb } from '@/lib/firebase/admin'
-import { NEW_WINDOW_MS } from '@/lib/home/new-on-tikem'
+import { NEW_READ_WINDOW_MS } from '@/lib/home/new-on-tikem'
 
 /** Docs read per stored type of created_at; the catalogue is small, the country cut is in memory. */
-const READ_MAX = 80
+const READ_MAX = 150
 
 /** Top-level Timestamps → ISO strings, so the rows survive the cache's JSON. */
 function plain(id: string, data: Record<string, any>): Record<string, any> {
@@ -29,19 +29,26 @@ function plain(id: string, data: Record<string, any>): Record<string, any> {
 const readNewDocs = unstable_cache(
   async (sinceIso: string): Promise<Array<Record<string, any>>> => {
     const since = new Date(sinceIso)
-    const read = (bound: Date | string) =>
+    // published_at (ISO, stamped on first publish: lib/events/publishedAt)
+    // catches an old draft published today; created_at covers events from
+    // before that stamp, read once per stored type (Timestamp / ISO string).
+    const read = (field: 'published_at' | 'created_at', bound: Date | string) =>
       adminDb
         .collection('events')
         .where('is_published', '==', true)
-        .where('created_at', '>=', bound)
-        .orderBy('created_at', 'desc')
+        .where(field, '>=', bound)
+        .orderBy(field, 'desc')
         .limit(READ_MAX)
         .get()
         .catch((err: any) => {
           console.warn('[new-on-tikem] read failed', err?.message)
           return null
         })
-    const snaps = await Promise.all([read(since), read(since.toISOString())])
+    const snaps = await Promise.all([
+      read('published_at', since.toISOString()),
+      read('created_at', since),
+      read('created_at', since.toISOString()),
+    ])
     const seen = new Set<string>()
     const out: Array<Record<string, any>> = []
     for (const s of snaps) {
@@ -61,7 +68,7 @@ export async function readNewOnTikemDocs(now: number): Promise<Array<Record<stri
   // The bound is rounded to the hour so the cache key holds for an hour; the
   // exact two-week cut is applied in memory (selectNewOnTikem).
   const hour = 3_600_000
-  const since = Math.floor((now - NEW_WINDOW_MS) / hour) * hour - hour
+  const since = Math.floor((now - NEW_READ_WINDOW_MS) / hour) * hour - hour
   try {
     return await readNewDocs(new Date(since).toISOString())
   } catch (err: any) {

@@ -103,7 +103,7 @@ import {
 } from '@/lib/events/composer-country'
 import { isPaidAllowed, normalizeSupportedCountry } from '@/lib/country-support'
 import AddOnsEditor from '@/components/organizer/AddOnsEditor'
-import { addOnsFromDrafts, draftProblem, draftsFromAddOns, type AddOnDraft } from '@/lib/addons/editor'
+import { savedTierIds, draftsAwaitTierIds, addOnsFromDrafts, draftProblem, draftsFromAddOns, type AddOnDraft } from '@/lib/addons/editor'
 import { withStoredMoneyFields } from '@/lib/events/stored-money-fields'
 import { incidenceForEvent, priceOrder } from '@/lib/checkout/buyer-pricing'
 import { fromCents, MAX_FREE_TICKETS_PER_PERSON } from '@/lib/ticketPricing'
@@ -1349,6 +1349,8 @@ export default function EventComposer({
 
   const [attempted, setAttempted] = useState(false)
   const [saving, setSaving] = useState(false)
+  // A new flyer still uploading: saving now would write the OLD flyer URL.
+  const [flyerUploading, setFlyerUploading] = useState(false)
 
   // Never throws: a malformed time must not take the whole composer down.
   const composeISO = (d: string, t: string) => {
@@ -1482,9 +1484,12 @@ export default function EventComposer({
   // Add-ons are paid items: an event selling them follows every paid gate
   // (payout setup, the publish gate), even when its tickets are free.
   const addOnsAllowed = sellMode === 'tickets' && isPaidAllowed(country)
-  const savedAddOns = addOnsAllowed
-    ? addOnsFromDrafts(addOnDrafts, tiers.map((tr) => tr.docId).filter(Boolean) as string[])
-    : []
+  // An add-on may be limited to a ticket row not saved yet (its local id):
+  // saved rows map to their doc ids now, new ones after the tiers are written
+  // (remapAddOnTiers below). The stored shape never changes.
+  const savedTierDocIds = tiers.map((tr) => tr.docId).filter(Boolean) as string[]
+  const tierIdMap = Object.fromEntries(tiers.filter((tr) => tr.docId).map((tr) => [tr.id, tr.docId as string]))
+  const savedAddOns = addOnsAllowed ? addOnsFromDrafts(addOnDrafts, savedTierDocIds, tierIdMap) : []
   const addOnDraftProblem = addOnsAllowed && addOnDrafts.some((d) => draftProblem(d) !== null)
   const isPaid = ticketsPaid || savedAddOns.length > 0
   // Approval is for free events only: a paid tier switches it off.
@@ -1905,7 +1910,38 @@ export default function EventComposer({
     return { before: existing, rowDocIds }
   }
 
+  /**
+   * After the tiers are written: add-ons limited to a ticket row that had no
+   * doc id yet now point at its new doc. One extra write, only when needed.
+   */
+  const remapAddOnTiers = async (eventId: string, rowDocIds: Array<string | null>) => {
+    if (!addOnsAllowed || !draftsAwaitTierIds(addOnDrafts, savedTierDocIds)) return
+    const map: Record<string, string> = {}
+    tiers.forEach((tr, i) => {
+      const id = rowDocIds[i] || tr.docId
+      if (id) map[tr.id] = id
+    })
+    const list = addOnsFromDrafts(addOnDrafts, Object.values(map), map)
+    try {
+      await (await getShim()).from('events').update({ add_ons: list, add_ons_enabled: list.length > 0 }).eq('id', eventId)
+      // Keep the drafts on doc ids, so the next save needs no remap.
+      setAddOnDrafts((prev) => prev.map((d) => ({ ...d, tierIds: savedTierIds(d.tierIds, Object.values(map), map) })))
+    } catch (e) {
+      // The add-on stays sellable with any ticket; the organizer can tick it again.
+      console.warn('Add-on ticket restriction not saved', e)
+    }
+  }
+
   const handleSave = async () => {
+    if (flyerUploading) {
+      showToast({
+        type: 'info',
+        title: t('composer.toasts.flyerUploadingTitle', { defaultValue: 'Your flyer is still uploading' }),
+        message: t('composer.toasts.flyerUploadingMsg', { defaultValue: 'Save again in a moment, once it is in.' }),
+        duration: 4000,
+      })
+      return
+    }
     setAttempted(true)
     if (title.trim().length < 3 || !startDate) {
       showToast({
@@ -2142,6 +2178,7 @@ export default function EventComposer({
         })
         // The composer stays mounted after an edit save: give freshly inserted
         // rows their new doc ids so saving again updates them in place.
+        await remapAddOnTiers(event.id, rowDocIds)
         setTiers((prev) =>
           prev.map((tr, i) => (rowDocIds[i] ? { ...tr, docId: rowDocIds[i] as string } : tr))
         )
@@ -2267,7 +2304,8 @@ export default function EventComposer({
           const { data: occ, error: occErr } = await (await getShim()).from('events').insert(occData).select().single()
           if (occErr) throw occErr
           if (occ?.id) {
-            await syncTiers(occ.id, cleanTiers, isRsvp)
+            const { rowDocIds: occIds } = await syncTiers(occ.id, cleanTiers, isRsvp)
+            await remapAddOnTiers(occ.id, occIds)
             await writeAccessHash(occ.id)
           }
           if (i === 0) firstId = occ?.id || ''
@@ -2293,7 +2331,8 @@ export default function EventComposer({
       const { data: created, error } = await (await getShim()).from('events').insert(createData).select().single()
       if (error) throw error
       if (created?.id) {
-        await syncTiers(created.id, cleanTiers, isRsvp)
+        const { rowDocIds: newIds } = await syncTiers(created.id, cleanTiers, isRsvp)
+        await remapAddOnTiers(created.id, newIds)
         await writeAccessHash(created.id)
       }
       try {
@@ -3657,7 +3696,7 @@ export default function EventComposer({
               <AddOnsEditor
                 drafts={addOnDrafts}
                 onChange={setAddOnDrafts}
-                tiers={tiers.map((tr) => ({ docId: tr.docId, name: tr.name }))}
+                tiers={tiers.map((tr) => ({ key: tr.id, docId: tr.docId, name: tr.name }))}
                 currency={currency}
               />
             </div>
@@ -4046,6 +4085,7 @@ export default function EventComposer({
                 setPosterSpec(null)
               }}
               endpoint={guest ? '/api/guest-upload' : undefined}
+              onUploadingChange={setFlyerUploading}
               onMakePoster={() => setPosterOpen(true)}
             />
             {posterOpen && (

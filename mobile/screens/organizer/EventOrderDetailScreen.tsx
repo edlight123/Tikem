@@ -269,6 +269,11 @@ export default function EventOrderDetailScreen() {
                     <Text style={[styles.ticketTier, !live && styles.ticketTierMuted]} numberOfLines={1}>
                       {tk.tierName || t('organizerOrders.generalAdmission')}
                     </Text>
+                    {tk.addOns && tk.addOns.length > 0 ? (
+                      <Text style={styles.ticketId} numberOfLines={2}>
+                        {`+ ${tk.addOns.join(', ')}`}
+                      </Text>
+                    ) : null}
                     <Text style={styles.ticketId} numberOfLines={1} selectable>
                       {tk.id}
                     </Text>
