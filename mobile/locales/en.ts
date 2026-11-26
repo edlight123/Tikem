@@ -4518,6 +4518,16 @@ export default {
   // Community-shared events (lib/community): Share an event, Claim it.
   community: {
     share: {
+      liveTitle: "Your event is live",
+      liveBody: "Thanks for sharing it. Anyone can find it on Tikèm now.",
+      reviewTitle: "Thanks",
+      reviewBody: "We're checking this one before it goes live.",
+      seeEvent: "See the event",
+      mine: "My shared events",
+      mineEmpty: "You haven't shared an event yet.",
+      statusLive: "Live",
+      statusReview: "Waiting for review",
+      statusNotApproved: "Not approved",
       title: "Share an event",
       entry: "Share an event",
       discoverEntry: "Seen an event that isn't here? Share it",

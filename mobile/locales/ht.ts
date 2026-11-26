@@ -4504,6 +4504,16 @@ export default {
   // Community-shared events (lib/community): Share an event, Claim it.
   community: {
     share: {
+      liveTitle: "Evènman ou an an liy",
+      liveBody: "Mèsi paske w pataje l. Tout moun ka jwenn li sou Tikèm kounye a.",
+      reviewTitle: "Mèsi",
+      reviewBody: "N ap verifye l anvan l parèt.",
+      seeEvent: "Wè evènman an",
+      mine: "Evènman mwen pataje",
+      mineEmpty: "Ou poko pataje okenn evènman.",
+      statusLive: "An liy",
+      statusReview: "N ap verifye l",
+      statusNotApproved: "Pa apwouve",
       title: "Pataje yon evènman",
       entry: "Pataje yon evènman",
       discoverEntry: "Ou wè yon evènman ki pa la? Pataje l",

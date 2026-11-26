@@ -2412,13 +2412,23 @@
       "sent": "Thanks. We'll check it and add it to Tikèm.",
       "another": "Share another",
       "done": "Done",
-      "footnote": "We check every event before it goes up and credit its organizer.",
+      "footnote": "Most shared events go up right away, credited to their organizer. Some we check first.",
       "errors": {
         "rate_limited": "You've shared a lot today. Try again tomorrow.",
         "bad_image": "Add the flyer first.",
         "forbidden": "This account can't share events.",
         "generic": "Couldn't send. Try again."
-      }
+      },
+      "live": "Your event is live. Thanks for sharing it.",
+      "review": "Thanks. We're checking this one before it goes live.",
+      "see_event": "See the event",
+      "mine": "My shared events",
+      "mine_title": "my shared events",
+      "mine_empty": "You haven't shared an event yet.",
+      "status_live": "Live",
+      "status_review": "Waiting for review",
+      "status_not_approved": "Not approved",
+      "share_one": "Share an event"
     },
     "claim": {
       "title": "claim this event",

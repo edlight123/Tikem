@@ -2412,13 +2412,23 @@
       "sent": "Mèsi. N ap verifye l epi mete l sou Tikèm.",
       "another": "Pataje yon lòt",
       "done": "Fini",
-      "footnote": "Nou verifye chak evènman anvan li parèt epi nou bay òganizatè a kredi.",
+      "footnote": "Pifò evènman yo pataje parèt touswit, ak non òganizatè yo. Gen kèk nou verifye anvan.",
       "errors": {
         "rate_limited": "Ou pataje anpil jodi a. Eseye ankò demen.",
         "bad_image": "Mete afich la anvan.",
         "forbidden": "Kont sa a pa ka pataje evènman.",
         "generic": "Nou pa t ka voye l. Eseye ankò."
-      }
+      },
+      "live": "Evènman ou an an liy. Mèsi paske w pataje l.",
+      "review": "Mèsi. N ap verifye l anvan l parèt.",
+      "see_event": "Wè evènman an",
+      "mine": "Evènman mwen pataje",
+      "mine_title": "evènman mwen pataje",
+      "mine_empty": "Ou poko pataje okenn evènman.",
+      "status_live": "An liy",
+      "status_review": "N ap verifye l",
+      "status_not_approved": "Pa apwouve",
+      "share_one": "Pataje yon evènman"
     },
     "claim": {
       "title": "reklame evènman sa a",
