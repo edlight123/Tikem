@@ -19,16 +19,34 @@ import { holdReasons, RATE_WINDOW_MS, type HoldReason } from '@/lib/community/tr
 /** Statuses that count against an account: an admin said no, or took a live share down. */
 const BAD_OUTCOMES = new Set(['rejected', 'removed'])
 
-/** What this account has shared before: any rejection/removal, and how many in the last 24h. */
+/**
+ * What this account has shared before: any rejection/removal, and how many in
+ * the last 24h. A share that went live counts as removed when its event was
+ * taken down by ANY path since (rejected, removed, hidden after reports, or
+ * gone), not only through Community's Remove.
+ */
 export async function submissionHistory(uid: string, now: Date): Promise<{ hasPastRemoval: boolean; recentCount: number }> {
   const snap = await adminDb.collection('event_submissions').where('submitted_by', '==', uid).get()
   let hasPastRemoval = false
   let recentCount = 0
+  const liveEventIds: string[] = []
   for (const d of snap.docs as any[]) {
     const s = d.data() || {}
     if (BAD_OUTCOMES.has(String(s.status || ''))) hasPastRemoval = true
+    if (s.status === 'approved' && typeof s.event_id === 'string' && s.event_id && !s.event_id.includes('/')) {
+      liveEventIds.push(s.event_id)
+    }
     const at = Date.parse(String(s.created_at || ''))
     if (Number.isFinite(at) && now.getTime() - at < RATE_WINDOW_MS) recentCount++
+  }
+  if (!hasPastRemoval && liveEventIds.length) {
+    const refs = liveEventIds.slice(0, 100).map((id) => adminDb.collection('events').doc(id))
+    const events = (await adminDb.getAll(...refs)) as any[]
+    hasPastRemoval = events.some((e) => {
+      if (!e?.exists) return true
+      const ev = e.data() || {}
+      return ev.rejected === true || ev.hidden_pending_review === true || String(ev.status || '') === 'removed'
+    })
   }
   return { hasPastRemoval, recentCount }
 }
@@ -55,6 +73,12 @@ export async function decideShare(p: {
   submission: Record<string, any>
   body: Record<string, any>
   now?: Date
+  /**
+   * This account's count in the route's atomic per-user 24h counter, INCLUDING
+   * this share (lib/rate-limit consumeRateLimit). Two shares sent at once each
+   * get their own count, so neither slips under the limit.
+   */
+  windowCount?: number
 }): Promise<ShareOutcome & { submissionId: string }> {
   const now = p.now || new Date()
   const nowIso = now.toISOString()
@@ -65,7 +89,7 @@ export async function decideShare(p: {
     signedIn: true,
     authCreatedAtMs: createdAt,
     hasPastRemoval: history.hasPastRemoval,
-    recentCount: history.recentCount,
+    recentCount: Math.max(history.recentCount, (p.windowCount ?? 0) - 1),
     now,
     zone,
     body: p.body,

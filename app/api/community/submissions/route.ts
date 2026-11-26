@@ -56,6 +56,7 @@ export async function POST(request: Request) {
   const now = new Date().toISOString()
   const outcome = await decideShare({
     uid: user.id,
+    windowCount: perUser.count,
     body: body || {},
     submission: {
       image_url: imageUrl,

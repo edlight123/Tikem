@@ -19,7 +19,7 @@ export async function consumeRateLimit(opts: {
   failOpen?: boolean
   /** Units to consume (defaults to 1), e.g. number of phones in a batch. */
   cost?: number
-}): Promise<{ limited: boolean }> {
+}): Promise<{ limited: boolean; /** The window's count after this call (set when not limited). */ count?: number }> {
   const raw = String(opts.key || '').trim()
   if (!raw) return { limited: false }
   const cost = Math.max(1, Math.floor(opts.cost ?? 1))
@@ -42,7 +42,7 @@ export async function consumeRateLimit(opts: {
         window_start: withinWindow ? windowStart : now,
         expires_at: new Date((withinWindow ? windowStart : now) + opts.windowMs),
       })
-      return { limited: false }
+      return { limited: false, count: count + cost }
     })
   } catch (e) {
     console.error('[rate-limit] counter failed', (e as any)?.message)
