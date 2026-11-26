@@ -1,7 +1,8 @@
 import { Platform, Share } from 'react-native';
 
 import type { Language } from '../contexts/I18nContext';
-import { formatEventTime } from './dates';
+import { eventTimeZone, formatEventTime } from './dates';
+import { zoneAbbr } from './zonedTime';
 
 /**
  * The single event-share helper used across Discover / Home / Favorites so the
@@ -24,8 +25,11 @@ export async function shareEvent(event: any, language: Language = 'en'): Promise
   if (title) lines.push(title);
 
   // Date · venue — each part optional, joined only when present.
+  // On the event's clock with its zone, like a flight: "Sat, Dec 5 · 7:00 PM EST".
+  const zone = eventTimeZone(event);
+  const abbr = event.start_datetime && zone ? zoneAbbr(zone, 'en-US', event.start_datetime) : '';
   const when = event.start_datetime
-    ? formatEventTime(event.start_datetime, event, 'EEE, MMM d · h:mm a', language)
+    ? `${formatEventTime(event.start_datetime, event, 'EEE, MMM d · h:mm a', language)}${abbr ? ` ${abbr}` : ''}`
     : '';
   const where = [event.venue_name, event.city, event.location]
     .find((v) => typeof v === 'string' && v.trim().length > 0);
