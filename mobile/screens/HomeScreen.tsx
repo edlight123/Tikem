@@ -14,7 +14,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useScrollToTop } from '@react-navigation/native';
 import { useTabBarSpace } from '../hooks/useTabBarSpace';
 import { filterExploreEvents } from '../lib/api/events';
-import { fetchPublishedEventsForCountryWithMeta } from '../lib/api/eventFeed';
+import { fetchNewOnTikemEvents, fetchPublishedEventsForCountryWithMeta } from '../lib/api/eventFeed';
+import { selectNewOnTikem } from '../lib/newOnTikem';
 import { persistFeedCache, restoreFeedCache } from '../lib/feedCache';
 import { filterBlockedEvents, useBlockedOrganizers } from '../lib/blockedOrganizers';
 import { useI18n } from '../contexts/I18nContext';
@@ -56,14 +57,6 @@ import { shareEvent } from '../lib/share';
 // A rail with a single card reads as half-empty; hide anything thinner.
 const MIN_RAIL_EVENTS = 2;
 
-const toMillis = (v: any): number => {
-  if (!v) return 0;
-  if (typeof v?.toDate === 'function') return v.toDate().getTime();
-  if (v?.seconds) return v.seconds * 1000;
-  const d = new Date(v).getTime();
-  return Number.isFinite(d) ? d : 0;
-};
-
 export default function HomeScreen({ navigation }: any) {
   const { colors, isDark } = useTheme();
   const styles = getStyles(colors);
@@ -78,7 +71,8 @@ export default function HomeScreen({ navigation }: any) {
   const tabBarSpace = useTabBarSpace();
   const [events, setEvents] = useState<any[]>([]);
   const [forYouEvents, setForYouEvents] = useState<any[]>([]);
-  const [newEvents, setNewEvents] = useState<any[]>([]);
+  // "new on Tikèm": events added in the last two weeks, newest first (lib/newOnTikem).
+  const [newOnTikem, setNewOnTikem] = useState<any[]>([]);
   const [categoryRails, setCategoryRails] = useState<{ category: string; events: any[] }[]>([]);
   // Top events from OTHER metros in the same country/region — its own rail,
   // below everything local, never mixed into the feed above.
@@ -173,12 +167,6 @@ export default function HomeScreen({ navigation }: any) {
         .slice(0, 8),
     );
 
-    setNewEvents(
-      [...finalEvents]
-        .sort((a: any, b: any) => toMillis(b.created_at) - toMillis(a.created_at))
-        .slice(0, 8),
-    );
-
     const byCategory: Record<string, any[]> = {};
     finalEvents.forEach((e) => {
       const c = e.category;
@@ -216,6 +204,9 @@ export default function HomeScreen({ navigation }: any) {
       // Miami, match none, and be told Miami is empty while Miami events sat
       // unfetched. Metro narrowing below stays client-side — inside one country
       // the sample is a real sample. See lib/api/eventFeed.ts.
+      // "new on Tikèm" is read alongside: an event announced today for a date
+      // weeks out is not in the soonest-first read below.
+      const newP = fetchNewOnTikemEvents().catch(() => [] as any[]);
       const { events: eventsData, fromCache } = await fetchPublishedEventsForCountryWithMeta(
         userCountry,
       );
@@ -286,6 +277,19 @@ export default function HomeScreen({ navigation }: any) {
 
       applyEventLists(countryFiltered);
       setOffline(fromCache);
+      // "new on Tikèm": the feed's own rules (visibility, blocks, country,
+      // metro); empty under three events, so the rail hides. Not awaited: the
+      // feed paints (and the skeleton ends) without waiting on this read.
+      newP.then((newRaw) => {
+        if (request !== feedRequest.current) return;
+        setNewOnTikem(
+          selectNewOnTikem(filterBlockedEvents(newRaw, blockedOrganizers), {
+            now: Date.now(),
+            country: userCountry,
+            inArea: activeMetro ? (e: any) => isEventInMetro(e, activeMetro) : undefined,
+          }),
+        );
+      });
       // Persist the last good online feed so the next offline open has events.
       if (!fromCache) persistFeedCache(userCountry, countryFiltered);
     } catch (err) {
@@ -374,8 +378,6 @@ export default function HomeScreen({ navigation }: any) {
 
   const handleViewAllForYou = () =>
     openFeed('forYou', t('home.forYouTitle'));
-
-  const handleViewAllNew = () => openFeed('new', t('home.newTitle'));
 
   // Where you are browsing, in words: the metro when we know it, otherwise the
   // chosen town, otherwise the whole country.
@@ -564,9 +566,26 @@ export default function HomeScreen({ navigation }: any) {
               </View>
             )}
 
+            {/* new on Tikèm: what organizers just added, newest first, so an
+                event weeks out is not buried. No "view all": the rail holds
+                every recent event (up to twelve). */}
+            {newOnTikem.length > 0 && (
+              <View style={forYouEvents.length >= MIN_RAIL_EVENTS ? styles.section : styles.firstSection}>
+                <EventRail
+                  title={t('home.newOnTikemTitle')}
+                  events={newOnTikem}
+                  onEventPress={(eventId) => navigation.navigate('EventDetail', { eventId })}
+                />
+              </View>
+            )}
+
             {/* Worlds: always present, so browsing by vibe never depends on
                 tonight's inventory. Each tile opens that world's page. */}
-            <View style={forYouEvents.length >= MIN_RAIL_EVENTS ? styles.section : styles.firstSection}>
+            <View
+              style={
+                forYouEvents.length >= MIN_RAIL_EVENTS || newOnTikem.length > 0 ? styles.section : styles.firstSection
+              }
+            >
               <WorldRail
                 onWorldPress={(world, label) =>
                   navigation.navigate('CategoryEvents', { world, title: label })
@@ -593,19 +612,6 @@ export default function HomeScreen({ navigation }: any) {
                 />
               </View>
             ))}
-
-            {/* Just Announced */}
-            {newEvents.length >= MIN_RAIL_EVENTS && (
-              <View style={styles.section}>
-                <EventRail
-                  title={t('home.newTitle')}
-                  events={newEvents}
-                  badge="New"
-                  onEventPress={(eventId) => navigation.navigate('EventDetail', { eventId })}
-                  onViewAll={handleViewAllNew}
-                />
-              </View>
-            )}
 
             {/* The posh-style "discover more" category banners were removed
                 per tester feedback (2026-08-29): "this looks too much like

@@ -22,6 +22,8 @@ import { getActiveNationalDay, nationalDayPreviewKey } from '@/lib/nationalDaysS
 import { eventMatchesNationalDay } from '@/lib/nationalDays'
 import { homeOccasion } from '@/lib/occasions'
 import { buildSiteJsonLd } from '@/lib/seo/siteJsonLd'
+import { selectNewOnTikem } from '@/lib/home/new-on-tikem'
+import { readNewOnTikemDocs } from '@/lib/home/new-on-tikem-server'
 import { serializeJsonLd } from '@/app/events/[id]/eventJsonLd'
 import {
   type HomeEvent,
@@ -97,7 +99,11 @@ export default async function HomePage({
   const rawEventsPromise = isDemoMode() ? Promise.resolve(DEMO_EVENTS as any[]) : getDiscoverEvents({}, 50)
   const nationalDayPromise = getActiveNationalDay(new Date(), nationalDayPreviewKey(params.nd))
   const archivePromise = isDemoMode() ? Promise.resolve([] as any[]) : getCinemaArtworkEvents(40)
+  // "new on Tikèm" is read on its own, newest first: the feed above is
+  // soonest first, so an event announced today for a date weeks out is not in it.
+  const newDocsPromise = isDemoMode() ? Promise.resolve([] as any[]) : readNewOnTikemDocs(Date.now())
   rawEventsPromise.catch(() => {})
+  newDocsPromise.catch(() => {})
   nationalDayPromise.catch(() => {})
   archivePromise.catch(() => {})
 
@@ -178,6 +184,22 @@ export default async function HomePage({
   if (!hero.length) hero = pickHeroEvents(inCountry, now)
   if (!hero.length) hero = pickHeroEvents(upcoming, now)
   const heroIds = new Set(hero.map((e) => e.id))
+
+  // "new on Tikèm" (lib/home/new-on-tikem): organizers' events added in the
+  // last two weeks, newest first, in the browsed country and city. An event
+  // the hero carries is left out; the rail hides under three events.
+  const newOnTikem: HomeEvent[] = selectNewOnTikem(
+    filterBlockedEvents(await newDocsPromise.catch(() => [] as any[]), blockedOrganizers).filter(
+      (e: any) => !heroIds.has(String(e.id))
+    ),
+    {
+      now,
+      country,
+      inArea: (e: any) => inCity({ city: String(e.city || ''), country: String(e.country || 'HT') } as HomeEvent, active?.key ?? null),
+    }
+  )
+    .map(toHomeEvent)
+    .filter((e): e is HomeEvent => !!e)
 
   // No picture twice on the page. Every image a section shows is claimed in
   // `used`, in the order the sections need it most: the hero, then the cards
@@ -335,6 +357,7 @@ export default async function HomePage({
         elsewhereMode={elsewhereMode}
         elsewhere={elsewhere}
         occasionRow={occasionRow}
+        newOnTikem={newOnTikem}
       />
 
       <MobileNavWrapper user={user} isAdmin={isAdmin(((user as any)?.email_verified) ? user?.email : null)} />

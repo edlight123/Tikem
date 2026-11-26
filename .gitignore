@@ -73,5 +73,5 @@ testflight-feedback/*.png
 testflight-feedback-*/
 marketing/tikem-promo/out/
 marketing/tikem-promo/public/
-marketing/tikem-promo/node_modules/
+marketing/tikem-promo/node_modules
 marketing/tutorials/

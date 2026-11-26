@@ -845,6 +845,7 @@ export default {
     freeTitle: 'Gratuit et abordable',
     freeSubtitle: 'De belles soirées à petit prix',
     newTitle: 'Nouveautés',
+    newOnTikemTitle: 'Nouveau sur Tikèm',
     newSubtitle: 'Événements récemment ajoutés',
     viewAllEvents: 'Voir tous les événements',
     emptyTitle: 'Aucun événement disponible',

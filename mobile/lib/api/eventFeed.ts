@@ -170,6 +170,51 @@ export async function fetchPublishedEventsForCountryWithMeta(
   };
 }
 
+/**
+ * Published events created in the last `windowMs`, newest first, for Home's
+ * "new on Tikèm" rail (lib/newOnTikem picks from them: country, metro,
+ * visibility, series). Read on their own so an event announced today for a
+ * date weeks out still surfaces; the soonest-first feed above cuts it off.
+ *
+ * created_at is a Timestamp on app-made events and an ISO string on web-made
+ * ones, so it is read once per stored type. Country is applied by the caller,
+ * so this uses the deployed index events is_published ASC + created_at DESC.
+ * Dates come back as Dates, like the feed. A failed read is an empty rail.
+ */
+export async function fetchNewOnTikemEvents(
+  windowMs: number = 14 * 86_400_000,
+  max: number = 80
+): Promise<any[]> {
+  const since = new Date(Date.now() - windowMs);
+  const read = (bound: Date | string) =>
+    getDocs(
+      query(
+        collection(db, 'events'),
+        where('is_published', '==', true),
+        where('created_at', '>=', bound),
+        orderBy('created_at', 'desc'),
+        limit(max)
+      )
+    ).catch(() => null);
+  const snaps = await Promise.all([read(since), read(since.toISOString())]);
+  const seen = new Set<string>();
+  const out: any[] = [];
+  for (const s of snaps) {
+    for (const d of s?.docs || []) {
+      if (seen.has(d.id)) continue;
+      seen.add(d.id);
+      const data = d.data() || {};
+      out.push({
+        id: d.id,
+        ...data,
+        start_datetime: toDate(data.start_datetime),
+        end_datetime: toDate(data.end_datetime),
+      });
+    }
+  }
+  return out;
+}
+
 /** Firestore's "this query needs a composite index" error. */
 export function isMissingIndexError(err: unknown): boolean {
   const e = err as { code?: unknown; message?: unknown } | null;

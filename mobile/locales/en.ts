@@ -1217,6 +1217,7 @@ export default {
     freeTitle: 'Free & Budget-Friendly',
     freeSubtitle: 'Great nights that won’t cost much',
     newTitle: 'Just Announced',
+    newOnTikemTitle: 'new on Tikèm',
     newSubtitle: 'Freshly added events',
     viewAllEvents: 'View all events',
     emptyTitle: 'No Events Available',
