@@ -84,10 +84,24 @@ export async function notifyCommunityMember(p: {
 }
 
 /** Page every admin about a new share or claim (bell + push), like a report. */
-export async function notifyAdminsOfCommunity(p: { kind: 'submission' | 'claim'; title: string }): Promise<void> {
+export async function notifyAdminsOfCommunity(p: { kind: 'submission' | 'claim' | 'auto_published'; title: string }): Promise<void> {
   try {
-    const title = p.kind === 'submission' ? 'New shared event to review' : 'New event claim to review'
-    const message = p.title ? `"${p.title}" is waiting in Community.` : 'A community item is waiting in Community.'
+    // A share that passed the safety checks is already live: admins are told
+    // so they can take it down from Community if it is wrong.
+    const title =
+      p.kind === 'auto_published'
+        ? 'A shared event went live'
+        : p.kind === 'submission'
+          ? 'New shared event to review'
+          : 'New event claim to review'
+    const message =
+      p.kind === 'auto_published'
+        ? p.title
+          ? `"${p.title}" is live. Remove it from Community if it is wrong.`
+          : 'A shared event is live. Remove it from Community if it is wrong.'
+        : p.title
+          ? `"${p.title}" is waiting in Community.`
+          : 'A community item is waiting in Community.'
     const actionUrl = '/admin/community'
     const snaps = await Promise.all(
       ['admin', 'super_admin'].map((role) => adminDb.collection('users').where('role', '==', role).get())

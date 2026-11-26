@@ -235,7 +235,10 @@ export async function readShareFlyer(url: string): Promise<ShareFlyerRead> {
   return read;
 }
 
-export async function submitShare(input: ShareInput): Promise<{ ok: boolean; id?: string }> {
+/** Posts a share: it goes live at once (status 'published', with its event) or waits for review. */
+export async function submitShare(
+  input: ShareInput
+): Promise<{ ok: boolean; id?: string; status?: 'published' | 'pending'; eventId?: string }> {
   const { backendJson } = await import('./api/backend');
   return backendJson('/api/community/submissions', {
     method: 'POST',

@@ -88,6 +88,8 @@ export default function ShareEventScreen({ navigation }: any) {
   const [picker, setPicker] = useState<PickerField | null>(null);
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
+  // Live right away (passed the safety checks) or held for review (web lib/community/publish).
+  const [liveEventId, setLiveEventId] = useState<string | null>(null);
 
   const patch = (p: Partial<ShareDetails>) => setDetails((d) => ({ ...d, ...p }));
   // The flyer read lands after an await: read the LATEST details, not the
@@ -154,7 +156,7 @@ export default function ShareEventScreen({ navigation }: any) {
     if (!flyerUrl || sending) return;
     setSending(true);
     try {
-      await submitShare({
+      const result = await submitShare({
         image_url: flyerUrl,
         source_url: sourceUrl,
         organizer_name: organizerName,
@@ -162,6 +164,7 @@ export default function ShareEventScreen({ navigation }: any) {
         note,
         details,
       });
+      setLiveEventId(result?.status === 'published' && result.eventId ? String(result.eventId) : null);
       setSent(true);
     } catch (e: any) {
       const code = e?.code;
@@ -190,6 +193,7 @@ export default function ShareEventScreen({ navigation }: any) {
     setSourceUrl('');
     setNote('');
     setSent(false);
+    setLiveEventId(null);
   };
 
   const country = details.country || 'HT';
@@ -217,15 +221,31 @@ export default function ShareEventScreen({ navigation }: any) {
         <View style={[styles.sentWrap, { paddingTop: headerH + 24 }]}>
           <View style={styles.sentRow}>
             <Check size={18} color={colors.text} strokeWidth={1.75} />
-            <Text style={styles.sentTitle}>{t('community.share.sentTitle')}</Text>
+            <Text style={styles.sentTitle}>
+              {liveEventId ? t('community.share.liveTitle') : t('community.share.reviewTitle')}
+            </Text>
           </View>
-          <Text style={styles.sentBody}>{t('community.share.sentBody')}</Text>
+          <Text style={styles.sentBody}>
+            {liveEventId ? t('community.share.liveBody') : t('community.share.reviewBody')}
+          </Text>
           <View style={styles.sentActions}>
-            <WhitePillCTA size="sm" label={t('community.share.done')} onPress={() => navigation.goBack()} style={styles.flex} />
+            {liveEventId ? (
+              <WhitePillCTA
+                size="sm"
+                label={t('community.share.seeEvent')}
+                onPress={() => navigation.replace('EventDetail', { eventId: liveEventId })}
+                style={styles.flex}
+              />
+            ) : (
+              <WhitePillCTA size="sm" label={t('community.share.done')} onPress={() => navigation.goBack()} style={styles.flex} />
+            )}
             <Touchable style={styles.quietButton} onPress={reset} accessibilityRole="button">
               <Text style={styles.quietButtonText}>{t('community.share.another')}</Text>
             </Touchable>
           </View>
+          <Touchable style={styles.quietButton} onPress={() => navigation.navigate('MyShares')} accessibilityRole="button">
+            <Text style={styles.quietButtonText}>{t('community.share.mine')}</Text>
+          </Touchable>
         </View>
       </SafeAreaView>
     );

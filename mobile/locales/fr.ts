@@ -4537,6 +4537,16 @@ export default {
   // Community-shared events (lib/community): Share an event, Claim it.
   community: {
     share: {
+      liveTitle: "Votre événement est en ligne",
+      liveBody: "Merci de l'avoir partagé. Tout le monde peut le trouver sur Tikèm.",
+      reviewTitle: "Merci",
+      reviewBody: "Nous le vérifions avant de le publier.",
+      seeEvent: "Voir l'événement",
+      mine: "Mes événements partagés",
+      mineEmpty: "Vous n'avez encore partagé aucun événement.",
+      statusLive: "En ligne",
+      statusReview: "En cours de vérification",
+      statusNotApproved: "Non approuvé",
       title: "Partager un événement",
       entry: "Partager un événement",
       discoverEntry: "Vous avez vu un événement absent d'ici ? Partagez-le",

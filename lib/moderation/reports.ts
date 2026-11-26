@@ -59,6 +59,8 @@ export type ReportTargetKind = 'event' | 'organizer'
 export const MAX_REPORT_DETAILS = 1000
 /** Distinct open reporters at which an event drops out of discovery pending review. */
 export const AUTO_HIDE_THRESHOLD = 5
+/** A community-shared event (published without an admin's review) is hidden sooner. */
+export const COMMUNITY_AUTO_HIDE_THRESHOLD = 3
 /** New reports one user may file per rolling hour, across events and organizers. */
 export const REPORTS_PER_HOUR = 10
 const RATE_WINDOW_MS = 60 * 60 * 1000
@@ -200,7 +202,8 @@ export async function fileReport(params: {
     let autoHidden = false
     if (kind === 'event') {
       openCount = (Number(target.reports_count) || 0) + 1
-      autoHidden = openCount >= AUTO_HIDE_THRESHOLD && target.hidden_pending_review !== true
+      const threshold = target.community_shared === true ? COMMUNITY_AUTO_HIDE_THRESHOLD : AUTO_HIDE_THRESHOLD
+      autoHidden = openCount >= threshold && target.hidden_pending_review !== true
       tx.update(targetRef, {
         reports_count: FieldValue.increment(1),
         last_reported_at: now,

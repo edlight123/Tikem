@@ -2412,13 +2412,23 @@
       "sent": "Merci. Nous allons vérifier et l'ajouter à Tikèm.",
       "another": "En partager un autre",
       "done": "Terminé",
-      "footnote": "Nous vérifions chaque événement avant sa mise en ligne et créditons son organisateur.",
+      "footnote": "La plupart des événements partagés sont publiés tout de suite, au nom de leur organisateur. Certains sont vérifiés avant.",
       "errors": {
         "rate_limited": "Vous avez beaucoup partagé aujourd'hui. Réessayez demain.",
         "bad_image": "Ajoutez d'abord l'affiche.",
         "forbidden": "Ce compte ne peut pas partager d'événements.",
         "generic": "Envoi impossible. Réessayez."
-      }
+      },
+      "live": "Votre événement est en ligne. Merci de l'avoir partagé.",
+      "review": "Merci. Nous le vérifions avant de le publier.",
+      "see_event": "Voir l'événement",
+      "mine": "Mes événements partagés",
+      "mine_title": "mes événements partagés",
+      "mine_empty": "Vous n'avez encore partagé aucun événement.",
+      "status_live": "En ligne",
+      "status_review": "En cours de vérification",
+      "status_not_approved": "Non approuvé",
+      "share_one": "Partager un événement"
     },
     "claim": {
       "title": "réclamer cet événement",

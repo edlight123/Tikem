@@ -34,7 +34,7 @@ import {
   LogOut,
   MapPin,
   Inbox,
-  Megaphone,
+  Megaphone, Share2,
   Phone,
   RotateCcw,
   Shield,
@@ -577,6 +577,7 @@ export default function ProfileScreen() {
             <ListRow icon={Users} title={t('profile.friends')} onPress={() => navigation.navigate('Connections')} />
             {/* Seen a flyer for an event that is not on Tikèm? Share it (lib/community). */}
             <ListRow icon={Megaphone} title={t('community.share.entry')} onPress={() => navigation.navigate('ShareEvent')} />
+            <ListRow icon={Share2} title={t('community.share.mine')} onPress={() => navigation.navigate('MyShares')} />
           </ListGroup>
         </View>
 

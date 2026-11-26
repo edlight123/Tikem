@@ -25,6 +25,7 @@ import { MAX_ADD_ON_OPTIONS, newAddOnId, normalizeAddOns, type EventAddOn } from
 import { addOnProblem } from '../../lib/addOnDraft';
 import FormSheet, { SheetInput, SheetLabel } from './FormSheet';
 import DateTimeField from './DateTimeField';
+import { fromWallClockCarrier, isValidZone, toWallClockCarrier } from '../../lib/zonedTime';
 import WhitePillCTA from '../WhitePillCTA';
 import { radius } from '../../theme/tokens';
 
@@ -100,15 +101,21 @@ interface Props {
   onChange: (next: EventAddOn[]) => void;
   tiers: AddOnsEditorTier[];
   currency: string;
+  /** The event's zone: the sales window is shown and picked as the venue's wall clock. */
+  zone?: string;
 }
 
-const isoOrNull = (d: Date | null) => (d ? d.toISOString() : '');
-const dateOrNull = (iso: string) => {
+// The pickers edit a wall-clock "carrier" Date (lib/zonedTime): its local
+// fields are the venue's clock; the stored value is the instant in the zone.
+const isoOrNull = (d: Date | null, zone?: string) =>
+  d ? (zone && isValidZone(zone) ? fromWallClockCarrier(d, zone) : d).toISOString() : '';
+const dateOrNull = (iso: string, zone?: string) => {
   const t = iso ? Date.parse(iso) : NaN;
-  return Number.isFinite(t) ? new Date(t) : null;
+  if (!Number.isFinite(t)) return null;
+  return zone && isValidZone(zone) ? toWallClockCarrier(new Date(t), zone) : new Date(t);
 };
 
-export default function AddOnsEditor({ value, onChange, tiers, currency }: Props) {
+export default function AddOnsEditor({ value, onChange, tiers, currency, zone }: Props) {
   const { colors } = useTheme();
   const { t } = useI18n();
   const { user } = useAuth();
@@ -208,8 +215,8 @@ export default function AddOnsEditor({ value, onChange, tiers, currency }: Props
         : problem === 'window'
           ? t(`${K}.badWindow`)
           : null;
-  const salesStart = draft ? dateOrNull(draft.sales_start) : null;
-  const salesEnd = draft ? dateOrNull(draft.sales_end) : null;
+  const salesStart = draft ? dateOrNull(draft.sales_start, zone) : null;
+  const salesEnd = draft ? dateOrNull(draft.sales_end, zone) : null;
 
   return (
     <View>
@@ -385,7 +392,7 @@ export default function AddOnsEditor({ value, onChange, tiers, currency }: Props
               label={t(`${S}.from`)}
               title={t(`${K}.salesStart`)}
               value={salesStart}
-              onChange={(d) => patch({ sales_start: isoOrNull(d) })}
+              onChange={(d) => patch({ sales_start: isoOrNull(d, zone) })}
               clearable
               placeholder={t(`${S}.now`)}
               helper={t(`${S}.salesStartHint`)}
@@ -396,7 +403,7 @@ export default function AddOnsEditor({ value, onChange, tiers, currency }: Props
               label={t(`${S}.until`)}
               title={t(`${K}.salesEnd`)}
               value={salesEnd}
-              onChange={(d) => patch({ sales_end: isoOrNull(d) })}
+              onChange={(d) => patch({ sales_end: isoOrNull(d, zone) })}
               minimumDate={salesStart || undefined}
               clearable
               placeholder={t(`${S}.eventStarts`)}

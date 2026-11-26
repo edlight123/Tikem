@@ -80,6 +80,8 @@ export const ACCOUNT_ROUTES = [
   // The community "share an event you saw" entry (Discover): needs an account
   // to submit, so a guest signs in first and lands on the form.
   'ShareEvent',
+  // The member's own community shares and their status.
+  'MyShares',
   'ClaimEvent',
   'OrganizerAnalytics',
   'OrganizerRefunds',

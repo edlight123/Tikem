@@ -16,6 +16,10 @@ let user: any = { id: 'u1', email: 'a@b.c', full_name: 'Ana' }
 let admin = false
 let orgCtx: any = null
 let proofExists = true
+/** The member's Auth account creation time (lib/community/publish reads it); null = unknown, held as new. */
+let authCreated: string | null = null
+/** What the atomic per-user counter reports (lib/rate-limit); undefined = not given. */
+let userWindowCount: number | undefined = undefined
 const limited: Record<string, boolean> = {}
 const rateKeys: string[] = []
 const notified: any[] = []
@@ -30,7 +34,8 @@ jest.mock('@/lib/rate-limit', () => ({
   clientIp: () => '203.0.113.9', clientIpKey: () => '203.0.113.9',
   consumeRateLimit: jest.fn(async (o: any) => {
     rateKeys.push(o.key)
-    return { limited: !!limited[o.key.split(':').slice(0, 2).join(':')] }
+    const limitedNow = !!limited[o.key.split(':').slice(0, 2).join(':')]
+    return { limited: limitedNow, ...(o.key.includes(':user:') && userWindowCount !== undefined ? { count: userWindowCount } : {}) }
   }),
 }))
 jest.mock('@/lib/posters/hosts', () => ({
@@ -84,11 +89,13 @@ jest.mock('@/lib/firebase/admin', () => {
     }),
   })
   return {
+    adminAuth: { getUser: async () => ({ metadata: { creationTime: authCreated } }) },
     adminDb: {
       collection: (col: string) => ({
         doc: (id?: string) => ref(col, id || `${col}-${++n}`),
         where: (f: string, op: string, v: any) => query(col, []).where(f, op, v),
       }),
+      getAll: async (...refs: any[]) => Promise.all(refs.map((r) => r.get())),
       batch: () => {
         const ops: Array<() => Promise<void>> = []
         return {
@@ -123,6 +130,8 @@ beforeEach(() => {
   admin = false
   orgCtx = null
   proofExists = true
+  authCreated = null
+  userWindowCount = undefined
 })
 
 describe('POST /api/community/submissions', () => {
@@ -133,6 +142,55 @@ describe('POST /api/community/submissions', () => {
     expect(doc).toMatchObject({ status: 'pending', image_url: OURS, source_url: 'https://instagram.com/p/1', submitted_by: 'u1', details: { title: 'Kompa', free: true } })
     expect(rateKeys).toEqual(['community-submit:user:u1', 'community-submit:ip:203.0.113.9'])
     expect(notified).toEqual([expect.objectContaining({ admin: true, kind: 'submission' })])
+  })
+
+  it('publishes a complete share from a settled account right away, and tells admins it is live', async () => {
+    authCreated = new Date(Date.now() - 30 * 86400_000).toUTCString()
+    const soon = new Date(Date.now() + 10 * 86400_000).toISOString().slice(0, 10)
+    const res = await submit(
+      req({
+        image_url: OURS,
+        organizer_name: 'Kompa Nights',
+        source_url: 'https://instagram.com/p/1',
+        details: { title: 'Kompa sou plaj', date: soon, start_time: '21:00', city: 'Port-au-Prince', country: 'HT', category: 'Concert', free: true },
+      })
+    )
+    expect(res.status).toBe(201)
+    const body = await res.json()
+    expect(body).toMatchObject({ status: 'published' })
+    const [sub] = Object.values(db.event_submissions)
+    expect(sub).toMatchObject({ status: 'approved', auto_published: true, event_id: body.eventId })
+    expect(db.events[body.eventId]).toMatchObject({ is_published: true, community_auto: true })
+    expect(notified).toEqual(expect.arrayContaining([expect.objectContaining({ admin: true, kind: 'auto_published' })]))
+  })
+
+  it('holds a share from a new account, with the reason, for review', async () => {
+    authCreated = new Date(Date.now() - 3600_000).toUTCString()
+    await submit(req({ image_url: OURS, organizer_name: 'Kompa Nights', details: { title: 'Kompa', free: true } }))
+    const [sub] = Object.values(db.event_submissions)
+    expect(sub.status).toBe('pending')
+    expect(sub.hold_reasons).toEqual(expect.arrayContaining(['new_account', 'incomplete']))
+  })
+
+  it('holds a share when an event from an earlier share was taken down (hidden after reports)', async () => {
+    authCreated = new Date(Date.now() - 30 * 86400_000).toUTCString()
+    db.event_submissions = { old: { submitted_by: 'u1', status: 'approved', event_id: 'ev-old', created_at: '2020-01-01T00:00:00Z' } }
+    db.events = { 'ev-old': { hidden_pending_review: true } }
+    const soon = new Date(Date.now() + 10 * 86400_000).toISOString().slice(0, 10)
+    await submit(req({ image_url: OURS, organizer_name: 'Kompa Nights', details: { title: 'Kompa', date: soon, start_time: '21:00', city: 'Port-au-Prince', country: 'HT', category: 'Concert', free: true } }))
+    const fresh = Object.entries(db.event_submissions).find(([id]) => id !== 'old')![1]
+    expect(fresh.status).toBe('pending')
+    expect(fresh.hold_reasons).toContain('past_removals')
+  })
+
+  it('holds the 4th share in a day by the atomic counter, even when two arrive at once', async () => {
+    authCreated = new Date(Date.now() - 30 * 86400_000).toUTCString()
+    userWindowCount = 4
+    const soon = new Date(Date.now() + 10 * 86400_000).toISOString().slice(0, 10)
+    await submit(req({ image_url: OURS, organizer_name: 'Kompa Nights', details: { title: 'Kompa', date: soon, start_time: '21:00', city: 'Port-au-Prince', country: 'HT', category: 'Concert', free: true } }))
+    const [sub] = Object.values(db.event_submissions)
+    expect(sub.status).toBe('pending')
+    expect(sub.hold_reasons).toContain('rate_limit')
   })
 
   it('drops a non-http(s) source link instead of storing it', async () => {

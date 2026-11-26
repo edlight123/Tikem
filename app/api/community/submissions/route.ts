@@ -4,9 +4,11 @@
  *
  * A signed-in member shares an event they saw ("Share an event", web
  * /share-event and the app). The flyer was already uploaded to our bucket and,
- * if they wanted, read by /api/flyers/read to prefill the form. Nothing is
- * published from here: the share waits in event_submissions (server-only,
- * default-deny in firestore.rules) for an admin (/admin/community).
+ * if they wanted, read by /api/flyers/read to prefill the form. It goes live
+ * right away when it passes the safety checks (lib/community/trust,
+ * lib/community/publish); otherwise it waits in event_submissions
+ * (server-only, default-deny in firestore.rules) for an admin
+ * (/admin/community), with the reasons it was held. Admins hear of both.
  *
  * Guards: signed in (Tikra allowed no guests either), not banned, our own
  * uploaded image only (lib/posters/hosts.isOwnPoster), source links http(s)
@@ -24,7 +26,8 @@ import {
   isBannedProfile,
   parseSubmissionInput,
 } from '@/lib/community/submissions'
-import { notifyAdminsOfCommunity } from '@/lib/community/notify'
+import { notifyAdminsOfCommunity, notifyCommunityMember } from '@/lib/community/notify'
+import { decideShare } from '@/lib/community/publish'
 
 export const dynamic = 'force-dynamic'
 
@@ -51,16 +54,52 @@ export async function POST(request: Request) {
 
   const input = parseSubmissionInput(body)
   const now = new Date().toISOString()
-  const ref = adminDb.collection('event_submissions').doc()
-  await ref.set({
-    status: 'pending',
-    image_url: imageUrl,
-    ...input,
-    submitted_by: user.id,
-    submitted_by_email: user.email || '',
-    created_at: now,
-    updated_at: now,
+  const outcome = await decideShare({
+    uid: user.id,
+    windowCount: perUser.count,
+    body: body || {},
+    submission: {
+      image_url: imageUrl,
+      ...input,
+      submitted_by: user.id,
+      submitted_by_email: user.email || '',
+      created_at: now,
+      updated_at: now,
+    },
   })
-  await notifyAdminsOfCommunity({ kind: 'submission', title: input.details.title || input.organizer_name })
-  return NextResponse.json({ ok: true, id: ref.id }, { status: 201 })
+  const title = input.details.title || input.organizer_name
+  await notifyAdminsOfCommunity({ kind: outcome.status === 'published' ? 'auto_published' : 'submission', title })
+  if (outcome.status === 'published') {
+    await notifyCommunityMember({ userId: user.id, outcome: 'published', eventId: outcome.eventId, eventTitle: title })
+    return NextResponse.json({ ok: true, id: outcome.submissionId, status: 'published', eventId: outcome.eventId }, { status: 201 })
+  }
+  return NextResponse.json({ ok: true, id: outcome.submissionId, status: 'pending' }, { status: 201 })
+}
+
+/**
+ * GET /api/community/submissions: the signed-in member's own shares, newest
+ * first ("My shared events", web /share-event/mine and the app). Only their
+ * own; no email, no hold reasons (those are for admins).
+ */
+export async function GET() {
+  const user = await getCurrentUser()
+  if (!user) return NextResponse.json({ error: 'Sign in.', code: 'unauthorized' }, { status: 401 })
+  const snap = await adminDb.collection('event_submissions').where('submitted_by', '==', user.id).limit(100).get()
+  const shares = (snap.docs as any[])
+    .map((d) => {
+      const s = d.data() || {}
+      const status: 'live' | 'review' | 'not_approved' =
+        s.status === 'approved' || s.status === 'merged' ? 'live' : s.status === 'pending' ? 'review' : 'not_approved'
+      return {
+        id: d.id,
+        title: String(s.details?.title || s.organizer_name || ''),
+        image_url: String(s.image_url || ''),
+        status,
+        event_id: s.event_id || s.merged_into || null,
+        reason: status === 'not_approved' ? String(s.reject_reason || s.remove_reason || '') || null : null,
+        created_at: String(s.created_at || ''),
+      }
+    })
+    .sort((a, b) => b.created_at.localeCompare(a.created_at))
+  return NextResponse.json({ shares }, { headers: { 'Cache-Control': 'private, no-store' } })
 }

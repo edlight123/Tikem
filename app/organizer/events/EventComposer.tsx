@@ -133,7 +133,7 @@ import { EVENT_LANGUAGES, cleanEventLanguages, eventLanguageLabel, type EventLan
 import type { FlyerRead } from '@/lib/flyer/parse'
 import { useOrgRole } from '@/components/organizer/OrgRoleProvider'
 import { POSTER_ALT_MAX, cleanPosterAlt } from '@/lib/posterAlt'
-import { isValidZone, isoToZonedInput, toZonedParts, zoneLabel, zonedInputToIso, zonedPartsToIso } from '@/lib/events/zonedTime'
+import { fromWallClockCarrier, isValidZone, isoToZonedInput, toWallClockCarrier, toZonedParts, zoneLabel, zonedInputToIso, zonedPartsToIso } from '@/lib/events/zonedTime'
 import {
   Accessibility,
   CalendarDays,
@@ -198,8 +198,11 @@ const MAX_RECURRENCE_COUNT = 52
  * length (e.g. Jan 31 + 1 month → Feb 28/29) so no occurrence rolls into the
  * following month. Mirrors mobile/lib/api/events.ts:shiftDateByRecurrence.
  */
-function shiftDateByRecurrence(base: Date, cadence: 'daily' | 'weekly' | 'monthly', i: number): Date {
-  const d = new Date(base.getTime())
+function shiftDateByRecurrence(base: Date, cadence: 'daily' | 'weekly' | 'monthly', i: number, zone?: string): Date {
+  // Stepped on the VENUE's calendar (a wall-clock carrier in its zone), so a
+  // weekly 7:00 PM stays 7:00 PM local across a daylight-saving change.
+  const zoned = !!zone && isValidZone(zone)
+  const d = zoned ? toWallClockCarrier(base, zone as string) : new Date(base.getTime())
   if (cadence === 'daily') {
     d.setDate(d.getDate() + i)
   } else if (cadence === 'weekly') {
@@ -211,7 +214,7 @@ function shiftDateByRecurrence(base: Date, cadence: 'daily' | 'weekly' | 'monthl
     const lastDayOfMonth = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()
     d.setDate(Math.min(day, lastDayOfMonth))
   }
-  return d
+  return zoned ? fromWallClockCarrier(d, zone as string) : d
 }
 
 /**
@@ -2294,7 +2297,7 @@ export default function EventComposer({
       if (cadence && useUntil && baseStart && untilBound) {
         let n = 0
         for (let i = 0; i < MAX_RECURRENCE_COUNT; i++) {
-          if (shiftDateByRecurrence(baseStart, cadence, i).getTime() > untilBound.getTime()) break
+          if (shiftDateByRecurrence(baseStart, cadence, i, eventTz).getTime() > untilBound.getTime()) break
           n = i + 1
         }
         occurrenceCount = Math.max(1, n)
@@ -2311,8 +2314,8 @@ export default function EventComposer({
         for (let i = 0; i < occurrenceCount; i++) {
           const occData = {
             ...createData,
-            start_datetime: baseStart ? shiftDateByRecurrence(baseStart, cadence, i).toISOString() : null,
-            end_datetime: baseEnd ? shiftDateByRecurrence(baseEnd, cadence, i).toISOString() : null,
+            start_datetime: baseStart ? shiftDateByRecurrence(baseStart, cadence, i, eventTz).toISOString() : null,
+            end_datetime: baseEnd ? shiftDateByRecurrence(baseEnd, cadence, i, eventTz).toISOString() : null,
             is_recurring: true,
             recurrence: cadence,
             series_id: seriesId,

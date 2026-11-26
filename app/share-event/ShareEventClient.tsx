@@ -85,6 +85,8 @@ export default function ShareEventClient() {
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [sent, setSent] = useState(false)
+  // Live right away (passed the safety checks) or held for review (lib/community/publish).
+  const [sentResult, setSentResult] = useState<{ status: 'published' | 'pending'; eventId?: string } | null>(null)
 
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setForm((f) => ({ ...f, [k]: v }))
 
@@ -169,6 +171,7 @@ export default function ShareEventClient() {
         setError(t(`community.share.errors.${['rate_limited', 'bad_image', 'forbidden'].includes(code) ? code : 'generic'}`))
         return
       }
+      setSentResult(body?.status === 'published' && body?.eventId ? { status: 'published', eventId: String(body.eventId) } : { status: 'pending' })
       setSent(true)
     } catch {
       setError(t('community.share.errors.generic'))
@@ -183,7 +186,18 @@ export default function ShareEventClient() {
         <h1 className="font-display italic lowercase !text-[clamp(28px,4vw,40px)] !leading-[1.04] text-fg">{t('community.share.title')}</h1>
         <p className="mt-6 flex items-center gap-2 text-body text-fg">
           <Check className="h-4 w-4 text-brand-400" aria-hidden />
-          {t('community.share.sent')}
+          {sentResult?.status === 'published' ? t('community.share.live') : t('community.share.review')}
+        </p>
+        <p className="mt-2 text-meta text-fg-muted">
+          {sentResult?.status === 'published' && sentResult.eventId ? (
+            <Link href={`/events/${encodeURIComponent(sentResult.eventId)}`} className="font-semibold text-fg underline underline-offset-4">
+              {t('community.share.see_event')}
+            </Link>
+          ) : null}
+          {sentResult?.status === 'published' ? ' · ' : null}
+          <Link href="/share-event/mine" className="font-semibold text-fg underline underline-offset-4">
+            {t('community.share.mine')}
+          </Link>
         </p>
         <div className="mt-6 flex gap-3">
           <button
@@ -193,6 +207,7 @@ export default function ShareEventClient() {
               setImage(null)
               setFilled(null)
               setSent(false)
+              setSentResult(null)
             }}
             className="h-10 rounded bg-surface px-4 text-meta font-semibold text-fg hover:bg-surface-high"
           >

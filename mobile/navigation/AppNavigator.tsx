@@ -117,6 +117,7 @@ import { useI18n } from '../contexts/I18nContext';
 import RefundRequestScreen from '../screens/RefundRequestScreen';
 import ReviewScreen from '../screens/ReviewScreen';
 import ShareEventScreen from '../screens/ShareEventScreen';
+import MySharesScreen from '../screens/MySharesScreen';
 import ClaimEventScreen from '../screens/ClaimEventScreen';
 import OrganizerAnalyticsScreen from '../screens/organizer/OrganizerAnalyticsScreen';
 import OrganizerRefundsScreen from '../screens/organizer/OrganizerRefundsScreen';
@@ -231,6 +232,7 @@ export type RootStackParamList = {
   // Community-shared events (lib/community): share a flyer you saw; claim
   // a community event as its organizer.
   ShareEvent: undefined;
+  MyShares: undefined;
   ClaimEvent: { eventId: string; eventTitle?: string };
   OrganizerAnalytics: undefined;
   OrganizerRefunds: undefined;
@@ -1323,6 +1325,7 @@ export default function AppNavigator() {
             <Stack.Screen name="RefundRequest" component={RefundRequestScreen} options={{ headerShown: false }} />
             <Stack.Screen name="Review" component={ReviewScreen} options={{ headerShown: false }} />
             <Stack.Screen name="ShareEvent" component={ShareEventScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="MyShares" component={MySharesScreen} options={{ headerShown: false }} />
             <Stack.Screen name="ClaimEvent" component={ClaimEventScreen} options={{ headerShown: false }} />
             <Stack.Screen name="OrganizerAnalytics" component={OrganizerAnalyticsScreen} options={{ headerShown: false }} />
             <Stack.Screen name="OrganizerRefunds" component={OrganizerRefundsScreen} options={{ headerShown: false }} />

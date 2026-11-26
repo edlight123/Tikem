@@ -26,10 +26,30 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const snap = await ref.get()
   if (!snap.exists) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   const sub: any = snap.data()
-  if (sub.status !== 'pending') return NextResponse.json({ error: 'Already handled', code: 'not_pending' }, { status: 409 })
   const body = await request.json().catch(() => null)
   const now = new Date().toISOString()
   const decided = { decided_by: user.id, decided_at: now, updated_at: now }
+
+  // Take down a share that went live on its own (lib/community/publish): the
+  // event is unpublished, the share is marked removed (which also holds that
+  // account's next shares for review: lib/community/trust past_removals).
+  if (body?.action === 'remove') {
+    if (sub.status !== 'approved' || !sub.event_id) {
+      return NextResponse.json({ error: 'Only a live share can be removed.', code: 'not_live' }, { status: 409 })
+    }
+    const batch = adminDb.batch()
+    batch.update(adminDb.collection('events').doc(String(sub.event_id)), {
+      is_published: false,
+      status: 'removed',
+      rejected: true,
+      updated_at: now,
+    })
+    batch.update(ref, { status: 'removed', remove_reason: String(body?.reason || '').trim().slice(0, 300), ...decided })
+    await batch.commit()
+    return NextResponse.json({ ok: true })
+  }
+
+  if (sub.status !== 'pending') return NextResponse.json({ error: 'Already handled', code: 'not_pending' }, { status: 409 })
 
   if (body?.action === 'reject') {
     await ref.update({ status: 'rejected', reject_reason: String(body?.reason || '').trim().slice(0, 300), ...decided })

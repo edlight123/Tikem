@@ -143,3 +143,17 @@ it('the app copy matches the web module line for line (header aside)', () => {
     fs.readFileSync(path.join(__dirname, '..', p), 'utf8').split('\n').slice(17).join('\n')
   expect(body('mobile/lib/zonedTime.ts')).toBe(body('lib/events/zonedTime.ts'))
 })
+
+describe('a repeating event keeps the venue clock across daylight saving', () => {
+  it('weekly 7:00 PM in Toronto is 7:00 PM local before and after the November change', () => {
+    const first = new Date('2026-10-29T23:00:00.000Z') // Thu 7:00 PM EDT
+    for (const z of [web, mobile]) {
+      const carrier = z.toWallClockCarrier(first, 'America/Toronto')
+      carrier.setDate(carrier.getDate() + 7)
+      const next = z.fromWallClockCarrier(carrier, 'America/Toronto')
+      // Thu Nov 5, 7:00 PM EST = 00:00 UTC the next day (not 23:00 UTC).
+      expect(next.toISOString()).toBe('2026-11-06T00:00:00.000Z')
+      expect(z.toZonedParts(next, 'America/Toronto')).toEqual({ date: '2026-11-05', time: '19:00' })
+    }
+  })
+})

@@ -6,6 +6,8 @@
  *  - Shares: open one to see the flyer and what the member said, edit the
  *    fields, then Publish (credited, claimable, sells nothing), Reject, or
  *    Merge into an existing event id when it is a duplicate.
+ *  - Recently auto-published: shares that passed the safety checks and went
+ *    live on their own (lib/community/publish), with Remove.
  *  - Claims: the proof (handle and whether it matches the credited handle, a
  *    link, or a 10-minute signed link to the private uploaded file), then
  *    Approve (the event moves to the claimant's org) or Reject.
@@ -37,6 +39,20 @@ interface Submission {
   submitted_by: string
   created_at: string
   draft: Record<string, any>
+  /** Why it was held for review instead of going live (lib/community/trust). */
+  hold_reasons?: string[]
+  event_id?: string
+}
+
+const HOLD_LABELS: Record<string, string> = {
+  new_account: 'New account (under 24h)',
+  past_removals: 'Had a share rejected or removed',
+  rate_limit: 'More than 3 shares in 24h',
+  bad_link: 'Suspicious link',
+  bad_date: 'Date in the past or over a year ahead',
+  spam_text: 'Looks like spam',
+  incomplete: 'Missing details',
+  paid_no_link: 'Paid, no ticket link',
 }
 
 interface Claim {
@@ -303,7 +319,30 @@ function ClaimRow({ claim, now, onDone }: { claim: Claim; now: Date | null; onDo
 
 export default function CommunityReview() {
   const now = useConsoleNow()
-  const [data, setData] = useState<{ submissions: Submission[]; claims: Claim[] } | null>(null)
+  const [data, setData] = useState<{ submissions: Submission[]; claims: Claim[]; autoPublished?: Submission[] } | null>(null)
+  const confirm = useConfirm()
+  const [removing, setRemoving] = useState<string | null>(null)
+  async function removeLive(s: Submission) {
+    const ok = await confirm({
+      title: 'Take this event down?',
+      description: `"${s.draft?.title || 'This event'}" is unpublished, and this member's next shares wait for review.`,
+      confirmLabel: 'Remove',
+      variant: 'danger',
+    })
+    if (!ok) return
+    setRemoving(s.id)
+    try {
+      const res = await fetch(`/api/admin/community/submissions/${encodeURIComponent(s.id)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'remove' }),
+      })
+      if (!res.ok) setError((await res.json().catch(() => null))?.error || 'Could not remove it.')
+      else done('Removed.')
+    } finally {
+      setRemoving(null)
+    }
+  }
   const [error, setError] = useState<string | null>(null)
   const [open, setOpen] = useState<string | null>(null)
   const [flash, setFlash] = useState<string | null>(null)
@@ -362,11 +401,41 @@ export default function CommunityReview() {
                   <p className="truncate text-xs text-console-mut">
                     {[s.draft?.date, s.draft?.city, s.organizer_name && `from ${s.organizer_name}`].filter(Boolean).join(' · ') || 'No details given'}
                   </p>
+                  {s.hold_reasons && s.hold_reasons.length > 0 && (
+                    <p className="truncate text-xs text-console-faint">
+                      Held: {s.hold_reasons.map((r) => HOLD_LABELS[r] || r).join(' · ')}
+                    </p>
+                  )}
                 </div>
                 <ConsoleAge ageAt={s.created_at} now={now} />
               </ConsoleRow>
               {open === s.id && <SubmissionEditor sub={s} onDone={done} />}
             </div>
+          ))}
+        </div>
+      )}
+
+      <ConsoleSection>Recently auto-published</ConsoleSection>
+      {!data ? null : (data.autoPublished || []).length === 0 ? (
+        <p className="text-meta text-console-mut">None yet.</p>
+      ) : (
+        <div className="space-y-1.5">
+          {(data.autoPublished || []).map((s) => (
+            <ConsoleRow key={s.id} ageAt={s.created_at} now={now}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={s.image_url} alt="" className="h-12 w-9 shrink-0 rounded object-cover" />
+              <div className="min-w-0 flex-1">
+                <a href={`/events/${s.event_id}`} target="_blank" rel="noopener noreferrer" className="block truncate text-meta font-semibold text-console-text underline">
+                  {s.draft?.title || 'Untitled flyer'}
+                </a>
+                <p className="truncate text-xs text-console-mut">
+                  {[s.draft?.date, s.draft?.city, s.submitted_by && `shared by ${s.submitted_by}`].filter(Boolean).join(' · ')}
+                </p>
+              </div>
+              <ConsoleButton variant="danger" disabled={removing === s.id} onClick={() => removeLive(s)}>
+                {removing === s.id ? 'Removing…' : 'Remove'}
+              </ConsoleButton>
+            </ConsoleRow>
           ))}
         </div>
       )}
