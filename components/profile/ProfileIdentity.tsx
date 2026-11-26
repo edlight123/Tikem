@@ -9,6 +9,8 @@ import { BadgeCheck, Camera, Loader2, MapPin, Pencil } from 'lucide-react'
 import { useToast } from '@/components/ui/Toast'
 import type { UserProfile } from '@/lib/firestore/user-profile'
 import { defaultAvatarUrl } from '@/lib/defaultAvatar'
+import { useImageFramer } from '@/components/ImageCropDialog'
+import { SQUARE_ASPECT } from '@/lib/imageCrop'
 
 interface ProfileIdentityProps {
   profile: UserProfile
@@ -56,11 +58,7 @@ export function ProfileIdentity({ profile, stats, onEdit, onOpenFollowing }: Pro
       })
     : ''
 
-  const handlePhotoPicked = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    // Reset so picking the same file again still fires onChange.
-    e.target.value = ''
-    if (!file) return
+  const uploadPhotoFile = async (file: File) => {
 
     if (!file.type.startsWith('image/')) {
       showToast({ type: 'error', title: t('header.photo_invalid') })
@@ -91,6 +89,9 @@ export function ProfileIdentity({ profile, stats, onEdit, onOpenFollowing }: Pro
       setIsUploadingPhoto(false)
     }
   }
+
+  // Framed 1:1 (pinch, drag, zoom) before it goes up.
+  const photoFramer = useImageFramer(SQUARE_ASPECT, uploadPhotoFile)
 
   const statCells: Array<{ key: string; label: string; value: number; href?: string; onClick?: () => void }> = [
     { key: 'attended', label: t('dashboard.stats.attended'), value: stats.attended, href: '/tickets' },
@@ -144,9 +145,11 @@ export function ProfileIdentity({ profile, stats, onEdit, onOpenFollowing }: Pro
           ref={fileInputRef}
           type="file"
           accept="image/jpeg,image/png,image/webp,image/gif"
-          onChange={handlePhotoPicked}
+          onChange={photoFramer.onInputChange}
           className="hidden"
         />
+
+        {photoFramer.dialog}
 
         <div className="min-w-0 flex-1">
           <div className="flex items-start gap-2">

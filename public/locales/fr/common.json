@@ -1948,7 +1948,20 @@
     "formats": "PNG ou JPG · jusqu’à 5 Mo",
     "errType": "Veuillez choisir un fichier image",
     "errSize": "L’image doit faire moins de 5 Mo",
-    "uploading": "Téléversement…"
+    "uploading": "Téléversement…",
+    "crop": {
+      "titlePoster": "Cadrez votre affiche",
+      "titleSquare": "Cadrez votre image",
+      "hint": "Glissez pour déplacer · faites défiler, pincez ou utilisez le curseur pour zoomer",
+      "frameLabel": "Zone de recadrage. Les flèches déplacent l'image ; plus et moins zooment.",
+      "zoom": "Zoom",
+      "zoomIn": "Zoomer",
+      "zoomOut": "Dézoomer",
+      "reset": "Réinitialiser",
+      "cancel": "Annuler",
+      "done": "Terminé",
+      "preparing": "Préparation…"
+    }
   },
   "phone": {
     "country": "Indicatif pays",

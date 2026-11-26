@@ -14,6 +14,7 @@ import { AppAlertProvider } from './components/AppAlert';
 import AppNavigator from './navigation/AppNavigator';
 import BootScreen from './components/BootScreen';
 import PhonePromptHost from './components/PhonePromptHost';
+import { ImageCropProvider } from './components/ImageCropModal';
 import { refreshFeeConfig } from './lib/feeConfigSync';
 
 export default function App() {
@@ -46,10 +47,13 @@ export default function App() {
                   above ThemeProvider, which is fine: ThemeContext defaults to
                   DARK_COLORS and the app ships a single dark theme. */}
               <AppAlertProvider>
-                <AppNavigator />
-                {/* The "add your number" sheet (lib/phonePrompt.ts). At the root
-                    so it survives the navigation that follows a purchase. */}
-                <PhonePromptHost />
+                {/* useImageCrop(): the 4:5 flyer / 1:1 logo and photo framing step after a pick. */}
+                <ImageCropProvider>
+                  <AppNavigator />
+                  {/* The "add your number" sheet (lib/phonePrompt.ts). At the root
+                      so it survives the navigation that follows a purchase. */}
+                  <PhonePromptHost />
+                </ImageCropProvider>
               </AppAlertProvider>
               <StatusBar style="light" />
             </FiltersProvider>

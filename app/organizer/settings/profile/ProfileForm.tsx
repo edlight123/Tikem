@@ -7,6 +7,8 @@ import { User, Phone, Mail, Camera, Loader2 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { SaveBar } from '@/components/organizer/ui';
 import Image from 'next/image';
+import { useImageFramer } from '@/components/ImageCropDialog';
+import { SQUARE_ASPECT } from '@/lib/imageCrop';
 
 interface ProfileFormProps {
   userId: string;
@@ -76,9 +78,7 @@ export default function ProfileForm({ userId, initialData }: ProfileFormProps) {
     }
   };
 
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const uploadPhotoFile = async (file: File) => {
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
@@ -137,6 +137,9 @@ export default function ProfileForm({ userId, initialData }: ProfileFormProps) {
     }
   };
 
+  // Framed 1:1 (pinch, drag, zoom) before it goes up.
+  const photoFramer = useImageFramer(SQUARE_ASPECT, uploadPhotoFile);
+
   return (
     <form ref={formRef} onSubmit={handleSubmit} className="p-6 space-y-6">
       {/* Profile Photo */}
@@ -175,7 +178,7 @@ export default function ProfileForm({ userId, initialData }: ProfileFormProps) {
             id="photo-upload"
             type="file"
             accept="image/*"
-            onChange={handlePhotoUpload}
+            onChange={photoFramer.onInputChange}
             className="hidden"
             disabled={isUploadingPhoto}
           />
@@ -184,6 +187,8 @@ export default function ProfileForm({ userId, initialData }: ProfileFormProps) {
           </p>
         </div>
       </div>
+
+      {photoFramer.dialog}
 
       {/* Full Name */}
       <div>

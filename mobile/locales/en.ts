@@ -4680,6 +4680,16 @@ export default {
       voided: "Voided printed ticket",
     },
   },
+  // Framing step after picking a flyer (4:5) or a logo / photo (1:1).
+  imageCrop: {
+    titlePoster: "Frame your flyer",
+    titleSquare: "Frame your image",
+    hint: "Pinch to zoom · drag to move · double-tap to reset",
+    reset: "Reset",
+    cancel: "Cancel",
+    done: "Done",
+    failed: "This image couldn't be framed here, so it was added as is.",
+  },
   printedBundle: {
     title: "Printed tickets",
     online: "{n} online",

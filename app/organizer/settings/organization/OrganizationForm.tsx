@@ -7,6 +7,8 @@ import { Building2, Globe, Upload, Loader2, Facebook, Instagram, Twitter, Linked
 import { useToast } from '@/components/ui/Toast';
 import { SaveBar } from '@/components/organizer/ui';
 import Image from 'next/image';
+import { useImageFramer } from '@/components/ImageCropDialog';
+import { SQUARE_ASPECT } from '@/lib/imageCrop';
 
 interface OrganizationFormProps {
   userId: string;
@@ -78,9 +80,7 @@ export default function OrganizationForm({ userId, initialData }: OrganizationFo
     }
   };
 
-  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const uploadLogoFile = async (file: File) => {
 
     if (!file.type.startsWith('image/')) {
       showToast({
@@ -137,6 +137,9 @@ export default function OrganizationForm({ userId, initialData }: OrganizationFo
     }
   };
 
+  // Framed 1:1 (pinch, drag, zoom) before it goes up.
+  const logoFramer = useImageFramer(SQUARE_ASPECT, uploadLogoFile);
+
   return (
     <form ref={formRef} onSubmit={handleSubmit} className="p-6 space-y-6">
       {/* Organization Logo */}
@@ -175,7 +178,7 @@ export default function OrganizationForm({ userId, initialData }: OrganizationFo
             id="logo-upload"
             type="file"
             accept="image/*"
-            onChange={handleLogoUpload}
+            onChange={logoFramer.onInputChange}
             className="hidden"
             disabled={isUploadingLogo}
           />
@@ -184,6 +187,8 @@ export default function OrganizationForm({ userId, initialData }: OrganizationFo
           </p>
         </div>
       </div>
+
+      {logoFramer.dialog}
 
       {/* Organization Name */}
       <div>

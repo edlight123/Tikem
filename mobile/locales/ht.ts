@@ -4666,6 +4666,16 @@ export default {
       voided: "Tikè enprime anile",
     },
   },
+  // Framing step after picking a flyer (4:5) or a logo / photo (1:1).
+  imageCrop: {
+    titlePoster: "Ajiste afich ou",
+    titleSquare: "Ajiste imaj ou",
+    hint: "Pense pou zoume · glise pou deplase · tape de fwa pou rekòmanse",
+    reset: "Rekòmanse",
+    cancel: "Anile",
+    done: "Fini",
+    failed: "Nou pa t ka ajiste imaj sa a isit la, kidonk li ajoute jan l ye a.",
+  },
   printedBundle: {
     title: "Biyè enprime",
     online: "{n} sou entènèt",
