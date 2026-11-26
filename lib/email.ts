@@ -36,6 +36,8 @@ import {
   ticketStub,
 } from '@/lib/email-kit/layout'
 import { COMMON, formatMoney, pickLang, type EmailLang } from '@/lib/email-kit/i18n'
+import { formatMinor, type ReceiptModel } from '@/lib/receipts/receipt'
+import { RECEIPT_LABELS } from '@/lib/receipts/labels'
 
 export type { EmailLang } from '@/lib/email-kit/i18n'
 
@@ -292,6 +294,14 @@ export function getTicketConfirmationEmail(params: {
   approved?: boolean
   /** Add-ons bought with the order (lib/addons/addOns.ts), already labelled: "T-shirt (M) × 2". */
   addOns?: string[]
+  /**
+   * The full receipt for a paid order (lib/receipts): replaces the simple
+   * price rows with every line, the service fee (and any tax in it), the
+   * total, the card, the order number, the organizer (and charity number) and
+   * Tikèm's legal entity, plus a link to the printable receipt.
+   */
+  receipt?: ReceiptModel
+  receiptUrl?: string
   lang?: EmailLang
 }) {
   const lang = pickLang(params.lang)
@@ -374,8 +384,18 @@ export function getTicketConfirmationEmail(params: {
   const price = params.ticketPrice ? formatMoney(params.ticketPrice, params.currency, lang) : t.free
   const metaLine = [params.eventDate, params.eventVenue].filter(Boolean).join(' · ')
 
-  const receiptRows: Array<{ label: string; value: string; strong?: boolean; muted?: boolean }> = []
-  if (params.ticketPrice) {
+  const receiptRows: Array<{ label: string; value: string; strong?: boolean; muted?: boolean; mono?: boolean }> = []
+  const R = RECEIPT_LABELS[lang]
+  const rc = params.receipt
+  if (rc) {
+    const m = (minor: number) => formatMinor(minor, rc.currency, lang)
+    receiptRows.push({ label: R.order, value: rc.orderNumber, mono: true, muted: true })
+    for (const line of rc.lines) {
+      receiptRows.push({ label: line.quantity > 1 ? `${line.label} × ${line.quantity}` : line.label, value: m(line.amountMinor) })
+    }
+    if (rc.serviceFeeMinor > 0) receiptRows.push({ label: R.fee, value: m(rc.serviceFeeMinor), muted: true })
+    receiptRows.push({ label: R.total, value: m(rc.totalMinor), strong: true })
+  } else if (params.ticketPrice) {
     receiptRows.push({ label: qty > 1 ? `${tier} × ${qty}` : tier, value: formatMoney(params.ticketPrice * qty, params.currency, lang) })
     if (params.serviceFee) receiptRows.push({ label: t.service, value: formatMoney(params.serviceFee, params.currency, lang), muted: true })
     receiptRows.push({
@@ -419,7 +439,9 @@ export function getTicketConfirmationEmail(params: {
       serifHeading(t.before),
       lines([...(params.doorsTime ? [t.doors(params.doorsTime)] : []), ...t.tips]),
       receiptRows.length ? gap(24) : '',
-      receiptRows.length ? rowsBlock(receiptRows, params.paidWith) : '',
+      receiptRows.length ? rowsBlock(receiptRows, rc?.paidWith ? `${R.paidWith}: ${R.rails[rc.paidWith]}` : params.paidWith) : '',
+      rc && rc.organizerName ? p(`${R.organizer}: ${rc.organizerName}`) : '',
+      rc && params.receiptUrl ? textLink(R.print, params.receiptUrl) : '',
       !receiptRows.length ? gap(4) : '',
       gap(24),
       followCard(t.followLine, t.follow),

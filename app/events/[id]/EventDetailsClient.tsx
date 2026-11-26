@@ -24,6 +24,7 @@ import MobileSections from './MobileSections'
 import WhosGoing from '@/components/events/WhosGoing'
 import FriendsGoing from '@/components/events/FriendsGoing'
 import InviteFriends from '@/components/events/InviteFriends'
+import AfterEvent from '@/components/events/AfterEvent'
 import PromoVideo from '@/components/events/PromoVideo'
 import ContactOrganizer from '@/components/events/ContactOrganizer'
 import { ticketScarcity, scarcityCopy, isUrgent } from '@/lib/ticketScarcity'
@@ -528,6 +529,21 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
 
       {/* The event's song — mobile placement, under the accordions. */}
       <SpotifyEmbed url={event.spotify_url} className="px-4 pt-4 md:hidden" />
+
+      {/* After it: "How was it?", photos from people who went (moderated),
+          and the organizer's next event. One block for every width. */}
+      {isPastEvent && (
+        <div className="mx-auto max-w-7xl px-4 pt-8 md:px-6 lg:px-8">
+          <AfterEvent
+            eventId={event.id}
+            organizerId={event.organizer_id && user?.id !== event.organizer_id ? event.organizer_id : null}
+            organizerName={event.users?.organization_name || event.users?.full_name || ''}
+            userId={user?.id || null}
+            isFollowing={isFollowing}
+            className="lg:max-w-[calc((100%-4rem)*2/3)]"
+          />
+        </div>
+      )}
 
       {/* MAIN CONTENT - Desktop */}
       <div className="max-w-7xl mx-auto px-0 md:px-6 lg:px-8 py-0 md:py-8">

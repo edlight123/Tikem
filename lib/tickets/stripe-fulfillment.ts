@@ -47,6 +47,7 @@ import { createHmac } from 'node:crypto'
 import { adminDb } from '@/lib/firebase/admin'
 import { addTicketToEarnings } from '@/lib/earnings'
 import { sendTicketConfirmation } from '@/lib/tickets/confirmation'
+import { loadReceipt } from '@/lib/receipts/receipt-server'
 import { notifyOrganizerTicketSale, notifyTicketPurchase } from '@/lib/notifications/helpers'
 import { onSaleCompleted } from '@/lib/notifications/campaigns'
 import { promoBuyerKey, redeemPromoInTransaction } from '@/lib/promo-codes'
@@ -1109,8 +1110,18 @@ export async function fulfillStripeOrder(input: StripeOrderInput): Promise<Strip
   await runStep('notify', { idempotent: false }, async () => {
     const out: Record<string, any> = {}
     if (attendee) {
+      // The receipt (P1-28): built from the tickets just issued, with the card
+      // details fetched once from Stripe and cached on the order. Best-effort:
+      // without it the email still carries the ticket.
+      let receipt: Awaited<ReturnType<typeof loadReceipt>> = null
+      try {
+        receipt = await loadReceipt(input.paymentId)
+      } catch (err: any) {
+        console.warn(`${logPrefix} receipt not built`, err?.message || err)
+      }
       try {
         await sendTicketConfirmation({
+          receipt: receipt?.model || null,
           ticketId: ticketIds[0],
           qrPayload: ticketIds[0],
           event: eventDetails as any,

@@ -16,6 +16,8 @@ import { resolveEmailLang } from '@/lib/email-kit/recipient'
 import { sendSms, getTicketConfirmationSms } from '@/lib/sms'
 import { sendWhatsAppMessage, getTicketConfirmationWhatsApp } from '@/lib/whatsapp'
 import { guestTicketUrl, isValidPhone, normalizePhone } from '@/lib/guest/identity'
+import { receiptPath, type ReceiptModel } from '@/lib/receipts/receipt'
+import { appUrl as publicAppUrl } from '@/lib/email-kit/layout'
 
 export interface ConfirmationRecipient {
   /** Resolved server-side FROM THE ORDER — never from a request body. */
@@ -88,6 +90,8 @@ export async function sendTicketConfirmation(params: {
   approved?: boolean
   /** Add-ons bought with the order, labelled ("T-shirt (M) × 2"), for the receipt. */
   addOns?: string[]
+  /** The paid order's receipt (lib/receipts): full receipt block + a link to the printable receipt. */
+  receipt?: ReceiptModel | null
   logPrefix?: string
 }): Promise<SendTicketConfirmationResult> {
   const logPrefix = params.logPrefix || '[confirmation]'
@@ -147,6 +151,9 @@ export async function sendTicketConfirmation(params: {
           doorsTime: doorsClock(params.event, lang),
           approved: params.approved === true,
           ...(params.addOns && params.addOns.length > 0 ? { addOns: params.addOns } : {}),
+          ...(params.receipt
+            ? { receipt: params.receipt, receiptUrl: `${publicAppUrl()}${receiptPath(params.receipt.orderId, { lang })}` }
+            : {}),
           ...(guestUrl ? { ticketsUrl: guestUrl, ticketsUrlNote: guestNote } : {}),
         }),
         attachments: qrPng

@@ -2728,5 +2728,38 @@
     "goingOne": "{{name}} prale",
     "goingTwo": "{{a}} ak {{b}} prale",
     "goingMany": "{{a}}, {{b}} ak {{count}} lòt prale"
+  },
+  "afterEvent": {
+    "howWasIt": "Kijan l te ye?",
+    "howWasItBody": "Yon sèl klik. Se òganizatè a sèlman ki wè l.",
+    "faceMeh": "Konsa konsa",
+    "faceGood": "Bon",
+    "faceGreat": "Mwen renmen l",
+    "thanks": "Mèsi paske w di l sa.",
+    "photosTitle": "Foto evènman an",
+    "addPhotos": "Ajoute foto w yo",
+    "uploading": "Ap voye…",
+    "photoAdded": "Mèsi. Foto w ap parèt lè òganizatè a apwouve l.",
+    "photoFailed": "Nou pa t ka ajoute foto sa a. Eseye ankò.",
+    "photoTooLarge": "Foto sa a twò lou (4 MB maksimòm).",
+    "pendingTitle": "Ap tann apwobasyon w",
+    "approve": "Apwouve",
+    "remove": "Retire",
+    "nextFrom": "Pwochen ak {{name}}",
+    "nextFromThem": "Pwochen evènman l",
+    "followPrompt": "Swiv li pou w konnen lè pwochen an ap fèt."
+  },
+  "receipts": {
+    "view_receipt": "Wè resi a"
+  },
+  "statements": {
+    "title": "Rapò chak mwa",
+    "subtitle": "Vant, frè Tikèm, ranbousman ak peman pou yon mwa.",
+    "month": "Mwa",
+    "download_csv": "Telechaje CSV",
+    "download_pdf": "Telechaje PDF",
+    "preparing": "N ap prepare…",
+    "error": "Nou pa t ka telechaje rapò a. Tanpri eseye ankò.",
+    "note": "Dat yo an UTC."
   }
 }

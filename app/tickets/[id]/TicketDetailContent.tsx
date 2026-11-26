@@ -23,6 +23,9 @@ interface TicketDetailContentProps {
 
 export default function TicketDetailContent({ ticket, event, user, pendingTransfer = null }: TicketDetailContentProps) {
   const { t } = useTranslation('tickets')
+  const { t: tc } = useTranslation('common')
+  // A paid order has a receipt (P1-28); the route checks the viewer is the buyer.
+  const receiptOrderId = Number(ticket?.charged_amount ?? ticket?.price_paid ?? 0) > 0 ? String(ticket?.payment_id || '') : ''
 
   const cleanTitle = (event?.title || '').replace(/^\[[^\]]*\]\s*/, '')
   const posterAlt = usePosterAlt()
@@ -132,6 +135,17 @@ export default function TicketDetailContent({ ticket, event, user, pendingTransf
                 eligible={isLiveTicketStatus(ticket.status) && !ticket.checked_in_at && ticket.checked_in !== true}
                 eventStartIso={event.start_datetime || event.date || null}
               />
+
+              {receiptOrderId ? (
+                <a
+                  href={`/receipts/${encodeURIComponent(receiptOrderId)}`}
+                  target="_blank"
+                  rel="noopener"
+                  className="flex h-10 w-full items-center justify-center rounded bg-surface px-4 text-sm font-semibold text-fg-soft transition-colors hover:bg-surface-high hover:text-fg"
+                >
+                  {tc('receipts.view_receipt')}
+                </a>
+              ) : null}
             </div>
           </div>
         </div>
