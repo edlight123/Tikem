@@ -16,7 +16,7 @@ import { adminDb } from '@/lib/firebase/admin'
 import { sendEmail, getEventUpdateEmail } from '@/lib/email'
 import { resolveEmailLang } from '@/lib/email-kit/recipient'
 import { loadEventTicketRows } from '@/lib/organizer/eventOrdersLoader'
-import { isSoldTicketStatus } from '@/lib/organizer/eventOrders'
+import { holdersFromRows } from '@/lib/events/ticket-holders'
 
 // The few strings this sender needs, per email language (Tikèm has no shared
 // email string catalog). {event} is the event title.
@@ -51,23 +51,16 @@ export async function broadcastToAttendees(params: {
   const { event, senderId, message } = params
   const out: BroadcastOutcome = { recipients: 0, emailed: 0, emailFailed: 0, pushed: 0, inApp: 0, optedOut: 0 }
 
-  const rows = (await loadEventTicketRows(event)).filter((r) => isSoldTicketStatus(r.status))
-  const people = new Map<string, { uid: string | null; email: string }>()
-  for (const r of rows) {
-    const uid = r.isGuest ? null : r.buyerKey || null
-    if (uid && uid === senderId) continue
-    const email = String(r.buyer?.email || '').trim().toLowerCase()
-    const key = uid ? `u:${uid}` : email ? `e:${email}` : null
-    if (!key) continue
-    const prev = people.get(key)
-    people.set(key, { uid, email: prev?.email || email })
-  }
-  out.recipients = people.size
+  // The one holder list (lib/events/ticket-holders): live tickets only, real
+  // account ids only (a buyerKey that is an email or name is never a uid), one
+  // entry per person, the sender left out.
+  const people = holdersFromRows(await loadEventTicketRows(event), { excludeUid: senderId })
+  out.recipients = people.length
 
   const eventTitle = String(event.title || '').replace(/[\r\n]+/g, ' ').trim()
   const actionUrl = `/events/${event.id}`
 
-  for (const person of people.values()) {
+  for (const person of people) {
     try {
       const lang = await resolveEmailLang({ userId: person.uid, email: person.email, event: event as any })
       const t = emailText(lang)

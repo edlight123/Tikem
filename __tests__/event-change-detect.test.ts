@@ -4,6 +4,7 @@
  * what the email says (lib/email-templates/eventChange.ts).
  */
 import {
+  changeContentAllowed,
   CHANGE_DEBOUNCE_MS,
   CHANGE_MAX_WAIT_MS,
   changeNoticeStamp,
@@ -162,5 +163,20 @@ describe('change email', () => {
     const mail = getEventChangeEmail({ lang: 'fr', event: ht, before, after, ticketUrl: 'https://t', hasAccount: true })
     expect(mail.html).not.toContain('<script>x')
     expect(mail.subject).toContain('Kompa Night')
+  })
+})
+
+describe('change notice content (organizer-typed venue and link)', () => {
+  const base = { start: null, end: null, venue: 'Olympia', address: '28 Bd des Capucines', commune: '', city: 'Paris', online: false, link: '' }
+
+  it('lets a normal venue and an https meeting link through', () => {
+    expect(changeContentAllowed(base)).toBe(true)
+    expect(changeContentAllowed({ ...base, online: true, link: 'https://zoom.us/j/123456789' })).toBe(true)
+  })
+
+  it('refuses phishing in the venue and unsafe links', () => {
+    expect(changeContentAllowed({ ...base, venue: 'Verify your account and enter your password here' })).toBe(false)
+    expect(changeContentAllowed({ ...base, link: 'http://evil.example/login' })).toBe(false)
+    expect(changeContentAllowed({ ...base, link: 'https://bit.ly/abc' })).toBe(false)
   })
 })

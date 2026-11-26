@@ -16,6 +16,7 @@
  * cannot hold a notice back forever). Old -> new is measured from the last
  * notified baseline, so an edit reverted before the notice goes sends nothing.
  */
+import { checkBroadcast } from '@/lib/moderation/broadcast'
 import { eventInstantIso } from '@/lib/email-templates/reminder'
 
 export const CHANGE_DEBOUNCE_MS = 10 * 60 * 1000
@@ -156,4 +157,11 @@ export function changeNoticeStamp(before: MaterialSnapshot, after: MaterialSnaps
     kinds,
     before: { start: before.start, end: before.end, venue: before.venue, city: before.city, online: before.online },
   }
+}
+
+/** The venue and link text an organizer typed, through the organizer-message rules. */
+export function changeContentAllowed(after: MaterialSnapshot): boolean {
+  const place = [after.venue, after.address, after.commune, after.city].filter(Boolean).join(', ')
+  const message = `The event details were updated. ${place}${after.link ? ` Online: ${after.link}` : ''}`
+  return checkBroadcast({ message }).ok
 }

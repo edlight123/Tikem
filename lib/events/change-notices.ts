@@ -48,6 +48,7 @@ import {
   observe,
   type ChangeState,
   type MaterialSnapshot,
+  changeContentAllowed,
 } from './change-detect'
 
 export const CHANGE_STATE_COLLECTION = 'event_change_state'
@@ -94,6 +95,9 @@ export async function observeEventChange(
  * event also gets `change_notice` (what moved and what it was), which the
  * ticket screens show.
  */
+/** At most this many change notices per event per UTC day. */
+export const MAX_NOTICES_PER_EVENT_PER_DAY = 3
+
 export async function claimDueChanges(now = Date.now()): Promise<Array<{ eventId: string; outcome: string; noticeId?: string }>> {
   const snap = await adminDb.collection(CHANGE_STATE_COLLECTION).where('pending', '==', true).limit(MAX_CLAIMS_PER_RUN).get()
   const out: Array<{ eventId: string; outcome: string; noticeId?: string }> = []
@@ -110,14 +114,42 @@ export async function claimDueChanges(now = Date.now()): Promise<Array<{ eventId
         if (!s || !noticeDue(s, now)) return 'not_due'
         const event = eventSnap.exists ? (eventSnap.data() as Record<string, any>) : null
         const current = materialSnapshot(event)
+        const stamp = event && eventIsNotifiable(event, now) ? changeNoticeStamp(s.baseline, current, now) : null
+        // A per-event daily cap: past it the change stays pending and goes out
+        // tomorrow as one notice (old → newest), so an organizer can't spam holders.
+        const day = new Date(now).toISOString().slice(0, 10)
+        const sentToday = (s as any).notice_day === day ? Number((s as any).notice_count) || 0 : 0
+        if (stamp && sentToday >= MAX_NOTICES_PER_EVENT_PER_DAY) return 'capped'
         tx.set(
           stateRef(eventId),
-          { baseline: current, latest: current, pending: false, pending_since: null, last_notice_at: now, updated_at: new Date(now).toISOString() },
+          {
+            baseline: current,
+            latest: current,
+            pending: false,
+            pending_since: null,
+            last_notice_at: now,
+            updated_at: new Date(now).toISOString(),
+            ...(stamp ? { notice_day: day, notice_count: sentToday + 1 } : {}),
+          },
           { merge: true }
         )
         if (!event || !eventIsNotifiable(event, now)) return 'skipped_not_live'
-        const stamp = changeNoticeStamp(s.baseline, current, now)
         if (!stamp) return 'reverted'
+        // The organizer typed the venue and the link: the same phishing and
+        // link rules as an organizer message (lib/moderation/broadcast) before
+        // they go out in our name. A refused change is kept for an admin.
+        if (!changeContentAllowed(current)) {
+          tx.set(noticeRef, {
+            event_id: eventId,
+            before: s.baseline,
+            after: current,
+            kinds: stamp.kinds,
+            status: 'blocked',
+            delivered: 0,
+            created_at: new Date(now).toISOString(),
+          })
+          return 'blocked'
+        }
         tx.set(noticeRef, {
           event_id: eventId,
           before: s.baseline,
@@ -270,15 +302,50 @@ export async function deliverOpenNotices(budget = MAX_DELIVERIES_PER_RUN): Promi
  * The first run has no cursor: it only looks back 30 minutes, and
  * baselineUpcomingEvents() gives every other upcoming event its baseline.
  */
+const SCAN_PAGE = 500
+
+function instantMs(v: any): number | null {
+  if (!v) return null
+  if (typeof v?.toDate === 'function') return v.toDate().getTime()
+  const t = Date.parse(String(v))
+  return Number.isFinite(t) ? t : null
+}
+
 export async function scanEditedEvents(now = Date.now()) {
   const stateSnap = await SCAN_STATE().get()
   const state = stateSnap.exists ? (stateSnap.data() as any) : {}
   const since = Number(state.last_scan_at) ? Number(state.last_scan_at) - 2 * 60 * 1000 : now - 30 * 60 * 1000
   const sinceDate = new Date(since)
+  const nowDate = new Date(now)
+  // Bounded above by now and ordered, so an event stamped in the future can't
+  // hold the window, and a full page moves the cursor only as far as it read.
   const [asString, asTimestamp] = await Promise.all([
-    adminDb.collection('events').where('updated_at', '>=', sinceDate.toISOString()).limit(500).get().catch(() => null),
-    adminDb.collection('events').where('updated_at', '>=', sinceDate).limit(500).get().catch(() => null),
+    adminDb
+      .collection('events')
+      .where('updated_at', '>=', sinceDate.toISOString())
+      .where('updated_at', '<=', nowDate.toISOString())
+      .orderBy('updated_at')
+      .limit(SCAN_PAGE)
+      .get()
+      .catch(() => null),
+    adminDb
+      .collection('events')
+      .where('updated_at', '>=', sinceDate)
+      .where('updated_at', '<=', nowDate)
+      .orderBy('updated_at')
+      .limit(SCAN_PAGE)
+      .get()
+      .catch(() => null),
   ])
+  // Where to start next time: now, unless a page was full; then the oldest
+  // last-read edit across the two (the 2-minute overlap re-reads it, harmlessly).
+  let nextScan = now
+  for (const snap of [asString, asTimestamp] as any[]) {
+    const docs = (snap?.docs || []) as any[]
+    if (docs.length < SCAN_PAGE) continue
+    const lastAt = instantMs(docs[docs.length - 1].data()?.updated_at)
+    if (lastAt != null) nextScan = Math.min(nextScan, lastAt + 2 * 60 * 1000)
+  }
   const seen = new Map<string, any>()
   for (const s of [asString, asTimestamp]) for (const d of ((s as any)?.docs || []) as any[]) seen.set(d.id, d.data())
   let observed = 0
@@ -293,8 +360,8 @@ export async function scanEditedEvents(now = Date.now()) {
       console.error('[event-change] observe failed', id, (e as any)?.message)
     }
   }
-  await SCAN_STATE().set({ last_scan_at: now }, { merge: true })
-  return { scanned: seen.size, observed, pending }
+  await SCAN_STATE().set({ last_scan_at: nextScan }, { merge: true })
+  return { scanned: seen.size, observed, pending, caughtUp: nextScan === now }
 }
 
 /**
