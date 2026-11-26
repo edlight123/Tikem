@@ -183,8 +183,8 @@ export async function fetchPublishedEventsForCountryWithMeta(
  * Dates come back as Dates, like the feed. A failed read is an empty rail.
  */
 export async function fetchNewOnTikemEvents(
-  windowMs: number = 14 * 86_400_000,
-  max: number = 80
+  windowMs: number = 60 * 86_400_000,
+  max: number = 150
 ): Promise<any[]> {
   const since = new Date(Date.now() - windowMs);
   const read = (field: 'published_at' | 'created_at', bound: Date | string) =>

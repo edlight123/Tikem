@@ -800,7 +800,10 @@
       "FR": "Lafrans"
     },
     "new_on": {
-      "title": "Nouvo sou Tikèm"
+      "title": "Nouvo sou Tikèm",
+      "empty": "Poko gen anyen nouvo isit la.",
+      "discover": "Wè tout evènman yo",
+      "see_all": "Wè tout"
     },
     "elsewhere": {
       "back_home": "lakay",

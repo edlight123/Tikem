@@ -800,7 +800,10 @@
       "FR": "France"
     },
     "new_on": {
-      "title": "new on Tikèm"
+      "title": "new on Tikèm",
+      "empty": "Nothing new here yet.",
+      "discover": "See every event",
+      "see_all": "See all"
     },
     "elsewhere": {
       "back_home": "back home",

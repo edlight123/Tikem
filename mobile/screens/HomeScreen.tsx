@@ -596,6 +596,7 @@ export default function HomeScreen({ navigation }: any) {
                   title={t('home.newOnTikemTitle')}
                   events={newOnTikem}
                   onEventPress={(eventId) => navigation.navigate('EventDetail', { eventId })}
+                  onViewAll={() => navigation.navigate('CategoryEvents', { recent: true, title: t('home.newOnTikemTitle') })}
                 />
               </View>
             )}

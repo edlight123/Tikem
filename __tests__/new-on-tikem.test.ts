@@ -48,7 +48,7 @@ describe.each([
     expect(pick(list)).toEqual(['published', 'ts', 'secs', 'date'])
   })
 
-  it('keeps only the last two weeks and events not over', () => {
+  it('keeps events not over, newest-added window first', () => {
     const list = [
       ev('stale', { created_at: iso(now - 15 * day) }),
       ev('future-stamp', { created_at: iso(now + day) }),
@@ -57,8 +57,24 @@ describe.each([
       ev('undated', { start_datetime: null }),
       ev('fresh'),
     ]
-    // Added at the same time: the sooner one first.
-    expect(pick(list)).toEqual(['running', 'fresh'])
+    // Added at the same time: the sooner one first. The rail is thin, so it
+    // widens past two weeks and the 15-day-old event joins, after the new ones.
+    expect(pick(list)).toEqual(['running', 'fresh', 'stale'])
+    // With a fixed two-week window, only the last two weeks.
+    expect(pick(list, { windowMs: 14 * day })).toEqual(['running', 'fresh'])
+  })
+
+  it('widens 14 → 30 → 60 days → any age while under eight, and stops once full', () => {
+    const old = (n: number, ageDays: number) =>
+      Array.from({ length: n }, (_, i) => ev(`d${ageDays}-${i}`, { created_at: iso(now - ageDays * day - i * 60_000) }))
+    // Two this fortnight, three at 20 days, four at 45: widens to 60 days.
+    const thin = [...old(2, 1), ...old(3, 20), ...old(4, 45)]
+    expect(pick(thin)).toHaveLength(9)
+    // Nine this fortnight: no widening, the 20-day-old ones stay out.
+    const full = [...old(9, 1), ...old(3, 20)]
+    expect(pick(full).every((id) => id.startsWith('d1-'))).toBe(true)
+    // Only very old events: any age.
+    expect(pick(old(3, 200))).toHaveLength(3)
   })
 
   it('never shows a draft, rejected, held, unlisted, cancelled or sample event', () => {
@@ -101,9 +117,9 @@ describe.each([
     const many = Array.from({ length: 20 }, (_, i) => ev(`e${i}`, { created_at: iso(now - i * 3600_000) }))
     expect(pick(many, { max: 5 })).toEqual(['e0', 'e1', 'e2', 'e3', 'e4'])
     expect(select(many, { now, country: 'HT' })).toHaveLength(12)
-    expect(NEW_MIN).toBe(3)
-    expect(select(many.slice(0, 2), { now, country: 'HT' })).toEqual([])
-    expect(select(many.slice(0, 3), { now, country: 'HT' })).toHaveLength(3)
+    expect(NEW_MIN).toBe(2)
+    expect(select(many.slice(0, 1), { now, country: 'HT' })).toEqual([])
+    expect(select(many.slice(0, 2), { now, country: 'HT' })).toHaveLength(2)
   })
 
   it('skips duplicates and rows without an id', () => {

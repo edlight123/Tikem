@@ -1,9 +1,9 @@
 import { unstable_cache } from 'next/cache'
 import { adminDb } from '@/lib/firebase/admin'
-import { NEW_WINDOW_MS } from '@/lib/home/new-on-tikem'
+import { NEW_READ_WINDOW_MS } from '@/lib/home/new-on-tikem'
 
 /** Docs read per stored type of created_at; the catalogue is small, the country cut is in memory. */
-const READ_MAX = 80
+const READ_MAX = 150
 
 /** Top-level Timestamps → ISO strings, so the rows survive the cache's JSON. */
 function plain(id: string, data: Record<string, any>): Record<string, any> {
@@ -68,7 +68,7 @@ export async function readNewOnTikemDocs(now: number): Promise<Array<Record<stri
   // The bound is rounded to the hour so the cache key holds for an hour; the
   // exact two-week cut is applied in memory (selectNewOnTikem).
   const hour = 3_600_000
-  const since = Math.floor((now - NEW_WINDOW_MS) / hour) * hour - hour
+  const since = Math.floor((now - NEW_READ_WINDOW_MS) / hour) * hour - hour
   try {
     return await readNewDocs(new Date(since).toISOString())
   } catch (err: any) {
