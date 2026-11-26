@@ -2696,5 +2696,38 @@
     "filter": "Langue",
     "any": "Toutes les langues",
     "held_in": "En"
+  },
+  "afterEvent": {
+    "howWasIt": "C'était comment ?",
+    "howWasItBody": "Un seul geste. Seul l'organisateur le voit.",
+    "faceMeh": "Bof",
+    "faceGood": "Bien",
+    "faceGreat": "Adoré",
+    "thanks": "Merci de lui avoir dit.",
+    "photosTitle": "Photos de l'événement",
+    "addPhotos": "Ajouter vos photos",
+    "uploading": "Envoi…",
+    "photoAdded": "Merci. Votre photo s'affichera une fois approuvée par l'organisateur.",
+    "photoFailed": "Impossible d'ajouter cette photo. Réessayez.",
+    "photoTooLarge": "Cette photo est trop lourde (4 Mo max).",
+    "pendingTitle": "En attente de votre approbation",
+    "approve": "Approuver",
+    "remove": "Retirer",
+    "nextFrom": "Prochainement avec {{name}}",
+    "nextFromThem": "Son prochain événement",
+    "followPrompt": "Suivez-le pour être prévenu du prochain."
+  },
+  "receipts": {
+    "view_receipt": "Voir le reçu"
+  },
+  "statements": {
+    "title": "Relevés mensuels",
+    "subtitle": "Ventes, frais Tikèm, remboursements et versements d'un mois.",
+    "month": "Mois",
+    "download_csv": "Télécharger en CSV",
+    "download_pdf": "Télécharger en PDF",
+    "preparing": "Préparation…",
+    "error": "Le relevé n'a pas pu être téléchargé. Veuillez réessayer.",
+    "note": "Les dates sont en UTC."
   }
 }

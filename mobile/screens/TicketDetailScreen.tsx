@@ -1,6 +1,6 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
-import { ChevronLeft, ChevronRight, Calendar, MapPin, User as UserIcon, Send, Star, RotateCcw, CalendarPlus, Navigation } from 'lucide-react-native';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { View, Text, ScrollView, StyleSheet, Linking } from 'react-native';
+import { ChevronLeft, ChevronRight, Calendar, MapPin, User as UserIcon, Send, Star, RotateCcw, CalendarPlus, Navigation, Receipt } from 'lucide-react-native';
 import { doc, getDoc } from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { auth, db } from '../config/firebase';
@@ -36,6 +36,22 @@ export default function TicketDetailScreen({ route }: any) {
   const { t, language } = useI18n();
   const navigation = useNavigation<any>();
   const showAlert = useAppAlert();
+  // Receipt (P1-28): the server mints a signed link for the buyer; the browser
+  // shows the printable receipt (print or save as PDF from there).
+  const [receiptBusy, setReceiptBusy] = useState(false);
+  const openReceipt = async (orderId: string) => {
+    if (receiptBusy) return;
+    setReceiptBusy(true);
+    try {
+      const res = await backendJson<{ url?: string }>(`/api/receipts/${encodeURIComponent(orderId)}/link`);
+      if (!res?.url) throw new Error('no url');
+      await Linking.openURL(res.url);
+    } catch {
+      showAlert(t('common.error'), t('receipts.receiptFailed'));
+    } finally {
+      setReceiptBusy(false);
+    }
+  };
   // Max out brightness so the QR scans at a dim venue door; restore on leave.
   useMaxBrightnessWhileFocused();
   const [ticket, setTicket] = useState<any>(null);
@@ -547,6 +563,24 @@ export default function TicketDetailScreen({ route }: any) {
                 <ChevronRight size={18} color={colors.textTertiary} />
               </Touchable>
             )}
+
+            {/* Receipt: paid orders only. */}
+            {ticket.payment_id && Number(ticket.charged_amount ?? ticket.price_paid ?? 0) > 0 ? (
+              <Touchable
+                style={styles.actionButton}
+                scale={0.98}
+                accessibilityRole="button"
+                onPress={() => openReceipt(String(ticket.payment_id))}
+              >
+                <View style={styles.actionButtonIcon}>
+                  <Receipt size={18} color={colors.textSecondary} strokeWidth={1.75} />
+                </View>
+                <View style={styles.actionButtonText}>
+                  <Text style={styles.actionButtonTitle}>{receiptBusy ? '…' : t('receipts.viewReceipt')}</Text>
+                </View>
+                <ChevronRight size={18} color={colors.textTertiary} />
+              </Touchable>
+            ) : null}
 
             {/* Refund Status Badge */}
             {ticket.refund_status && ticket.refund_status !== 'none' && (
