@@ -78,6 +78,7 @@ import {
   batchState,
   hasSellableBatch,
   printedManageUrl,
+  batchDesignName,
   soldForPeople,
   visibleBatches,
   type PrintedBatchSummary,
@@ -760,6 +761,11 @@ export default function OrganizerEventManagementScreen() {
                         </View>
                       </View>
                       <Text style={styles.tierSplit} numberOfLines={2}>{line}</Text>
+                      {batchDesignName(b.batch, language) ? (
+                        <Text style={styles.batchDesign} numberOfLines={1}>
+                          {t('printedBundle.design', { name: batchDesignName(b.batch, language) })}
+                        </Text>
+                      ) : null}
                     </View>
                   );
                 })}
@@ -1059,6 +1065,11 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   batchStateText: {
     fontSize: 13,
     color: colors.textSecondary,
+  },
+  batchDesign: {
+    marginTop: 2,
+    fontSize: 12,
+    color: colors.textTertiary,
   },
   ctaDock: {
     position: 'absolute',

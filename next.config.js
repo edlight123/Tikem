@@ -90,6 +90,10 @@ const nextConfig = {
     '/api/posters/create': ['./assets/fonts/**'],
     // The printed-ticket sheet (lib/physical/pdf.ts) embeds the brand fonts.
     '/api/admin/physical-tickets/batches/[batchId]/pdf': ['./assets/fonts/**'],
+    // Printed-ticket proofs and the proof page's fonts (lib/physical/design).
+    '/api/admin/physical-tickets/batches/[batchId]/proof': ['./assets/fonts/**'],
+    '/api/organizer/events/[id]/physical-batches/proof': ['./assets/fonts/**'],
+    '/api/physical/fonts/[name]': ['./assets/fonts/**'],
     // The flyer reader's worker script, its WebAssembly engine (the LSTM
     // builds only) and the English/French models are all opened by path at
     // runtime, which tracing cannot follow.

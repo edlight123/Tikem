@@ -1,24 +1,14 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
-import { CreditCard, Printer, Smartphone, Wallet } from 'lucide-react'
+import { Printer } from 'lucide-react'
 import { Drawer, FormField, OrgEmptyState, SectionHeader, StatusChip, type ChipTone } from '@/components/organizer/ui'
-import { quoteBatch, type PhysicalTicketsConfig } from '@/lib/physical/config'
-import { formatSerial, showBalanceOption, type BatchCounts } from '@/lib/physical/rules'
-
-interface BalanceInfo {
-  canUse: boolean
-  availableHtg: number
-}
-
-interface Tier {
-  id: string
-  name: string
-  price: number
-  remaining: number | null
-}
+import type { PhysicalTicketsConfig } from '@/lib/physical/config'
+import { formatSerial, type BatchCounts } from '@/lib/physical/rules'
+import { getTemplate, swatchFor, type TicketTemplate } from '@/lib/physical/design/registry'
+import OrderDrawer, { type BalanceInfo, type OrderTier as Tier } from './OrderDrawer'
 
 interface BatchSummary {
   batch: {
@@ -31,6 +21,7 @@ interface BatchSummary {
     unit_price_htg: number
     payment?: { method?: string; funds_rail?: string; refunded_to_balance_at?: string }
     payment_expires_at?: string
+    design?: { template?: string; color?: string; template_name?: Record<string, string>; approved_at?: string | null }
     assignments?: Array<{ uid: string; name: string; from: number; to: number }>
     voided_ranges?: Array<{ from: number; to: number; count: number }>
     released_count?: number
@@ -72,6 +63,8 @@ export default function PrintedClient({ eventId, currency, tiers }: { eventId: s
   const [batches, setBatches] = useState<BatchSummary[]>([])
   const [sellers, setSellers] = useState<Seller[]>([])
   const [balance, setBalance] = useState<BalanceInfo | null>(null)
+  const [templates, setTemplates] = useState<TicketTemplate[]>([])
+  const [posterUrl, setPosterUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(false)
   const [panel, setPanel] = useState<Panel>(null)
@@ -86,6 +79,8 @@ export default function PrintedClient({ eventId, currency, tiers }: { eventId: s
       setBatches(data.batches || [])
       setSellers(data.sellers || [])
       setBalance(data.balance || null)
+      setTemplates(Array.isArray(data.templates) ? data.templates : [])
+      setPosterUrl(typeof data.posterUrl === 'string' ? data.posterUrl : null)
       setLoadError(false)
     } catch {
       setLoadError(true)
@@ -155,13 +150,15 @@ export default function PrintedClient({ eventId, currency, tiers }: { eventId: s
         </div>
       )}
 
-      {panel?.kind === 'order' && config && (
+      {panel?.kind === 'order' && config && templates.length > 0 && (
         <OrderDrawer
           eventId={eventId}
           currency={currency}
           tiers={tiers}
           config={config}
           balance={balance}
+          templates={templates}
+          posterUrl={posterUrl}
           onClose={() => setPanel(null)}
           onPaid={async () => {
             setPanel(null)
@@ -208,8 +205,11 @@ function BatchCard({
   onPanel: (p: Panel) => void
   onChanged: () => Promise<void>
 }) {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
   const { batch, counts, bySeller } = summary
+  const lang = i18n.language?.startsWith('fr') ? 'fr' : i18n.language?.startsWith('ht') ? 'ht' : 'en'
+  const tpl = batch.design ? getTemplate(batch.design.template) : null
+  const designLine = tpl ? `${tpl.name[lang]} · ${swatchFor(tpl, batch.design?.color).name[lang]}` : null
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const unpaid = batch.status === 'awaiting_payment'
@@ -250,6 +250,7 @@ function BatchCard({
           <p className="mt-0.5 font-mono text-meta text-fg-subtle">
             {first} – {last}
           </p>
+          {designLine && <p className="mt-0.5 text-caption text-fg-subtle">{t('print_design.batch_design', { name: designLine })}</p>}
         </div>
         <StatusChip className="!normal-case" tone={batchStatusTone(batch.status)}>
           {t(`physical.status.${batch.status}`)}
@@ -379,191 +380,6 @@ function BatchCard({
       )}
       {error && <p className="mt-3 text-sm text-danger-soft">{error}</p>}
     </section>
-  )
-}
-
-function OrderDrawer({
-  eventId,
-  currency,
-  tiers,
-  config,
-  balance,
-  onClose,
-  onPaid,
-}: {
-  eventId: string
-  currency: string
-  tiers: Tier[]
-  config: PhysicalTicketsConfig
-  balance: BalanceInfo | null
-  onClose: () => void
-  onPaid: () => Promise<void>
-}) {
-  const { t } = useTranslation('common')
-  const [tierId, setTierId] = useState(tiers[0]?.id || '')
-  const [qty, setQty] = useState(String(config.minBatch))
-  const [method, setMethod] = useState<'moncash' | 'card' | 'balance'>('moncash')
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const quantity = Math.round(Number(qty))
-  const quote = useMemo(() => quoteBatch(config, quantity), [config, quantity])
-  const tier = tiers.find((x) => x.id === tierId)
-  const overCapacity = tier?.remaining != null && quantity > tier.remaining
-  const balanceShown = quote.ok && showBalanceOption(balance, quote.totalHtg)
-  const chosen = method === 'balance' && !balanceShown ? 'moncash' : method
-
-  const submit = async () => {
-    if (!quote.ok || overCapacity) return
-    setBusy(true)
-    setError(null)
-    try {
-      const res = await fetch(`/api/organizer/events/${eventId}/physical-batches`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tierId, quantity, method: chosen }),
-      })
-      const data = await res.json().catch(() => ({}))
-      if (res.ok && data?.paid) {
-        await onPaid()
-        return
-      }
-      if (!res.ok || !data?.redirectUrl) throw new Error(data?.error || t('physical.generic_error'))
-      window.location.href = data.redirectUrl
-    } catch (e: any) {
-      setError(String(e?.message || t('physical.generic_error')))
-      setBusy(false)
-    }
-  }
-
-  const quoteError = !quote.ok
-    ? quote.code === 'below_minimum'
-      ? t('physical.min_batch', { min: nf(config.minBatch) })
-      : quote.code === 'above_maximum'
-        ? t('physical.max_batch', { max: nf(config.maxBatch) })
-        : quote.code === 'disabled'
-          ? t('physical.disabled')
-          : t('physical.whole_number')
-    : overCapacity
-      ? t('physical.over_capacity', { remaining: nf(tier!.remaining!) })
-      : null
-
-  return (
-    <Drawer
-      open
-      onClose={onClose}
-      title={t('physical.order_title')}
-      size="sm"
-      footer={
-        <div className="flex justify-end gap-3">
-          <button type="button" className={btnQuiet} onClick={onClose}>
-            {t('physical.cancel')}
-          </button>
-          <button type="button" className={btnPrimary} disabled={busy || !!quoteError || !tierId} onClick={submit}>
-            {quote.ok
-              ? chosen === 'balance'
-                ? t('physical.pay_from_balance_total', { total: nf(quote.totalHtg) })
-                : t('physical.pay_total', { total: nf(quote.totalHtg) })
-              : t('physical.pay')}
-          </button>
-        </div>
-      }
-    >
-      <div className="space-y-6 p-6">
-        <p className="text-sm text-fg-muted">{t('physical.order_intro')}</p>
-
-        <FormField label={t('physical.ticket_type')} htmlFor="phys-tier">
-          <select id="phys-tier" value={tierId} onChange={(e) => setTierId(e.target.value)} className={field}>
-            {tiers.map((x) => (
-              <option key={x.id} value={x.id}>
-                {x.name}
-                {x.remaining != null ? ` · ${t('physical.left', { count: x.remaining })}` : ''}
-              </option>
-            ))}
-          </select>
-        </FormField>
-
-        <FormField label={t('physical.quantity')} htmlFor="phys-qty" error={quoteError || undefined}>
-          <input
-            id="phys-qty"
-            type="number"
-            inputMode="numeric"
-            min={config.minBatch}
-            max={config.maxBatch}
-            step={1}
-            value={qty}
-            onChange={(e) => setQty(e.target.value)}
-            className={field}
-          />
-        </FormField>
-
-        <div className="rounded bg-surface p-4">
-          <p className="text-caption text-fg-subtle">{t('physical.price_list')}</p>
-          <ul className="mt-2 space-y-1">
-            {config.tiers.map((tierRow, i) => {
-              const next = config.tiers[i + 1]
-              const active = quote.ok && quote.tierIndex === i
-              return (
-                <li key={tierRow.minQty} className={`flex justify-between text-sm ${active ? 'text-fg' : 'text-fg-subtle'}`}>
-                  <span>
-                    {next
-                      ? t('physical.tier_range', { from: nf(tierRow.minQty), to: nf(next.minQty - 1) })
-                      : t('physical.tier_from', { from: nf(tierRow.minQty) })}
-                  </span>
-                  <span className="font-mono tabular-nums">{t('physical.per_ticket', { price: nf(tierRow.priceHtgPerTicket) })}</span>
-                </li>
-              )
-            })}
-          </ul>
-          {quote.ok && (
-            <div className="mt-4 flex items-baseline justify-between bg-surface-raised px-3 py-2">
-              <span className="text-sm text-fg-muted">
-                {nf(quote.quantity)} × {nf(quote.unitPriceHtg)} HTG
-              </span>
-              <span className="font-mono text-lead tabular-nums text-fg">{nf(quote.totalHtg)} HTG</span>
-            </div>
-          )}
-          {quote.ok && Object.entries(quote.display).map(([cur, v]) => (
-            <p key={cur} className="mt-1 text-right text-caption text-fg-subtle">
-              ≈ {v.total.toFixed(2)} {cur}
-            </p>
-          ))}
-        </div>
-
-        <fieldset>
-          <legend className="mb-2 text-sm font-medium text-fg-soft">{t('physical.pay_with')}</legend>
-          <div className="grid grid-cols-2 gap-3">
-            {(
-              [
-                { id: 'moncash', icon: Smartphone, label: t('physical.method_moncash') },
-                { id: 'card', icon: CreditCard, label: t('physical.method_card') },
-                ...(balanceShown ? [{ id: 'balance', icon: Wallet, label: t('physical.method_balance') }] : []),
-              ] as Array<{ id: 'moncash' | 'card' | 'balance'; icon: typeof Wallet; label: string }>
-            ).map((m) => (
-              <button
-                key={m.id}
-                type="button"
-                aria-pressed={chosen === m.id}
-                onClick={() => setMethod(m.id)}
-                className={`flex h-10 items-center gap-2 rounded px-3 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
-                  m.id === 'balance' ? 'col-span-2' : ''
-                } ${chosen === m.id ? 'bg-surface-high text-fg' : 'bg-surface text-fg-muted hover:bg-surface-raised'}`}
-              >
-                <m.icon className="h-4 w-4" strokeWidth={1.75} />
-                {m.label}
-              </button>
-            ))}
-          </div>
-          {chosen === 'card' && <p className="mt-2 text-caption text-fg-subtle">{t('physical.card_note')}</p>}
-          {chosen === 'balance' && balance && (
-            <p className="mt-2 text-caption text-fg-subtle">{t('physical.balance_note', { amount: nf(balance.availableHtg) })}</p>
-          )}
-          {currency !== 'HTG' && <p className="mt-2 text-caption text-fg-subtle">{t('physical.htg_note')}</p>}
-        </fieldset>
-
-        <p className="text-caption text-fg-subtle">{t('physical.no_fee_note')}</p>
-        {error && <p className="text-sm text-danger-soft">{error}</p>}
-      </div>
-    </Drawer>
   )
 }
 

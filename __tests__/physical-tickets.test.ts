@@ -137,7 +137,7 @@ describe('pricing tiers from config', () => {
 describe('admin config validation', () => {
   const good = { enabled: true, minBatch: 100, maxBatch: 5000, tiers: [{ minQty: 100, priceHtgPerTicket: 40 }, { minQty: 500, priceHtgPerTicket: 30 }] }
   it('accepts a sound config', () => {
-    expect(validatePhysicalConfig(good)).toEqual({ ok: true, value: { ...good, displayPrices: null } })
+    expect(validatePhysicalConfig(good)).toEqual({ ok: true, value: { ...good, displayPrices: null, templateSurcharges: null } })
   })
   it.each([
     ['unknown key', { ...good, fee: 1 }],
@@ -622,6 +622,9 @@ describe('print PDF holds only unsold tickets', () => {
     // The download is the print: the batch now carries printed_at.
     expect((await getBatch(batch.id))!.printed_at).toBeTruthy()
     expect(printed.every((t: any) => parsePhysicalQr(t.qrPayload)?.v === 2)).toBe(true)
+    // In the batch's design (one ordered before the gallery prints clean_white), never a specimen.
+    expect(renderBatchPdf.mock.calls[0][0]).toMatchObject({ design: { template: 'clean_white' } })
+    expect(renderBatchPdf.mock.calls[0][0].specimen).toBeFalsy()
   })
 })
 

@@ -55,6 +55,7 @@ import {
   type BatchStatus,
   type SerialRange,
 } from './rules'
+import type { BatchDesign } from './design/registry'
 
 export const PHYSICAL_BATCH_ORDERS = 'physical_batch_orders'
 const WRITE_CHUNK = 400
@@ -85,6 +86,7 @@ export async function savePhysicalConfig(value: PhysicalTicketsConfig, admin: { 
     maxBatch: value.maxBatch,
     tiers: value.tiers,
     displayPrices: value.displayPrices ?? null,
+    templateSurcharges: value.templateSurcharges ?? null,
     updated_at: nowIso,
     updated_by: admin.uid,
     updated_by_email: admin.email,
@@ -175,9 +177,14 @@ export async function createBatch(params: {
   quantity: number
   method: PayMethod
   createdBy: string
+  /** The approved design (lib/physical/design). Absent only for internal / legacy callers. */
+  design?: BatchDesign | null
 }): Promise<CreateBatchResult> {
+  if (params.design && !params.design.approved_at) {
+    return { ok: false, status: 400, code: 'proof_not_approved', error: 'Approve the proof before paying.' }
+  }
   const config = await loadPhysicalConfig()
-  const quote = quoteBatch(config, Math.round(Number(params.quantity)))
+  const quote = quoteBatch(config, Math.round(Number(params.quantity)), params.design?.template)
   if (!quote.ok) {
     const msg =
       quote.code === 'disabled'
@@ -245,7 +252,9 @@ export async function createBatch(params: {
     serial_prefix: serial.prefix,
     batch_seq: serial.seq,
     unit_price_htg: quote.unitPriceHtg,
+    surcharge_htg_per_ticket: quote.surchargeHtgPerTicket,
     total_htg: quote.totalHtg,
+    ...(params.design ? { design: params.design } : {}),
     status: 'awaiting_payment',
     reservation_id: reservationId,
     payment: { method: params.method, funds_rail: rail, status: 'pending' },

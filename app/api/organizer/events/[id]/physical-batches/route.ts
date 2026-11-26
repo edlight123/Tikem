@@ -5,6 +5,8 @@ import { cancelUnpaidBatch, createBatch, loadEventBatches, loadPhysicalConfig, t
 import { CardFxUnavailableError, startCardBatchPayment, startMonCashBatchPayment } from '@/lib/physical/payments'
 import { canUseBalance, loadOffsetCandidates, payBatchFromBalance } from '@/lib/physical/balanceOffset'
 import { consumeRateLimit } from '@/lib/rate-limit'
+import { TICKET_TEMPLATES } from '@/lib/physical/design/registry'
+import { eventPosterUrl, validateEventDesign } from '@/lib/physical/design/server'
 
 export const dynamic = 'force-dynamic'
 
@@ -16,10 +18,15 @@ export const dynamic = 'force-dynamic'
  *       range can be assigned to.
  *       For the owner / a finance admin, also the largest RELEASED HTG balance
  *       a single event holds (what "Pay from my Tikèm balance" can cover).
- * POST  { tierId, quantity, method: 'moncash' | 'card' | 'balance' } → order a
- *       batch: price from the live config, reserve the seats, start the upfront
- *       payment. Returns { batchId, redirectUrl } (or { batchId, paid: true }
- *       for a balance payment).
+ *       Also the template gallery (lib/physical/design/registry) and the
+ *       event's poster link (the "use event poster" choice).
+ * POST  { tierId, quantity, method: 'moncash' | 'card' | 'balance', design,
+ *       approveProof: true } → order a batch: the design is checked (its images
+ *       must be this event's uploads or its poster) and MUST come with the
+ *       proof approved, or nothing is ordered (code proof_not_approved). Price
+ *       from the live config (+ the template's surcharge), reserve the seats,
+ *       start the upfront payment. Returns { batchId, redirectUrl } (or
+ *       { batchId, paid: true } for a balance payment).
  *
  * The event's org (owner, admin, manager) or a platform admin.
  */
@@ -46,7 +53,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       .map((d: any) => ({ uid: d.id, ...(d.data() || {}) }))
       .filter((m: any) => m.status === 'active' && ['seller', 'manager', 'admin'].includes(String(m.role)))
       .map((m: any) => ({ uid: String(m.uid || m.id), name: String(m.name || m.email || ''), role: String(m.role) }))
-    return NextResponse.json({ config, batches, sellers, balance })
+    return NextResponse.json({ config, batches, sellers, balance, templates: TICKET_TEMPLATES, posterUrl: eventPosterUrl(gate.value.event, eventId) })
   } catch (err: any) {
     console.error('[physical] list failed', { eventId, message: err?.message })
     return NextResponse.json({ error: 'Could not load printed tickets' }, { status: 500 })
@@ -68,9 +75,17 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const tierId = String(body?.tierId || '').trim()
   if (!tierId || tierId.includes('/')) return NextResponse.json({ error: 'Choose a ticket type', code: 'tier_required' }, { status: 400 })
 
+  // The design and its proof: approved by the organizer, or no order at all.
+  const design = validateEventDesign(body?.design, eventId, event)
+  if (!design.ok) return NextResponse.json({ error: design.error, code: design.code }, { status: 400 })
+  if (body?.approveProof !== true) {
+    return NextResponse.json({ error: 'Approve the proof before paying.', code: 'proof_not_approved' }, { status: 400 })
+  }
+  const approvedDesign = { ...design.value, approved_at: new Date().toISOString(), approved_by: user.id }
+
   // Cheap refusal before touching inventory: the quote is what will be charged.
   const config = await loadPhysicalConfig()
-  const quote = quoteBatch(config, quantity)
+  const quote = quoteBatch(config, quantity, approvedDesign.template)
   if (!quote.ok) {
     return NextResponse.json({ error: 'This quantity cannot be ordered', code: quote.code, minBatch: quote.minBatch, maxBatch: quote.maxBatch }, { status: 400 })
   }
@@ -78,7 +93,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const limit = await consumeRateLimit({ key: `physical:order:${orgId || user.id}`, limit: 20, windowMs: 24 * 60 * 60 * 1000 })
   if (limit.limited) return NextResponse.json({ error: 'Too many orders today. Try again tomorrow.', code: 'rate_limited' }, { status: 429 })
 
-  const created = await createBatch({ eventId, event, orgId: orgId || user.id, tierId, quantity, method, createdBy: user.id })
+  const created = await createBatch({ eventId, event, orgId: orgId || user.id, tierId, quantity, method, createdBy: user.id, design: approvedDesign })
   if (!created.ok) return NextResponse.json({ error: created.error, code: created.code, remaining: created.remaining ?? null }, { status: created.status })
 
   // Build the return URLs on the request's own host (apex → www redirects drop state).

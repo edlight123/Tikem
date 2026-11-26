@@ -143,11 +143,13 @@ describe('the printed ticket', () => {
   })
 
   it('every fixed word has a French version', () => {
-    expect(PDF_LABELS.fr.eyebrow).toBe('TIKÈM  ·  ENTRÉE')
+    expect(PDF_LABELS.fr.admit).toBe('ENTRÉE')
     expect(PDF_LABELS.fr.validOnceSold).toBe('Valide une fois vendu')
     expect(PDF_LABELS.fr.stub).toBe('TALON')
+    expect(PDF_LABELS.fr.stubValid).toBe('TALON · VALIDE UNE FOIS VENDU')
+    expect(PDF_LABELS.fr.holder).toBe('TITULAIRE')
     expect(PDF_LABELS.fr.page(1, 3)).toBe('page 1 sur 3')
-    expect(PDF_LABELS.en.eyebrow).toBe('TIKÈM  ·  ADMIT ONE')
+    expect(PDF_LABELS.en.admit).toBe('ADMIT ONE')
   })
 
   it('renders a French sheet (the drawn strings)', async () => {
@@ -170,14 +172,18 @@ describe('the printed ticket', () => {
     jest.isolateModules(() => {
       render = require('@/lib/physical/pdf').renderBatchPdf
     })
+    const { buildTicketFacts } = require('@/lib/physical/design/facts')
+    const { designOf } = require('@/lib/physical/design/registry')
+    const facts = buildTicketFacts({ event: { ...HT_EVENT, title: 'Konpa Live', start_datetime: HT_8PM, venue_name: 'Royal Oasis', city: 'Pétion-Ville' }, tierName: 'VIP', tierPrice: 1500, lang: 'fr' })
     await render({
-      event: { title: 'Konpa Live', dateLine: ticketDateLine(HT_8PM, HT_EVENT, 'fr'), venueLine: 'Royal Oasis, Pétion-Ville' },
+      design: designOf({}),
+      facts,
       tickets: [{ serial: 'A-0001', qrPayload: 'x', tierName: 'VIP' }],
       lang: 'fr',
     })
     jest.dontMock('jspdf')
     expect(drawn).toEqual(
-      expect.arrayContaining(['TIKÈM  ·  ENTRÉE', 'Valide une fois vendu', 'TALON', 'samedi 20 juin 2026 · 8:00 PM'])
+      expect.arrayContaining(['ENTRÉE', 'Valide une fois vendu', 'TALON · VALIDE UNE FOIS VENDU', 'Samedi 20 juin 2026 · 8:00 PM', 'A-0001'])
     )
     expect(drawn.join(' ')).not.toMatch(/ADMIT ONE|STUB|Valid only|20 h|20:00/)
   }, 60_000)
