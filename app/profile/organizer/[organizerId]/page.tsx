@@ -1,3 +1,4 @@
+import { isPubliclyListed } from '@/lib/events/visibility'
 import { createClient } from '@/lib/firebase-db/server'
 import { getCurrentUser } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
@@ -256,7 +257,8 @@ export default async function OrganizerProfilePage({
   }
 
   const organizerEvents = allOrganizerEvents || []
-  const publishedEvents = organizerEvents.filter((e: any) => e.is_published)
+  // Unlisted events (lib/events/visibility) are link-only: not on the public page, nor in its counts.
+  const publishedEvents = organizerEvents.filter((e: any) => e.is_published && isPubliclyListed(e))
 
   const withOrganizer = (event: any) => ({
     ...event,

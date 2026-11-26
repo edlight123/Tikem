@@ -1,3 +1,4 @@
+import { isListable, isUnlisted } from '@/lib/events/visibility'
 import { getCurrentUser } from '@/lib/auth'
 import { isAdmin } from '@/lib/admin'
 import { getEventById, checkIsFavorite, checkIsFollowing } from '@/lib/data/events'
@@ -77,6 +78,8 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     title: `${event.title} | Tikèm`,
     description: stripRichText(event.description) || `Join us for ${event.title} at ${event.venue_name}, ${event.city}`,
     alternates: { canonical: `/events/${id}` },
+    // Unlisted (lib/events/visibility): reachable by its link, kept out of search engines.
+    ...(isUnlisted(event) ? { robots: { index: false, follow: false } } : {}),
     openGraph: {
       title: event.title,
       description: shareLine || undefined,
@@ -232,7 +235,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
         .where('category', '==', event.category)
         .where('is_published', '==', true)
         .where('start_datetime', '>=', bound)
-        .limit(4)
+        .limit(8)
         .get()
         .then((s: any) => s.docs)
         .catch(() => [])
@@ -255,7 +258,8 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
       return typeof v?.toMillis === 'function' ? v.toMillis() : new Date(v).getTime()
     }
     const filteredRelated = relatedDocs
-      .filter((doc: any) => doc.id !== id)
+      // Unlisted, rejected or held events are never suggested (lib/events/visibility).
+      .filter((doc: any) => doc.id !== id && isListable(doc.data()))
       .sort((x: any, y: any) => startMs(x) - startMs(y))
       .slice(0, 3)
     
@@ -348,7 +352,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
   // to its own organizer is not something to describe to crawlers. The CSP
   // allows inline scripts, and ld+json is a data block browsers never execute.
   const isPublic = Boolean(serializedEvent.is_published || serializedEvent.status === 'published')
-  const jsonLd = isPublic
+  const jsonLd = isPublic && !isUnlisted(serializedEvent)
     ? buildEventJsonLd(serializedEvent, CANONICAL_SITE_URL)
     : null
 

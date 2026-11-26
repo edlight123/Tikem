@@ -53,6 +53,8 @@ export async function getOrganizerEvents(organizerId: string) {
         category: data.category || '',
         status: data.is_published ? 'published' : 'draft',
         is_published: data.is_published ?? data.status === 'published',
+        // Visibility (lib/events/visibility): false = unlisted.
+        show_on_explore: data.show_on_explore === false ? false : undefined,
         created_at: createdAt,
         updated_at: updatedAt,
         organizer_id: data.organizer_id

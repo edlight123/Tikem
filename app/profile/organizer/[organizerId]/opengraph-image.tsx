@@ -1,4 +1,5 @@
 /* eslint-disable @next/next/no-img-element */
+import { isPubliclyListed } from '@/lib/events/visibility'
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 import { ImageResponse } from 'next/og'
@@ -76,7 +77,9 @@ export default async function Image({ params }: { params: Promise<{ organizerId:
   const name =
     str(brand?.organization_name) || str(pub?.organization_name) || str(user?.organization_name) || str(pub?.full_name) || str(user?.full_name) || 'Tikèm'
   const verified = Boolean(pub?.is_verified ?? user?.is_verified)
-  const eventCount = newest?.size ?? 0
+  // Unlisted events (lib/events/visibility) are link-only: not counted, not shown.
+  const listedDocs = (newest?.docs || []).filter((d: any) => isPubliclyListed(d.data() || {}))
+  const eventCount = listedDocs.length
 
   // The light behind: their banner, else their most recent poster.
   const cover = valid ? resolveOrgCover(organizerId, pub) : null
@@ -87,8 +90,8 @@ export default async function Image({ params }: { params: Promise<{ organizerId:
   } else if (cover?.kind === 'upload') {
     backdrop = await ownImage(cover.src, size.width)
   }
-  if (!backdrop && newest && !newest.empty) {
-    const posters = newest.docs
+  if (!backdrop && listedDocs.length) {
+    const posters = listedDocs
       .map((d: any) => d.data() || {})
       .sort((a: any, b: any) => String(b.start_datetime || '').localeCompare(String(a.start_datetime || '')))
       .map((e: any) => str(e.banner_image_url))

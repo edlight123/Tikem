@@ -4862,4 +4862,11 @@ export default {
       has_money: "Suppression impossible : des paiements sont enregistrés.",
     },
   },
+  eventVisibility: {
+    label: "Visibilité",
+    public: "Public",
+    publicHint: "Visible sur l'accueil, Découvrir, la recherche et votre page.",
+    unlisted: "Non répertorié",
+    unlistedHint: "Seules les personnes ayant le lien peuvent le trouver.",
+  },
 } as const;

@@ -1,4 +1,5 @@
 import { venueDetailsFields, venueDetailsOf } from '../venueDetails';
+import { isPubliclyListed } from '../eventVisibility';
 import { cleanEventLanguages } from '../eventLanguages';
 import { parseOccasion } from '../occasions';
 import { eventAddOns, type EventAddOn } from '../addOns';
@@ -549,7 +550,8 @@ export function isVisibleOnExplore(event: { show_on_explore?: boolean } | null |
   // `hidden_pending_review` is set server-side once enough distinct people have
   // reported the event (lib/moderation/reports.ts on the web side). It stays
   // published and linkable, but out of discovery until an admin reviews it.
-  return (event as any)?.show_on_explore !== false && (event as any)?.hidden_pending_review !== true;
+  // Unlisted (lib/eventVisibility): link only, never in a public listing.
+  return isPubliclyListed(event as any) && (event as any)?.hidden_pending_review !== true;
 }
 
 /**

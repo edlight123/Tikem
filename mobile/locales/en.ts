@@ -4843,4 +4843,11 @@ export default {
       has_money: "Can’t delete: payments are on record.",
     },
   },
+  eventVisibility: {
+    label: "Visibility",
+    public: "Public",
+    publicHint: "Listed on Home, Discover, Search and your page.",
+    unlisted: "Unlisted",
+    unlistedHint: "Only people with the link can find it.",
+  },
 } as const;

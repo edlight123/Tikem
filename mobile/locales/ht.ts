@@ -4829,4 +4829,11 @@ export default {
       has_money: "Pa ka efase: gen peman ki anrejistre.",
     },
   },
+  eventVisibility: {
+    label: "Vizibilite",
+    public: "Piblik",
+    publicHint: "Parèt sou Akèy, Dekouvri, Rechèch ak paj ou.",
+    unlisted: "Pa nan lis",
+    unlistedHint: "Se sèlman moun ki gen lyen an ki ka jwenn li.",
+  },
 } as const;

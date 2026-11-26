@@ -5,8 +5,10 @@
  * Separates client-side and server-side operations.
  */
 
+import { isUnlisted } from '@/lib/events/visibility'
 import { parseOccasion } from '@/lib/occasions'
 import { cleanEventLanguages } from '@/lib/event-languages'
+import { venueDetailsForReader } from '@/lib/events/venue-details'
 import { cache } from 'react'
 import { adminDb } from '@/lib/firebase/admin'
 import { normalizeCountryCode } from '@/lib/payment-provider'
@@ -265,6 +267,8 @@ async function getEventByIdUncached(eventId: string): Promise<Event | null> {
         tickets_sold: data?.tickets_sold || 0,
         tickets_available: data?.tickets_available,
         is_published: data?.is_published,
+        // Visibility (lib/events/visibility): false = unlisted, the page is noindex.
+        show_on_explore: data?.show_on_explore === false ? false : undefined,
         // The buy flow must know to prompt for the access code BEFORE checkout —
         // the server routes enforce it either way, but without this flag the UI
         // never asks and buyers dead-end on access_code_required.
@@ -312,6 +316,9 @@ async function getEventByIdUncached(eventId: string): Promise<Event | null> {
         // The language(s) it is held in (lib/event-languages): the event page's
         // quiet line and its JSON-LD inLanguage read it.
         languages: cleanEventLanguages(data?.languages).length ? cleanEventLanguages(data?.languages) : undefined,
+        // Venue details (lib/events/venue-details): the page's "good to know"
+        // lines. Missing from this whitelist, the web never showed them.
+        ...venueDetailsForReader(data),
         tags: data?.tags && Array.isArray(data.tags) ? data.tags.filter((tag: any) => typeof tag === 'string') : undefined,
         created_at: data?.created_at?.toDate?.()?.toISOString() || data?.created_at,
         updated_at: data?.updated_at?.toDate?.()?.toISOString() || data?.updated_at,
@@ -408,6 +415,8 @@ const readPublishedEvents = unstable_cache(
     for (const snap of [...windows, snapshot]) {
       for (const d of snap?.docs || []) {
         if (seen.has(d.id)) continue
+        // Unlisted (lib/events/visibility): link only, never in a public feed.
+        if (isUnlisted(d.data())) continue
         seen.add(d.id)
         docs.push(d)
       }
@@ -482,6 +491,8 @@ const readPublishedEvents = unstable_cache(
         occasion: parseOccasion(data.occasion) ?? undefined,
         // The language(s) it is held in: Discover's language filter reads it.
         languages: cleanEventLanguages(data.languages).length ? cleanEventLanguages(data.languages) : undefined,
+        // Venue details: Discover's venue filters (lib/filters/apply) read them.
+        ...venueDetailsForReader(data),
         // A seeded sample listing: browsable, never the homepage hero.
         is_template: isTemplateEvent(data),
         created_at: data.created_at?.toDate?.()?.toISOString() || data.created_at,
