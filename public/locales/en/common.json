@@ -2701,5 +2701,38 @@
     "filter": "Language",
     "any": "Any language",
     "held_in": "Held in"
+  },
+  "afterEvent": {
+    "howWasIt": "How was it?",
+    "howWasItBody": "One tap. Only the organizer sees it.",
+    "faceMeh": "Meh",
+    "faceGood": "Good",
+    "faceGreat": "Loved it",
+    "thanks": "Thanks for telling them.",
+    "photosTitle": "Photos from the event",
+    "addPhotos": "Add your photos",
+    "uploading": "Uploading…",
+    "photoAdded": "Thanks. Your photo shows once the organizer approves it.",
+    "photoFailed": "Couldn't add that photo. Try again.",
+    "photoTooLarge": "That photo is too large (4 MB max).",
+    "pendingTitle": "Waiting for your approval",
+    "approve": "Approve",
+    "remove": "Remove",
+    "nextFrom": "Next from {{name}}",
+    "nextFromThem": "Their next event",
+    "followPrompt": "Follow them to hear about the next one."
+  },
+  "receipts": {
+    "view_receipt": "View receipt"
+  },
+  "statements": {
+    "title": "Monthly statements",
+    "subtitle": "Sales, Tikèm fees, refunds and payouts for a month.",
+    "month": "Month",
+    "download_csv": "Download CSV",
+    "download_pdf": "Download PDF",
+    "preparing": "Preparing…",
+    "error": "The statement could not be downloaded. Please try again.",
+    "note": "Dates are in UTC."
   }
 }

@@ -83,6 +83,7 @@ import PurchaseSuccessSheet from '../components/PurchaseSuccessSheet';
 import FriendsGoingRow from '../components/FriendsGoingRow';
 import RichText from '../components/RichText';
 import InviteFriendsRow from '../components/InviteFriendsSheet';
+import AfterEvent from '../components/AfterEvent';
 import { requestPhonePrompt } from '../lib/phonePrompt';
 import { useAppAlert } from '../components/AppAlert';
 import ChromeBlur from '../components/ChromeBlur';
@@ -1288,6 +1289,18 @@ export default function EventDetailScreen({ route, navigation }: any) {
           {/* Your own connections going (config/auth.friend_suggestions). Renders
               nothing when the flag is off, signed out, or no friend is going. */}
           <FriendsGoingRow eventId={eventId} />
+
+          {/* After it: "How was it?", photos from people who went (moderated),
+              the organizer's next event. */}
+          {isPastEvent ? (
+            <AfterEvent
+              eventId={eventId}
+              organizerId={event.organizer_id && event.organizer_id !== user?.uid ? event.organizer_id : null}
+              organizerName={event.users?.organization_name || event.users?.full_name || event.organizer_name || ''}
+              onEvent={(id) => navigation.push('EventDetail', { eventId: id })}
+              onRate={() => navigation.navigate('EventFeedback', { eventId })}
+            />
+          ) : null}
 
           {/* Invite your connections (config/auth.invites). Nothing when off,
               signed out, or the event is not on sale. */}

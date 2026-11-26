@@ -6,6 +6,7 @@ import { TranslatedPageHeader } from '@/components/organizer/ui/TranslatedPageHe
 import { T } from '@/components/organizer/ui/TranslatedText'
 import EarningsView from '../earnings/EarningsView'
 import FinancePayoutHistory from './FinancePayoutHistory'
+import StatementsPanel from '@/components/organizer/StatementsPanel'
 import Link from 'next/link'
 
 export const revalidate = 0
@@ -75,6 +76,7 @@ export default async function FinancePage() {
               createdAt: p.createdAt,
             }))}
           />
+          <StatementsPanel />
         </div>
       </div>
     </div>
